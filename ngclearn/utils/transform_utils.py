@@ -1,11 +1,10 @@
 """
 Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
 You may use, distribute and modify this code under the
-terms of the GNU LGPL-3.0-or-later license.
+terms of the BSD 3-clause license.
 
-You should have received a copy of the XYZ license with
-this file. If not, please write to: ago@cs.rit.edu , or visit:
-https://www.gnu.org/licenses/lgpl-3.0.en.html
+You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: ago@cs.rit.edu
 """
 
 """

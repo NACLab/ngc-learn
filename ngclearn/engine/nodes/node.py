@@ -1,3 +1,12 @@
+"""
+Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
+You may use, distribute and modify this code under the
+terms of the BSD 3-clause license.
+
+You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: ago@cs.rit.edu
+"""
+
 import tensorflow as tf
 import sys
 import numpy as np
@@ -5,16 +14,6 @@ import copy
 from ngclearn.utils import transform_utils
 from ngclearn.engine.cables.dcable import DCable # dense cable
 from ngclearn.engine.cables.scable import SCable # simple cable
-
-"""
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the GNU LGPL-3.0-or-later license.
-
-You should have received a copy of the XYZ license with
-this file. If not, please write to: ago@cs.rit.edu , or visit:
-https://www.gnu.org/licenses/lgpl-3.0.en.html
-"""
 
 class Node:
     def __init__(self, node_type, name, dim):
