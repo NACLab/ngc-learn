@@ -38,11 +38,19 @@ and complete the following sequence of steps as depicted in the screenshot below
 If you use this code in any form in your project(s), please cite its source
 paper:
 <pre>
-@article{ororbia2020neural,
-  title={The neural coding framework for learning generative models},
+@article{Ororbia2022,
   author={Ororbia, Alexander and Kifer, Daniel},
-  journal={arXiv preprint arXiv:2012.03405},
-  year={2020}
+  title={The neural coding framework for learning generative models},
+  journal={Nature Communications},
+  year={2022},
+  month={Apr},
+  day={19},
+  volume={13},
+  number={1},
+  pages={2064},
+  issn={2041-1723},
+  doi={10.1038/s41467-022-29632-7},
+  url={https://doi.org/10.1038/s41467-022-29632-7}
 }
 </pre>
 
