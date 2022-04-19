@@ -29,7 +29,7 @@ $ python setup.py install
 
 If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command
-and complete the following sequence of steps as depicted in the screenshot below:
+and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="img/test_ngclearn_install.png" width="512">
 
 
