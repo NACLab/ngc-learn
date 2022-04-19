@@ -61,4 +61,5 @@ You may use, distribute and modify this code under the
 terms of the BSD 3-clause license.
 
 You should have received a copy of the BSD 3-clause license with
-this software. If not, please write to: ago@cs.rit.edu 
+this software.<br>
+If not, please write to: ago@cs.rit.edu 
