@@ -1,4 +1,4 @@
-<img src="img/ngc-learn-logo.png" width="256">
+<img src="img/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building arbitrary predictive 
 processing models based on the neural generative coding (NGC) computational
