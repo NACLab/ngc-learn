@@ -58,6 +58,10 @@ paper:
 }
 </pre>
 
+<b>Development:</b>
+Information/updates coming soon on community contributions.
+
+
 Version:  
 0.0.1 Alpha
 
