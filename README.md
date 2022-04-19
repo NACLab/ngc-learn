@@ -5,10 +5,12 @@ processing models based on the neural generative coding (NGC) computational
 framework. This toolkit is built on top of Tensorflow 2 and is distributed 
 under the 3-Clause BSD license.
 
+It is currently maintained by the 
+<a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
 <b>Installation:</b>
 
-Setup: Ensure that you have installed the following base dependencies in 
+<i>Setup:</i> Ensure that you have installed the following base dependencies in 
 your system. Note that this library was developed and tested on 
 Ubuntu 18.04. 
 ngc-learn requires:
@@ -29,6 +31,11 @@ it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="img/test_ngclearn_install.png" width="512">
 
+<b>Source Code</b>
+You can check/pull the latest source code for this library via:
+<pre>
+$ git clone https://github.com/ngc-learn/ngc-learn.git
+</pre>
 
 <b>Attribution:</b>
 
