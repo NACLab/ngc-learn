@@ -1,0 +1,3 @@
+# GNCN-t1 (Rao & Ballard, 1999)
+
+This model...

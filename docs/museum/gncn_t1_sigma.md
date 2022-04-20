@@ -1,0 +1,3 @@
+# GNCN-t1-Sigma (Friston, 2008)
+
+This model...

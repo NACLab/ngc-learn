@@ -7,8 +7,25 @@ Welcome to ngc-learn's documentation!
 =====================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Introduction:
+
+   overview
+   installation
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials:
+
+   tutorials/gen_model_tutorial
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Model Museum
+
+   museum/gncn_t1
+   museum/gncn_t1_sigma
+   museum/gncn_pdh
 
 
 
