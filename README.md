@@ -15,7 +15,9 @@ under the 3-Clause BSD license.
 It is currently maintained by the 
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
-<b>Installation:</b>
+## <b>Installation:</b>
+
+---
 
 <i>Setup:</i> Ensure that you have installed the following base dependencies in 
 your system. Note that this library was developed and tested on 
@@ -38,7 +40,9 @@ it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="img/test_ngclearn_install.png" width="512">
 
-<b>Documentation</b>
+## <b>Documentation</b>
+
+---
 
 Official documentation, including some tutorials, can be found <a href="">here</a>.
 
