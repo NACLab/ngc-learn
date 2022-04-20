@@ -31,6 +31,13 @@ it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="img/test_ngclearn_install.png" width="512">
 
+<b>Documentation</b>
+
+Official documentation, including some tutorials, can be found <a href="">here</a>.
+
+<!--The technical report going over the theoretical underpinnings of the 
+    NGC framework can be found here. TO BE RELEASED SOON. -->
+
 <b>Source Code</b>
 You can check/pull the latest source code for this library via:
 <pre>
@@ -59,7 +66,9 @@ paper:
 </pre>
 
 <b>Development:</b>
+
 Information/updates coming soon on community contributions.
+
 
 
 Version:  
