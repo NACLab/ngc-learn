@@ -42,7 +42,8 @@ and complete the following sequence of steps as depicted in the screenshot below
 
 ## <b>Documentation</b>
 
-Official documentation, including some tutorials, can be found <a href="">here</a>.
+Official documentation, including some tutorials, can be found
+<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>.
 
 <!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
