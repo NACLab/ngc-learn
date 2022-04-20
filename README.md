@@ -17,8 +17,6 @@ It is currently maintained by the
 
 ## <b>Installation:</b>
 
----
-
 <i>Setup:</i> Ensure that you have installed the following base dependencies in 
 your system. Note that this library was developed and tested on 
 Ubuntu 18.04. 
@@ -41,8 +39,6 @@ and complete the following sequence of steps as depicted in the screenshot below
 <img src="img/test_ngclearn_install.png" width="512">
 
 ## <b>Documentation</b>
-
----
 
 Official documentation, including some tutorials, can be found <a href="">here</a>.
 
