@@ -1,3 +1,6 @@
+[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![Linux](https://svgshare.com/i/Zhy.svg)](https://svgshare.com/i/Zhy.svg)
+
 <img src="img/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building arbitrary predictive 
