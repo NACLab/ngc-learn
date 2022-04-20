@@ -45,13 +45,7 @@ Official documentation, including some tutorials, can be found <a href="">here</
 <!--The technical report going over the theoretical underpinnings of the 
     NGC framework can be found here. TO BE RELEASED SOON. -->
 
-<b>Source Code</b>
-You can check/pull the latest source code for this library via:
-<pre>
-$ git clone https://github.com/ngc-learn/ngc-learn.git
-</pre>
-
-<b>Attribution:</b>
+## <b>Attribution:</b>
 
 If you use this code in any form in your project(s), please cite its source
 paper:
@@ -72,10 +66,15 @@ paper:
 }
 </pre>
 
-<b>Development:</b>
+## <b>Development:</b>
 
 Information/updates coming soon on community contributions.
 
+<b>Source Code</b>
+You can check/pull the latest source code for this library via:
+<pre>
+$ git clone https://github.com/ngc-learn/ngc-learn.git
+</pre>
 
 
 Version:  
@@ -86,7 +85,7 @@ Alexander G. Ororbia II
 Director, Neural Adaptive Computing (NAC) Laboratory
 Rochester Institute of Technology, Department of Computer Science
 
-<b>Copyright:</b>
+## <b>Copyright:</b>
 
 Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
 You may use, distribute and modify this code under the
