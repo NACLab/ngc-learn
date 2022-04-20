@@ -17,7 +17,6 @@ import time
 
 from ngclearn.utils.config import Config
 import ngclearn.utils.transform_utils as transform
-import ngclearn.utils.stat_utils as stat
 import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_tools
 from ngclearn.utils.data_utils import DataLoader
