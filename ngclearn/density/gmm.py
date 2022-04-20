@@ -33,7 +33,7 @@ tf.random.set_seed(seed=seed)
     Note this is a TF wrapper model that houses the sklearn implementation for learning.
     The sampling process has been rewritten to utilize GPU matrix computation.
 
-    @author Alex Ororbia
+    @author Alexander Ororbia
 """
 class GMM:
     def __init__(self, k, max_iter=5, assume_diag_cov=False, init_kmeans=True):

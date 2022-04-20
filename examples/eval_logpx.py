@@ -1,3 +1,12 @@
+"""
+Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
+You may use, distribute and modify this code under the
+terms of the BSD 3-clause license.
+
+You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: ago@cs.rit.edu
+"""
+
 import os
 import sys, getopt, optparse
 import pickle
@@ -18,6 +27,18 @@ import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_utils
 from ngclearn.utils.data_utils import DataLoader
 
+"""
+################################################################################
+Tutorial File:
+Evaluates/estimates the marginal log likelihood -- log p(x) -- of a
+(pre-)trained NGC model given a data sample/pool, i.e., the MNIST test set.
+
+Usage:
+$ python eval_logpx.py --config=/path/to/analyze.cfg --gpu_id=0
+
+@author Alexander Ororbia
+################################################################################
+"""
 
 # GPU arguments
 # read in configuration file and extract necessary variables/constants

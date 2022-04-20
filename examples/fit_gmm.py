@@ -1,3 +1,12 @@
+"""
+Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
+You may use, distribute and modify this code under the
+terms of the BSD 3-clause license.
+
+You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: ago@cs.rit.edu
+"""
+
 import os
 import sys, getopt, optparse
 import pickle
@@ -13,27 +22,22 @@ import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_utils
 from ngclearn.utils.data_utils import DataLoader
 
-def sort_data_by_label(X, Y):
-    lab_map = {}
-    lab = tf.argmax(Y,axis=1)
-    #print(lab.shape)
-    for s in range(X.shape[0]):
-        xs = tf.expand_dims(X[s,:],axis=0)
-        ys = int(lab[s])
-        blob = lab_map.get(ys)
-        if blob is not None:
-            blob = tf.concat([blob,xs],axis=0) #blob + xs
-            lab_map[ys] = blob
-        else:
-            lab_map[ys] = xs
-    return lab_map
+"""
+################################################################################
+Tutorial File:
+Fitting a Gaussian mixture density/prior to a collected latent variable dataset,
+i.e., latent vector codes extracted from a (pre-)trained NGC model.
 
+Usage:
+$ python fit_gmm.py --config=/path/to/analyze.cfg --gpu_id=0
+
+@author Alexander Ororbia
+################################################################################
+"""
 
 # GPU arguments
 # read in configuration file and extract necessary variables/constants
-options, remainder = getopt.getopt(sys.argv[1:], '', ["config=","gpu_id=",
-                                                      "latents_fname=","gmm_fname=",
-                                                      "labels_fname="])
+options, remainder = getopt.getopt(sys.argv[1:], '', ["config=","gpu_id="])
 # Collect arguments from argv
 cfg_fname = None
 use_gpu = False
@@ -47,12 +51,6 @@ for opt, arg in options:
     elif opt in ("--gpu_id"):
         gpu_id = int(arg.strip())
         use_gpu = True
-    elif opt in ("--latents_fname"):
-        latents_fname = arg.strip()
-    elif opt in ("--labels_fname"):
-        labels_fname = arg.strip()
-    elif opt in ("--gmm_fname"):
-        gmm_fname = arg.strip()
 
 mid = gpu_id
 if mid >= 0:
@@ -69,6 +67,22 @@ if cfg_fname is not None:
     gmm_fname = args.getArg("gmm_fname") #"../models/pc_rao/mnist/gmm.pkl"
     latents_fname = args.getArg("latents_fname")
     labels_fname = args.getArg("labels_fname")
+
+def sort_data_by_label(X, Y):
+    lab_map = {}
+    lab = tf.argmax(Y,axis=1)
+    #print(lab.shape)
+    for s in range(X.shape[0]):
+        xs = tf.expand_dims(X[s,:],axis=0)
+        ys = int(lab[s])
+        blob = lab_map.get(ys)
+        if blob is not None:
+            blob = tf.concat([blob,xs],axis=0) #blob + xs
+            lab_map[ys] = blob
+        else:
+            lab_map[ys] = xs
+    return lab_map
+
 
 #delimiter = "\t"
 n_subset = 18000 #20000 #50000

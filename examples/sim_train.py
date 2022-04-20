@@ -1,3 +1,12 @@
+"""
+Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
+You may use, distribute and modify this code under the
+terms of the BSD 3-clause license.
+
+You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: ago@cs.rit.edu
+"""
+
 import os
 import sys, getopt, optparse
 import pickle
@@ -22,9 +31,17 @@ tf.random.set_seed(seed=seed)
 np.random.seed(seed)
 
 """
+################################################################################
+Tutorial File:
+Trains/fits an NGC model to a dataset of sensory patterns, e.g., the MNIST
+database. Note that this script will sequentially run multiple trials/seeds if an
+experimental multi-trial setup is required (the tutorial only requires 1 trial).
 
-Use:
-$ python sim_train.py --config=rao_mnist.cfg --gpu_id=0 --n_trials=1
+Usage:
+$ python sim_train.py --config=/path/to/fit.cfg --gpu_id=0 --n_trials=1
+
+@author Alexander Ororbia
+################################################################################
 """
 
 # read in configuration file and extract necessary simulation variables/constants
@@ -121,7 +138,7 @@ with tf.device(gpu_tag):
             agent = GNCN_t1_Sigma(args)
         elif model_type == "GNCN_PDH" or model_type == "GNCN_t2_LSigma_PDH":
             agent = GNCN_PDH(args)
-            
+
         eta_v  = tf.Variable( eta ) # set up optimization process
         #opt = tf.compat.v1.train.AdamOptimizer(learning_rate=eta_v,beta1=0.9, beta2=0.999, epsilon=1e-6)
         opt = tf.keras.optimizers.Adam(eta_v)

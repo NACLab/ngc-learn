@@ -1,3 +1,12 @@
+"""
+Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
+You may use, distribute and modify this code under the
+terms of the BSD 3-clause license.
+
+You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: ago@cs.rit.edu
+"""
+
 import os
 import sys, getopt, optparse
 import pickle
@@ -20,9 +29,16 @@ tf.random.set_seed(seed=seed)
 np.random.seed(seed)
 
 """
+################################################################################
+Tutorial File:
+Extracts/retrieves the latent representations of a (pre-)trained NGC model and 
+a provided data sample/pool, i.e., the MNIST database.
 
-Use:
-$ python extract_latents.py --config=rao_mnist.cfg --gpu_id=0 --n_trials=1
+Usage:
+$ python extract_latents.py --config=/path/to/analyze.cfg --gpu_id=0
+
+@author Alexander Ororbia
+################################################################################
 """
 
 # read in configuration file and extract necessary simulation variables/constants
