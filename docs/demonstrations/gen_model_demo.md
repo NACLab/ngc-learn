@@ -6,7 +6,7 @@ to the MNIST dataset. Specifically, we will focus on training three key models,
 each with different structural properties, and estimating their marginal log likelihoods.
 
 We will start by importing an GNCN-t1, which is an instantiation of the model
-proposed in (Rao & Ballard, 1999). To do so, we simply import a few modules
+proposed in (Rao &amp; Ballard, 1999). To do so, we simply import a few modules
 from the ngc-learn library, including a DataLoader, as follows:
 
 <!--

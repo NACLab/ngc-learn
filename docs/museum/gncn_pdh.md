@@ -1,3 +1,3 @@
-# GNCN-PDH (Ororbia & Kifer, 2020/2022)
+# GNCN-PDH (Ororbia &amp; Kifer, 2020/2022)
 
 This model...

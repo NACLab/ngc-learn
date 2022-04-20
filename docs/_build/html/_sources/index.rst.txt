@@ -15,9 +15,9 @@ Welcome to ngc-learn's documentation!
 
 .. toctree::
    :maxdepth: 1
-   :caption: Tutorials:
+   :caption: Demonstrations:
 
-   tutorials/gen_model_tutorial
+   demonstrations/gen_model_demo
 
 .. toctree::
    :maxdepth: 1
