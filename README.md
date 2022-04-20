@@ -8,27 +8,27 @@
 
 <img src="img/ngc-learn-logo.png" width="300">
 
-<b>ngc-learn</b> is a Python library for building arbitrary predictive 
+<b>ngc-learn</b> is a Python library for building arbitrary predictive
 processing models based on the neural generative coding (NGC) computational
-framework. This toolkit is built on top of Tensorflow 2 and is distributed 
+framework. This toolkit is built on top of Tensorflow 2 and is distributed
 under the 3-Clause BSD license.
 
-It is currently maintained by the 
+It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
 ## <b>Installation:</b>
 
-<i>Setup:</i> Ensure that you have installed the following base dependencies in 
-your system. Note that this library was developed and tested on 
-Ubuntu 18.04. 
+<i>Setup:</i> Ensure that you have installed the following base dependencies in
+your system. Note that this library was developed and tested on
+Ubuntu 18.04.
 ngc-learn requires:
 1) Python (>=3.7)
 2) Numpy (>=1.20.0)
 3) Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
 4) scikit-learn (>=0.24.2) if using ngclearn.density (needed for the examples/)
 
-Once you have ensured that the above dependencies have been installed, you can then 
-run the setup script at the top of the <code>ngclearn</code> directory 
+Once you have ensured that the above dependencies have been installed, you can then
+run the setup script at the top of the <code>ngclearn</code> directory
 to have the <code>ngclearn</code> package install on your system using the
 following bash command:
 <pre>
@@ -44,7 +44,7 @@ and complete the following sequence of steps as depicted in the screenshot below
 
 Official documentation, including some tutorials, can be found <a href="">here</a>.
 
-<!--The technical report going over the theoretical underpinnings of the 
+<!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
 
 ## <b>Attribution:</b>
@@ -79,12 +79,12 @@ $ git clone https://github.com/ngc-learn/ngc-learn.git
 </pre>
 
 
-Version:  
+Version:<br>
 0.0.1 Alpha
 
 Author:
-Alexander G. Ororbia II
-Director, Neural Adaptive Computing (NAC) Laboratory
+Alexander G. Ororbia II<br>
+Director, Neural Adaptive Computing (NAC) Laboratory<br>
 Rochester Institute of Technology, Department of Computer Science
 
 ## <b>Copyright:</b>
@@ -95,4 +95,4 @@ terms of the BSD 3-clause license.
 
 You should have received a copy of the BSD 3-clause license with
 this software.<br>
-If not, please write to: ago@cs.rit.edu 
+If not, please write to: ago@cs.rit.edu
