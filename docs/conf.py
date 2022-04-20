@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('../'))
 
 import sphinx_rtd_theme
 
-import ngclearn
+#import ngclearn
 
 # -- Project information -----------------------------------------------------
 
@@ -27,8 +27,8 @@ copyright = "The Neural Adaptive Computing Laboratory 2022"
 author = 'Alexander Ororbia'
 
 # The full version, including alpha/beta/rc tags
-version = ngclearn.__version__
-release = ngclearn.__version__ #'0.0.1'
+version = '0.0.1' #ngclearn.__version__
+release = '0.0.1' #ngclearn.__version__ #'0.0.1'
 
 
 # -- General configuration ---------------------------------------------------
