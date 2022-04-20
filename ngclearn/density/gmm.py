@@ -11,7 +11,7 @@ import tensorflow as tf
 import sys
 import numpy as np
 #from sklearn import mixture
-from sklearn.cluster import KMeans
+#from sklearn.cluster import KMeans
 from scipy.stats import multivariate_normal
 sys.path.insert(0, 'utils/')
 sys.path.insert(0, 'models/')

@@ -1,0 +1,429 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ngclearn.museum.gncn_t1_sigma &mdash; ngc-learn 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ngc-learn
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ngc-learn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ngclearn.museum.gncn_t1_sigma</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ngclearn.museum.gncn_t1_sigma</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved</span>
+<span class="sd">You may use, distribute and modify this code under the</span>
+<span class="sd">terms of the BSD 3-clause license.</span>
+
+<span class="sd">You should have received a copy of the BSD 3-clause license with</span>
+<span class="sd">this file. If not, please write to: ago@cs.rit.edu</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="c1">#from config import Config</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">ngclearn.engine.nodes.snode</span> <span class="kn">import</span> <span class="n">SNode</span>
+<span class="kn">from</span> <span class="nn">ngclearn.engine.nodes.enode</span> <span class="kn">import</span> <span class="n">ENode</span>
+<span class="kn">from</span> <span class="nn">ngclearn.engine.ngc_graph</span> <span class="kn">import</span> <span class="n">NGCGraph</span>
+
+<span class="kn">from</span> <span class="nn">ngclearn.engine.nodes.fnode</span> <span class="kn">import</span> <span class="n">FNode</span>
+<span class="kn">from</span> <span class="nn">ngclearn.engine.proj_graph</span> <span class="kn">import</span> <span class="n">ProjectionGraph</span>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma">[docs]</a><span class="k">class</span> <span class="nc">GNCN_t1_Sigma</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Structure for constructing the model proposed in:</span>
+
+<span class="sd">    Friston, Karl. &quot;Hierarchical models in the brain.&quot; PLoS Computational</span>
+<span class="sd">    Biology 4.11 (2008): e1000211.</span>
+
+<span class="sd">    Note this model includes a Laplacian prior to induce some level of sparsity</span>
+<span class="sd">    in the latent activities.</span>
+
+<span class="sd">    This model, under the NGC computational framework, is referred to as</span>
+<span class="sd">    the GNCN-t1-Sigma/Friston, according to the naming convention in</span>
+<span class="sd">    (Ororbia &amp; Kifer 2022).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1</span>
+
+<span class="sd">    NOTE - args should contain values for the following:</span>
+<span class="sd">    z_top_dim: # of latent variables in layer z3 (top-most layer)</span>
+<span class="sd">    z_dim: # of latent variables in layers z1 and z2</span>
+<span class="sd">    x_dim: # of latent variables in layer z0 or sensory x</span>
+<span class="sd">    seed: number to control determinism of weight initialization</span>
+<span class="sd">    wght_sd: standard deviation of Gaussian initialization of weights</span>
+<span class="sd">    beta: latent state update factor</span>
+<span class="sd">    leak: strength of the leak variable in the latent states</span>
+<span class="sd">    lmbda: strength of the Laplacian prior applied over latent state activities</span>
+<span class="sd">    K: # of steps to take when conducting iterative inference/settling</span>
+<span class="sd">    act_fx: activation function for layers z1, z2, and z3</span>
+<span class="sd">    out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)</span>
+
+<span class="sd">    @author: Alexander Ororbia</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
+
+        <span class="n">z_top_dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;z_top_dim&quot;</span><span class="p">))</span>
+        <span class="n">z_dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;z_dim&quot;</span><span class="p">))</span>
+        <span class="n">x_dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;x_dim&quot;</span><span class="p">))</span>
+
+        <span class="n">seed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;seed&quot;</span><span class="p">))</span> <span class="c1">#69</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;beta&quot;</span><span class="p">))</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;K&quot;</span><span class="p">))</span>
+        <span class="n">act_fx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;act_fx&quot;</span><span class="p">)</span> <span class="c1">#&quot;tanh&quot;</span>
+        <span class="n">out_fx</span> <span class="o">=</span> <span class="s2">&quot;sigmoid&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">hasArg</span><span class="p">(</span><span class="s2">&quot;out_fx&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">out_fx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;out_fx&quot;</span><span class="p">)</span>
+        <span class="n">leak</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;leak&quot;</span><span class="p">))</span> <span class="c1">#0.0</span>
+
+        <span class="n">integrate_cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;integrate_type&quot;</span> <span class="p">:</span> <span class="s2">&quot;euler&quot;</span><span class="p">,</span> <span class="s2">&quot;use_dfx&quot;</span> <span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+        <span class="n">lmbda</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;lmbda&quot;</span><span class="p">))</span> <span class="c1">#0.0002</span>
+        <span class="n">prior_cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;prior_type&quot;</span> <span class="p">:</span> <span class="s2">&quot;laplace&quot;</span><span class="p">,</span> <span class="s2">&quot;lambda&quot;</span> <span class="p">:</span> <span class="n">lmbda</span><span class="p">}</span>
+        <span class="n">precis_cfg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+        <span class="c1">#use_mod_factor = (self.args.getArg(&quot;use_mod_factor&quot;).lower() == &#39;true&#39;)</span>
+
+        <span class="n">z3</span> <span class="o">=</span> <span class="n">SNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;z3&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z_top_dim</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span> <span class="n">leak</span><span class="o">=</span><span class="n">leak</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">act_fx</span><span class="p">,</span>
+                   <span class="n">integrate_kernel</span><span class="o">=</span><span class="n">integrate_cfg</span><span class="p">,</span> <span class="n">prior_kernel</span><span class="o">=</span><span class="n">prior_cfg</span><span class="p">)</span>
+        <span class="n">mu2</span> <span class="o">=</span> <span class="n">SNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mu2&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z_dim</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="s2">&quot;identity&quot;</span><span class="p">,</span> <span class="n">zeta</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">e2</span> <span class="o">=</span> <span class="n">ENode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;e2&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z_dim</span><span class="p">,</span> <span class="n">precis_kernel</span><span class="o">=</span><span class="n">precis_cfg</span><span class="p">)</span>
+        <span class="c1">#e2.use_mod_factor = use_mod_factor</span>
+        <span class="n">z2</span> <span class="o">=</span> <span class="n">SNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;z2&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z_dim</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span> <span class="n">leak</span><span class="o">=</span><span class="n">leak</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">act_fx</span><span class="p">,</span>
+                   <span class="n">integrate_kernel</span><span class="o">=</span><span class="n">integrate_cfg</span><span class="p">,</span> <span class="n">prior_kernel</span><span class="o">=</span><span class="n">prior_cfg</span><span class="p">)</span>
+        <span class="n">mu1</span> <span class="o">=</span> <span class="n">SNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mu1&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z_dim</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="s2">&quot;identity&quot;</span><span class="p">,</span> <span class="n">zeta</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">e1</span> <span class="o">=</span> <span class="n">ENode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;e1&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z_dim</span><span class="p">,</span> <span class="n">precis_kernel</span><span class="o">=</span><span class="n">precis_cfg</span><span class="p">)</span>
+        <span class="c1">#e1.use_mod_factor = use_mod_factor</span>
+        <span class="n">z1</span> <span class="o">=</span> <span class="n">SNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;z1&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z_dim</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span> <span class="n">leak</span><span class="o">=</span><span class="n">leak</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">act_fx</span><span class="p">,</span>
+                   <span class="n">integrate_kernel</span><span class="o">=</span><span class="n">integrate_cfg</span><span class="p">,</span> <span class="n">prior_kernel</span><span class="o">=</span><span class="n">prior_cfg</span><span class="p">)</span>
+        <span class="n">mu0</span> <span class="o">=</span> <span class="n">SNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mu0&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">x_dim</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">out_fx</span><span class="p">,</span> <span class="n">zeta</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">e0</span> <span class="o">=</span> <span class="n">ENode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;e0&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">x_dim</span><span class="p">)</span> <span class="c1">#, precis_kernel=precis_cfg)</span>
+        <span class="n">z0</span> <span class="o">=</span> <span class="n">SNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;z0&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">x_dim</span><span class="p">)</span>
+
+        <span class="c1"># create cable wiring scheme relating nodes to one another</span>
+        <span class="n">wght_sd</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getArg</span><span class="p">(</span><span class="s2">&quot;wght_sd&quot;</span><span class="p">))</span> <span class="c1">#0.025 #0.05 # 0.055</span>
+        <span class="n">dcable_cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;dense&quot;</span><span class="p">,</span> <span class="s2">&quot;has_bias&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;init&quot;</span> <span class="p">:</span> <span class="p">(</span><span class="s2">&quot;gaussian&quot;</span><span class="p">,</span><span class="n">wght_sd</span><span class="p">),</span> <span class="s2">&quot;seed&quot;</span> <span class="p">:</span> <span class="n">seed</span><span class="p">}</span>
+        <span class="n">pos_scable_cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="s2">&quot;coeff&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">}</span>
+        <span class="n">neg_scable_cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="s2">&quot;coeff&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">}</span>
+
+        <span class="n">z3_mu2</span> <span class="o">=</span> <span class="n">z3</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">mu2</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">dcable_cfg</span><span class="p">)</span>
+        <span class="n">mu2</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">e2</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;pred_mu&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">pos_scable_cfg</span><span class="p">)</span>
+        <span class="n">z2</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">e2</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;pred_targ&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">pos_scable_cfg</span><span class="p">)</span>
+        <span class="n">e2</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">z3</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">mirror_path_kernel</span><span class="o">=</span><span class="p">(</span><span class="n">z3_mu2</span><span class="p">,</span><span class="s2">&quot;symm_tied&quot;</span><span class="p">))</span>
+        <span class="n">e2</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">z2</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">neg_scable_cfg</span><span class="p">)</span>
+
+        <span class="n">z2_mu1</span> <span class="o">=</span> <span class="n">z2</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">mu1</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">dcable_cfg</span><span class="p">)</span>
+        <span class="n">mu1</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;pred_mu&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">pos_scable_cfg</span><span class="p">)</span>
+        <span class="n">z1</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;pred_targ&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">pos_scable_cfg</span><span class="p">)</span>
+        <span class="n">e1</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">z2</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">mirror_path_kernel</span><span class="o">=</span><span class="p">(</span><span class="n">z2_mu1</span><span class="p">,</span><span class="s2">&quot;symm_tied&quot;</span><span class="p">))</span>
+        <span class="n">e1</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">z1</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">neg_scable_cfg</span><span class="p">)</span>
+
+        <span class="n">z1_mu0</span> <span class="o">=</span> <span class="n">z1</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">mu0</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">dcable_cfg</span><span class="p">)</span>
+        <span class="n">mu0</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">e0</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;pred_mu&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">pos_scable_cfg</span><span class="p">)</span>
+        <span class="n">z0</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">e0</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;pred_targ&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">pos_scable_cfg</span><span class="p">)</span>
+        <span class="n">e0</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">z1</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">mirror_path_kernel</span><span class="o">=</span><span class="p">(</span><span class="n">z1_mu0</span><span class="p">,</span><span class="s2">&quot;symm_tied&quot;</span><span class="p">))</span>
+        <span class="n">e0</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">z0</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">cable_kernel</span><span class="o">=</span><span class="n">neg_scable_cfg</span><span class="p">)</span>
+
+        <span class="c1"># set up update rules and make relevant edges aware of these</span>
+        <span class="n">z3_mu2</span><span class="o">.</span><span class="n">set_update_rule</span><span class="p">(</span><span class="n">preact</span><span class="o">=</span><span class="p">(</span><span class="n">z3</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">),</span> <span class="n">postact</span><span class="o">=</span><span class="p">(</span><span class="n">e2</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">))</span>
+        <span class="n">z2_mu1</span><span class="o">.</span><span class="n">set_update_rule</span><span class="p">(</span><span class="n">preact</span><span class="o">=</span><span class="p">(</span><span class="n">z2</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">),</span> <span class="n">postact</span><span class="o">=</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">))</span>
+        <span class="n">z1_mu0</span><span class="o">.</span><span class="n">set_update_rule</span><span class="p">(</span><span class="n">preact</span><span class="o">=</span><span class="p">(</span><span class="n">z1</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">),</span> <span class="n">postact</span><span class="o">=</span><span class="p">(</span><span class="n">e0</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">))</span>
+
+        <span class="c1"># Set up graph - execution cycle/order</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot; &gt; Constructing NGC graph&quot;</span><span class="p">)</span>
+        <span class="n">ngc_model</span> <span class="o">=</span> <span class="n">NGCGraph</span><span class="p">(</span><span class="n">K</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
+        <span class="n">ngc_model</span><span class="o">.</span><span class="n">proj_update_mag</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span> <span class="c1">#-1.0</span>
+        <span class="n">ngc_model</span><span class="o">.</span><span class="n">proj_weight_mag</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">ngc_model</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="p">[</span><span class="n">z3</span><span class="p">,</span><span class="n">z2</span><span class="p">,</span><span class="n">z1</span><span class="p">,</span><span class="n">z0</span><span class="p">])</span>
+        <span class="n">ngc_model</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="p">[</span><span class="n">mu2</span><span class="p">,</span><span class="n">mu1</span><span class="p">,</span><span class="n">mu0</span><span class="p">])</span>
+        <span class="n">ngc_model</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="p">[</span><span class="n">e2</span><span class="p">,</span><span class="n">e1</span><span class="p">,</span><span class="n">e0</span><span class="p">])</span>
+        <span class="n">ngc_model</span><span class="o">.</span><span class="n">apply_constraints</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span> <span class="o">=</span> <span class="n">ngc_model</span>
+
+        <span class="c1"># build this NGC model&#39;s sampling graph</span>
+        <span class="n">z3_dim</span> <span class="o">=</span> <span class="n">ngc_model</span><span class="o">.</span><span class="n">getNode</span><span class="p">(</span><span class="s2">&quot;z3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">dim</span>
+        <span class="n">z2_dim</span> <span class="o">=</span> <span class="n">ngc_model</span><span class="o">.</span><span class="n">getNode</span><span class="p">(</span><span class="s2">&quot;z2&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">dim</span>
+        <span class="n">z1_dim</span> <span class="o">=</span> <span class="n">ngc_model</span><span class="o">.</span><span class="n">getNode</span><span class="p">(</span><span class="s2">&quot;z1&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">dim</span>
+        <span class="n">z0_dim</span> <span class="o">=</span> <span class="n">ngc_model</span><span class="o">.</span><span class="n">getNode</span><span class="p">(</span><span class="s2">&quot;z0&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">dim</span>
+        <span class="c1"># Set up complementary sampling graph to use in conjunction w/ NGC-graph</span>
+        <span class="n">s3</span> <span class="o">=</span> <span class="n">FNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;s3&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z3_dim</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">act_fx</span><span class="p">)</span>
+        <span class="n">s2</span> <span class="o">=</span> <span class="n">FNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;s2&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z2_dim</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">act_fx</span><span class="p">)</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="n">FNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;s1&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z1_dim</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">act_fx</span><span class="p">)</span>
+        <span class="n">s0</span> <span class="o">=</span> <span class="n">FNode</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;s0&quot;</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">z0_dim</span><span class="p">,</span> <span class="n">act_fx</span><span class="o">=</span><span class="n">out_fx</span><span class="p">)</span>
+        <span class="n">s3_s2</span> <span class="o">=</span> <span class="n">s3</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">s2</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">point_to_path</span><span class="o">=</span><span class="n">z3_mu2</span><span class="p">)</span>
+        <span class="n">s2_s1</span> <span class="o">=</span> <span class="n">s2</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">point_to_path</span><span class="o">=</span><span class="n">z2_mu1</span><span class="p">)</span>
+        <span class="n">s1_s0</span> <span class="o">=</span> <span class="n">s1</span><span class="o">.</span><span class="n">wire_to</span><span class="p">(</span><span class="n">s0</span><span class="p">,</span> <span class="n">src_var</span><span class="o">=</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">,</span> <span class="n">dest_var</span><span class="o">=</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">point_to_path</span><span class="o">=</span><span class="n">z1_mu0</span><span class="p">)</span>
+        <span class="n">sampler</span> <span class="o">=</span> <span class="n">ProjectionGraph</span><span class="p">()</span>
+        <span class="n">sampler</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="p">[</span><span class="n">s3</span><span class="p">,</span><span class="n">s2</span><span class="p">,</span><span class="n">s1</span><span class="p">,</span><span class="n">s0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngc_sampler</span> <span class="o">=</span> <span class="n">sampler</span>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma.project"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma.project">[docs]</a>    <span class="k">def</span> <span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z_sample</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run projection scheme to get a sample of the underlying directed</span>
+<span class="sd">        generative model given the clamped variable *z_sample*</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            z_sample: the input noise sample to project through the NGC graph</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            x_sample (sample(s) of the underlying generative model)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">readouts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngc_sampler</span><span class="o">.</span><span class="n">project</span><span class="p">(</span>
+                        <span class="n">clamped_vars</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;s3&quot;</span><span class="p">,</span><span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">z_sample</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">))],</span>
+                        <span class="n">readout_vars</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;s0&quot;</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">)]</span>
+                    <span class="p">)</span>
+        <span class="n">x_sample</span> <span class="o">=</span> <span class="n">readouts</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">x_sample</span></div>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma.settle"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma.settle">[docs]</a>    <span class="k">def</span> <span class="nf">settle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run an iterative settling process to find latent states given clamped</span>
+<span class="sd">        input and output variables</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: sensory input to reconstruct/predict</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            x_hat (predicted x)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">readouts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">settle</span><span class="p">(</span>
+                        <span class="n">clamped_vars</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;z0&quot;</span><span class="p">,</span> <span class="n">x</span><span class="p">)],</span>
+                        <span class="n">readout_vars</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;mu0&quot;</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">),(</span><span class="s2">&quot;mu1&quot;</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">),(</span><span class="s2">&quot;mu2&quot;</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">)]</span>
+                    <span class="p">)</span>
+        <span class="n">x_hat</span> <span class="o">=</span> <span class="n">readouts</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">x_hat</span></div>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma.calc_updates"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma.calc_updates">[docs]</a>    <span class="k">def</span> <span class="nf">calc_updates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">avg_update</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate adjustments to parameters under this given model and its</span>
+<span class="sd">        current internal state values</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            delta, a list of synaptic matrix updates (that follow order of .theta)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Ns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="s2">&quot;z0&quot;</span><span class="p">,</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">calc_updates</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">avg_update</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">delta</span><span class="p">)):</span>
+                <span class="n">delta</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">Ns</span> <span class="o">*</span> <span class="mf">1.0</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">delta</span></div>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma.update"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">avg_update</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates synaptic parameters/connections given sensory input</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: a sensory sample or batch of sensory samples</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settle</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_updates</span><span class="p">(</span><span class="n">avg_update</span><span class="o">=</span><span class="n">avg_update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">apply_gradients</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">apply_constraints</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma.clear"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clears the states/values of the stateful nodes in this NGC system&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngc_sampler</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma.print_norms"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma.print_norms">[docs]</a>    <span class="k">def</span> <span class="nf">print_norms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Prints the Frobenius norms of each parameter of this system&quot;&quot;&quot;</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">:</span>
+            <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> | </span><span class="si">{}</span><span class="s2"> : </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">param</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">param</span><span class="p">,</span><span class="nb">ord</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+        <span class="c1">#str = &quot;{}\n&quot;.format(str)</span>
+        <span class="k">return</span> <span class="nb">str</span></div>
+
+<div class="viewcode-block" id="GNCN_t1_Sigma.set_weights"><a class="viewcode-back" href="../../../source/ngclearn.museum.html#ngclearn.museum.gncn_t1_sigma.GNCN_t1_Sigma.set_weights">[docs]</a>    <span class="k">def</span> <span class="nf">set_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">0.005</span><span class="p">):</span> <span class="c1">#0.001):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deep copies weight variables of another model (of the same exact type)</span>
+<span class="sd">        into this model&#39;s weight variables</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            source: the source model to extract/transfer params from</span>
+<span class="sd">            tau: if &gt; 0, the Polyak averaging coefficient</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#self.param_var = copy.deepcopy(source.param_var)</span>
+        <span class="k">if</span> <span class="n">tau</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">[</span><span class="n">l</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">tau</span><span class="p">)</span> <span class="o">+</span> <span class="n">source</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">[</span><span class="n">l</span><span class="p">]</span> <span class="o">*</span> <span class="n">tau</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span> <span class="n">source</span><span class="o">.</span><span class="n">ngc_model</span><span class="o">.</span><span class="n">theta</span><span class="p">[</span><span class="n">l</span><span class="p">]</span> <span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, Alexander Ororbia
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

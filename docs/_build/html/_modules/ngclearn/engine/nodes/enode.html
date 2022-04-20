@@ -1,0 +1,432 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ngclearn.engine.nodes.enode &mdash; ngc-learn 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> ngc-learn
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">ngc-learn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ngclearn.engine.nodes.enode</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ngclearn.engine.nodes.enode</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved</span>
+<span class="sd">You may use, distribute and modify this code under the</span>
+<span class="sd">terms of the BSD 3-clause license.</span>
+
+<span class="sd">You should have received a copy of the BSD 3-clause license with</span>
+<span class="sd">this file. If not, please write to: ago@cs.rit.edu</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">ngclearn.engine.nodes.node</span> <span class="kn">import</span> <span class="n">Node</span>
+<span class="kn">from</span> <span class="nn">ngclearn.utils</span> <span class="kn">import</span> <span class="n">transform_utils</span>
+
+<div class="viewcode-block" id="ENode"><a class="viewcode-back" href="../../../../source/ngclearn.engine.nodes.html#ngclearn.engine.nodes.enode.ENode">[docs]</a><span class="k">class</span> <span class="nc">ENode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">error_type</span><span class="o">=</span><span class="s2">&quot;mse&quot;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">leak</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">zeta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                 <span class="n">act_fx</span><span class="o">=</span><span class="s2">&quot;identity&quot;</span><span class="p">,</span> <span class="n">precis_kernel</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ex_scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+        <span class="n">node_type</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">node_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_type</span> <span class="o">=</span> <span class="n">error_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_mod_factor</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ex_scale</span> <span class="o">=</span> <span class="n">ex_scale</span>
+
+        <span class="n">fx</span><span class="p">,</span> <span class="n">dfx</span> <span class="o">=</span> <span class="n">transform_utils</span><span class="o">.</span><span class="n">decide_fun</span><span class="p">(</span><span class="n">act_fx</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fx</span> <span class="o">=</span> <span class="n">fx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dfx</span> <span class="o">=</span> <span class="n">dfx</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Prec</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># the precision matrix for this node</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Sigma</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># the covariance matrix for this node</span>
+        <span class="k">if</span> <span class="n">precis_kernel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># (init_type, sigma)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">is_learnable</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># if precision is used, then this node becomes &quot;learnable&quot;</span>
+            <span class="n">prec_type</span><span class="p">,</span> <span class="n">prec_sigma</span> <span class="o">=</span> <span class="n">precis_kernel</span>
+            <span class="c1">#if self.prec_sigma &gt; 0.0:</span>
+            <span class="c1"># create potential precision synapses at point of connection to target_node</span>
+            <span class="n">diag</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="c1">#* prec_sigma</span>
+            <span class="n">init</span> <span class="o">=</span> <span class="n">diag</span> <span class="o">+</span> <span class="n">tf</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">],</span><span class="n">minval</span><span class="o">=-</span><span class="n">prec_sigma</span><span class="p">,</span><span class="n">maxval</span><span class="o">=</span><span class="n">prec_sigma</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">diag</span><span class="p">)</span>
+            <span class="c1">#init = diag + init_weights(&quot;orthogonal&quot;, [self.z_dims[l],self.z_dims[l]], stddev=prec_sigma, seed=seed) * (1.0 - diag)</span>
+            <span class="n">Sigma</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">init</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Sigma_</span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Sigma</span> <span class="o">=</span> <span class="n">Sigma</span>
+
+        <span class="c1"># node meta-parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">leak</span> <span class="o">=</span> <span class="n">leak</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zeta</span> <span class="o">=</span> <span class="n">zeta</span>
+
+        <span class="c1"># error neuron-specific vector statistics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;pred_mu&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;pred_targ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;L&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;avg_scalar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># if clamped/set, will scale error neurons and loss by 1/N, N = mini-batch size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;weights&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">build_tick</span><span class="p">()</span>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1"># Setup Routines</span>
+    <span class="c1">############################################################################</span>
+
+<div class="viewcode-block" id="ENode.clear"><a class="viewcode-back" href="../../../../source/ngclearn.engine.nodes.html#ngclearn.engine.nodes.enode.ENode.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;pred_mu&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;pred_targ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;L&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;avg_scalar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;weights&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="ENode.check_correctness"><a class="viewcode-back" href="../../../../source/ngclearn.engine.nodes.html#ngclearn.engine.nodes.enode.ENode.check_correctness">[docs]</a>    <span class="k">def</span> <span class="nf">check_correctness</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">is_correct</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_nodes</span><span class="p">)):</span>
+            <span class="n">n_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_nodes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">cable_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_cables</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">dest_var_j</span> <span class="o">=</span> <span class="n">cable_j</span><span class="o">.</span><span class="n">out_var</span>
+            <span class="k">if</span> <span class="n">dest_var_j</span> <span class="o">!=</span> <span class="s2">&quot;pred_mu&quot;</span> <span class="ow">and</span> <span class="n">dest_var_j</span> <span class="o">!=</span> <span class="s2">&quot;pred_targ&quot;</span><span class="p">:</span>
+                <span class="n">is_correct</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: Cable </span><span class="si">{0}</span><span class="s2"> mis-wires to </span><span class="si">{1}</span><span class="s2">.</span><span class="si">{2}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cable_j</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dest_var_j</span><span class="p">))</span>
+                <span class="k">break</span>
+        <span class="n">n_ins</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_nodes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n_ins</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: Only two nodes can exactly wire to this error node, not </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_ins</span><span class="p">))</span>
+            <span class="n">is_correct</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">is_correct</span></div>
+
+    <span class="c1">############################################################################</span>
+    <span class="c1"># Signal Transmission Routines</span>
+    <span class="c1">############################################################################</span>
+
+<div class="viewcode-block" id="ENode.step"><a class="viewcode-back" href="../../../../source/ngclearn.engine.nodes.html#ngclearn.engine.nodes.enode.ENode.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">skip_core_calc</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">Ws</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;weights&quot;</span><span class="p">)</span>
+        <span class="n">Ns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;avg_scalar&quot;</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span>
+        <span class="c1">#pre_z = None</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_clamped</span> <span class="ow">is</span> <span class="kc">False</span> <span class="ow">and</span> <span class="n">skip_core_calc</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_nodes</span><span class="p">)):</span>
+                <span class="n">n_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_nodes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">cable_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_cables</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">dest_var_j</span> <span class="o">=</span> <span class="n">cable_j</span><span class="o">.</span><span class="n">out_var</span>
+                <span class="n">tick_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tick</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dest_var_j</span><span class="p">)</span>
+                <span class="n">var_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dest_var_j</span><span class="p">)</span> <span class="c1"># get current value of component</span>
+                <span class="n">dz_j</span> <span class="o">=</span> <span class="n">cable_j</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">n_j</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">tick_j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1">#if var_j is not None:</span>
+                    <span class="n">var_j</span> <span class="o">=</span> <span class="n">var_j</span> <span class="o">+</span> <span class="n">dz_j</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">var_j</span> <span class="o">=</span> <span class="n">dz_j</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="n">dest_var_j</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_j</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tick</span><span class="p">[</span><span class="n">dest_var_j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tick</span><span class="p">[</span><span class="n">dest_var_j</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="n">pred_mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pred_mu&quot;</span><span class="p">)</span>
+            <span class="n">pred_targ</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pred_targ&quot;</span><span class="p">)</span>
+
+            <span class="c1"># TODO: should this block of code for masking be moved elsewhere to improve efficiency?</span>
+            <span class="n">bmask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mask&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">bmask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># applies mask to all component variables of this node</span>
+                <span class="k">if</span> <span class="n">pred_mu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">pred_mu</span> <span class="o">=</span> <span class="n">pred_mu</span> <span class="o">*</span> <span class="n">bmask</span>
+                <span class="k">if</span> <span class="n">pred_targ</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">pred_targ</span> <span class="o">=</span> <span class="n">pred_targ</span> <span class="o">*</span> <span class="n">bmask</span>
+
+            <span class="k">if</span> <span class="n">pred_mu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR:  </span><span class="si">{0}</span><span class="s2">.pred_mu is NONE!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pred_targ</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR:  </span><span class="si">{0}</span><span class="s2">.pred_targ is NONE!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_type</span> <span class="o">==</span> <span class="s2">&quot;mse&quot;</span><span class="p">:</span>
+                <span class="n">dz</span> <span class="o">=</span> <span class="n">pred_targ</span> <span class="o">-</span> <span class="n">pred_mu</span>
+                <span class="c1">#dz = -dz</span>
+                <span class="c1">#z = z * self.zeta + dz * self.beta - z * leak</span>
+                <span class="n">z</span> <span class="o">=</span> <span class="n">dz</span>
+                <span class="n">e</span> <span class="o">=</span> <span class="n">z</span>
+                <span class="c1"># compute local loss that this error node represents</span>
+                <span class="n">L_batch</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">e</span> <span class="o">*</span> <span class="n">e</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1">#/(e.shape[0] * 2.0)</span>
+                <span class="k">if</span> <span class="n">Ws</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># optionally scale units by a fixed external set of weights</span>
+                    <span class="n">L_batch</span> <span class="o">=</span> <span class="n">L_batch</span> <span class="o">*</span> <span class="n">Ws</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">*</span> <span class="n">Ws</span>
+                <span class="n">L</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">L_batch</span><span class="p">)</span>
+                <span class="n">z</span> <span class="o">=</span> <span class="n">z</span>  <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ex_scale</span>
+                <span class="k">if</span> <span class="n">Ns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># optionally scale units and local loss by 1/Ns</span>
+                    <span class="n">L</span> <span class="o">=</span> <span class="n">L</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">Ns</span><span class="p">)</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">Ns</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;L&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">L</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error: </span><span class="si">{0}</span><span class="s2"> for error neuron not implemented yet&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error_type</span><span class="p">))</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># Spratling-style error neurons</span>
+            <span class="c1"># eps2 = 1e-2</span>
+            <span class="c1"># self.e = self.z/tf.math.maximum(eps2, self.z_mu)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Prec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1">#pre_z = e + 0</span>
+                <span class="n">z</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Prec</span><span class="p">)</span>
+                <span class="c1">#sys.exit(0)</span>
+        <span class="c1"># the post-activation function is computed always, even if pre-activation is clamped</span>
+        <span class="n">phi_z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fx</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;dz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dz</span>
+        <span class="c1">#self.stat[&quot;pre_z&quot;] = pre_z # FOR COMPATIBILITY WITH PRECISION CALC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">phi_z</span>
+        <span class="c1"># print(&quot;***************&quot;)</span>
+        <span class="c1"># print(&quot;{}.phi(z) =\n{}&quot;.format(self.name,phi_z))</span>
+
+        <span class="n">bmask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mask&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bmask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># applies mask to all component variables of this node</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dz&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;dz&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dz&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="n">bmask</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="n">bmask</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="p">[</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="n">bmask</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">build_tick</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ENode.compute_precision"><a class="viewcode-back" href="../../../../source/ngclearn.engine.nodes.html#ngclearn.engine.nodes.enode.ENode.compute_precision">[docs]</a>    <span class="k">def</span> <span class="nf">compute_precision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rebuild_cov</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Co-function that pre-computes the precision matrices for this NGC node.</span>
+<span class="sd">            NGC uses the Cholesky-decomposition form of precision (Sigma)^{-1}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="mf">0.00025</span> <span class="c1">#0.0001 # stability factor for precision/covariance computation</span>
+        <span class="n">cov_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Sigma</span> <span class="c1">#tf.math.abs(self.Sigma[l])</span>
+
+        <span class="n">diag_l</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">cov_l</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">vari_l</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">cov_l</span><span class="p">)</span> <span class="o">*</span> <span class="n">diag_l</span> <span class="c1"># restrict diag( Sigma ) to be &gt;= 1.0</span>
+        <span class="c1"># #vari_l = tf.math.abs(cov_l * diag_l) # variance is restricted to be positive</span>
+        <span class="n">cov_l</span> <span class="o">=</span> <span class="n">vari_l</span> <span class="o">+</span> <span class="p">(</span><span class="n">cov_l</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">diag_l</span><span class="p">))</span>
+        <span class="c1">#cov_l = cov_l + (1.0 - diag_l) * 0.001</span>
+        <span class="n">cov_l</span> <span class="o">=</span> <span class="n">cov_l</span> <span class="o">+</span> <span class="n">eps</span>
+
+        <span class="c1"># min_val = 0.005</span>
+        <span class="c1"># m_l = tf.cast(tf.math.less(cov_l, min_val),dtype=tf.float32)</span>
+        <span class="c1"># cov_l = cov_l * (1.0 - m_l) + (m_l * min_val)</span>
+        <span class="c1">#cov_l = cov_l * (1.0 - diag_l) + diag_l</span>
+        <span class="k">if</span> <span class="n">rebuild_cov</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Sigma</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span> <span class="n">cov_l</span> <span class="p">)</span>
+
+        <span class="c1"># Note for Numerical Stability:</span>
+        <span class="c1">#   Add small pertturbation eps * I to covariance before decomposing</span>
+        <span class="c1">#   (due to rapidly decaying Eigen values)</span>
+        <span class="c1">#R = tf.linalg.cholesky(cov_l + diag_l) # decompose</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">cov_l</span><span class="p">)</span> <span class="c1"># + diag_l * eps) # decompose</span>
+        <span class="c1">#R = tf.linalg.cholesky(cov_l)</span>
+        <span class="n">prec_l</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">triangular_solve</span><span class="p">(</span><span class="n">R</span><span class="p">,</span><span class="n">diag_l</span><span class="p">,</span><span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Prec</span> <span class="o">=</span> <span class="n">prec_l</span></div>
+
+        <span class="c1"># eps = 0.0005 #0.0001</span>
+        <span class="c1"># cov_l = self.Sigma #tf.math.abs(self.Sigma[l])</span>
+        <span class="c1"># diag_l = tf.eye(cov_l.shape[1])</span>
+        <span class="c1"># vari_l = tf.math.abs(cov_l * diag_l) # variance is restricted to be positive</span>
+        <span class="c1"># cov_l = vari_l + (cov_l * (1.0 - diag_l))</span>
+        <span class="c1"># if rebuild_cov is True:</span>
+        <span class="c1">#     self.Sigma.assign( cov_l )</span>
+        <span class="c1"># # Note for Numerical Stability: Add small pertturbation eps * I to covariance before decomposing</span>
+        <span class="c1"># #                               (due to rapidly decaying Eigen values)</span>
+        <span class="c1"># R = tf.linalg.cholesky(cov_l + diag_l * eps) # decompose</span>
+        <span class="c1"># #R = tf.linalg.cholesky(cov_l) # decompose</span>
+        <span class="c1"># prec_l = tf.transpose(tf.linalg.triangular_solve(R,diag_l,lower=True))</span>
+        <span class="c1"># self.Prec = prec_l</span>
+
+<div class="viewcode-block" id="ENode.calc_update"><a class="viewcode-back" href="../../../../source/ngclearn.engine.nodes.html#ngclearn.engine.nodes.enode.ENode.calc_update">[docs]</a>    <span class="k">def</span> <span class="nf">calc_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">update_radius</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Calculate the updates to the local synaptic parameters related to this</span>
+<span class="sd">            specific node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># compute update to lateral correlation synapses</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Sigma</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Prec_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Prec</span>
+            <span class="c1">#e_noprec = self.stat.get(&quot;pre_z&quot;)</span>
+            <span class="c1">#e = e_noprec</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phi(z)&quot;</span><span class="p">)</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">transpose_a</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1">#dW = tf.matmul(tf.matmul(-Prec_l, B), Prec_l) - Prec_l</span>
+            <span class="n">dW</span> <span class="o">=</span> <span class="p">(</span><span class="n">B</span> <span class="o">-</span> <span class="n">Prec_l</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="c1"># d_L_l / d_cov_l (derivative w.r.t. covariance)</span>
+            <span class="c1">#dW = tf.matmul(tf.matmul(Prec_l, B), Prec_l) * 0.5 - Prec_l * 0.5 # deriv w.r.t. Cov, can get Prec from Cholesky/Triangular solve from Cov</span>
+            <span class="c1">#dW = self.Sigma[l] - B * 0.5 # &lt;-- direct derivative w.r.t. precision but would require Cov = (Prec)^{-1}</span>
+            <span class="k">if</span> <span class="n">update_radius</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">dW</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_norm</span><span class="p">(</span><span class="n">dW</span><span class="p">,</span> <span class="n">update_radius</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_mod_factor</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">W_M</span> <span class="o">=</span> <span class="n">transform_utils</span><span class="o">.</span><span class="n">calc_modulatory_factor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Sigma</span><span class="p">)</span>
+                <span class="n">dW</span> <span class="o">=</span> <span class="n">dW</span> <span class="o">*</span> <span class="n">W_M</span>
+            <span class="n">dW</span> <span class="o">=</span> <span class="o">-</span><span class="n">dW</span>
+            <span class="n">delta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dW</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">delta</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, Alexander Ororbia
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

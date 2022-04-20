@@ -1,20 +1,10 @@
 """
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the BSD 3-clause license.
-
-You should have received a copy of the BSD 3-clause license with
-this file. If not, please write to: ago@cs.rit.edu
-"""
-
-import tensorflow as tf
-import numpy as np
-
-"""
 Contains general mathematical measurement/metric functions.
 
 @author Alexander Ororbia
 """
+import tensorflow as tf
+import numpy as np
 
 def cat_nll(y_pred, y_true, epsilon=0.0000001): #1e-7):
     ''' Negative Categorical Log Likelihood '''

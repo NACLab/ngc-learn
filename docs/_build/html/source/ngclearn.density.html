@@ -1,0 +1,289 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ngclearn.density package &mdash; ngc-learn 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> ngc-learn
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">ngclearn.density package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-ngclearn.density.gmm">ngclearn.density.gmm module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.density">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ngc-learn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>ngclearn.density package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/ngclearn.density.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="ngclearn-density-package">
+<h1>ngclearn.density package<a class="headerlink" href="#ngclearn-density-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-ngclearn.density.gmm">
+<span id="ngclearn-density-gmm-module"></span><h2>ngclearn.density.gmm module<a class="headerlink" href="#module-ngclearn.density.gmm" title="Permalink to this headline">¶</a></h2>
+<p>Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
+You may use, distribute and modify this code under the
+terms of the BSD 3-clause license.</p>
+<p>You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: <a class="reference external" href="mailto:ago&#37;&#52;&#48;cs&#46;rit&#46;edu">ago<span>&#64;</span>cs<span>&#46;</span>rit<span>&#46;</span>edu</a></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ngclearn.density.gmm.</span></span><span class="sig-name descname"><span class="pre">GMM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_diag_cov</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_kmeans</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.calc_gaussian_logpdf">
+<span class="sig-name descname"><span class="pre">calc_gaussian_logpdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.calc_gaussian_logpdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.calc_gaussian_logpdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates log densities/probabilities of data X under each component given this GMM</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.calc_prob">
+<span class="sig-name descname"><span class="pre">calc_prob</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.calc_prob"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.calc_prob" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes probabilities p(z|x) of data samples in X under this GMM</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.calc_w_log_prob">
+<span class="sig-name descname"><span class="pre">calc_w_log_prob</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.calc_w_log_prob"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.calc_w_log_prob" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates weighted log probabilities of data X under each component given this GMM</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.e_step">
+<span class="sig-name descname"><span class="pre">e_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.e_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.e_step" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.estimate_gaussian_parameters">
+<span class="sig-name descname"><span class="pre">estimate_gaussian_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.estimate_gaussian_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.estimate_gaussian_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.estimate_log_prob">
+<span class="sig-name descname"><span class="pre">estimate_log_prob</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.estimate_log_prob"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.estimate_log_prob" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.fit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.init_from_ScikitLearn">
+<span class="sig-name descname"><span class="pre">init_from_ScikitLearn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gmm</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.init_from_ScikitLearn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.init_from_ScikitLearn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a GMM from a pre-trained Scikit-Learn model – conversion
+sets things up for a row-major form of sampling, i.e., s ~ mu_k + eps * (L_k^T)
+where k is the sampled component index</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.m_step">
+<span class="sig-name descname"><span class="pre">m_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_resp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.m_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.m_step" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Chooses which component samples in X are likely to belong to given p(z|x)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.sample">
+<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode_i</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samples_modes_evenly</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>(Efficiently) Draw samples from the current underlying GMM model</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.density.gmm.GMM.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/density/gmm.html#GMM.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.density.gmm.GMM.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a single iterative update of parameters (assuming model initialized)</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-ngclearn.density">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ngclearn.density" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, Alexander Ororbia
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

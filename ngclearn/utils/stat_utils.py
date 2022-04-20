@@ -1,22 +1,13 @@
 """
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the BSD 3-clause license.
-
-You should have received a copy of the BSD 3-clause license with
-this file. If not, please write to: ago@cs.rit.edu
-"""
-
-"""
 Statistical utilities function file
 
 @author: Alexander Ororbia
 """
+
 import tensorflow as tf
 import numpy as np
 seed = 69
 #tf.random.set_random_seed(seed=seed)
-
 tf.random.set_seed(seed=seed)
 np.random.seed(seed)
 

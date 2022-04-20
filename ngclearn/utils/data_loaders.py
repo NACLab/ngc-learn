@@ -1,23 +1,16 @@
 """
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the BSD 3-clause license.
-
-You should have received a copy of the BSD 3-clause license with
-this file. If not, please write to: ago@cs.rit.edu
-"""
-
-"""
 Contains some specialized loaders for various dataset benchmarks
 
 @author: Alex Ororbia
 """
+
 import tensorflow as tf
 import numpy as np
 import scipy
 #import tensorflow.contrib.eager as tfe
 #tf.enable_eager_execution()
 #tf.executing_eagerly()
+
 seed = 69
 #tf.random.set_random_seed(seed=seed)
 

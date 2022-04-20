@@ -165,12 +165,10 @@ class SpNode(Node):
     #@tf.function
     def apply_SRM_LIF(self, J_t, V_t, rfr_t, spike_t, dt, tau_m, membrane_leak, abs_refractory_time = 0.0, V_thr=0.5):
         """
-        ###########################################################################################
-            Apply the leaky integrate-and-fire spike-response model (SRM LIF):\n
-            V(t + dt) = V(t) + ( -V(t) * leak_lvl + I(t) ) * (dt / tau_m), where tau_m = R_m * C_m
+        Apply the leaky integrate-and-fire spike-response model (SRM LIF):
+        V(t + dt) = V(t) + ( -V(t) * leak_lvl + I(t) ) * (dt / tau_m), where tau_m = R_m * C_m
 
-            @returns (spike_t, volt_t, refractory variable)
-        ###########################################################################################
+        Returns: (spike_t, volt_t, refractory variable)
         """
         rfr_t = tf.nn.relu(tf.subtract(rfr_t, dt))
         #rfr_t.assign( tf.nn.relu(tf.subtract(rfr_t, dt)) )

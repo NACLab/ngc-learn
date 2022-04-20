@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ngclearn.engine.proj_graph &mdash; ngc-learn 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ngc-learn
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ngc-learn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ngclearn.engine.proj_graph</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ngclearn.engine.proj_graph</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved</span>
+<span class="sd">You may use, distribute and modify this code under the</span>
+<span class="sd">terms of the BSD 3-clause license.</span>
+
+<span class="sd">You should have received a copy of the BSD 3-clause license with</span>
+<span class="sd">this file. If not, please write to: ago@cs.rit.edu</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<div class="viewcode-block" id="ProjectionGraph"><a class="viewcode-back" href="../../../source/ngclearn.engine.html#ngclearn.engine.proj_graph.ProjectionGraph">[docs]</a><span class="k">class</span> <span class="nc">ProjectionGraph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implements a projection graph -- useful for conducting ancestral sampling of a</span>
+<span class="sd">    directed generative model or ancestral projection of a clamped graph.</span>
+<span class="sd">    Note that this graph system is NOT learnable.</span>
+
+<span class="sd">    @author: Alexander G. Ororbia</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;sampler&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exec_cycles</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># node execution cycles</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cables</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="ProjectionGraph.set_cycle"><a class="viewcode-back" href="../../../source/ngclearn.engine.html#ngclearn.engine.proj_graph.ProjectionGraph.set_cycle">[docs]</a>    <span class="k">def</span> <span class="nf">set_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set execution cycle for this graph</span>
+
+<span class="sd">        :param nodes:</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exec_cycles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)):</span> <span class="c1"># collect any learnable cables</span>
+            <span class="n">n_j</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">n_j</span><span class="o">.</span><span class="n">node_type</span> <span class="o">!=</span> <span class="s2">&quot;feedforward&quot;</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: node is of type </span><span class="si">{0}</span><span class="s2"> but must be of type |feedforward_node|&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_j</span><span class="o">.</span><span class="n">node_type</span><span class="p">))</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n_j</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_j</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">n_j</span><span class="o">.</span><span class="n">input_cables</span><span class="p">)):</span>
+                <span class="n">cable_i</span> <span class="o">=</span> <span class="n">n_j</span><span class="o">.</span><span class="n">input_cables</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cables</span><span class="p">[</span><span class="n">cable_i</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cable_i</span>
+                <span class="k">if</span> <span class="n">cable_i</span><span class="o">.</span><span class="n">W</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">theta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cable_i</span><span class="o">.</span><span class="n">W</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ProjectionGraph.extract"><a class="viewcode-back" href="../../../source/ngclearn.engine.html#ngclearn.engine.proj_graph.ProjectionGraph.extract">[docs]</a>    <span class="k">def</span> <span class="nf">extract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_name</span><span class="p">,</span> <span class="n">node_var_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract a particular signal from a particular node embedded in this graph</span>
+
+<span class="sd">        :param node_name:</span>
+<span class="sd">        :param node_var_name:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node_name</span><span class="p">]</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">node_var_name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ProjectionGraph.getNode"><a class="viewcode-back" href="../../../source/ngclearn.engine.html#ngclearn.engine.proj_graph.ProjectionGraph.getNode">[docs]</a>    <span class="k">def</span> <span class="nf">getNode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract a particular node from this graph</span>
+
+<span class="sd">        :param node_name:</span>
+<span class="sd">        :param node_var_name:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node_name</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ProjectionGraph.project"><a class="viewcode-back" href="../../../source/ngclearn.engine.html#ngclearn.engine.proj_graph.ProjectionGraph.project">[docs]</a>    <span class="k">def</span> <span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clamped_vars</span><span class="p">,</span> <span class="n">readout_vars</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Project signals through the execution pathway(s) defined by this graph</span>
+
+<span class="sd">        :param clamped_vars:</span>
+<span class="sd">        :param readout_vars:</span>
+<span class="sd">        :return: readouts</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c1"># Step 1: Clamp variables that will persist during sampling/projection step</span>
+        <span class="k">for</span> <span class="n">clamped_var</span> <span class="ow">in</span> <span class="n">clamped_vars</span><span class="p">:</span>
+            <span class="n">var_name</span><span class="p">,</span> <span class="n">var_value</span> <span class="o">=</span> <span class="n">clamped_var</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">var_value</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">clamp</span><span class="p">((</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">var_value</span><span class="p">),</span> <span class="n">is_persistent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exec_cycles</span><span class="p">)):</span>
+            <span class="n">cycle_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exec_cycles</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cycle_c</span><span class="p">)):</span>
+                <span class="n">cycle_c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="c1"># Post-process NGC graph by extracting predictions at indicated output nodes</span>
+        <span class="n">readouts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="n">readout_vars</span><span class="p">:</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+            <span class="n">var_value</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">comp_name</span><span class="p">)</span>
+            <span class="n">readouts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">comp_name</span><span class="p">,</span> <span class="n">var_value</span><span class="p">)</span> <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">readouts</span></div>
+
+<div class="viewcode-block" id="ProjectionGraph.clear"><a class="viewcode-back" href="../../../source/ngclearn.engine.html#ngclearn.engine.proj_graph.ProjectionGraph.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear/delete any persistent signals in this graph</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exec_cycles</span><span class="p">)):</span>
+            <span class="n">cycle_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exec_cycles</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cycle_c</span><span class="p">)):</span>
+                <span class="n">cycle_c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, Alexander Ororbia
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,569 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ngclearn.utils package &mdash; ngc-learn 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> ngc-learn
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">ngclearn.utils package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils.config">ngclearn.utils.config module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils.data_loaders">ngclearn.utils.data_loaders module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils.data_utils">ngclearn.utils.data_utils module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils.io_utils">ngclearn.utils.io_utils module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils.metric_utils">ngclearn.utils.metric_utils module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils.stat_utils">ngclearn.utils.stat_utils module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils.transform_utils">ngclearn.utils.transform_utils module</a></li>
+<li><a class="reference internal" href="#module-ngclearn.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ngc-learn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>ngclearn.utils package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/ngclearn.utils.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="ngclearn-utils-package">
+<h1>ngclearn.utils package<a class="headerlink" href="#ngclearn-utils-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-ngclearn.utils.config">
+<span id="ngclearn-utils-config-module"></span><h2>ngclearn.utils.config module<a class="headerlink" href="#module-ngclearn.utils.config" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="ngclearn.utils.config.Config">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ngclearn.utils.config.</span></span><span class="sig-name descname"><span class="pre">Config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/config.html#Config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.config.Config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Simple configuration object to house named arguments for experiments</p>
+<p>File format is:
+# Comments start with pound symbol
+arg_name = arg_value
+arg_name = arg_value # side comment that will be stripped off</p>
+<p>&#64;author: Alex Ororbia</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.utils.config.Config.getArg">
+<span class="sig-name descname"><span class="pre">getArg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/config.html#Config.getArg"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.config.Config.getArg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve argument from current configuration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.utils.config.Config.hasArg">
+<span class="sig-name descname"><span class="pre">hasArg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/config.html#Config.hasArg"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.config.Config.hasArg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if argument exists (or if it is known by this config object)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ngclearn.utils.config.Config.setArg">
+<span class="sig-name descname"><span class="pre">setArg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg_value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/config.html#Config.setArg"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.config.Config.setArg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set argument directly</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-ngclearn.utils.data_loaders">
+<span id="ngclearn-utils-data-loaders-module"></span><h2>ngclearn.utils.data_loaders module<a class="headerlink" href="#module-ngclearn.utils.data_loaders" title="Permalink to this headline">¶</a></h2>
+<p>Contains some specialized loaders for various dataset benchmarks</p>
+<p>&#64;author: Alex Ororbia</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.data_loaders.binarized_shuffled_omniglot">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.data_loaders.</span></span><span class="sig-name descname"><span class="pre">binarized_shuffled_omniglot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">out_dir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/data_loaders.html#binarized_shuffled_omniglot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.data_loaders.binarized_shuffled_omniglot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-ngclearn.utils.data_utils">
+<span id="ngclearn-utils-data-utils-module"></span><h2>ngclearn.utils.data_utils module<a class="headerlink" href="#module-ngclearn.utils.data_utils" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="ngclearn.utils.data_utils.DataLoader">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ngclearn.utils.data_utils.</span></span><span class="sig-name descname"><span class="pre">DataLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">design_matrices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/data_utils.html#DataLoader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.data_utils.DataLoader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>design_matrices</strong> – list of named data design matrices - [(“name”, matrix), …]</p></li>
+<li><p><strong>batch_size</strong> – number of samples to place inside a mini-batch</p></li>
+</ul>
+</dd>
+<dt class="field-even">Disable_shuffle disable_shuffle</dt>
+<dd class="field-even"><p>if True turns off sample shuffling</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ngclearn.utils.io_utils">
+<span id="ngclearn-utils-io-utils-module"></span><h2>ngclearn.utils.io_utils module<a class="headerlink" href="#module-ngclearn.utils.io_utils" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.io_utils.deserialize">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.io_utils.</span></span><span class="sig-name descname"><span class="pre">deserialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/io_utils.html#deserialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.io_utils.deserialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>De-serializes a object from disk</p>
+<p>fname: /path/to/fname_of_model
+return: model object</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.io_utils.serialize">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.io_utils.</span></span><span class="sig-name descname"><span class="pre">serialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/io_utils.html#serialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.io_utils.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serializes object to disk</p>
+<p>fname: /path/to/fname_of_model
+model: model object to serialize
+return: None</p>
+</dd></dl>
+
+</section>
+<section id="module-ngclearn.utils.metric_utils">
+<span id="ngclearn-utils-metric-utils-module"></span><h2>ngclearn.utils.metric_utils module<a class="headerlink" href="#module-ngclearn.utils.metric_utils" title="Permalink to this headline">¶</a></h2>
+<p>Contains general mathematical measurement/metric functions.</p>
+<p>&#64;author Alexander Ororbia</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.metric_utils.bce">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.metric_utils.</span></span><span class="sig-name descname"><span class="pre">bce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-07</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/metric_utils.html#bce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.metric_utils.bce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates negative Bernoulli log likelihood or binary cross entropy (BCE)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.metric_utils.calc_ACC">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.metric_utils.</span></span><span class="sig-name descname"><span class="pre">calc_ACC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/metric_utils.html#calc_ACC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.metric_utils.calc_ACC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates average accuracy given a task matrix T</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.metric_utils.calc_BWT">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.metric_utils.</span></span><span class="sig-name descname"><span class="pre">calc_BWT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/metric_utils.html#calc_BWT"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.metric_utils.calc_BWT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates backward transfer given a task matrix T</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.metric_utils.cat_nll">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.metric_utils.</span></span><span class="sig-name descname"><span class="pre">cat_nll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-07</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/metric_utils.html#cat_nll"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.metric_utils.cat_nll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Negative Categorical Log Likelihood</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.metric_utils.fast_log_loss">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.metric_utils.</span></span><span class="sig-name descname"><span class="pre">fast_log_loss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_ind_</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/metric_utils.html#fast_log_loss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.metric_utils.fast_log_loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates negative Categorical log likelihood / cross entropy via a
+fast indexing approach (assumes targets/labels are integers or class
+indices for single-class one-hot encoding)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.metric_utils.mse">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.metric_utils.</span></span><span class="sig-name descname"><span class="pre">mse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_pred</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/metric_utils.html#mse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.metric_utils.mse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mean Squared Error</p>
+</dd></dl>
+
+</section>
+<section id="module-ngclearn.utils.stat_utils">
+<span id="ngclearn-utils-stat-utils-module"></span><h2>ngclearn.utils.stat_utils module<a class="headerlink" href="#module-ngclearn.utils.stat_utils" title="Permalink to this headline">¶</a></h2>
+<p>Statistical utilities function file</p>
+<p>&#64;author: Alexander Ororbia</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.stat_utils.ainv">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.stat_utils.</span></span><span class="sig-name descname"><span class="pre">ainv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/stat_utils.html#ainv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.stat_utils.ainv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the inverse of matrix A</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.stat_utils.calc_covariance">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.stat_utils.</span></span><span class="sig-name descname"><span class="pre">calc_covariance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/stat_utils.html#calc_covariance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.stat_utils.calc_covariance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the covariance matrix of X</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.stat_utils.calc_gKL">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.stat_utils.</span></span><span class="sig-name descname"><span class="pre">calc_gKL</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu_p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_q</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/stat_utils.html#calc_gKL"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.stat_utils.calc_gKL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Gaussian Kullback-Leibler (KL) divergence</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.stat_utils.calc_list_moments">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.stat_utils.</span></span><span class="sig-name descname"><span class="pre">calc_list_moments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_dec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/stat_utils.html#calc_list_moments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.stat_utils.calc_list_moments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute 1st and 2nd moments from a list of data values</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.stat_utils.calc_log_gauss_pdf">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.stat_utils.</span></span><span class="sig-name descname"><span class="pre">calc_log_gauss_pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cov</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/stat_utils.html#calc_log_gauss_pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.stat_utils.calc_log_gauss_pdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the log Gaussian PDF</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.stat_utils.sample_gaussian">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.stat_utils.</span></span><span class="sig-name descname"><span class="pre">sample_gaussian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/stat_utils.html#sample_gaussian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.stat_utils.sample_gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Samples a multivariate Gaussian assuming at worst a diagonal covariance</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.stat_utils.sample_uniform">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.stat_utils.</span></span><span class="sig-name descname"><span class="pre">sample_uniform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_dim</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/stat_utils.html#sample_uniform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.stat_utils.sample_uniform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Samples a multivariate Uniform distribution</p>
+</dd></dl>
+
+</section>
+<section id="module-ngclearn.utils.transform_utils">
+<span id="ngclearn-utils-transform-utils-module"></span><h2>ngclearn.utils.transform_utils module<a class="headerlink" href="#module-ngclearn.utils.transform_utils" title="Permalink to this headline">¶</a></h2>
+<p>Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
+You may use, distribute and modify this code under the
+terms of the BSD 3-clause license.</p>
+<p>You should have received a copy of the BSD 3-clause license with
+this file. If not, please write to: <a class="reference external" href="mailto:ago&#37;&#52;&#48;cs&#46;rit&#46;edu">ago<span>&#64;</span>cs<span>&#46;</span>rit<span>&#46;</span>edu</a></p>
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.binarize">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">binarize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#binarize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.binarize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts the vector <em>data</em> to its binary equivalent</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.binary_flip">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">binary_flip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#binary_flip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.binary_flip" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.bkwta">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">bkwta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">K</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#bkwta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.bkwta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Binarized k-winners-take-all competitive activation function</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.calc_modulatory_factor">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">calc_modulatory_factor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">W</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#calc_modulatory_factor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.calc_modulatory_factor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate modulatory matrix W_M for W</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.clip_fx">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">clip_fx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#clip_fx"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.clip_fx" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.convert_to_spikes">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">convert_to_spikes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_spike_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sp_div</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#convert_to_spikes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.convert_to_spikes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a vector <em>x_data</em> to its approximate Poisson spike equivalent</p>
+<p>max_spike_rate: firing rate (in Hertz)
+dt: integraton time constant (in milliseconds or ms)
+sp_div: to denominator to convert input data values to a firing frequency
+Return:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.create_block_bin_matrix">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">create_block_bin_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_ones_per_row</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#create_block_bin_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.create_block_bin_matrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.create_competiion_matrix">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">create_competiion_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta_scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha_scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">band</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#create_competiion_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.create_competiion_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function creates a particular matrix to simulate competition via self-excitatory
+and inhibitory synaptic signals.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.create_mask_matrix">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">create_mask_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_col_m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nrow</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncol</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#create_mask_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.create_mask_matrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_elu">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_elu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_elu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_elu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_identity">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_identity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_identity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_identity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_ltanh">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_ltanh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_ltanh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_ltanh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_relu">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_relu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_relu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_relu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_relu6">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_relu6</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_relu6"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_relu6" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_sigmoid">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_sigmoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_sigmoid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_sigmoid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_softplus">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_softplus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_softplus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_softplus" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.d_tanh">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">d_tanh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#d_tanh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.d_tanh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.decide_fun">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">decide_fun</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fun_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#decide_fun"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.decide_fun" title="Permalink to this definition">¶</a></dt>
+<dd><p>A selector function that generates a physical activation function and its
+first-order (element-wise) derivative funciton given a description <em>fun_type</em></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.drop_out">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">drop_out</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">69</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#drop_out"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.drop_out" title="Permalink to this definition">¶</a></dt>
+<dd><p>Custom drop-out function – returns output as well as binary mask</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.elu">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">elu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#elu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.elu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.filter">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'var_trace'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a filter to data <em>x_t</em></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.gte">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">gte</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#gte"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.gte" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.identity">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">identity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#identity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.identity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.init_weights">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">init_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kernel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#init_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.init_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Randomly generates/initializes a matrix/vector according to a kernel pattern</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.kwta">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">kwta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">K</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#kwta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.kwta" title="Permalink to this definition">¶</a></dt>
+<dd><p>k-winners-take-all competitive activation function</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.ltanh">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">ltanh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#ltanh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.ltanh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.mellowmax">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">mellowmax</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#mellowmax"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.mellowmax" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.mish">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">mish</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#mish"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.mish" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.scale_feat">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">scale_feat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#scale_feat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.scale_feat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.shrink">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">shrink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#shrink"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.shrink" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngclearn.utils.transform_utils.softmax">
+<span class="sig-prename descclassname"><span class="pre">ngclearn.utils.transform_utils.</span></span><span class="sig-name descname"><span class="pre">softmax</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ngclearn/utils/transform_utils.html#softmax"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngclearn.utils.transform_utils.softmax" title="Permalink to this definition">¶</a></dt>
+<dd><p>Softmax function with overflow control built in directly. Contains optional
+temperature parameter to control sharpness (tau &gt; 1 softens probs, &lt; 1 sharpens –&gt; 0 yields point-mass)</p>
+</dd></dl>
+
+</section>
+<section id="module-ngclearn.utils">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ngclearn.utils" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, Alexander Ororbia
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
