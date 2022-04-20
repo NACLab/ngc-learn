@@ -27,7 +27,8 @@ ngc-learn requires:
 3) Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
 4) scikit-learn (>=0.24.2) if using ngclearn.density (needed for the examples/)
 
-Then run the setup script at the top of the <code>ngclearn</code> directory
+Once you have ensured the above dependencies have been installed, you can then 
+run the setup script at the top of the <code>ngclearn</code> directory 
 to have the <code>ngclearn</code> package install on your system using the
 following bash command:
 <pre>
