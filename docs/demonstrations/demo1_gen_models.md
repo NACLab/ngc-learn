@@ -58,7 +58,7 @@ on validation data.
 Notice in the script, at the start of our with-statement (which is used to force
 the following computations to reside in a particular GPU/CPU), before initializing
 a chosen model, we define a second special function to track another important
-quantity special to NGC models -- the total discrepancy (ToD):
+quantity special to NGC models -- the total discrepancy (ToD) -- as follows:
 
 ```python
 def calc_ToD(agent):
@@ -81,8 +81,38 @@ process is behaving correctly and making progress towards reaching a stable fixe
 Next, we write an evaluation function that leverages a DataLoader and a NGC model
 and returns some useful problem-specific measurements, i.e., in this demo's case,
 we want to measure and track binary cross entropy across training iterations/epochs.
-This is done as follows:
+The evaluation loop can be written like so:
 
+```python
+def eval_model(agent, dataset, calc_ToD, verbose=False):
+    """
+        Evaluates performance of agent on this fixed-point data sample
+    """
+    ToD = 0.0 # total disrepancy over entire data pool
+    Lx = 0.0 # metric/loss over entire data pool
+    N = 0.0 # number samples seen so far
+    for batch in dataset:
+        x_name, x = batch[0]
+        N += x.shape[0]
+        x_hat = agent.settle(x) # conduct iterative inference
+        ToD_t = calc_ToD(agent) # calc ToD
+        # update tracked fixed-point losses
+        Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx
+        ToD = calc_ToD(agent) + ToD
+        agent.clear()
+        if verbose == True:
+            print("\r ToD {0}  Lx {1} over {2} samples...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), N),end="")
+    if verbose == True:
+        print()
+    Lx = Lx / N
+    ToD = ToD / N
+    return ToD, Lx
+```
+
+Notice that we pass in the current NGC model (`agent`), the DataLoader (`dataset`), and the ToD
+function we wrote earlier. Now we have a means to measure some aspect of the generalization
+ability of our NGC model so all that remains is to craft a training process loop
+and we can simulate an NGC. This loop can be as follows:
 
 
 
