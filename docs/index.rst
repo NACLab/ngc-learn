@@ -17,8 +17,10 @@ Welcome to ngc-learn's documentation!
    :maxdepth: 1
    :caption: Demonstrations:
 
-   demonstrations/gen_model_demo
-   demonstrations/create_ngc_demo
+   demonstrations/demo1_gen_models
+   demonstrations/demo2_create_ngc
+   demonstrations/demo3_amortized_inf
+   demonstrations/demo4_recall
 
 .. toctree::
    :maxdepth: 1
