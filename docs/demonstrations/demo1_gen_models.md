@@ -55,11 +55,33 @@ With the above imported from ngc-learn, we have everything we need to craft a
 full training cycle as well as track the model's out-of-sample inference ability
 on validation data.
 
-Notice in the script, at the start of our with statement (which is used to force
+Notice in the script, at the start of our with-statement (which is used to force
 the following computations to reside in a particular GPU/CPU), before initializing
 a chosen model, we define a second special function to track another important
-quantity special to NGC models -- the total discrepancy (ToD).
+quantity special to NGC models -- the total discrepancy (ToD):
 
+```python
+def calc_ToD(agent):
+    """Measures the total discrepancy (ToD) of a given NGC model"""
+    ToD = 0.0
+    L2 = agent.ngc_model.extract(node_name="e2", node_var_name="L")
+    L1 = agent.ngc_model.extract(node_name="e1", node_var_name="L")
+    L0 = agent.ngc_model.extract(node_name="e0", node_var_name="L")
+    ToD = -(L0 + L1 + L2)
+    return ToD
+```
+
+This function is used to measure the internal disorder, of approximate free energy,
+within an NGC model based on its error neurons (if using specialized error neuron
+nodes, notice that a specialized node contains a scalar loss value, otherwise,
+you will need to take convert the error neuron vector to a scalar via something
+like a distance function). ToD allows us to track if entire NGC system's optimization
+process is behaving correctly and making progress towards reaching a stable fixed-point.
+
+Next, we write an evaluation function that leverages a DataLoader and a NGC model
+and returns some useful problem-specific measurements, i.e., in this demo's case,
+we want to measure and track binary cross entropy across training iterations/epochs.
+This is done as follows:
 
 
 
