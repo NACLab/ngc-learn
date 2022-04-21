@@ -1,4 +1,4 @@
-# Amortized Inference: Speeding Up the Settling Process
+# Demo 3: Amortized Inference: Speeding Up the Settling Process
 
 Although fitting an NGC model (a GNCN) to a data sample is a rather straightforward
 process, as we saw in the Demo 1 the underlying dynamics of the neural system
