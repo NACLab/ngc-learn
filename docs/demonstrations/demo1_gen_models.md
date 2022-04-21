@@ -1,4 +1,4 @@
-# Demonstration 1: Learning NGC Generative Models
+# Demo 1: Learning NGC Generative Models
 
 In this demonstration, we will learn how to use ngc-learn's Model Museum to fit an
 NGC generative model, specifically called a generative neural coding network (GNCN),
