@@ -16,9 +16,10 @@ Note that pixels in all image vectors have been normalized to the range of [0,1]
 Next,in `examples/`, we observe the provided script `sim_train.py`, which contains the
 code to execute the training process of an NGC model. Inside this file, we can export
 one of three possible GNCNs from ngc-learn's Model Museum, i.e., the GNCN-t1 (which
-is an instantiation of the model proposed in Rao &amp; Ballard, 1999), the GNCN-t1-Sigma  
-(which is an instantiation of the model proposed in Friston 2008), and the
-GNCN-PDH (which is one of the models proposed in Ororbia &amp; Kifer 2022).
+is an instantiation of the model proposed in Rao &amp; Ballard, 1999 [1]),
+the GNCN-t1-Sigma (which is an instantiation of the model proposed in Friston
+2008 [2]), and the GNCN-PDH (which is one of the models proposed in
+Ororbia &amp; Kifer 2022 [3]).
 
 Importing models from the Model Museum is straightforward and only
 requires a few lines to be placed in the header of a training script. Notice
@@ -58,3 +59,16 @@ Notice in the script, at the start of our with statement (which is used to force
 the following computations to reside in a particular GPU/CPU), before initializing
 a chosen model, we define a second special function to track another important
 quantity special to NGC models -- the total discrepancy (ToD).
+
+
+
+
+
+**References:**
+[1] Rao, Rajesh PN, and Dana H. Ballard. "Predictive coding in the visual cortex:
+a functional interpretation of some extra-classical receptive-field effects."
+Nature neuroscience 2.1 (1999): 79-87. <br>
+[2] Friston, Karl. "Hierarchical models in the brain." PLoS Computational
+Biology 4.11 (2008): e1000211. <br>
+[3] Ororbia, A., and Kifer, D. The neural coding framework for learning
+generative models. Nature Communications 13, 2064 (2022).
