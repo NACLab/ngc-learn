@@ -50,7 +50,9 @@ Official documentation, including some tutorials, can be found
 
 The official blog-post related to the source paper behind this software library
 can be found
-<a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">here</a>.
+<a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">here</a>.<br>
+You can find the related paper also, under the Editors' Highlights page,  
+<a href="https://www.nature.com/collections/hjhbgijcei">right here</a>.
 
 <!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
