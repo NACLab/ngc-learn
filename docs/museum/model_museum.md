@@ -35,13 +35,13 @@ developed to classify data will offer functionality for categorization in a
 relevant prediction routine while one that was created to operate as a density
 model/generative model will sport routines for sampling/synthesization.
 
-Current models we have implemented include:
-* GNCN-t1/Rao - the model proposed in (Rao &amp; Ballard, 1999) [2]
-* GNCN-t1-Sigma/Friston - the model proposed in (Friston, 2008) [3]
-* GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
+Current models that we have implemented include:
+1. GNCN-t1/Rao - the model proposed in (Rao &amp; Ballard, 1999) [2]
+2. GNCN-t1-Sigma/Friston - the model proposed in (Friston, 2008) [3]
+3. GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
 
 
-**References:**
+**References:** <br>
 [1] Ororbia, A., and Kifer, D. The neural coding framework for learning
 generative models. Nature Communications 13, 2064 (2022). <br>
 [2] Rao, Rajesh PN, and Dana H. Ballard. "Predictive coding in the visual cortex:
