@@ -26,6 +26,7 @@ Welcome to ngc-learn's documentation!
    :maxdepth: 1
    :caption: Model Museum
 
+   museum/model_museum
    museum/gncn_t1
    museum/gncn_t1_sigma
    museum/gncn_pdh
