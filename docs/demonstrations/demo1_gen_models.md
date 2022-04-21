@@ -5,6 +5,8 @@ NGC generative model, specifically called a generative neural coding network (GN
 to the MNIST dataset. Specifically, we will focus on training three key models,
 each with different structural properties, and estimating their marginal log likelihoods.
 
+## Setting Up and Training A Generative System
+
 To start, navigate to the `examples/` directory to access the example/demonstration
 code and further enter the `examples/data/` sub-folder. Unzip the file
 `mnist.zip` to create one more sub-folder that contains a set of numpy arrays that house
@@ -220,6 +222,35 @@ execute the above three experiments sequentially:
 ```console
 <user_path>$ ./exec_experiments.sh
 ```
+
+As each script runs, you will see printed to the terminal, after each epoch,
+an estimate of the ToD and the BCE for the training sample as well as the
+measured validation ToD and BCE for the development data subset. Note that our
+training script retrieves from the `examples/data/mnist/` folder you unzipped
+only the training arrays, i.e., `trainX.npy` and `trainY.npy`, and the
+validation set arrays, i.e., `validX.npy` and `validY.npy`. We will use the
+test set arrays in a follow-up analysis once we have trained each of our
+models above. After the script terminates, you can also check inside each of
+the model folders, i.e., `examples/gncn_t1/`, `examples/gncn_t1_sigma/`, and
+`examples/gncn_pdh/`, and notice that your script saved/serialized to disk a
+few useful files:
+- `Lx0.npy`: the BCE training loss for the training set over epoch
+- `ToD0.npy`: the ToD measurement for the training set over epoch
+- `vLx0.npy`: the validation BCE loss over epoch
+- `vToD0.npy`: the validation ToD measurement loss over epoch
+- `model0.ngc`: your saved NGC model (with best validation performance)
+You can use then plot the numpy arrays using `matplotlib` or your favorite
+visualization library/package to create curves for each measurement over epoch.
+The final object, the model object, is what we will use in the next section to
+quantitatively evaluate how well our NGC model works as a generative model.
+
+## Analyzing a Trained Generative Model
+
+Now that you trained three NGC generative models, we now want to analyze them a
+bit further than just the total discrepancy and binary cross entropy (the latter
+of which just tells you how good the model is at auto-associative reconstruction
+of samples binary-valued data).
+
 
 
 **References:**
