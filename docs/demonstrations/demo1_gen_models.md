@@ -114,6 +114,95 @@ function we wrote earlier. Now we have a means to measure some aspect of the gen
 ability of our NGC model so all that remains is to craft a training process loop
 and we can simulate an NGC. This loop can be as follows:
 
+```python
+# create a  training loop
+ToD, Lx = eval_model(agent, train_set, calc_ToD, verbose=True)
+vToD, vLx = eval_model(agent, dev_set, calc_ToD, verbose=True)
+print("{} | ToD = {}  Lx = {} ; vToD = {}  vLx = {}".format(-1, ToD, Lx, vToD, vLx))
+
+sim_start_time = time.time()
+########################################################################
+for i in range(num_iter): # for each training iteration/epoch
+    ToD = 0.0 # estimated ToD over an epoch (or whole dataset)
+    Lx = 0.0 # estimated total loss over epoch (or whole dataset)
+    n_s = 0
+    # run single epoch/pass/iteration through dataset
+    ####################################################################
+    for batch in train_set:
+        n_s += batch[0][1].shape[0] # track num samples seen so far
+        x_name, x = batch[0]
+        x_hat = agent.settle(x) # conduct iterative inference
+        ToD_t = calc_ToD(agent) # calc ToD
+        Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx
+        # update synaptic parameters given current model internal state
+        delta = agent.calc_updates()
+        opt.apply_gradients(zip(delta, agent.ngc_model.theta))
+        agent.ngc_model.apply_constraints()
+        agent.clear()
+
+        ToD = ToD_t + ToD
+        print("\r train.ToD {0}  Lx {1}  with {2} samples seen...".format(
+              (ToD/(n_s * 1.0)), (Lx/(n_s * 1.0)), n_s),
+              end=""
+              )
+    ####################################################################
+    print()
+    ToD = ToD / (n_s * 1.0)
+    Lx = Lx / (n_s * 1.0)
+    # evaluate generalization ability on dev set
+    vToD, vLx = eval_model(agent, dev_set, calc_ToD)
+    print("-------------------------------------------------")
+    print("{} | ToD = {}  Lx = {} ; vToD = {}  vLx = {}".format(
+          i, ToD, Lx, vToD, vLx)
+          )
+```
+
+The above code snippet represents the core training process loop but you will
+find in `sim_train.py` a few other mechanisms such as some model saving/check-pointing,
+an early-stopping mechanism based on patience, and some metric/ToD tracking by
+saving an updated set of scalar lists to disk.
+Taking the above together, you can run simulate the NGC training process after setting
+some chosen values in your configuration file, which is read in near the beginning
+of your training script. For example, in `train_sim.py`, you will see some basic
+code to read in an external experimental configuration `*.cfg` file:
+
+```python
+options, remainder = getopt.getopt(sys.argv[1:], '', ["config=","gpu_id=","n_trials="])
+# GPU arguments
+cfg_fname = None
+use_gpu = False
+n_trials = 1
+gpu_id = -1
+for opt, arg in options:
+    if opt in ("--config"):
+        cfg_fname = arg.strip()
+    elif opt in ("--gpu_id"):
+        gpu_id = int(arg.strip())
+        use_gpu = True
+    elif opt in ("--n_trials"):
+        n_trials = int(arg.strip())
+mid = gpu_id
+if mid >= 0:
+    print(" > Using GPU ID {0}".format(mid))
+    os.environ["CUDA_VISIBLE_DEVICES"]="{0}".format(mid)
+    #gpu_tag = '/GPU:0'
+    gpu_tag = '/GPU:0'
+else:
+    os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+    gpu_tag = '/CPU:0'
+
+save_marker = 1
+
+args = Config(cfg_fname)
+```
+
+Furthermore, the above code snippet contains some setup to allow you to switch to
+a GPU of your choice (if you set `gpu_id` to a value `>= 0`)
+or a CPU if no GPU is available (`gpu_id =` should be `-1`).
+
+The above code snippets can be found in `train_sim.py` which is ready for you to
+run if you use the provided example configuration scripts.
+
 
 
 **References:**
