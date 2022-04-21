@@ -25,7 +25,7 @@ sample(s), ultimately serving as an intelligent initialization of the state valu
 instead of starting from zero vectors.
 For this second way, approaches have ranged from ancestral sampling/projection,
 as in deep Boltzmann machines [1] and as in for NGC systems formulated for active
-inference [1], to learning (jointly with the generative model) a complementary
+inference [2], to learning (jointly with the generative model) a complementary
 (neural) model in a process known as amortized inference, e.g., in sparse coding
 the algorithm developed to do this was called predictive sparse decomposition [3].
 Amortize means, in essence, to gradually reduce the initial cost of something
