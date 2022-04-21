@@ -16,7 +16,7 @@ under the 3-Clause BSD license.
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
-**NOTE:** The documentation of this version is currently being built at the momemt (the formal release will be coming shortly, 
+**NOTE:** The documentation of this version is currently being built at the momemt (the formal release will be coming shortly,
 so please check in and git pull/re-clone in the next few days for the full version to be fully ported/built).
 
 ## <b>Installation:</b>
@@ -47,6 +47,10 @@ and complete the following sequence of steps as depicted in the screenshot below
 
 Official documentation, including some tutorials, can be found
 <a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>.
+
+The official blog-post related to the source paper behind this software library
+can be found
+<a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">here</a>.
 
 <!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
