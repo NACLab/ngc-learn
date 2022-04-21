@@ -97,9 +97,9 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
     """
         Evaluates performance of agent on this fixed-point data sample
     """
-    ToD = 0.0
-    Lx = 0.0
-    N = 0.0
+    ToD = 0.0 # total disrepancy over entire data pool
+    Lx = 0.0 # metric/loss over entire data pool
+    N = 0.0 # number samples seen so far
     for batch in dataset:
         x_name, x = batch[0]
         N += x.shape[0]
@@ -109,8 +109,10 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
         Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx
         ToD = calc_ToD(agent) + ToD
         agent.clear()
-        print("\r ToD {0}  Lx {1} over {2} samples...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), N),end="")
-    print()
+        if verbose == True:
+            print("\r ToD {0}  Lx {1} over {2} samples...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), N),end="")
+    if verbose == True:
+        print()
     Lx = Lx / N
     ToD = ToD / N
     return ToD, Lx

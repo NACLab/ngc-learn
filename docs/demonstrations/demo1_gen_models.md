@@ -202,7 +202,24 @@ or a CPU if no GPU is available (`gpu_id =` should be `-1`).
 
 The above code snippets can be found in `train_sim.py` which is ready for you to
 run if you use the provided example configuration scripts.
-
+Let's go ahead and train one of each the three models we imported into our training
+script. Start by running the GNCN-t1:
+```console
+<user_path>$ python sim_train.py --config==gncn_t1/fit.cfg --gpu_id=0 --n_trials=1
+```
+then move on the GNCN-t1-Sigma script:
+```console
+<user_path>$ python sim_train.py --config==gncn_t1_sigma/fit.cfg --gpu_id=0 --n_trials=1
+```
+and finally run the GNCN-PDH simulation:
+```console
+<user_path>$ python sim_train.py --config==gncn_pdh/fit.cfg --gpu_id=0 --n_trials=1
+```
+Alternatively, you can also just run the bash script we provided which will just simply
+execute the above three experiments sequentially:
+```console
+<user_path>$ ./exec_experiments.sh
+```
 
 
 **References:**
