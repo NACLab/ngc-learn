@@ -35,7 +35,7 @@ developed to classify data will offer functionality for categorization in a
 relevant prediction routine while one that was created to operate as a density
 model/generative model will sport routines for sampling/synthesization.
 
-Current models that we have implemented include:
+Current models that we have implemented/included so far are:
 1. GNCN-t1/Rao - the model proposed in (Rao &amp; Ballard, 1999) [2]
 2. GNCN-t1-Sigma/Friston - the model proposed in (Friston, 2008) [3]
 3. GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
