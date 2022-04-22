@@ -1,8 +1,9 @@
 # Demo 2: Creating Custom NGC Systems
 
-In this demonstration, we will learn how to craft our own custom NGC graph/system
+## Theoretical Inspiration/Grounding
+In this demonstration, we will learn how to craft our own custom NGC system
 using ngc-learn's fundamental building blocks -- nodes and cables. At its core,
-part of ngc-learn's fundamental design was inspired by
+part of ngc-learn's fundamental design is inspired by
 <a href="http://www.scholarpedia.org/article/Neuronal_cable_theory">cable theory </a>,
 where neurons, arranged in complex connectivity structures, are viewed as
 performing dendritic calculations. In other words, a particular neuron integrates
@@ -19,6 +20,7 @@ to a rate-coded firing rate). Many nodes and cables yield an NGC system where ea
 node is itself, in general, a stateful computation (even if we are processing
 static data such as images).
 
+## Building NGC Systems with Nodes and Cables
 With some of ngc-learn's theoretical framing in mind, we can craft connectivity
 patterns of our own by simply deciding the form that nodes and cables in our system
 will take. ngc-learn currently offers a few core nodes and cable types (noting that
