@@ -15,7 +15,7 @@ likely that billions of neurons that compose the human brain adjust the synapses
 that connect in the way that backprop would prescribe.
 
 Although ANNs are (loosely) inspired by our current understanding of the human brain,
-the connections to the actual mechanisms driving systems of natural neurons are
+the connections to the actual mechanisms that drive systems of natural neurons are
 quite loose, at best. Although the question as to how the brain exactly conducts
 credit assignment -- or the process of determining the contribution of each
 and every neuron to overall error on some task (the "blame game") -- is still an
@@ -43,11 +43,11 @@ The overarching goal of ngc-learn is to provide researchers and engineers with:
 * a modular design that allows for the flexible design, simulation, analysis of
   neural systems fundamentally built and driven by predictive processing;
 * a powerful, approachable tool, written by and maintained by researchers and
-  experimenters directly studying and working to advance predictive processing,
-  meant to lower the barriers to entry to this field of research;
+experimenters directly studying and working to advance predictive processing,
+meant to lower the barriers to entry to this field of research;
 * a "model museum" that captures the essence of fundamental and interesting
-  predictive processing models and algorithms throughout history, allowing for the
-  study of and experimentation with classical and modern systems.
+predictive processing models and algorithms throughout history, allowing for the
+study of and experimentation with classical and modern systems.
 
 The ngc-learn software framework was originally developed in 2019 by the Neural Adaptive
 Computing (NAC) laboratory in Rochester Institute of Technology meant as an internal
