@@ -12,13 +12,13 @@ often highly nonlinear ways through a complex dendritic tree. While modeling
 a neuronal system through the lens of cable theory is certainly complex and intricate
 in of itself, ngc-learn is built in this direction, starting with the idea a neuron
 (or a cluster of them) can be viewed as a node (`Node`) and each bundle of synapses
-that connect nodes can be viewed as a cable (`Cable`). Each node has multiple
-"compartments", which allows it to collect information from many different nodes
-and then, within its integration routine (or `step()`), decide how to combine
-the different signals in order to calculate its own activity (loosely corresponding
-to a rate-coded firing rate). Many nodes and cables yield an NGC system where each
-node is itself, in general, a stateful computation (even if we are processing
-static data such as images).
+that connect nodes can be viewed as a cable (`Cable`). Each node has differnt, multiple
+"compartments" (which we allow to be named), which allows it to collect information
+from many different nodes and then, within its integration routine (or `step()`),
+decide how to combine the different signals in order to calculate its own activity
+(loosely corresponding to a rate-coded firing rate). Many nodes and cables yield
+an NGC system where each node is itself, in general, a stateful computation (even
+if we are processing static data such as images).
 
 ## Building NGC Systems with Nodes and Cables
 With some of ngc-learn's theoretical framing in mind, we can craft connectivity
