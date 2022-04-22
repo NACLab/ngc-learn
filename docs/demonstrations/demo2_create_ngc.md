@@ -1,5 +1,7 @@
 # Demo 2: Creating Custom NGC Systems
 
+<i>NOTE: This demonstration is under construction and thus incomplete at the moment...</i>
+
 ## Theoretical Inspiration/Grounding
 In this demonstration, we will learn how to craft our own custom NGC system
 using ngc-learn's fundamental building blocks -- nodes and cables. At its core,

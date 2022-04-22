@@ -28,14 +28,14 @@ across software releases/patches/edits).
 
 As mentioned above, NGC predictive processing models have historically been
 designed to serve particular purposes, thus we wrap their underlying NGC graphs
-in agent structure that provides particular documented convenience functions
+in an agent structure that provides particular documented convenience functions
 allowing the user/modeler to interact with such models according to their
 intended purpose/use. For example, a published/public NGC model that was
 developed to classify data will offer functionality for categorization in a
-relevant prediction routine while one that was created to operate as a density
-model/generative model will sport routines for sampling/synthesization.
+relevant prediction routine while another one that was created to operate as
+a generative/density estimator will sport a routine(s) for sampling/synthesization.
 
-Current models that we have implemented/included so far are:
+Current models that we have implemented in the Model Museum so far are:
 1. GNCN-t1/Rao - the model proposed in (Rao &amp; Ballard, 1999) [2]
 2. GNCN-t1-Sigma/Friston - the model proposed in (Friston, 2008) [3]
 3. GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
