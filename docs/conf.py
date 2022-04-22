@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('../'))
 
 import sphinx_rtd_theme
 
-#import ngclearn
+import ngclearn
 
 # -- Project information -----------------------------------------------------
 
@@ -27,8 +27,8 @@ copyright = "The Neural Adaptive Computing Laboratory 2022"
 author = 'Alexander Ororbia'
 
 # The full version, including alpha/beta/rc tags
-version = '0.0.1' #ngclearn.__version__
-release = '0.0.1' #ngclearn.__version__ #'0.0.1'
+version = ngclearn.__version__
+release = ngclearn.__version__ #'0.0.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -103,6 +103,12 @@ html_context = {
         "_static/pygments.css",
         "_static/theme_overrides.css",  # override wide tables in RTD theme
     ],
+}
+
+html_logo = "images/ngc-learn-logo.png"
+html_theme_options = {
+    'logo_only': True,
+    'display_version': True,
 }
 
 # # Output file base name for HTML help builder.
