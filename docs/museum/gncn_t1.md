@@ -1,3 +1,22 @@
 # GNCN-t1 (Rao &amp; Ballard, 1999)
 
-This model...
+This model implements the structure proposed in (Rao &amp; Ballard, 1990).
+Specifically, this model is unsupervised and can be used to process sensory
+pattern (row) vector(s) `x` to infer internal latent states. This class offers,
+beyond settling and update routines, a projection function by which ancestral
+sampling may be carried out given the underlying directed generative model
+formed by this NGC system.
+
+```{eval-rst}
+.. autoclass:: ngclearn.museum.gncn_t1.GNCN_t1
+  :noindex:
+
+  .. automethod:: project
+    :noindex:
+  .. automethod:: settle
+    :noindex:
+  .. automethod:: update
+    :noindex:
+  .. automethod:: clear
+    :noindex:
+```

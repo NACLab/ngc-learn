@@ -29,8 +29,7 @@ class GNCN_t1_Sigma:
     Biology 4.11 (2008): e1000211.
 
     Note this model includes a Laplacian prior to induce some level of sparsity
-    in the latent activities.
-
+    in the latent activities. 
     This model, under the NGC computational framework, is referred to as
     the GNCN-t1-Sigma/Friston, according to the naming convention in
     (Ororbia & Kifer 2022).
@@ -38,18 +37,19 @@ class GNCN_t1_Sigma:
     Args:
         args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
 
-    NOTE - args should contain values for the following:
-    z_top_dim: # of latent variables in layer z3 (top-most layer)
-    z_dim: # of latent variables in layers z1 and z2
-    x_dim: # of latent variables in layer z0 or sensory x
-    seed: number to control determinism of weight initialization
-    wght_sd: standard deviation of Gaussian initialization of weights
-    beta: latent state update factor
-    leak: strength of the leak variable in the latent states
-    lmbda: strength of the Laplacian prior applied over latent state activities
-    K: # of steps to take when conducting iterative inference/settling
-    act_fx: activation function for layers z1, z2, and z3
-    out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)
+    | NOTE:
+    | args should contain values for the following:
+    | z_top_dim: # of latent variables in layer z3 (top-most layer)
+    | z_dim: # of latent variables in layers z1 and z2
+    | x_dim: # of latent variables in layer z0 or sensory x
+    | seed: number to control determinism of weight initialization
+    | wght_sd: standard deviation of Gaussian initialization of weights
+    | beta: latent state update factor
+    | leak: strength of the leak variable in the latent states
+    | lmbda: strength of the Laplacian prior applied over latent state activities
+    | K: # of steps to take when conducting iterative inference/settling
+    | act_fx: activation function for layers z1, z2, and z3
+    | out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)
 
     @author: Alexander Ororbia
     """

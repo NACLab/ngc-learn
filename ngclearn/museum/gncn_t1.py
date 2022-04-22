@@ -30,28 +30,27 @@ class GNCN_t1:
     effects." Nature neuroscience 2.1 (1999): 79-87.
 
     Note this model includes the Laplacian prior to induce some level of sparsity
-    in the latent activities.
+    in the latent activities. This model, under the NGC computational framework,
+    is referred to as the GNCN-t1/Rao, according to the naming convention in
+    (Ororbia & Kifer 2022).
 
-    This model, under the NGC computational framework, is referred to as
-    the GNCN-t1/Rao, according to the naming convention in (Ororbia & Kifer 2022).
+    Args:
+        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
 
-    Arguments:
-    args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
+    | NOTE:
+    | args should contain values for the following:
+    | * z_top_dim - # of latent variables in layer z3 (top-most layer)
+    | * z_dim - # of latent variables in layers z1 and z2
+    | * x_dim - # of latent variables in layer z0 or sensory x
+    | * seed - number to control determinism of weight initialization
+    | * wght_sd - standard deviation of Gaussian initialization of weights
+    | * beta - latent state update factor
+    | * leak - strength of the leak variable in the latent states
+    | * lmbda - strength of the Laplacian prior applied over latent state activities
+    | * K - # of steps to take when conducting iterative inference/settling
+    | * act_fx - activation function for layers z1, z2, and z3
+    | * out_fx - activation function for layer mu0 (prediction of z0) (Default: sigmoid)
 
-    NOTE - args should contain values for the following:
-    z_top_dim: # of latent variables in layer z3 (top-most layer)
-    z_dim: # of latent variables in layers z1 and z2
-    x_dim: # of latent variables in layer z0 or sensory x
-    seed: number to control determinism of weight initialization
-    wght_sd: standard deviation of Gaussian initialization of weights
-    beta: latent state update factor
-    leak: strength of the leak variable in the latent states
-    lmbda: strength of the Laplacian prior applied over latent state activities
-    K: # of steps to take when conducting iterative inference/settling
-    act_fx: activation function for layers z1, z2, and z3
-    out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)
-
-    @author: Alexander Ororbia
     """
     def __init__(self, args):
         self.args = args
@@ -155,11 +154,11 @@ class GNCN_t1:
         Run projection scheme to get a sample of the underlying directed
         generative model given the clamped variable *z_sample*
 
-        Arguments:
-        z_sample: the input noise sample to project through the NGC graph
+        Args:
+            z_sample: the input noise sample to project through the NGC graph
 
         Returns:
-        x_sample (sample(s) of the underlying generative model)
+            x_sample (sample(s) of the underlying generative model)
         """
         readouts = self.ngc_sampler.project(
                         clamped_vars=[("s3",tf.cast(z_sample,dtype=tf.float32))],
@@ -173,11 +172,11 @@ class GNCN_t1:
         Run an iterative settling process to find latent states given clamped
         input and output variables
 
-        Arguments:
-        x: sensory input to reconstruct/predict
+        Args:
+            x: sensory input to reconstruct/predict
 
         Returns:
-        x_hat (predicted x)
+            x_hat (predicted x)
         """
         readouts = self.ngc_model.settle(
                         clamped_vars=[("z0", x)],
@@ -192,7 +191,7 @@ class GNCN_t1:
         current internal state values
 
         Returns:
-        delta, a list of synaptic matrix updates (that follow order of .theta)
+            delta, a list of synaptic matrix updates (that follow order of .theta)
         """
         Ns = self.ngc_model.extract("z0","phi(z)").shape[0]
         delta = self.ngc_model.calc_updates()
@@ -205,8 +204,8 @@ class GNCN_t1:
         """
         Updates synaptic parameters/connections given sensory input
 
-        Arguments:
-        x: a sensory sample or batch of sensory samples
+        Args:
+            x: a sensory sample or batch of sensory samples
         """
         self.settle(x)
         delta = self.calc_updates(avg_update=avg_update)
