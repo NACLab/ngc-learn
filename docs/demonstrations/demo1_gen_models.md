@@ -209,18 +209,18 @@ run if you use the provided example configuration scripts.
 Let's go ahead and train one of each the three models we imported into our training
 script. Run the following three commands as shown below:
 ```console
-<path>$ python sim_train.py --config==gncn_t1/fit.cfg --gpu_id=0 --n_trials=1
+x@y:~path$ python sim_train.py --config==gncn_t1/fit.cfg --gpu_id=0 --n_trials=1
 ```
 ```console
-<path>$ python sim_train.py --config==gncn_t1_sigma/fit.cfg --gpu_id=0 --n_trials=1
+x@y:~path$ python sim_train.py --config==gncn_t1_sigma/fit.cfg --gpu_id=0 --n_trials=1
 ```
 ```console
-<path>$ python sim_train.py --config==gncn_pdh/fit.cfg --gpu_id=0 --n_trials=1
+x@y:~path$ python sim_train.py --config==gncn_pdh/fit.cfg --gpu_id=0 --n_trials=1
 ```
 Alternatively, you can also just run the bash script we provided which will just simply
 execute the above three experiments sequentially:
 ```console
-<user_path>$ ./exec_experiments.sh
+x@y:~path$ ./exec_experiments.sh
 ```
 
 As each script runs, you will see printed to the terminal, after each epoch,
@@ -276,6 +276,128 @@ with a Gaussian mixture model (GMM). Once we have the learned GMM prior, we can
 sample from this model of `p(z3)` and run these samples through the NGC graph
 via ancestral sampling (using prebuilt ancestral projection function `project()`).
 
+ngc-learn is designed to offer some basic support for density estimation, and
+for this demonstration, we will import and use its GMM density estimator (which
+builds on top of scikit-learn's GMM base model), i.e., `ngclearn.density.gmm`.
+First, we will need to extract the latent variables from the trained NGC model,
+which simply requires us to adapt our `eval_model()` function in our training script
+to also return a design matrix where each row contains one latent code vector
+per data point in a sample pool. Specifically, all we need to write is the
+following:
+
+```python
+def extract_latents(agent, dataset, calc_ToD, verbose=False):
+    """
+        Extracts latent activities of an agent on a fixed-point data sample
+    """
+    latents = None
+    ToD = 0.0
+    Lx = 0.0
+    N = 0.0
+    for batch in dataset:
+        x_name, x = batch[0]
+        N += x.shape[0]
+        x_hat = agent.settle(x) # conduct iterative inference
+        lats = agent.ngc_model.extract(node_name, cmpt_name)
+        if latents is not None:
+            latents = tf.concat([latents,lats],axis=0)
+        else:
+            latents = lats
+        ToD_t = calc_ToD(agent) # calc ToD
+        # update tracked fixed-point losses
+        Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx
+        ToD = calc_ToD(agent) + ToD
+        agent.clear()
+        print("\r ToD {0}  Lx {1} over {2} samples...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), N),end="")
+    print()
+    Lx = Lx / N
+    ToD = ToD / N
+    return latents, ToD, Lx
+```
+
+Notice we still keep our measurement of the ToD and BCE just as an extra qualitative
+sanity check to make sure that any model we de-serialize from disk yields values
+similar to what we measured during our training process.
+Armed with the extraction function above, we can gather the latent codes of
+our NGC model. Notice that in the provided `examples/extract_latents.py` script,
+you will find the above function integrated/used.
+Go ahead and run the extraction script for the first of your three models:
+```console
+x@y:~path$ python extract_latents.py --config==gncn_t1/analyze.cfg --gpu_id=0
+```
+and you will find now inside the folder `examples/gncn_t1/` a new numpy array
+file `z3_0.npy`, which contains all of the latent variables for the top-most layer
+of your model (you can examine the configuration file `analyze.cfg` to see what
+arguments are set to achieve this).
+
+Now it is time to fit the GMM prior. In the `fit_gmm.py` script, we have set
+up the necessary framework for you to do so (using `18,000` samples from the
+training set to speed up calculations a bit). All you need to do at this point,
+using the `analyze.cfg` configuration, is execute this script like so:
+```console
+x@y:~path$ python fit_gmm.py --config==gncn_t1/analyze.cfg --gpu_id=0
+```
+and after your fitting process script terminates, you will see inside your model
+`examples/gncn_t1/` your learned prior `prior0.gmm`.
+
+With this prior model `prior0.gmm` and your previously trained NGC system
+`model0.ngc` you are ready to finally estimate your marginal log likelihood.
+The final script provided `examples/eval_logpx.py` will do this for you, taking
+your full system -- the prior and the model -- and calculating a Monte Carlo
+estimate of its log likelihood. Run this script as follows:
+```console
+x@y:~path$ python eval_logpx.py --config==gncn_t1/analyze.cfg --gpu_id=0
+```
+and after it completes (this step can take a bit more time than the other steps,
+since we are computing our estimate over quite a few samples), in addition to
+an output to I/O of your `log p(x)`, you will see two more items in your
+model folder `examples/gncn_t1/`:
+- `logpx_results.txt`: the recorded marginal log likelihood
+- `samples.png`: some visual samples stored in an image array for you to view/assess
+If you `cat` the first item, you should something similar to the following:
+```console
+x@y:~path$ cat gncn_t1/logpx_results.txt
+Likelihood Test:
+  log[p(x)] = -103.13798522949219
+```
+and if you open and view the image samples, you should see something similar to:
+![image_samples](../images/demo1/gncn_t1_samples.png)
+
+Now go ahead and re-run the same steps above but for your other two models, using
+the final configuration scripts, i.e., `gncn_t1_sigma/analyze.cfg` and
+`gncn_pdh/analyze.cfg`. You should see similar outputs as below.
+
+For the GNCN-t1-Sigma, you get a log likelihood of:
+```console
+x@y:~path$ cat gncn_t1_sigma/logpx_results.txt
+Likelihood Test:
+  log[p(x)] = -100.03035736083984
+```
+with images as follows:
+![image_samples](../images/demo1/gncn_t1_sigma_samples.png)
+
+For the GNCN-PDH, you get a log likelihood of:
+```console
+x@y:~path$ cat gncn_t1_sigma/logpx_results.txt
+Likelihood Test:
+  log[p(x)] = -96.92353820800781
+```
+with images as follows:
+![image_samples](../images/demo1/gncn_pdh_samples.png)
+
+For the three models above, we get log likelihood measurements that are desirably
+within the right ballpack of those reported in related literature [3].
+<!--
+You can re-run the above analysis scripts by modifying them slightly if you
+simulate for more than one trial (notice that we only ran one trial for this
+demonstration, so all our models and priors had a `0` in their filenames -- if
+you set the `sim_train.py` script's `n_trials`
+flag argument to a number greater than one, you will find the simulation code will
+re-run your training process for a fixed number of trials and save relevant
+data to your model folder with the trial index in the filenames).
+-->
+You have now successfully trained three different, powerful NGC generative models
+using ngc-learn's Model Museum and analyzed their log likelihoods.
 
 
 ## References:
