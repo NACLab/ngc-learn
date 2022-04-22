@@ -251,9 +251,34 @@ bit further than just the total discrepancy and binary cross entropy (the latter
 of which just tells you how good the model is at auto-associative reconstruction
 of samples binary-valued data).
 
+In particular, we are interested in measuring the marginal log likelihood of
+our models, or `log p(x)`. In general, calculating such a quantity exactly is
+intractable for any reasonably-sized model since we would have marginalize out
+the latent variables `Z = {z1, z2, z3}` of each our generative models, requiring
+us to evaluate an integral over a continuous space. However, though things seem
+bleak, we can approximate this marginal by resorting to a Monte Carlo estimate and
+simply draw as many samples from the underlying prior distribution inherent to
+our NGC model as we need (or can computationally handle) to calculate `log p(x)`.
+Since the NGC models we have designed/trained in this demo embody an underlying
+directed generative model, i.e., `p(x,Z) = p(x|z1) p(z1|z2) p(z2|z3) p(z3)`, we
+can use efficient ancestral sampling to produce fantasy image samples after we
+query the underlying latent prior `p(z3)`.
+
+Unfortunately, unlike models such as the variational autoencoder (VAE), we do not
+have an explicitly defined prior distribution, such as a standard multivariate Gaussian,
+that makes later sampling simple given that the VAE is trained with an encoder that
+forces the generative model to stick as close as it can to this prior. An NGC model's
+latent prior is, in contrast to the VAE, multimodal and thus simple using a
+standard Gaussian will not quite produce the fantasized samples we would expect.
+Nevertheless, we can in fact capture far more accurately an NGC model's prior by
+treating it as a mixture of Gaussians and instead estimate the multimodal density
+with a Gaussian mixture model (GMM). Once we have the learned GMM prior, we can
+sample from this model of `p(z3)` and run these samples through the NGC graph
+via ancestral sampling (using prebuilt ancestral projection function `project()`).
 
 
-**References:**
+
+## References:
 [1] Rao, Rajesh PN, and Dana H. Ballard. "Predictive coding in the visual cortex:
 a functional interpretation of some extra-classical receptive-field effects."
 Nature neuroscience 2.1 (1999): 79-87. <br>
