@@ -1,4 +1,4 @@
-# Demo 4: Pattern Completion: Hetero-Associative Recall
+# Demo 4: Pattern Completion: Auto-Associative Recall
 
  In this demonstration, we will see how to utilize a (pre-)trained NGC model
- and use to conduct hetero-associative pattern completion.
+ and use to conduct auto-associative pattern completion.
