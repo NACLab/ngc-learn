@@ -31,7 +31,7 @@ np.random.seed(seed)
 """
 ################################################################################
 Tutorial File:
-Extracts/retrieves the latent representations of a (pre-)trained NGC model and 
+Extracts/retrieves the latent representations of a (pre-)trained NGC model and
 a provided data sample/pool, i.e., the MNIST database.
 
 Usage:
@@ -80,7 +80,7 @@ train_set = DataLoader(design_matrices=[("z0",X)], batch_size=batch_size)
 
 def extract_latents(agent, dataset, calc_ToD, verbose=False):
     """
-        Extracts latent activites of an agent on a fixed-point data sample
+        Extracts latent activities of an agent on a fixed-point data sample
     """
     latents = None
     ToD = 0.0

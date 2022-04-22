@@ -8,6 +8,10 @@ Along the way, we will see how to fit a prior to our models and examine how a si
 configuration file will be set up to allow for easy recording of experimental
 settings.
 
+Note that the two folders of interest to this demonstration are:
++ `examples/demo1/`: which contains the scripts
++ `examples/data`: which contains a zipped copy of the MNIST database arrays
+
 ## Setting Up and Training A Generative System
 
 To start, navigate to the `examples/` directory to access the example/demonstration
@@ -18,7 +22,7 @@ the training set (image patterns and their labels), `validX.npy`and `validY.npy`
 up the development/validation set, and `testX.npy`and `testY.npy` compose the test set.
 Note that pixels in all image vectors have been normalized to the range of [0,1].
 
-Next,in `examples/`, we observe the provided script `sim_train.py`, which contains the
+Next,in `examples/demo1/`, we observe the provided script `sim_train.py`, which contains the
 code to execute the training process of an NGC model. Inside this file, we can export
 one of three possible GNCNs from ngc-learn's Model Museum, i.e., the GNCN-t1 (which
 is an instantiation of the model proposed in Rao &amp; Ballard, 1999 [1]),
@@ -234,8 +238,8 @@ only the training arrays, i.e., `trainX.npy` and `trainY.npy`, and the
 validation set arrays, i.e., `validX.npy` and `validY.npy`. We will use the
 test set arrays in a follow-up analysis once we have trained each of our
 models above. After the script terminates, you can also check inside each of
-the model folders, i.e., `examples/gncn_t1/`, `examples/gncn_t1_sigma/`, and
-`examples/gncn_pdh/`, and notice that your script saved/serialized to disk a
+the model folders, i.e., `examples/demo1/gncn_t1/`, `examples/demo1/gncn_t1_sigma/`,
+and `examples/demo1/gncn_pdh/`, and notice that your script saved/serialized to disk a
 few useful files:
 
 + `Lx0.npy`: the BCE training loss for the training set over epoch
@@ -324,13 +328,13 @@ Notice we still keep our measurement of the ToD and BCE just as an extra qualita
 sanity check to make sure that any model we de-serialize from disk yields values
 similar to what we measured during our training process.
 Armed with the extraction function above, we can gather the latent codes of
-our NGC model. Notice that in the provided `examples/extract_latents.py` script,
+our NGC model. Notice that in the provided `examples/demo1/extract_latents.py` script,
 you will find the above function integrated/used.
 Go ahead and run the extraction script for the first of your three models:
 ```console
 x@y:~path$ python extract_latents.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
-and you will find now inside the folder `examples/gncn_t1/` a new numpy array
+and you will find now inside the folder `examples/demo1/gncn_t1/` a new numpy array
 file `z3_0.npy`, which contains all of the latent variables for the top-most layer
 of your model (you can examine the configuration file `analyze.cfg` to see what
 arguments are set to achieve this).
@@ -343,20 +347,21 @@ using the `analyze.cfg` configuration, is execute this script like so:
 x@y:~path$ python fit_gmm.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
 and after your fitting process script terminates, you will see inside your model
-`examples/gncn_t1/` your learned prior `prior0.gmm`.
+`examples/demo1/gncn_t1/` your learned prior `prior0.gmm`.
 
 With this prior model `prior0.gmm` and your previously trained NGC system
 `model0.ngc` you are ready to finally estimate your marginal log likelihood.
-The final script provided `examples/eval_logpx.py` will do this for you, taking
+The final script provided `examples/demo1/eval_logpx.py` will do this for you, taking
 your full system -- the prior and the model -- and calculating a Monte Carlo
-estimate of its log likelihood. Run this script as follows:
+estimate of its log likelihood on the test set.
+Run this script as follows:
 ```console
 x@y:~path$ python eval_logpx.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
 and after it completes (this step can take a bit more time than the other steps,
 since we are computing our estimate over quite a few samples), in addition to
 an output to I/O of your `log p(x)`, you will see two more items in your
-model folder `examples/gncn_t1/`:
+model folder `examples/demo1/gncn_t1/`:
 
 + `logpx_results.txt`: the recorded marginal log likelihood
 + `samples.png`: some visual samples stored in an image array for you to view/assess
