@@ -49,6 +49,21 @@ extensions = [
 # napoleon_google_docstring = False
 # napoleon_use_param = False
 # napoleon_use_ivar = True
+myst_enable_extensions = [
+    "amsmath",
+    # "colon_fence",
+    # "deflist",
+    # "dollarmath",
+    # "fieldlist",
+    "html_admonition",
+    "html_image",
+    # "linkify",
+    # "replacements",
+    # "smartquotes",
+    "strikethrough",
+    # "substitution",
+    "tasklist",
+]
 
 # sphinx api-doc variables
 #apidoc_module_dir = "../ngclearn"

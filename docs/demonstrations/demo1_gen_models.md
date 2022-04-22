@@ -2,8 +2,11 @@
 
 In this demonstration, we will learn how to use ngc-learn's Model Museum to fit an
 NGC generative model, specifically called a generative neural coding network (GNCN),
-to the MNIST dataset. Specifically, we will focus on training three key models,
-each with different structural properties, and estimating their marginal log likelihoods.
+to the MNIST database. Specifically, we will focus on training three key models,
+each from different points in history, and estimating their marginal log likelihoods.
+Along the way, we will see how to fit a prior to our models and examine how a simple
+configuration file will be set up to allow for easy recording of experimental
+settings.
 
 ## Setting Up and Training A Generative System
 
@@ -234,11 +237,13 @@ models above. After the script terminates, you can also check inside each of
 the model folders, i.e., `examples/gncn_t1/`, `examples/gncn_t1_sigma/`, and
 `examples/gncn_pdh/`, and notice that your script saved/serialized to disk a
 few useful files:
-- `Lx0.npy`: the BCE training loss for the training set over epoch
-- `ToD0.npy`: the ToD measurement for the training set over epoch
-- `vLx0.npy`: the validation BCE loss over epoch
-- `vToD0.npy`: the validation ToD measurement loss over epoch
-- `model0.ngc`: your saved NGC model (with best validation performance)
+
++ `Lx0.npy`: the BCE training loss for the training set over epoch
++ `ToD0.npy`: the ToD measurement for the training set over epoch
++ `vLx0.npy`: the validation BCE loss over epoch
++ `vToD0.npy`: the validation ToD measurement loss over epoch
++ `model0.ngc`: your saved NGC model (with best validation performance)
+
 You can use then plot the numpy arrays using `matplotlib` or your favorite
 visualization library/package to create curves for each measurement over epoch.
 The final object, the model object, is what we will use in the next section to
@@ -352,16 +357,18 @@ and after it completes (this step can take a bit more time than the other steps,
 since we are computing our estimate over quite a few samples), in addition to
 an output to I/O of your `log p(x)`, you will see two more items in your
 model folder `examples/gncn_t1/`:
-- `logpx_results.txt`: the recorded marginal log likelihood
-- `samples.png`: some visual samples stored in an image array for you to view/assess
+
++ `logpx_results.txt`: the recorded marginal log likelihood
++ `samples.png`: some visual samples stored in an image array for you to view/assess
+
 If you `cat` the first item, you should something similar to the following:
 ```console
 x@y:~path$ cat gncn_t1/logpx_results.txt
 Likelihood Test:
   log[p(x)] = -103.13798522949219
 ```
-and if you open and view the image samples, you should see something similar to:
-![image_samples](../images/demo1/gncn_t1_samples.png)
+and if you open and view the image samples, you should see something similar to:<br>
+<img src="../images/demo1/gncn_t1_samples.png" width="350" />
 
 Now go ahead and re-run the same steps above but for your other two models, using
 the final configuration scripts, i.e., `gncn_t1_sigma/analyze.cfg` and
@@ -373,8 +380,8 @@ x@y:~path$ cat gncn_t1_sigma/logpx_results.txt
 Likelihood Test:
   log[p(x)] = -100.03035736083984
 ```
-with images as follows:
-![image_samples](../images/demo1/gncn_t1_sigma_samples.png)
+with images as follows:<br>
+<img src="../images/demo1/gncn_t1_sigma_samples.png" width="350" />
 
 For the GNCN-PDH, you get a log likelihood of:
 ```console
@@ -382,8 +389,8 @@ x@y:~path$ cat gncn_t1_sigma/logpx_results.txt
 Likelihood Test:
   log[p(x)] = -96.92353820800781
 ```
-with images as follows:
-![image_samples](../images/demo1/gncn_pdh_samples.png)
+with images as follows:<br>
+<img src="../images/demo1/gncn_pdh_samples.png" width="350" />
 
 For the three models above, we get log likelihood measurements that are desirably
 within the right ballpack of those reported in related literature [3].
