@@ -16,8 +16,22 @@ under the 3-Clause BSD license.
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
-**NOTE:** The documentation of this version is currently being built at the momemt (the formal release will be coming shortly,
+**NOTE:** The documentation of this version is currently being built at the moment (the formal release will be coming shortly,
 so please check in and git pull/re-clone in the next few days for the full version to be fully ported/built).
+
+## <b>Documentation</b>
+
+Official documentation, including some tutorials, can be found
+<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>.
+
+The official blog-post related to the source paper behind this software library
+can be found
+<a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">here</a>.<br>
+You can find the related paper also, under the Editors' Highlights page,  
+<a href="https://www.nature.com/collections/hjhbgijcei">right here</a>.
+
+<!--The technical report going over the theoretical underpinnings of the
+    NGC framework can be found here. TO BE RELEASED SOON. -->
 
 ## <b>Installation:</b>
 
@@ -42,20 +56,6 @@ If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="img/test_ngclearn_install.png" width="512">
-
-## <b>Documentation</b>
-
-Official documentation, including some tutorials, can be found
-<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>.
-
-The official blog-post related to the source paper behind this software library
-can be found
-<a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">here</a>.<br>
-You can find the related paper also, under the Editors' Highlights page,  
-<a href="https://www.nature.com/collections/hjhbgijcei">right here</a>.
-
-<!--The technical report going over the theoretical underpinnings of the
-    NGC framework can be found here. TO BE RELEASED SOON. -->
 
 ## <b>Attribution:</b>
 
