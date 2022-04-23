@@ -56,35 +56,63 @@ class Node:
     ############################################################################
 
     def build_tick(self):
+        """ Internal function for managing this node's notion of time """
         self.tick = {}
         for key in self.stat:
             self.tick[key] = 0
 
     def wire_to(self, dest_node, src_var, dest_var, cable_kernel=None, mirror_path_kernel=None, point_to_path=None):
         """
-        A wiring function allowing the user to connect this node to another external node
+        A wiring function that connects this node to another external node via a cable (or synaptic bundle)
 
         Args:
-            dest_node:
+            dest_node: destination node (a Node object) to wire this node to
 
-            src_var:
+            src_var: name of the compartment inside this node to transmit a signal from (to destination node)
 
-            dest_var:
+            dest_var: name of the compartment inside the destination node to transmit a signal to
 
-            cable_kernel:
+            cable_kernel: Dict defining how to initialize the cable that will connect this node to the destination node.
+                The expected keys and corresponding value types are specified below:
 
-            mirror_path_kernel:
+                :`'type'`: type of cable to be created.
+                    If "dense" is specified, a DCable (dense cable/bundle/matrix of synapses) will be used to
+                    transmit/transform information along.
 
-            point_to_path: 
+                :`'has_bias'`: if True, adds a bias/base-rate vector to the DCable that be used for wiring
+
+                :`'init'`: type of distribution to use initialize the cable/synapses.
+                    If "gaussian" is specified, for example, a Gaussian distribution will be used to initialize
+                    each scalar element inside the DCable synaptic matrix (biases are always set to zero)
+
+                :`'seed'`: integer seed to deterministically control initialization of synapses in a DCable
+
+                :Note: either cable_kernel, mirror_path_kernel, or point_to_path MUST be set to something that is not None
+
+            mirror_path_kernel: 2-Tuple that allows a currently existing cable to be re-used as a transformation.
+                The value types inside each slot of the tuple are specified below:
+
+                :cable_to_reuse (Tuple[0]): target cable (usually an existing DCable object) to shallow copy and mirror
+
+                :mirror_type (Tuple[1]): how should the cable be mirrored? If "symm_tied" is specified, then the transpose
+                    of this cable will be used to transmit information from this node to a destination node, if "anti_symm_tied"
+                    is specified, the negative transpose of this cable will be used
+
+                :Note: either cable_kernel, mirror_path_kernel, or point_to_path MUST be set to something that is not None
+
+            point_to_path: a DCable that we want to shallow-copy and directly/identically use to transmit information from this
+                node to a destination node (note that its shape/dimensions must be correct, otherwise this will break)
+
+                :Note: either cable_kernel, mirror_path_kernel, or point_to_path MUST be set to something that is not None
         """
         if cable_kernel is None and mirror_path_kernel is None and point_to_path is None:
-            print("Error: Must either set |cable_kernel| or |mirror_path_kernel| or |point_to_path| argument!")
+            print("Error: Must either set |cable_kernel| or |mirror_path_kernel| or |point_to_path| argument! for node({})".format(self.name))
             sys.exit(1)
         cable = None
-        if mirror_path_kernel is not None:
+        if mirror_path_kernel is not None: # directly share/shallow copy this cable but in reverse (with a transpose)
             cable = DCable(inp=(self,src_var),out=(dest_node,dest_var), shared_param_path=mirror_path_kernel, has_bias=False)
             #print(" CREATED:  ",cable.name)
-        elif point_to_path is not None:
+        elif point_to_path is not None: # directly share this cable (a shallow copy)
             has_bias = False
             if cable_kernel is not None:
                 has_bias = cable_kernel.get("has_bias")
@@ -186,8 +214,23 @@ class Node:
     # Signal Transmission Routines
     ############################################################################
 
-    def step(self):
+    def step(self, skip_core_calc=False):
+        """
+        Executes this nodes internal integration/calculation for one discrete step
+        in time, i.e., runs simulation of this node for one time step.
+
+        Args:
+            skip_core_calc: skips the core components of this node's calculation
+        """
         pass
 
     def calc_update(self, update_radius=-1.0):
+        """
+        Calculates the updates to local internal synaptic parameters related to this
+        specific node given current relevant values (such as node-level precision matrices).
+
+        Args:
+            update_radius: radius of Gaussian ball to constrain computed update matrices by
+                (i.e., clipping by Frobenius norm)
+        """
         return []

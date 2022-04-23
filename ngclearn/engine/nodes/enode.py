@@ -211,6 +211,10 @@ class ENode(Node):
         """
             Co-function that pre-computes the precision matrices for this NGC node.
             NGC uses the Cholesky-decomposition form of precision (Sigma)^{-1}
+
+            Args:
+                rebuild_cov: rebuild the underlying covariance matrix after re-computing
+                    precision (Default = True)
         """
         eps = 0.00025 #0.0001 # stability factor for precision/covariance computation
         cov_l = self.Sigma #tf.math.abs(self.Sigma[l])
@@ -253,10 +257,6 @@ class ENode(Node):
         # self.Prec = prec_l
 
     def calc_update(self, update_radius=-1.0):
-        """
-            Calculate the updates to the local synaptic parameters related to this
-            specific node
-        """
         delta = []
         # compute update to lateral correlation synapses
         if self.Sigma is not None:
