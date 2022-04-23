@@ -24,10 +24,11 @@ Note that pixels in all image vectors have been normalized to the range of [0,1]
 
 Next,in `examples/demo1/`, we observe the provided script `sim_train.py`, which contains the
 code to execute the training process of an NGC model. Inside this file, we can export
-one of three possible GNCNs from ngc-learn's Model Museum, i.e., the GNCN-t1 (which
+one of three possible GNCNs from ngc-learn's Model Museum, i.e., the
+[GNCN-t1](../museum/gncn_t1.md) (which
 is an instantiation of the model proposed in Rao &amp; Ballard, 1999 [1]),
-the GNCN-t1-Sigma (which is an instantiation of the model proposed in Friston
-2008 [2]), and the GNCN-PDH (which is one of the models proposed in
+the [GNCN-t1-Sigma](../museum/gncn_t1_sigma.md) (which is an instantiation of the model proposed in Friston
+2008 [2]), and the [GNCN-PDH](../museum/gncn_pdh.md) (which is one of the models proposed in
 Ororbia &amp; Kifer 2022 [3]).
 
 Importing models from the Model Museum is straightforward and only
