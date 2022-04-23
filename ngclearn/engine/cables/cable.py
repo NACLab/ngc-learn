@@ -14,7 +14,37 @@ import copy
 from ngclearn.utils import transform_utils
 
 class Cable:
+    """
+    Base cable element (class from which other cable types inherit basic properties from)
 
+    Args:
+        cable_type: the string concretely denoting this cable's type
+
+        inp: 2-Tuple defining the nodal points that this cable will connect.
+            The value types inside each slot of the tuple are specified below:
+
+            :input_node (Tuple[0]): the source/input Node object that this cable will carry
+                signal information from
+
+            :input_compartment (Tuple[1]): the compartment within the source/input Node that
+                signals will extracted and transmitted from
+
+        out: 2-Tuple defining the nodal points that this cable will connect.
+            The value types inside each slot of the tuple are specified below:
+
+            :input_node (Tuple[0]): the destination/output Node object that this cable will
+                carry signal information to
+
+            :input_compartment (Tuple[1]):  the compartment within the destination/output Node that
+                signals transmitted and deposited into
+
+        name: the string name of this cable (Default = None which creates an auto-name)
+
+        seed: integer seed to control determinism of any underlying synapses
+            associated with this cable
+
+        coeff: a scalar float to control any signal scaling associated with this cable
+    """
     def __init__(self, cable_type, inp, out, name=None, seed=69, coeff=1.0):
         self.cable_type = cable_type
         self.seed = seed

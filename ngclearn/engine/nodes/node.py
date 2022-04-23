@@ -20,7 +20,7 @@ class Node:
     Base node element (class from which other node types inherit basic properties from)
 
     Args:
-        node_type: the string concretely denoting this node type
+        node_type: the string concretely denoting this node's type
 
         dim: number of neurons this node will contain
     """
