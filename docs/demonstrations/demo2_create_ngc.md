@@ -34,3 +34,24 @@ in future releases, either through the NAC team or community contributions).
 The core node type set currently includes `SNode`, `ENode`, and `FNode` (all inheriting
 from the `Node` base class) while the current cable type set includes `DCable` and
 `SCable` (all inherited from the `Cable` base class).
+
+An `SNode` refers to a stateful node, which is one of the primary nodes you will
+work with when crafting NGC systems. A stateful node contains inside a cluster
+(or block) of neurons, the number of which is controlled through the `dim`
+argument.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end

@@ -34,7 +34,7 @@ class GNCN_PDH:
 
     Args:
         args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
-
+    
     | NOTE:
     | args should contain values for the following:
     | z_top_dim: # of latent variables in layer z3 (top-most layer)

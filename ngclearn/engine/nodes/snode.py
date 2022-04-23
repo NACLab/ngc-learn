@@ -1,12 +1,3 @@
-"""
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the BSD 3-clause license.
-
-You should have received a copy of the BSD 3-clause license with
-this file. If not, please write to: ago@cs.rit.edu
-"""
-
 import tensorflow as tf
 import sys
 import numpy as np
@@ -16,15 +7,67 @@ from ngclearn.utils import transform_utils
 
 class SNode(Node):
     """
-        Rate-coded state node
+    | Implements a (rate-coded) state node that follows NGC settling dynamics according to:
+    |   d.z/d.t = -z * leak + dz * beta + prior(z)
+    | where:
+    |   dz - aggregated input signals from other nodes/locations
+    |   beta - strength of update to node state z
+    |   leak - controls strength of leak variable/decay
+    |   prior(z) - distributional prior placed over z (such as a kurtotic prior)
+
+    | Note that the above is used to adjust neural activity values via an integator inside a node.
+        For example, if the standard/default Euler integrator is used then the neurons inside this
+        node are adjusted per step as follows:
+    |   z <- z * zeta + d.z/d.t
+    | where:
+    |   zeta - controls the strength of recurrent carry-over, if set to 0 no carry-over is used (stateless)
+
+    Args:
+        name: the name/label of this node
+
+        dim: number of neurons this node will contain/model
+
+        beta: strength of update to adjust neurons at each simulation step (Default = 1)
+
+        leak: strength of the leak applied to each neuron (Default = 0)
+
+        zeta: effect of recurrent/stateful carry-over (Defaul = 1)
+
+        act_fx: activation function -- phi(v) -- to apply to activities
+
+        integrate_kernel: Dict defining the neural state integration process type. The expected keys and
+            corresponding value types are specified below:
+
+            :`'integrate_type'`: type integration method to apply to neural activity over time.
+                If "euler" is specified, Euler integration will be used (future ngc-learn versions will support
+                "midpoint"/other methods).
+
+            :`'use_dfx'`: a boolean that decides if phi'(v) (activation derivative) is used in the integration
+                process/update.
+
+            :Note: specifying None will automatically set this node to use Euler integration w/ use_dfx=True
+
+        prior_kernel: Dict defining the type of prior function to apply over neural activities.
+            The expected keys and corresponding value types are specified below:
+
+            :`'prior_type'`: type of distribution to use as a prior over neural activities.
+                If "laplace" is specified, a Laplacian distribution is used (future ngc-learn versions will support
+                others such as "cauchy").
+
+            :`'lambda'`: the scale factor controlling the strength of the prior applied to neural activities.
+
+            :Note: specifying None will result in no prior distribution being applied
+
+        trace_kernel: (Default = None), supporting option for spiking neurons
+
+            :Note: NOT fully tested/integrated in ngc-learn v0.0.1
     """
     def __init__(self, name, dim, beta=1.0, leak=0.0, zeta=1.0, act_fx="identity",
-                 integrate_kernel=None, prior_kernel=None, lateral_kernel=None,
-                 trace_kernel=None):
+                 integrate_kernel=None, prior_kernel=None, trace_kernel=None):
         node_type = "state"
         super().__init__(node_type, name, dim)
-        self.use_dfx = False
-        self.integrate_type = "euler" # euler, midpoint
+        self.use_dfx = True # Default = True
+        self.integrate_type = "euler" # Default = euler
         if integrate_kernel is not None:
             self.use_dfx = integrate_kernel.get("use_dfx")
             self.integrate_type = integrate_kernel.get("integrate_type")
@@ -107,7 +150,7 @@ class SNode(Node):
                     if self.prior_type == "laplace":
                         z_prior = -tf.math.sign(z) * self.lbmda
             if self.integrate_type == "euler":
-                """
+                '''
                 Euler integration step (under NGC inference dynamics)
 
                 Constants/meta-parameters:
@@ -118,7 +161,7 @@ class SNode(Node):
 
                 Dynamics Equation:
                 z <- z * zeta + ( dz * beta - z * leak + prior(z) )
-                """
+                '''
                 dz = dz - z * self.leak + z_prior
                 z = z * self.zeta + dz * self.beta
             else:
