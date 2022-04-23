@@ -16,6 +16,14 @@ from ngclearn.engine.cables.dcable import DCable # dense cable
 from ngclearn.engine.cables.scable import SCable # simple cable
 
 class Node:
+    """
+    Base node element (class from which other node types inherit basic properties from)
+
+    Args:
+        node_type: the string concretely denoting this node type
+
+        dim: number of neurons this node will contain
+    """
     def __init__(self, node_type, name, dim):
         self.node_type = node_type
         self.name = name
@@ -53,6 +61,22 @@ class Node:
             self.tick[key] = 0
 
     def wire_to(self, dest_node, src_var, dest_var, cable_kernel=None, mirror_path_kernel=None, point_to_path=None):
+        """
+        A wiring function allowing the user to connect this node to another external node
+
+        Args:
+            dest_node:
+
+            src_var:
+
+            dest_var:
+
+            cable_kernel:
+
+            mirror_path_kernel:
+
+            point_to_path: 
+        """
         if cable_kernel is None and mirror_path_kernel is None and point_to_path is None:
             print("Error: Must either set |cable_kernel| or |mirror_path_kernel| or |point_to_path| argument!")
             sys.exit(1)
@@ -86,22 +110,53 @@ class Node:
         return cable
 
     def extract(self, var_name):
+        """
+        Extracts the data signal value that is currently stored inside of a target compartment
+
+        Args:
+            var_name: the name of the compartment in this node to extract data from
+        """
         return self.stat[var_name]
 
     def extract_params(self):
         return []
 
     def inject(self, data):
+        """
+        Injects an externally provided named value (a vector/matrix) to the desired
+        compartment within this node.
+
+        Args:
+            data: 2-Tuple containing a named external signal to clamp
+
+                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
+
+                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
+        """
         var_name, var_value = data
         self.stat[var_name] = var_value
 
     def clamp(self, data, is_persistent=True):
+        """
+        Clamps an externally provided named value (a vector/matrix) to the desired
+        compartment within this node.
+
+        Args:
+            data: 2-Tuple containing a named external signal to clamp
+
+                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
+
+                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
+
+            is_persistent: if True, prevents this node from overriding the clamped data over time (Default = True)
+        """
         var_name, var_value = data
         self.stat[var_name] = var_value
         if is_persistent is True:
             self.is_clamped = True
 
     def clear(self):
+        """ Wipes/clears values of each compartment in this node (and sets .is_clamped = False). """
         self.build_tick()
         self.is_clamped = False
         self.stat["dz"] = None
@@ -110,6 +165,12 @@ class Node:
         self.stat["mask"] = None
 
     def deep_store_state(self):
+        """
+        Performs a deep copy of all compartment statistics.
+
+        Returns:
+            Dict containing a deep copy of each named compartment of this node
+        """
         stat_cpy = {}
         for key in self.stat:
             value = self.stat.get(key)
@@ -118,6 +179,7 @@ class Node:
         return stat_cpy
 
     def check_correctness(self):
+        """ Executes a basic wiring correctness check. """
         pass
 
     ############################################################################

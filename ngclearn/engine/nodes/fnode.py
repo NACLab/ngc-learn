@@ -15,7 +15,19 @@ from ngclearn.engine.nodes.node import Node
 from ngclearn.utils import transform_utils
 
 class FNode(Node):
+    """
+    | Implements a feedforward (stateless) transmission node:
+    |   z = dz
+    | where:
+    |   dz - aggregated input signals from other nodes/locations
 
+    Args:
+        name: the name/label of this node
+
+        dim: number of neurons this node will contain/model
+
+        act_fx: activation function -- phi(v) -- to apply to neural activities
+    """
     def __init__(self, name, dim, act_fx="identity"):
         node_type = "feedforward"
         super().__init__(node_type, name, dim)
@@ -27,6 +39,7 @@ class FNode(Node):
         self.build_tick()
 
     def check_correctness(self):
+        """ Executes a basic wiring correctness check. """
         is_correct = True
         for j in range(len(self.input_nodes)):
             n_j = self.input_nodes[j]

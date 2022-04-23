@@ -33,7 +33,7 @@ class SNode(Node):
 
         zeta: effect of recurrent/stateful carry-over (Defaul = 1)
 
-        act_fx: activation function -- phi(v) -- to apply to activities
+        act_fx: activation function -- phi(v) -- to apply to neural activities
 
         integrate_kernel: Dict defining the neural state integration process type. The expected keys and
             corresponding value types are specified below:
@@ -100,6 +100,7 @@ class SNode(Node):
         self.build_tick()
 
     def check_correctness(self):
+        """ Executes a basic wiring correctness check. """
         is_correct = True
         for j in range(len(self.input_nodes)):
             n_j = self.input_nodes[j]

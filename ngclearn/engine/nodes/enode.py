@@ -15,9 +15,42 @@ from ngclearn.engine.nodes.node import Node
 from ngclearn.utils import transform_utils
 
 class ENode(Node):
+    """
+    | Implements a (rate-coded) error node simplified to its fixed-point form:
+    |   e = target - mu
+    | where:
+    |   target - a desired target activity value (pred_targ)
+    |   mu - an external prediction signal of the target activity value (pred_mu)
 
-    def __init__(self, name, dim, error_type="mse", beta=1.0, leak=0.0, zeta=1.0,
-                 act_fx="identity", precis_kernel=None, ex_scale=1.0):
+    | Note that this current version of the ENode has been set to be an MSE
+    | error node, meaning that the above fixed-point error neuron vector is
+    | derived from L = 0.5 * ( Sum_j (target - mu)^2_j )
+
+    Args:
+        name: the name/label of this node
+
+        dim: number of neurons this node will contain/model
+
+        error_type: type of distance/error measured by this error node (fixed to "mse")
+
+        act_fx: activation function -- phi(v) -- to apply to error activities (Default = "identity")
+
+        precis_kernel: 2-Tuple defining the initialization of the precision weighting synapses that will
+            modulate the error neural activities. For example, an argument could be: ("uniform", 0.01)
+            The value types inside each slot of the tuple are specified below:
+
+            :init_scheme (Tuple[0]): initialization scheme, e.g., "uniform", "gaussian".
+
+            :init_scale (Tuple[1]): scalar factor controlling the scale/magnitude of initialization distribution, e.g., 0.01.
+
+            :Note: specifying None will result in precision weighting being applied to the error neurons.
+                Understand that care should be taken w/ respect to this particular argument as precision
+                synapses involve an approximate inversion throughout simulation steps
+
+        ex_scale: a scale factor to amplify error neuron signals (Default = 1)
+    """
+    def __init__(self, name, dim, error_type="mse", act_fx="identity", precis_kernel=None,
+                 ex_scale=1.0):
         node_type = "error"
         super().__init__(node_type, name, dim)
         self.error_type = error_type
@@ -68,6 +101,7 @@ class ENode(Node):
         self.stat["weights"] = None
 
     def check_correctness(self):
+        """ Executes a basic wiring correctness check. """
         is_correct = True
         for j in range(len(self.input_nodes)):
             n_j = self.input_nodes[j]
