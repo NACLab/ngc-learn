@@ -4,16 +4,19 @@ import copy
 
 class Config:
     """
-    Simple configuration object to house named arguments for experiments
+    Simple configuration object to house named arguments for experiments (to be
+    built from a .cfg file on disk).
 
-    File format is:
-    # Comments start with pound symbol
-    arg_name = arg_value
-    arg_name = arg_value # side comment that will be stripped off
+    | File format is:
+    | # Comments start with pound symbol
+    | arg_name = arg_value
+    | arg_name = arg_value # side comment that will be stripped off
+
+    Args:
+        fname: the source file name to build a configuration object from (suffix = .cfg)
 
     @author: Alex Ororbia
     """
-
     def __init__(self, fname):
         self.fname = fname
         self.variables = {}
@@ -42,13 +45,25 @@ class Config:
 
     def getArg(self, arg_name):
         """
-            Retrieve argument from current configuration
+        Retrieve argument from current configuration
+
+        Args:
+            arg_name: the string name of the argument to retrieve from this config
+
+        Returns:
+            the value of the named argument queried
         """
         return self.variables.get(arg_name)
 
     def hasArg(self, arg_name):
         """
-            Check if argument exists (or if it is known by this config object)
+        Check if argument exists (or if it is known by this config object)
+
+        Args:
+            arg_name: the string name of the argument to check for the existence of
+
+        Returns:
+            True if this config contains this argument, False otherwise
         """
         arg = self.variables.get(arg_name)
         flag = False
@@ -58,6 +73,11 @@ class Config:
 
     def setArg(self, arg_name, arg_value):
         """
-            Set argument directly
+        Sets an argument directly
+
+        Args:
+            arg_name: the string name of the argument to set within this config
+
+            arg_value: the value name of the argument to set within this config
         """
         self.variables[arg_name] = arg_value

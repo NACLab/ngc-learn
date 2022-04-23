@@ -1,12 +1,3 @@
-"""
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the BSD 3-clause license.
-
-You should have received a copy of the BSD 3-clause license with
-this file. If not, please write to: ago@cs.rit.edu
-"""
-
 import tensorflow as tf
 import sys
 import numpy as np
@@ -24,8 +15,9 @@ from sklearn import mixture
 seed = 69
 tf.random.set_seed(seed=seed)
 
-"""
-    Implements a custom/pure-TF Gaussian mixture model -- or mixture of Gaussians, MoG.
+class GMM:
+    """
+    Implements a custom/pure-TF Gaussian mixture model (GMM) -- or mixture of Gaussians, MoG.
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)
     learning algorithm and leverages full covariance matrices in the component
     multivariate Gaussians.
@@ -33,9 +25,20 @@ tf.random.set_seed(seed=seed)
     Note this is a TF wrapper model that houses the sklearn implementation for learning.
     The sampling process has been rewritten to utilize GPU matrix computation.
 
+    Args:
+        k: the number of components/latent variables within this GMM
+
+        max_iter: the maximum number of EM iterations to fit parameters to data
+            (Default = 5)
+
+        assume_diag_cov: if True, assumes a diagonal covariance for each component
+            (Default = False)
+
+        init_kmeans: if True, first learn use the K-Means algorithm to initialize
+            the component Gaussians of this GMM (Default = True)
+
     @author Alexander Ororbia
-"""
-class GMM:
+    """
     def __init__(self, k, max_iter=5, assume_diag_cov=False, init_kmeans=True):
         self.use_sklearn = True
         self.k = k
@@ -60,9 +63,12 @@ class GMM:
 
     def init_from_ScikitLearn(self, gmm):
         '''
-            Creates a GMM from a pre-trained Scikit-Learn model -- conversion
-            sets things up for a row-major form of sampling, i.e., s ~ mu_k + eps * (L_k^T)
-            where k is the sampled component index
+        Creates a GMM from a pre-trained Scikit-Learn model -- conversion
+        sets things up for a row-major form of sampling, i.e., s ~ mu_k + eps * (L_k^T)
+        where k is the sampled component index
+
+        Args:
+            gmm: the pre-trained GMM (from scikit-learn) to load in
         '''
         eps = 0.0001
         self.k = gmm.weights_.shape[0]
@@ -84,8 +90,6 @@ class GMM:
             self.prec.append(prec_i)
             # Note for Numerical Stability: Add small pertturbation eps * I to covariance before decomposing (due to rapidly decaying Eigen values)
             self.R.append( tf.transpose(tf.linalg.cholesky(cov_i + diag_i * eps))  ) # L^T is stored b/c we sample from a row-major perspective
-
-
 
     def estimate_log_prob(self, X):
         log_px = 0.0
@@ -141,13 +145,21 @@ class GMM:
         return log_prob_norm, log_resp, w_log_probs
 
     def update(self, X):
-        """Performs a single iterative update of parameters (assuming model initialized)"""
+        """
+        Performs a single iterative update of parameters (assuming model initialized)
+
+        Args:
+            X: the dataset to fit this GMM to
+        """
         log_prob_norm, log_resp = self.e_step(X)
         self.m_step(X, log_resp)
 
     def calc_prob(self, X):
         """
-            Computes probabilities p(z|x) of data samples in X under this GMM
+        Computes probabilities p(z|x) of data samples in X under this GMM
+
+        Args:
+            X: the dataset to estimate the probabilities from
         """
         w_log_probs = self.calc_w_log_prob(X)
         log_prob_norm = tf.math.reduce_logsumexp(w_log_probs, axis=1, keepdims=True)
@@ -157,7 +169,10 @@ class GMM:
 
     def calc_gaussian_logpdf(self, X):
         """
-            Calculates log densities/probabilities of data X under each component given this GMM
+        Calculates log densities/probabilities of data X under each component given this GMM
+
+        Args:
+            X: the dataset to calculate the log likelihoods from
         """
         log_probs = None
         for i in range(self.k):
@@ -173,7 +188,10 @@ class GMM:
 
     def calc_w_log_prob(self, X):
         """
-            Calculates weighted log probabilities of data X under each component given this GMM
+        Calculates weighted log probabilities of data X under each component given this GMM
+
+        Args:
+            X: the dataset to calculate the weighted log probabilities from
         """
         log_weights = tf.math.log(self.weights)
         w_log_probs = None
@@ -192,7 +210,10 @@ class GMM:
 
     def predict(self, X):
         """
-            Chooses which component samples in X are likely to belong to given p(z|x)
+        Chooses which component samples in X are likely to belong to given p(z|x)
+
+        Args:
+            X: the input data to compute p(z|x) from
         """
         w_log_probs = self.calc_w_log_prob(X)
         #log_prob_norm = tf.math.reduce_logsumexp(w_log_probs, axis=1, keepdims=True)
@@ -202,7 +223,19 @@ class GMM:
         return pred
 
     def sample(self, n_s, mode_i=-1, samples_modes_evenly=False):
-        """(Efficiently) Draw samples from the current underlying GMM model"""
+        """
+        (Efficiently) Draw samples from the current underlying GMM model
+
+        Args:
+            n_s: the number of samples to draw from this GMM
+
+            mode_i: if >= 0, will only draw samples from a specific component of this GMM
+                (Default = -1), ignoring the Categorical prior over latent variables/components
+
+            samples_modes_evenly: if True, will ignore the Categorical prior over latent
+                variables/components and draw an approximately equal number of samples from
+                each component
+        """
         samples = None
         labels = None
         if mode_i >= 0: # sample from a particular mode / component

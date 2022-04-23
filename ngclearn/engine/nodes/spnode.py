@@ -1,12 +1,3 @@
-"""
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the BSD 3-clause license.
-
-You should have received a copy of the BSD 3-clause license with
-this file. If not, please write to: ago@cs.rit.edu
-"""
-
 import tensorflow as tf
 import sys
 import numpy as np
@@ -17,6 +8,8 @@ from ngclearn.utils import transform_utils
 class SpNode(Node):
     """
         Spiking state node (leaky-integrate and fire, LIF)
+
+        NOTE: currently under testing/integration
 
         @author Alexander G. Ororbia
     """
@@ -164,12 +157,13 @@ class SpNode(Node):
 
     #@tf.function
     def apply_SRM_LIF(self, J_t, V_t, rfr_t, spike_t, dt, tau_m, membrane_leak, abs_refractory_time = 0.0, V_thr=0.5):
-        """
+        '''
         Apply the leaky integrate-and-fire spike-response model (SRM LIF):
         V(t + dt) = V(t) + ( -V(t) * leak_lvl + I(t) ) * (dt / tau_m), where tau_m = R_m * C_m
 
-        Returns: (spike_t, volt_t, refractory variable)
-        """
+        Returns:
+            (spike_t, volt_t, refractory variable)
+        '''
         rfr_t = tf.nn.relu(tf.subtract(rfr_t, dt))
         #rfr_t.assign( tf.nn.relu(tf.subtract(rfr_t, dt)) )
 

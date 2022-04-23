@@ -1,12 +1,3 @@
-"""
-Copyright (C) 2021 Alexander G. Ororbia II - All Rights Reserved
-You may use, distribute and modify this code under the
-terms of the BSD 3-clause license.
-
-You should have received a copy of the BSD 3-clause license with
-this file. If not, please write to: ago@cs.rit.edu
-"""
-
 import os
 import sys
 import copy
@@ -29,7 +20,7 @@ class GNCN_t1_Sigma:
     Biology 4.11 (2008): e1000211.
 
     Note this model includes a Laplacian prior to induce some level of sparsity
-    in the latent activities. 
+    in the latent activities.
     This model, under the NGC computational framework, is referred to as
     the GNCN-t1-Sigma/Friston, according to the naming convention in
     (Ororbia & Kifer 2022).
