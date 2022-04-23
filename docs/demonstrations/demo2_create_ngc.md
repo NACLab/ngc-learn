@@ -25,8 +25,8 @@ if we are processing static data such as images).
 ## Building NGC Systems with Nodes and Cables
 With some of ngc-learn's theoretical framing in mind, we can craft connectivity
 patterns of our own by simply deciding the form that nodes and cables in our system
-will take. ngc-learn currently offers a few core nodes and cable types (noting that
-ngc-learn is meant to be an evolving software framework, so many more are to come
+will take. ngc-learn currently offers a few core nodes and cable types (note that
+ngc-learn is an evolving software framework, so more node/cable types are to come
 in future releases either from the NAC team or through community contributions).
 The core node type set currently includes `SNode`, `ENode`, and `FNode` (all inheriting
 from the `Node` base class) while the current cable type set includes `DCable` and

@@ -53,7 +53,8 @@ The ngc-learn software framework was originally developed in 2019 by the Neural 
 Computing (NAC) laboratory in Rochester Institute of Technology meant as an internal
 tool for predictive processing research (with earlier incarnations in the Scala
 programming language, dating back to early 2017). It remains actively maintained
-and used for predictive processing research in NAC.
+and used for predictive processing research in NAC (see ngc-learn's mention/announcement
+in this <a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">engineering blog post</a>).
 We welcome community contributions to this project. For details please check out our contributing guidelines (<i>coming soon!</i>).
 
 <!--
