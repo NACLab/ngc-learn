@@ -21,7 +21,7 @@ so please check in and git pull/re-clone in the next few days for the full versi
 
 ## <b>Documentation</b>
 
-Official documentation, including some tutorials, can be found
+Official documentation, including tutorials, can be found
 <a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>.
 
 The official blog-post related to the source paper behind this software library
