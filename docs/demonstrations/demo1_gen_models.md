@@ -12,7 +12,7 @@ Note that the two folders of interest to this demonstration are:
 + `examples/demo1/`: which contains the scripts
 + `examples/data`: which contains a zipped copy of the MNIST database arrays
 
-## Setting Up and Training A Generative System
+## Setting Up and Training a Generative System
 
 To start, navigate to the `examples/` directory to access the example/demonstration
 code and further enter the `examples/data/` sub-folder. Unzip the file
