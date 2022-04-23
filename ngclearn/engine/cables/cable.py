@@ -74,9 +74,52 @@ class Cable:
         self.deriv_comp = None
 
     def propagate(self, node):
-        pass
+        """
+        Internal transmission function that computes the correct transformation
+        of a source node to a destination node
+
+        Args:
+            node: source node to extracted relevant information from and transform
+
+        Returns:
+            the resultant transformed signal (transformation f information from "node")
+        """
+        return 0.0
 
     def set_update_rule(self, preact, postact, deriv_node=None, gamma=1.0, use_mod_factor=False):
+        """
+        Sets the synaptic adjustment rule for this cable (currently a 2-factor local synaptic Hebbian update rule).
+
+        Args:
+            preact: 2-Tuple defining the pre-activity/source node of which the first factor the synaptic
+                update rule will be extracted from.
+                The value types inside each slot of the tuple are specified below:
+
+                :preact_node (Tuple[0]): the physical node that offers a pre-activity signal for the first
+                    factor of the synaptic/cable update
+
+                :preact_compartment (Tuple[1]): the component in the preact_node to extract the necessary
+                    signal to compute the first factor the synaptic/cable update
+
+            postact: 2-Tuple defining the post-activity/source node of which the second factor the synaptic
+                update rule will be extracted from.
+                The value types inside each slot of the tuple are specified below:
+
+                :postact_node (Tuple[0]): the physical node that offers a post-activity signal for the second
+                    factor of the synaptic/cable update
+
+                :postact_compartment (Tuple[1]): the component in the postact_node to extract the necessary
+                    signal to compute the second factor the synaptic/cable update
+
+            deriv_node: <UNUSED>
+
+            gamma: scaling factor for the synaptic update
+
+            use_mod_factor: if True, triggers the modulatory matrix weighting factor to be
+                applied to the resultant synaptic update
+
+                :Note: This is un-tested/not fully integrated
+        """
         self.gamma = gamma
         self.use_mod_factor = use_mod_factor
         self.is_learnable = True
@@ -92,7 +135,20 @@ class Cable:
             self.deriv_comp = deriv_comp
 
     def calc_update(self, update_radius=-1.0):
+        """
+        Calculates the updates to the internal synapses that compose this cable
+        given this cable's pre-configured synaptic update rule.
+
+        Args:
+            update_radius: radius of Gaussian ball to constrain computed update matrices by
+                (i.e., clipping by Frobenius norm)
+        """
         return []
 
     def clear(self):
+        """
+        Clears/wipes any information that have remained persistent w/in this cable
+
+        NOTE: this is currently UNUSED
+        """
         pass

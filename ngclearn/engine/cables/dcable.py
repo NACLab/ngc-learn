@@ -50,7 +50,7 @@ class DCable(Cable):
             associated with this cable
 
         point_to:
-        
+
     """
     def __init__(self, inp, out, init_kernel=None, has_bias=False, shared_param_path=None,
                  name=None, seed=69, coeff=1.0, point_to=None):
