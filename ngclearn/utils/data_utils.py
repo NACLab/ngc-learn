@@ -11,23 +11,16 @@ np.random.seed(seed)
 
 class DataLoader(object):
     """
-        :param design_matrices:  list of named data design matrices - [("name", matrix), ...]
-        :param batch_size:  number of samples to place inside a mini-batch
-        :disable_shuffle disable_shuffle:  if True turns off sample shuffling
-        :return:  None
-    """
+        A data loader object, meant to allow sampling w/o replacement of one or
+        more named design matrices.
 
-    """
-    Data Code
-    self.xdata = np.loadtxt(self.x_fname, delimiter=delimiter)
-    if flip_data is True:
-        self.xdata = np.abs(self.xdata - 1.0)
-    # OR
-    self.xdata = np.load(x_fname)
-    if flip_data is True:
-        self.xdata = np.abs(self.xdata - 1.0)
-    """
+        Args:
+            design_matrices:  list of named data design matrices - [("name", matrix), ...]
+            batch_size:  number of samples to place inside a mini-batch
+            disable_shuffle:  if True, turns off sample shuffling (thus no sampling w/o replacement)
 
+        @author Alexander Ororbia
+    """
     def __init__(self, design_matrices, batch_size, disable_shuffle=False):
         self.batch_size = batch_size
         self.disable_shuffle = disable_shuffle
@@ -40,7 +33,7 @@ class DataLoader(object):
 
     def __iter__(self):
         """
-            yields a mini-batch of the form:  [("name", batch),("name",batch),...]
+            Yields a mini-batch of the form:  [("name", batch),("name",batch),...]
         """
         if self.disable_shuffle is False:
             self.ptrs = np.random.permutation(self.data_len)

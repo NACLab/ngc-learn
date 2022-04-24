@@ -5,11 +5,11 @@ import pickle
 
 def serialize(fname, object):
     """
-        Serializes object to disk
+        Serializes an object to disk.
 
-        fname: /path/to/fname_of_model
-        model: model object to serialize
-        return: None
+        Args:
+            fname: filename of object to save - /path/to/fname_of_model
+            model: model object to serialize
     """
     fd = open(fname, 'wb')
     pickle.dump(object, fd)
@@ -19,8 +19,10 @@ def deserialize(fname):
     """
         De-serializes a object from disk
 
-        fname: /path/to/fname_of_model
-        return: model object
+        Args:
+            fname: filename of object to load - /path/to/fname_of_model
+        Returns:
+            the deserialized model object
     """
     fd = open(fname, 'rb')
     object = pickle.load( fd )
