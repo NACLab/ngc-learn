@@ -1,9 +1,8 @@
 """
-Statistical utilities function file
+Statistical functions/utilities file.
 
 @author: Alexander Ororbia
 """
-
 import tensorflow as tf
 import numpy as np
 seed = 69
@@ -13,13 +12,37 @@ np.random.seed(seed)
 
 
 def sample_uniform(n_s, n_dim):
-    """ Samples a multivariate Uniform distribution """
+    """
+    Samples a multivariate Uniform distribution
+
+    Args:
+        n_s: number of samples to draw
+
+        n_dim: dimensionality of the sample space
+
+    Returns:
+        an (n_s x n_dim) matrix of uniform samples (one vector sample per row)
+    """
     eps = tf.random.uniform(shape=(n_s,n_dim), minval=0.0, maxval=1.0, dtype=tf.float32, seed=seed)
     return eps
 
 def sample_gaussian(n_s, mu=0.0, sig=1.0, n_dim=-1):
     """
-        Samples a multivariate Gaussian assuming at worst a diagonal covariance
+    Samples a multivariate Gaussian assuming a diagonal covariance or scalar
+    variance (shared across dimensions) in the form of a standard deviation
+    vector/scalar.
+
+    Args:
+        n_s: number of samples to draw
+
+        mu: (1 x D) mean of the Gaussian distribution
+
+        sig: (1 x D) or (1 x 1) standard deviation of the Gaussian distribution
+
+        n_dim: dimensionality of the sample space
+
+    Returns:
+        an (n_s x n_dim) matrix of uniform samples (one vector sample per row)
     """
     dim = n_dim
     if dim <= 0:
@@ -28,7 +51,19 @@ def sample_gaussian(n_s, mu=0.0, sig=1.0, n_dim=-1):
     return mu + eps * sig
 
 def calc_log_gauss_pdf(X, mu, cov):
-    """ Calculates the log Gaussian PDF """
+    """
+    Calculates the log Gaussian probability density function (PDF)
+
+    Args:
+        X: an (N x D) data design matrix to measure log density over
+
+        mu: the (1 x D) vector mean of the Gaussian distribution
+
+        cov: the (D x D) covariance matrix of the Gaussian distribution
+
+    Returns:
+        a (N x 1) column vector w/ each row containing log density value per sample
+    """
     prec_chol = calc_prec_chol(mu, cov)
     n_samples, n_features = X.shape
     # det(precision_chol) is half of det(precision)
@@ -38,7 +73,18 @@ def calc_log_gauss_pdf(X, mu, cov):
     return -0.5 * (n_features * tf.math.log(2 * np.pi) + log_prob) + log_det
 
 def calc_list_moments(data_list, num_dec=3):
-    """ Compute 1st and 2nd moments from a list of data values """
+    """
+    Compute the mean and standard deviation from a list of data values. This is
+    for simple scalar measurements/metrics that will be printed to I/O.
+
+    Args:
+        data_list: list of data values, each element should be (1 x 1)
+
+        num_dec: number of decimal points to round values to (Default = 3)
+
+    Returns:
+        (mu, sigma), where mu = mean and sigma = standard deviation
+    """
     mu = 0.0
     sigma = 0.0
     if len(data_list) > 0:
@@ -56,7 +102,25 @@ def calc_list_moments(data_list, num_dec=3):
     return mu, sigma
 
 def calc_covariance(X, mu_=None, weights=None, bias=True):
-    """ Calculates the covariance matrix of X """
+    """
+    Calculate the covariance matrix of X
+
+    Args:
+        X: an (N x D) data design matrix to measure log density over
+            (1 row vector - 1 data point)
+
+        mu_: a pre-computed (1 x D) vector mean of the Gaussian distribution
+            (Default = None)
+
+        weights: a (N x 1) weighting column vector, one row is weight applied
+            to one sample in X (Default = None)
+
+        bias: (only applies if weights is None), if True, compute the
+            biased estimator of covariance
+
+    Returns:
+        a (D x D) covariance matrix
+    """
     eps = 1e-4 #1e-4
     Ie = tf.eye(X.shape[1]) * eps
     if weights is None:
@@ -82,7 +146,22 @@ def calc_covariance(X, mu_=None, weights=None, bias=True):
     return C
 
 def calc_gKL(mu_p, sigma_p, mu_q, sigma_q):
-    """ Calculate the Gaussian Kullback-Leibler (KL) divergence """
+    """
+    Calculate the Gaussian Kullback-Leibler (KL) divergence between two
+    multivariate Gaussian distributions, i.e., KL(p||q).
+
+    Args:
+        mu_p: (1 x D) vector mean of distribution p
+
+        sigma_p: (D x D) covariance matrix of distributon p
+
+        mu_q: (1 x D) vector mean of distribution q
+
+        sigma_q: (D x D) covariance matrix of distributon q
+
+    Returns:
+        the scalar KL divergence
+    """
     # https://mr-easy.github.io/2020-04-16-kl-divergence-between-2-gaussian-distributions/
     prec_q = ainv(sigma_q)# tf.linalg.pinv(sigma_q)
     k = mu_p.shape[1]
@@ -95,7 +174,15 @@ def calc_gKL(mu_p, sigma_p, mu_q, sigma_q):
     return KL
 
 def ainv(A):
-    """Computes the inverse of matrix A"""
+    """
+    Computes the inverse of matrix A
+
+    Args:
+        A: matrix to invert
+
+    Returns:
+        the inversion of A
+    """
     eps = 0.0001 # stability factor for precision/covariance computation
     cov_l = A
     diag_l = tf.eye(cov_l.shape[1])

@@ -1,3 +1,8 @@
+"""
+Contains generic saving/loading utilies.
+
+@author Alexander Ororbia
+"""
 import io
 import sys
 import math
