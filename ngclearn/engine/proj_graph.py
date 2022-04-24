@@ -9,6 +9,9 @@ class ProjectionGraph:
     directed generative model or ancestral projection of a clamped graph.
     Note that this graph system is NOT learnable.
 
+    Args:
+        name: the name of this projection graph
+
     @author: Alexander G. Ororbia
     """
     def __init__(self, name="sampler"):
@@ -22,8 +25,8 @@ class ProjectionGraph:
         """
         Set execution cycle for this graph
 
-        :param nodes:
-        :return: None
+        Args:
+            nodes: an ordered list of Node(s) to create an execution cycle for
         """
         self.exec_cycles.append(nodes)
         for j in range(len(nodes)): # collect any learnable cables
@@ -42,9 +45,13 @@ class ProjectionGraph:
         """
         Extract a particular signal from a particular node embedded in this graph
 
-        :param node_name:
-        :param node_var_name:
-        :return:
+        Args:
+            node_name: name of the node from the NGC graph to examine
+
+            node_var_name: compartment name w/in Node to extract signal from
+
+        Returns:
+            an extracted signal (vector/matrix)
         """
         return self.nodes[node_name].extract(node_var_name)
 
@@ -52,9 +59,11 @@ class ProjectionGraph:
         """
         Extract a particular node from this graph
 
-        :param node_name:
-        :param node_var_name:
-        :return:
+        Args:
+            node_name: name of the node from the NGC graph to examine
+
+        Returns:
+            the desired Node (object)
         """
         return self.nodes[node_name]
 
@@ -62,17 +71,24 @@ class ProjectionGraph:
         """
         Project signals through the execution pathway(s) defined by this graph
 
-        :param clamped_vars:
-        :param readout_vars:
-        :return: readouts
+        Args:
+            clamped_vars: list of 2-tuples containing named Nodes that will be clamped with particular values.
+                Note that this list takes the form: [(node1_name, node_value1), node2_name, node_value2),...]
+
+            readout_vars: list of 2-tuple strings containing named Nodes and their compartments to read signals from.
+                Note that this list takes the form: [(node1_name, node1_compartment), node2_name, node2_compartment),...]
+
+        Returns:
+            readout values - a list of 3-tuples named signals corresponding to the ones in "readout_vars". Note that
+                this list takes the form: [(node1_name, node1_compartment, value), node2_name, node2_compartment, value),...]
         """
         batch_size = 1
         # Step 1: Clamp variables that will persist during sampling/projection step
         for clamped_var in clamped_vars:
-            var_name, var_value = clamped_var
+            var_name, comp_name, var_value = clamped_var
             batch_size = var_value.shape[0]
             node = self.nodes.get(var_name)
-            node.clamp(("z", var_value), is_persistent=True)
+            node.clamp((comp_name, var_value), is_persistent=True) # "z"
             node.step()
 
         for c in range(len(self.exec_cycles)):
@@ -91,7 +107,7 @@ class ProjectionGraph:
 
     def clear(self):
         """
-        Clear/delete any persistent signals in this graph
+        Clears/deletes any persistent signals embedded in this graph (clears the state).
         """
         for c in range(len(self.exec_cycles)):
             cycle_c = self.exec_cycles[c]

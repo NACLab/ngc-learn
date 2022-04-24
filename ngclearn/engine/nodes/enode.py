@@ -66,9 +66,7 @@ class ENode(Node):
             self.Sigma = Sigma
 
         # node meta-parameters
-        self.beta = beta
-        self.leak = leak
-        self.zeta = zeta
+        # None so far
 
         # error neuron-specific vector statistics
         self.stat["pred_mu"] = None
@@ -189,12 +187,16 @@ class ENode(Node):
 
         bmask = self.stat.get("mask")
         if bmask is not None: # applies mask to all component variables of this node
-            if self.stat.get("dz") is not None:
-                self.stat["dz"] = self.stat.get("dz") * bmask
-            if self.stat.get("z") is not None:
-                self.stat["z"] = self.stat.get("z") * bmask
-            if self.stat.get("phi(z)") is not None:
-                self.stat["phi(z)"] = self.stat.get("phi(z)") * bmask
+            for key in self.stat:
+                self.stat[key] = self.stat.get(key) * bmask
+            # if self.stat.get("dz") is not None:
+            #     self.stat["dz"] = self.stat.get("dz") * bmask
+            # if self.stat.get("dz_bu") is not None:
+            #     self.stat["dz_bu"] = self.stat.get("dz_bu") * bmask
+            # if self.stat.get("z") is not None:
+            #     self.stat["z"] = self.stat.get("z") * bmask
+            # if self.stat.get("phi(z)") is not None:
+            #     self.stat["phi(z)"] = self.stat.get("phi(z)") * bmask
 
         self.build_tick()
 

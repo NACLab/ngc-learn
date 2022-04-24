@@ -7,6 +7,8 @@ from ngclearn.engine.cables.cable import Cable
 
 class DCable(Cable):
     """
+    A dense cable that transforms signals that travel across via a bundle of synapses.
+    (In other words, a linear projection followed by an optional base-rate/bias shift.)
 
     Args:
         inp: 2-Tuple defining the nodal points that this cable will connect.

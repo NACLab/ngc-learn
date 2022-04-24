@@ -13,7 +13,7 @@ class Config:
     | arg_name = arg_value # side comment that will be stripped off
 
     Args:
-        fname: the source file name to build a configuration object from (suffix = .cfg)
+        fname: source file name to build configuration object from (suffix = .cfg)
 
     @author: Alex Ororbia
     """

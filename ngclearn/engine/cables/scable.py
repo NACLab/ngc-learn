@@ -7,6 +7,8 @@ from ngclearn.engine.cables.cable import Cable
 
 class SCable(Cable):
     """
+    A simple cable that, at most, applies a scalar amplification of signals that travel across it.
+    (Otherwise, this cable works like an identity carry-over.)
 
     Args:
         inp: 2-Tuple defining the nodal points that this cable will connect.

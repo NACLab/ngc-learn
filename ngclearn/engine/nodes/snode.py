@@ -45,7 +45,7 @@ class SNode(Node):
             :`'use_dfx'`: a boolean that decides if phi'(v) (activation derivative) is used in the integration
                 process/update.
 
-            :Note: specifying None will automatically set this node to use Euler integration w/ use_dfx=True
+            :Note: specifying None will automatically set this node to use Euler integration w/ use_dfx=False
 
         prior_kernel: Dict defining the type of prior function to apply over neural activities.
             The expected keys and corresponding value types are specified below:
@@ -66,7 +66,7 @@ class SNode(Node):
                  integrate_kernel=None, prior_kernel=None, trace_kernel=None):
         node_type = "state"
         super().__init__(node_type, name, dim)
-        self.use_dfx = True # Default = True
+        self.use_dfx = False
         self.integrate_type = "euler" # Default = euler
         if integrate_kernel is not None:
             self.use_dfx = integrate_kernel.get("use_dfx")
@@ -106,7 +106,8 @@ class SNode(Node):
             n_j = self.input_nodes[j]
             cable_j = self.input_cables[j]
             dest_var_j = cable_j.out_var
-            if dest_var_j != "dz":
+            #if dest_var_j != "dz":
+            if dest_var_j != "dz_td" and dest_var_j != "dz_bu" and dest_var_j != "dz":
                 is_correct = False
                 print("ERROR: Cable {0} mis-wires to {1}.{2} (can only be .dz)".format(cable_j.name, self.name, dest_var_j))
                 break
@@ -137,14 +138,24 @@ class SNode(Node):
                     var_j = dz_j
                 self.stat[dest_var_j] = var_j
                 self.tick[dest_var_j] = self.tick[dest_var_j] + 1
-            dz = self.stat.get("dz")
+            dz_td = self.stat.get("dz_td") # top-down compartment
+            dz_bu = self.stat.get("dz_bu") # bottom-up compartment
+            if dz_td is None:
+                dz_td = 0.0
+            if dz_bu is None:
+                dz_bu = 0.0
+            dz = None
+            if self.use_dfx is True:
+                dz = dz_td + (dz_bu * self.dfx(z)) # (dz_td + dz_bu) * self.dfx(z)
+            else:
+                dz = dz_td + dz_bu
             # if self.V is not None: # apply lateral filtering connections in V
             #      dz = dz - tf.matmul(phi_z, self.V)
-            if dz is None:
-                dz = 0.0
-            else:
-                if self.use_dfx is True:
-                    dz = dz * self.dfx(z)
+            # if dz is None:
+            #     dz = 0.0
+            # else:
+            #     if self.use_dfx is True:
+            #         dz = dz * self.dfx(z)
             z_prior = 0.0
             if self.prior_type is not None:
                 if self.lbmda > 0.0:
@@ -193,11 +204,15 @@ class SNode(Node):
 
         bmask = self.stat.get("mask")
         if bmask is not None: # applies mask to all component variables of this node
-            if self.stat.get("dz") is not None:
-                self.stat["dz"] = self.stat.get("dz") * bmask
-            if self.stat.get("z") is not None:
-                self.stat["z"] = self.stat.get("z") * bmask
-            if self.stat.get("phi(z)") is not None:
-                self.stat["phi(z)"] = self.stat.get("phi(z)") * bmask
+            for key in self.stat:
+                self.stat[key] = self.stat.get(key) * bmask
+            # if self.stat.get("dz") is not None:
+            #     self.stat["dz"] = self.stat.get("dz") * bmask
+            # if self.stat.get("dz_bu") is not None:
+            #     self.stat["dz_bu"] = self.stat.get("dz_bu") * bmask
+            # if self.stat.get("z") is not None:
+            #     self.stat["z"] = self.stat.get("z") * bmask
+            # if self.stat.get("phi(z)") is not None:
+            #     self.stat["phi(z)"] = self.stat.get("phi(z)") * bmask
 
         self.build_tick()

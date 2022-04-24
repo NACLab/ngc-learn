@@ -34,6 +34,8 @@ class Node:
         # self.phi_z = None
         self.stat = {}
         self.stat["dz"] = None
+        self.stat["dz_td"] = None
+        self.stat["dz_bu"] = None
         self.stat["z"] = None
         self.stat["phi(z)"] = None
         self.stat["mask"] = None # a binary mask that can be used to make this node's activity values
@@ -177,11 +179,15 @@ class Node:
     def clear(self):
         """ Wipes/clears values of each compartment in this node (and sets .is_clamped = False). """
         self.build_tick()
-        self.is_clamped = False
-        self.stat["dz"] = None
-        self.stat["z"] = None
-        self.stat["phi(z)"] = None
-        self.stat["mask"] = None
+        # self.is_clamped = False
+        # self.stat["dz"] = None
+        # self.stat["dz_td"] = None
+        # self.stat["dz_bu"] = None
+        # self.stat["z"] = None
+        # self.stat["phi(z)"] = None
+        # self.stat["mask"] = None
+        for key in self.stat:
+            self.stat[key] = None
 
     def deep_store_state(self):
         """

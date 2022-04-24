@@ -92,7 +92,7 @@ class GNCN_PDH:
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
         e0 = ENode(name="e0", dim=x_dim, ex_scale=ex_scale) #, precis_kernel=precis_cfg)
-        z0 = SNode(name="z0", dim=x_dim)
+        z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
         # create cable wiring scheme relating nodes to one another
         wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
@@ -105,38 +105,38 @@ class GNCN_PDH:
         lateral_cfg_top = {"type" : "dense", "has_bias": False, "init" : lat_init_top, "coeff": -1.0}
         z3_to_z3 = z3.wire_to(z3, src_var="phi(z)", dest_var="dz", cable_kernel=lateral_cfg_top) # lateral recurrent connection
 
-        z3_mu2 = z3.wire_to(mu2, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
+        z3_mu2 = z3.wire_to(mu2, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         mu2.wire_to(e2, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
         z2.wire_to(e2, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e2_z3 = e2.wire_to(z3, src_var="phi(z)", dest_var="dz", cable_kernel=ecable_cfg)
-        e2.wire_to(z2, src_var="phi(z)", dest_var="dz", cable_kernel=neg_scable_cfg)
+        e2_z3 = e2.wire_to(z3, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
+        e2.wire_to(z2, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
 
         z2_to_z2 = z2.wire_to(z2, src_var="phi(z)", dest_var="dz", cable_kernel=lateral_cfg) # lateral recurrent connection
 
-        z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
+        z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         z3_mu1 = z3.wire_to(mu1, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
         mu1.wire_to(e1, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
         z1.wire_to(e1, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e1_z2 = e1.wire_to(z2, src_var="phi(z)", dest_var="dz", cable_kernel=ecable_cfg)
-        e1.wire_to(z1, src_var="phi(z)", dest_var="dz", cable_kernel=neg_scable_cfg)
+        e1_z2 = e1.wire_to(z2, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
+        e1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
         if use_skip_error is True:
-            e1_z3 = e1.wire_to(z3, src_var="phi(z)", dest_var="dz", cable_kernel=ecable_cfg)
+            e1_z3 = e1.wire_to(z3, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
 
         z1_to_z1 = z1.wire_to(z1, src_var="phi(z)", dest_var="dz", cable_kernel=lateral_cfg) # lateral recurrent connection
 
-        z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
+        z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         z2_mu0 = z2.wire_to(mu0, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
         if add_extra_skip is True:
             z3_mu0 = z3.wire_to(mu0, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
         mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
         z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e0_z1 = e0.wire_to(z1, src_var="phi(z)", dest_var="dz", cable_kernel=ecable_cfg)
-        e0.wire_to(z0, src_var="phi(z)", dest_var="dz", cable_kernel=neg_scable_cfg)
+        e0_z1 = e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
+        e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
         if use_skip_error is True:
-            e0_z2 = e0.wire_to(z2, src_var="phi(z)", dest_var="dz", cable_kernel=ecable_cfg)
+            e0_z2 = e0.wire_to(z2, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
         if add_extra_skip is True:
             if use_skip_error is True:
-                e0_z3 = e0.wire_to(z3, src_var="phi(z)", dest_var="dz", cable_kernel=ecable_cfg)
+                e0_z3 = e0.wire_to(z3, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
 
         # set up update rules and make relevant edges aware of these
         z3_mu1.set_update_rule(preact=(z3,"phi(z)"), postact=(e1,"phi(z)"), use_mod_factor=use_mod_factor)
@@ -201,7 +201,7 @@ class GNCN_PDH:
             x_sample (sample(s) of the underlying generative model)
         """
         readouts = self.ngc_sampler.project(
-                        clamped_vars=[("s3",tf.cast(z_sample,dtype=tf.float32))],
+                        clamped_vars=[("s3","z",tf.cast(z_sample,dtype=tf.float32))],
                         readout_vars=[("s0","phi(z)")]
                     )
         x_sample = readouts[0][2]
@@ -219,7 +219,7 @@ class GNCN_PDH:
             x_hat (predicted x)
         """
         readouts = self.ngc_model.settle(
-                        clamped_vars=[("z0", x)],
+                        clamped_vars=[("z0","z", x)],
                         readout_vars=[("mu0","phi(z)"),("mu1","phi(z)"),("mu2","phi(z)")]
                     )
         x_hat = readouts[0][2]

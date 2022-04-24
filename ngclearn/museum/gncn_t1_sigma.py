@@ -80,7 +80,7 @@ class GNCN_t1_Sigma:
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
         e0 = ENode(name="e0", dim=x_dim) #, precis_kernel=precis_cfg)
-        z0 = SNode(name="z0", dim=x_dim)
+        z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
         # create cable wiring scheme relating nodes to one another
         wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
@@ -88,23 +88,23 @@ class GNCN_t1_Sigma:
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
-        z3_mu2 = z3.wire_to(mu2, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
+        z3_mu2 = z3.wire_to(mu2, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         mu2.wire_to(e2, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
         z2.wire_to(e2, src_var="z", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e2.wire_to(z3, src_var="phi(z)", dest_var="dz", mirror_path_kernel=(z3_mu2,"symm_tied"))
-        e2.wire_to(z2, src_var="phi(z)", dest_var="dz", cable_kernel=neg_scable_cfg)
+        e2.wire_to(z3, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z3_mu2,"symm_tied"))
+        e2.wire_to(z2, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
 
-        z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
+        z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         mu1.wire_to(e1, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
         z1.wire_to(e1, src_var="z", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e1.wire_to(z2, src_var="phi(z)", dest_var="dz", mirror_path_kernel=(z2_mu1,"symm_tied"))
-        e1.wire_to(z1, src_var="phi(z)", dest_var="dz", cable_kernel=neg_scable_cfg)
+        e1.wire_to(z2, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z2_mu1,"symm_tied"))
+        e1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
 
-        z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz", cable_kernel=dcable_cfg)
+        z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
         z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e0.wire_to(z1, src_var="phi(z)", dest_var="dz", mirror_path_kernel=(z1_mu0,"symm_tied"))
-        e0.wire_to(z0, src_var="phi(z)", dest_var="dz", cable_kernel=neg_scable_cfg)
+        e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
+        e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
 
         # set up update rules and make relevant edges aware of these
         z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"))
@@ -151,7 +151,7 @@ class GNCN_t1_Sigma:
             x_sample (sample(s) of the underlying generative model)
         """
         readouts = self.ngc_sampler.project(
-                        clamped_vars=[("s3",tf.cast(z_sample,dtype=tf.float32))],
+                        clamped_vars=[("s3","z",tf.cast(z_sample,dtype=tf.float32))],
                         readout_vars=[("s0","phi(z)")]
                     )
         x_sample = readouts[0][2]
@@ -169,7 +169,7 @@ class GNCN_t1_Sigma:
             x_hat (predicted x)
         """
         readouts = self.ngc_model.settle(
-                        clamped_vars=[("z0", x)],
+                        clamped_vars=[("z0","z", x)],
                         readout_vars=[("mu0","phi(z)"),("mu1","phi(z)"),("mu2","phi(z)")]
                     )
         x_hat = readouts[0][2]
