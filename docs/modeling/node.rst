@@ -1,11 +1,16 @@
 Node
 ====
 
+A Node represents one of the fundamental building blocks of an NGC system. These
+particular objects are meant to perform, per simulated time step, a calculation of
+output activity values given an internal arrangement of compartments (or sources
+where signals from other Node(s) are to be deposited).
+
 .. _node-model:
 
 Node Model
 --------------
-The ``Node`` class serves as a root class and fundamental building block of an
+The ``Node`` class serves as a root class for the node building block objects of an
 NGC system/graph. This is a core modeling component of general NGC computational
 systems. Node sub-classes within ngc-learn inherit from this base class.
 
@@ -71,4 +76,21 @@ used in simulation.
   .. automethod:: compute_precision
     :noindex:
   .. automethod:: clear
+    :noindex:
+
+
+.. _fnode-model:
+
+FNode Model
+-----------
+The ``FNode`` class extends from the base ``Node`` class, and represents
+a stateless node that simply aggregates (via summation) its received inputs.
+In conjunction with the corresponding ``SNode`` and ``ENode`` classes,
+this serves as the core modeling component of a higher-level ``NGCGraph`` class
+used in simulation.
+
+.. autoclass:: ngclearn.engine.nodes.fnode.FNode
+  :noindex:
+
+  .. automethod:: step
     :noindex:

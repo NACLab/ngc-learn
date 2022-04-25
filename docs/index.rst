@@ -36,7 +36,13 @@ Welcome to ngc-learn's documentation!
    :caption: Modeling API
 
    modeling/node
+   modeling/cable
 
+.. toctree::
+   :maxdepth: 5
+   :caption: Source API
+
+   source/modules
 
 Indices and tables
 ==================

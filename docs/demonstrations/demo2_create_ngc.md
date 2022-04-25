@@ -15,7 +15,7 @@ often highly nonlinear ways through a complex dendritic tree.
 Although modeling a neuronal system through the lens of cable theory is certainly
 complex and intricate in of itself, ngc-learn is built in this direction, starting
 with the idea a neuron (or a cluster of them) can be viewed as a node, or
-[Node](ngclearn.engine.nodes.snode) (also see {ref}`node-model`), and each bundle of synapses that connect nodes can be viewed as a cable, or [Cable](ngclearn.engine.cables.cable) (also see XXX).
+[Node](ngclearn.engine.nodes.snode) (also see {ref}`node-model`), and each bundle of synapses that connect nodes can be viewed as a cable, or [Cable](ngclearn.engine.cables.cable) (also see {ref}`cable-model`).
 Each A has different, multiple "compartments" (which we allow to be named, if desired),
 which allows it to collect information from many different connected/related nodes
 and then, within its integration routine (or `step()`), decide how to combine the
