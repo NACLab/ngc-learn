@@ -1,11 +1,11 @@
 NGCGraph
 ========
 
-An ``NGCGraph`` represents one of the core structural components of an NGC system.
-This particular object is what ``Node``(s) and ``Cable``(s) are ultimately
+An NGCGraph represents one of the core structural components of an NGC system.
+This particular object is what Node(s) and Cable(s) are ultimately
 embedded/integrated into in order to simulate a full NGC process (key functions
 include the primary settling process and synaptic update calculation routine).
-Furthermore, the ``NGCGraph`` contains several tool functions to facilitate
+Furthermore, the NGCGraph contains several tool functions to facilitate
 analysis of the system evolved over time.
 
 .. _ngc-graph:
