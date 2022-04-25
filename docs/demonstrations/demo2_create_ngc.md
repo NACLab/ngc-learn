@@ -14,8 +14,8 @@ often highly nonlinear ways through a complex dendritic tree.
 
 Although modeling a neuronal system through the lens of cable theory is certainly
 complex and intricate in of itself, ngc-learn is built in this direction, starting
-with the idea a neuron (or a cluster of them) can be viewed as a node (`Node`)
-and each bundle of synapses that connect nodes can be viewed as a cable (`Cable`).
+with the idea a neuron (or a cluster of them) can be viewed as a node, or
+[Node](ngclearn.engine.nodes.snode) (also see {ref}`node-model`), and each bundle of synapses that connect nodes can be viewed as a cable, or [Cable](ngclearn.engine.cables.cable) (also see XXX).
 Each A has different, multiple "compartments" (which we allow to be named, if desired),
 which allows it to collect information from many different connected/related nodes
 and then, within its integration routine (or `step()`), decide how to combine the
@@ -27,7 +27,7 @@ data such as images).
 
 ## Building NGC Systems with Nodes and Cables
 With the above aspect of ngc-learn's theoretical framing in mind, we can craft
-connectivity patterns of our own by deciding the form that each nodes and cable
+connectivity patterns of our own by deciding the form that each node and cable
 in our system will take. ngc-learn currently offers a few core nodes and cable types
 (note ngc-learn is an evolving software framework, so more node/cable types are to come
 in future releases, either through the NAC team or community contributions).

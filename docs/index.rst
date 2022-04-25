@@ -31,6 +31,11 @@ Welcome to ngc-learn's documentation!
    museum/gncn_t1_sigma
    museum/gncn_pdh
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Modeling API
+
+   modeling/node
 
 
 Indices and tables
