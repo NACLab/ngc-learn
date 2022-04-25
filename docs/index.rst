@@ -38,6 +38,7 @@ Welcome to ngc-learn's documentation!
    modeling/node
    modeling/cable
    modeling/ngc_graph
+   modeling/proj_graph
 
 .. toctree::
    :maxdepth: 5
