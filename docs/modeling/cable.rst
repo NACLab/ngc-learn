@@ -1,11 +1,12 @@
 Cable
 =====
 
-A Cable represents one of the fundamental building blocks of an NGC system. These
-particular objects are meant to serve as the connectors between Node(s), passing
-along or transforming signals from the source point (a compartment, or receiving
-area, within a particular node) to a destination point (another compartment in a
-different node) and transforming such signals through synaptic parameters.
+A Cable represents one of the fundamental building blocks of an NGC system.
+These particular objects are meant to serve as the connectors between Node(s),
+passing along or transforming signals from the source point (a compartment, or
+receiving area, within a particular node) to a destination point (another
+compartment in a different node) and transforming such signals through synaptic
+parameters.
 
 .. _cable-model:
 
