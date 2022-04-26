@@ -22,6 +22,13 @@ class SNode(Node):
     | where:
     |   zeta - controls the strength of recurrent carry-over, if set to 0 no carry-over is used (stateless)
 
+    | Compartments:
+    |   * dz_td - the top-down pressure compartment (deposited signals summed)
+    |   * dz_bu - the bottom-up pressure compartment, potentially weighted by phi'(x)) (deposited signals summed)
+    |   * z - the state neural activities
+    |   * phi(z) -  the post-activation of the state activities
+    |   * mask - a binary mask to be applied to the neural activities
+
     Args:
         name: the name/label of this node
 

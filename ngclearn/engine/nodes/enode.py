@@ -17,6 +17,14 @@ class ENode(Node):
     | error node, meaning that the above fixed-point error neuron vector is
     | derived from L = 0.5 * ( Sum_j (target - mu)^2_j )
 
+    | Compartments:
+    |   * pred_mu - prediction signals (deposited signals summed)
+    |   * pred_targ - target signals (deposited signals summed)
+    |   * z - the error neural activities, set as z = (pred_targ - pred_mu)
+    |   * phi(z) -  the post-activation of the error activities
+    |   * L - the local loss represented by the error activities
+    |   * avg_scalar - multiplies L and z by (1/avg_scalar)
+
     Args:
         name: the name/label of this node
 

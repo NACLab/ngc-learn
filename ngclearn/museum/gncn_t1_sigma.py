@@ -25,10 +25,14 @@ class GNCN_t1_Sigma:
     the GNCN-t1-Sigma/Friston, according to the naming convention in
     (Ororbia & Kifer 2022).
 
+    | Node Name Structure:
+    | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z1-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
+    | e2 -> e2 * Sigma2; e1 -> e1 * Sigma1  // Precision weighting
+
     Args:
         args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
 
-    | NOTE:
+    | DEFINITION NOTE:
     | args should contain values for the following:
     | z_top_dim: # of latent variables in layer z3 (top-most layer)
     | z_dim: # of latent variables in layers z1 and z2

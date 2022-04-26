@@ -4,13 +4,10 @@ import numpy as np
 #from sklearn import mixture
 #from sklearn.cluster import KMeans
 from scipy.stats import multivariate_normal
-sys.path.insert(0, 'utils/')
-sys.path.insert(0, 'models/')
 from ngclearn.utils.stat_utils import calc_log_gauss_pdf
 from ngclearn.utils.transform_utils import softmax
 #from kmeans import K_Means
 from sklearn import mixture
-
 
 seed = 69
 tf.random.set_seed(seed=seed)

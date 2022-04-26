@@ -12,6 +12,11 @@ class FNode(Node):
     | where:
     |   dz - aggregated input signals from other nodes/locations
 
+    | Compartments:
+    |   * dz - incoming pressures/signals (deposited signals summed)
+    |   * z - the state values/neural activities, set as: z = dz
+    |   * phi(z) -  the post-activation of the neural activities
+
     Args:
         name: the name/label of this node
 

@@ -246,6 +246,28 @@ def create_competiion_matrix(z_dim, lat_type, beta_scale, alpha_scale, n_group, 
         V_l = V_l * (1.0 - diag) * beta_scale + diag * alpha_scale
     return V_l
 
+def to_one_hot(idx, depth):
+    """
+    Converts an integer or integer array into a binary one-hot encoding.
+
+    Args:
+        idx: an integer or integer list representing the index/indices of the
+            chosen category/categories
+
+        depth: total number of actual categories (the dimension K of the encoding)
+
+    Returns:
+        a binary one-of-K encoding of the input idx (an N x K vector if len(idx) = N)
+    """
+    if isinstance(idx, list) == True:
+        return tf.cast(tf.one_hot(idx, depth=depth),dtype=tf.float32)
+    elif isinstance(idx, np.ndarray) == True:
+        idx_ = idx
+        if len(idx_.shape) >= 2:
+            idx_ = np.squeeze(idx_)
+        return tf.cast(tf.one_hot(idx_, depth=depth),dtype=tf.float32)
+    return tf.expand_dims(tf.cast(tf.one_hot(idx, depth=depth),dtype=tf.float32),axis=0)
+
 def scale_feat(x, a=-1.0, b=1.0):
     """
     Applies the min-max feature scaling function to input x.

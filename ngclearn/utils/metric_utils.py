@@ -34,24 +34,24 @@ def mse(mu, x):
         x: target values (x/data)
 
     Returns:
-        the scalar value of MSE(x_pred, x_true)
+        a (N x 1) column vector, where each row is the MSE(x_pred, x_true) for that row's datapoint
     """
     diff = mu - x
     se = diff * diff # squared error
     # NLL = -( -se )
-    return tf.math.reduce_mean(se)
+    return tf.reduce_sum(se, axis=1) # tf.math.reduce_mean(se)
 
 def bce(p, x, offset=1e-7): #1e-10
     """
     Calculates the negative Bernoulli log likelihood or binary cross entropy (BCE).
 
     Args:
-        p: predicted probabilities
+        p: predicted probabilities of shape (N x D)
 
-        x: target binary values (data)
+        x: target binary values (data) of shape (N x D)
 
     Returns:
-        the scalar value of BCE(p, x)
+        a (N x 1) column vector, where each row is the BCE(p, x) for that row's datapoint
     """
     p_ = tf.clip_by_value(p, offset, 1 - offset)
     return -tf.reduce_sum(x * tf.math.log(p_) + (1.0 - x) * tf.math.log(1.0 - p_), axis=1)
