@@ -329,11 +329,50 @@ NGC system back to resting until the video clip terminates).
 Now that we familiarized ourselves with the basic mechanics of nodes and cables
 and how they fit within a simulation graph, let's apply our knowledge and build
 a nonlinear NGC generative model that learns to mimic a streaming data generating
-process.
+process. Note that this part of the demonstration corresponds to the materials/scripts
+provided in `examples/demo2/`.
 
 In ngc-learn, within the `generator` module, we have provided a few initial data
-generators to facilitate prototyping and simulation studies. In this demonstration,
-we will take a look at the `MoG` (mixture of Gaussians) static data generating process.
+generators to facilitate prototyping and simulation studies. Data generating processes
+can be used in lieu of real datasets and are useful for early preliminary experimentation
+and proof-of-concept demonstrations.
+In this demonstration, we will take a look at the `MoG` (mixture of Gaussians)
+static data generating process.
+Data generating processes in ngc-learn typically offer a method called `sample()` and,
+depending on the type of process being used, with process-specific arguments.
+In the `MoG` process, we can initialize a non-temporal (thus "static") process
+as follows:
+
+```python
+# ...initialize mu1, mu2, mu3, cov1, cov2, cov3...
+mu_list = [mu1, mu2, mu3]
+sigma_list = [cov1, cov2, cov3]
+process = MoG(means=mu_list, covar=sigma_list, seed=69)
+```
+
+where the above creates a fixed mixture model of three multivariate Gaussian
+distributions (each component has an equal probability of being sampled by default
+in the `MoG` object). In the demonstration script
+`sim_dyn_train.py`, you can see what specific mean and covariance values we
+have chosen (for simplicity, we set our problem space to be two-dimensional and
+have each covariance matrix designed to be explicitly diagonal). The advantage
+of a data generator that we will take advantage of in this demonstration
+is the fact that it can be queried online, i.e., we can call its `sample()` function
+to produce fresh data sampled from its underlying generative process. This will allow  
+us to emulate the scenario of training an NGC system on a data stream (as opposed to
+a fixed dataset like we did in the first demonstration).
+
+With the data generating process chosen and initialized, we now turn to our NGC
+generative model. The model we will construct will be a nonlinear model with
+three layers -- a sensory layer `z0` and two latent neural variable layers `z1` and `z2`.
+The post-activation for `z1` will be the exponential linear rectifier unit (ELU)
+while the second layer will be set to the identity and bottle-necked to a two-dimensional
+code so we can visualize the top-most latents easily later.
+Our goal will be train our NGC model for so many iterations and then use it to
+synthesize/fantasize a new pool of samples, one for each known component of our
+mixture model (since each component represents a "label") where we will finally estimate
+the sample mean and covariance of each particular pool to gauge how well the model 
+has fit the mixture process.
 
 
 
