@@ -17,7 +17,7 @@ patterns that look like the target data generating process.
 Note that the folder of interest to this demonstration is:
 + `examples/demo2/`: this contains the necessary simulation script
 
-## Theoretical Motivation: Cables and Compartments
+## Theoretical Motivation: Nodes, Compartments, and Cables
 At its core, part of ngc-learn's fundamental design is inspired by (neural)
 <a href="http://www.scholarpedia.org/article/Neuronal_cable_theory">cable theory </a>,
 where neurons, arranged in complex connectivity structures, are viewed as
@@ -28,9 +28,12 @@ often highly nonlinear ways through a complex dendritic tree.
 Although modeling a neuronal system through the lens of cable theory is certainly
 complex and intricate in of itself, ngc-learn is built in this direction, starting
 with the idea a neuron (or a cluster of them) can be viewed as a node, or
-[Node](ngclearn.engine.nodes.snode) (also see {ref}`node-model`), and each bundle of synapses that connect nodes can be viewed as a cable, or [Cable](ngclearn.engine.cables.cable) (also see {ref}`cable-model`).
-Each node has different, multiple "compartments" (which we allow to be named, if desired),
-which allows it to collect information from many different connected/related nodes
+[Node](ngclearn.engine.nodes.snode) (also see {ref}`node-model`), and each bundle
+of synapses that connect nodes can be viewed as a cable, or
+[Cable](ngclearn.engine.cables.cable) (also see {ref}`cable-model`).
+Each node has different, multiple "compartments" (which are named), which are regions
+or slots inside the node that other nodes can deposit information/signals into.
+These compartments allow a node to collect information from many different connected/related nodes
 and then, within its integration routine (or `step()`), decide how to combine the
 different signals in order to calculate its own activity (loosely corresponding to a
 rate-coded firing rate -- we will learn how to model spike trains in a later
@@ -512,7 +515,7 @@ useful form of both metrics -- prequential MSE and prequential ToD -- which are
 essentially adaptations of the prequential error measurement [1] used to track
 the online performance of classifiers/regressors on data streams. We will
 plot the prequential ToD at the end of our simulation script, which will yield a plot
-that should look similar to:
+that should look similar to (where we see that ToD is maximized over time):
 
 <img src="../images/demo2/tod_curve.jpg" width="350" />
 
@@ -601,8 +604,6 @@ in latent space.).
 
 As a result, we have successfully learned to mimic a synthetic mixture of Gaussians data
 generating process with our custom, nonlinear NGC system.
-
-
 
 
 
