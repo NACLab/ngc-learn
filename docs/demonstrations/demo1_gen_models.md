@@ -1,16 +1,23 @@
 # Demo 1: Learning NGC Generative Models
 
 In this demonstration, we will learn how to use ngc-learn's Model Museum to fit an
-NGC generative model, specifically called a generative neural coding network (GNCN),
+NGC generative model, also called a generative neural coding network (GNCN),
 to the MNIST database. Specifically, we will focus on training three key models,
 each from different points in history, and estimating their marginal log likelihoods.
 Along the way, we will see how to fit a prior to our models and examine how a simple
 configuration file will be set up to allow for easy recording of experimental
 settings.
 
+Concretely, after going through this demonstration, you will:
+
+1.  Understand how to import and train models from ngc-learn's Model Museum.
+2.  Fit a density estimator to an NGC model's latent space to create a prior.
+3.  Estimate the marginal log likelihood of three GNCNs using the prior-fitting
+scheme designed in this demonstration.
+
 Note that the two folders of interest to this demonstration are:
-+ `examples/demo1/`: which contains the scripts
-+ `examples/data`: which contains a zipped copy of the MNIST database arrays
++ `examples/demo1/`: this contains the necessary scripts and configuration files
++ `examples/data`: this contains a zipped copy of the MNIST database arrays
 
 ## Setting Up and Training a Generative System
 
@@ -217,18 +224,18 @@ run if you use the provided example configuration scripts.
 Let's go ahead and train one of each the three models we imported into our training
 script. Run the following three commands as shown below:
 ```console
-x@y:~path$ python sim_train.py --config==gncn_t1/fit.cfg --gpu_id=0 --n_trials=1
+$ python sim_train.py --config==gncn_t1/fit.cfg --gpu_id=0 --n_trials=1
 ```
 ```console
-x@y:~path$ python sim_train.py --config==gncn_t1_sigma/fit.cfg --gpu_id=0 --n_trials=1
+$ python sim_train.py --config==gncn_t1_sigma/fit.cfg --gpu_id=0 --n_trials=1
 ```
 ```console
-x@y:~path$ python sim_train.py --config==gncn_pdh/fit.cfg --gpu_id=0 --n_trials=1
+$ python sim_train.py --config==gncn_pdh/fit.cfg --gpu_id=0 --n_trials=1
 ```
 Alternatively, you can also just run the bash script we provided which will just simply
 execute the above three experiments sequentially:
 ```console
-x@y:~path$ ./exec_experiments.sh
+$ ./exec_experiments.sh
 ```
 
 As each script runs, you will see printed to the terminal, after each epoch,
@@ -333,7 +340,7 @@ our NGC model. Notice that in the provided `examples/demo1/extract_latents.py` s
 you will find the above function integrated/used.
 Go ahead and run the extraction script for the first of your three models:
 ```console
-x@y:~path$ python extract_latents.py --config==gncn_t1/analyze.cfg --gpu_id=0
+$ python extract_latents.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
 and you will find now inside the folder `examples/demo1/gncn_t1/` a new numpy array
 file `z3_0.npy`, which contains all of the latent variables for the top-most layer
@@ -345,7 +352,7 @@ up the necessary framework for you to do so (using `18,000` samples from the
 training set to speed up calculations a bit). All you need to do at this point,
 using the `analyze.cfg` configuration, is execute this script like so:
 ```console
-x@y:~path$ python fit_gmm.py --config==gncn_t1/analyze.cfg --gpu_id=0
+$ python fit_gmm.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
 and after your fitting process script terminates, you will see inside your model
 `examples/demo1/gncn_t1/` your learned prior `prior0.gmm`.
@@ -357,7 +364,7 @@ your full system -- the prior and the model -- and calculating a Monte Carlo
 estimate of its log likelihood on the test set.
 Run this script as follows:
 ```console
-x@y:~path$ python eval_logpx.py --config==gncn_t1/analyze.cfg --gpu_id=0
+$ python eval_logpx.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
 and after it completes (this step can take a bit more time than the other steps,
 since we are computing our estimate over quite a few samples), in addition to
@@ -369,7 +376,7 @@ model folder `examples/demo1/gncn_t1/`:
 
 If you `cat` the first item, you should something similar to the following:
 ```console
-x@y:~path$ cat gncn_t1/logpx_results.txt
+$ cat gncn_t1/logpx_results.txt
 Likelihood Test:
   log[p(x)] = -103.13798522949219
 ```
@@ -382,7 +389,7 @@ the final configuration scripts, i.e., `gncn_t1_sigma/analyze.cfg` and
 
 For the GNCN-t1-Sigma, you get a log likelihood of:
 ```console
-x@y:~path$ cat gncn_t1_sigma/logpx_results.txt
+$ cat gncn_t1_sigma/logpx_results.txt
 Likelihood Test:
   log[p(x)] = -100.03035736083984
 ```
@@ -391,7 +398,7 @@ with images as follows:<br>
 
 For the GNCN-PDH, you get a log likelihood of:
 ```console
-x@y:~path$ cat gncn_t1_sigma/logpx_results.txt
+$ cat gncn_t1_sigma/logpx_results.txt
 Likelihood Test:
   log[p(x)] = -96.92353820800781
 ```

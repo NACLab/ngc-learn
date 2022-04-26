@@ -1,11 +1,24 @@
 # Demo 2: Creating Custom NGC Systems
 
-<i>NOTE: This demonstration is under construction and thus incomplete at the moment...</i>
+In this demonstration, we will learn how to craft our own custom NGC system
+using ngc-learn's fundamental building blocks -- nodes and cables. After going
+through this demonstration, you will:
+
+1. Be familiar with some of ngc-learn's basic theoretical motivations.
+2. Understand ngc-learn's basic building blocks, nodes and cables, and how they
+relate to each other and how they are put together in code. Furthermore, you will
+learn how to place these connected building blocks into a simulation object to
+implement inference and learning.
+3. Craft and simulate a custom nonlinear NGC model based on exponential linear units
+to learn how to mimic a streaming mixture-based data generating process. In this step,
+you will learn how to design an ancestral projection graph to aid in fantasizing data
+patterns that look like the target data generating process.
+
+Note that the folder of interest to this demonstration is:
++ `examples/demo2/`: this contains the necessary simulation script
 
 ## Theoretical Motivation: Cables and Compartments
-In this demonstration, we will learn how to craft our own custom NGC system
-using ngc-learn's fundamental building blocks -- nodes and cables. At its core,
-part of ngc-learn's fundamental design is inspired by (neural)
+At its core, part of ngc-learn's fundamental design is inspired by (neural)
 <a href="http://www.scholarpedia.org/article/Neuronal_cable_theory">cable theory </a>,
 where neurons, arranged in complex connectivity structures, are viewed as
 performing dendritic calculations. In other words, a particular neuron integrates
@@ -371,19 +384,228 @@ code so we can visualize the top-most latents easily later.
 Our goal will be train our NGC model for so many iterations and then use it to
 synthesize/fantasize a new pool of samples, one for each known component of our
 mixture model (since each component represents a "label") where we will finally estimate
-the sample mean and covariance of each particular pool to gauge how well the model 
+the sample mean and covariance of each particular pool to gauge how well the model
 has fit the mixture process.
 
+We create the desired NGC model as follows:
+
+```python
+# create cable wiring scheme relating nodes to one another
+wght_sd = 0.025 #0.025 #0.05
+dcable_cfg = {"type": "dense", "has_bias": False,
+              "init" : ("gaussian",wght_sd), "seed" : seed}
+pos_scable_cfg = {"type": "simple", "coeff": 1.0}
+neg_scable_cfg = {"type": "simple", "coeff": -1.0}
+
+z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
+mu1.wire_to(e1, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
+z1.wire_to(e1, src_var="z", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
+e1.wire_to(z2, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z2_mu1,"symm_tied")) #anti_symm_tied
+#e1.use_mod_factor = use_mod_factor
+e1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+
+z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
+mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
+z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
+e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied")) #anti_symm_tied
+e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+
+# set up update rules and make relevant edges aware of these
+z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+
+# Set up graph - execution cycle/order
+model = NGCGraph(K=K)
+model.proj_update_mag = -1.0 #-1.0
+model.proj_weight_mag = 1.0
+model.set_cycle(nodes=[z2,z1,z0])
+model.set_cycle(nodes=[mu1,mu0])
+model.set_cycle(nodes=[e1,e0])
+model.apply_constraints()
+```
+
+which constructs the model the three-layer system, which we can also depict with
+the following ngc-learn design shorthand:
+
+```
+Node Name Structure:
+z2 -(z1-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
+```
+
+One interesting thing to note is that, in the `sim_dyn_train.py` script, we also
+create an ancestral projection graph (or a co-model) in order to conduct the
+sampling we want to do after training. An ancestral projection graph `ProjectionGraph`
+(see [ProjectionGraph](ngclearn.engine.proj_graph)), which is
+useful for doing things like ancestral sampling from a directed generative model,
+should generally be created after an `NGCGraph` object has been instantiated.
+Doing so, as we do in `sim_dyn_train.py`, entails writing the following:
+
+```python
+# build an ancestral sampling graph
+z2_dim = model.getNode("z2").dim
+z1_dim = model.getNode("z1").dim
+z0_dim = model.getNode("z0").dim
+# Set up complementary sampling graph to use in conjunction w/ NGC-graph
+s2 = FNode(name="s2", dim=z2_dim, act_fx="identity")
+s1 = FNode(name="s1", dim=z1_dim, act_fx="elu")
+s0 = FNode(name="s0", dim=z0_dim, act_fx="identity")
+s2_s1 = s2.wire_to(s1, src_var="phi(z)", dest_var="dz", point_to_path=z2_mu1)
+s1_s0 = s1.wire_to(s0, src_var="phi(z)", dest_var="dz", point_to_path=z1_mu0)
+sampler = ProjectionGraph()
+sampler.set_cycle(nodes=[s2,s1,s0])
+```
+
+Creating a `ProjectionGraph` is rather similar to creating an `NGCGraph`. However,
+we should caution that the design of a projection graph should meaningfully mimic
+what one would envision is the underlying directed, acyclic generative model embodied  
+by their `NGCGraph` (it helps to draw out/visualize the dot-and-arrow structure you
+want graphically first, using similar shorthand as we presented for our model above,
+in order to then extract the underlying generative model the system implicitly learns).
+A few important points we followed for designing the projection graph above:
+1) the number (dimensionality) of nodes should be the same as the state nodes in the NGC system,
+i.e., `s2` corresponds to `z2`, `s1` corresponds to `z1`, and `s0` corresponds to `z0`;  
+2) the cables connecting the nodes should directly share the exact synaptic matrices
+between each key layer of the original NGC system, i.e., the cable `s2_s1` points
+directly to/re-uses cable `z2_mu1` and cable `s1_s0` points
+directly to/re-uses cable `z1_mu0` (note that we use a special argument in the
+`wire_to()` function that allows directly shallow-copying/linking between cables).
+Notice we used another one of the `NGCGraph` utility functions -- `getNode()` --
+which directly extracts a whole `Node` object from the graph, allowing one to
+quickly call its internal data members such as its dimensionality `.dim`.
+
+With the above `NGCGraph` and `ProjectionGraph` now created, we can now train
+our model by sampling the `MoG` data generator online as follows:
+
+```python
+ToD = 0.0
+Lx = 0.0
+Ns = 0.0
+alpha = 0.99 # fading factor
+for iter in range(n_iterations):
+
+    x, y = process.sample(n_s=batch_size)
+    Ns = x.shape[0] + Ns * alpha
+
+    # conduct iterative inference & update NGC system
+    readouts = model.settle(
+                    clamped_vars=[("z0","z",x)],
+                    readout_vars=[("mu0","phi(z)"),("mu1","phi(z)")]
+                )
+    x_hat = readouts[0][2]
+
+    ToD = calc_ToD(model) + ToD * alpha # calc ToD
+    Lx = tf.reduce_sum( metric.mse(x_hat, x) ) + Lx * alpha
+    # update synaptic parameters given current model internal state
+    delta = model.calc_updates()
+    opt.apply_gradients(zip(delta, model.theta))
+    model.apply_constraints()
+    model.clear()
+
+    print("\r{} | ToD = {}  MSE = {}".format(iter, ToD/Ns, Lx/Ns), end="")
+print()
+```
+
+where we track the total discrepancy (via a custom `calc_ToD()` also written for
+you in `sim_dyn_train.py`, much as we did in Demonstration \# 1) as well as the
+mean squared error (MSE). Notably, for online streams, we track a particularly
+useful form of both metrics -- prequential MSE and prequential ToD -- which are
+essentially adaptations of the prequential error measurement [1] used to track
+the online performance of classifiers/regressors on data streams. We will
+plot the prequential ToD at the end of our simulation script, which will yield a plot
+that should look similar to:
+
+<img src="../images/demo2/tod_curve.jpg" width="350" />
+
+Finally, after training, we will examine how well our NGC system learned to
+mimic the `MoG` by using the co-model projection graph we created earlier.
+Our basic process this time for sampling from the NGC model is simpler than
+in Demonstration \# 1 where we had to learn a density estimator to serve as our
+model's prior. In this demonstration, we will approximate the modes of
+our NGC's model's prior by feeding in batches of test samples drawn from the
+`MoG` process, about `64` samples per component, running them through the `NGCGraph`
+to infer the latent `z2` for each sample, estimate the latent mean and covariance
+for mode, and then use these to sample from and project through our `ProjectionGraph`
+to fantasized samples from which we can estimate the generative model's mean and
+covariance for each pool and compare visually to the actual mean and covariance
+of each component of the `MoG` process.
+This we have done for you in the `sample_system()` routine, shown below:
+
+```python
+def sample_system(Xs, model, sampler, Ns=-1):
+    readouts = model.settle(
+                    clamped_vars=[("z0","z",tf.cast(Xs,dtype=tf.float32))],
+                    readout_vars=[("mu0","phi(z)"),("z2","z")]
+                )
+    z2 = readouts[1][2]
+    z = z2
+    model.clear()
+    # estimate latent mode mean and covariance
+    z_mu = tf.reduce_mean(z2, axis=0, keepdims=True)
+    z_cov = stat.calc_covariance(z2, mu_=z_mu, bias=False)
+    z_R = tf.linalg.cholesky(z_cov) # decompose covariance via Cholesky
+    if Ns > 0:
+        eps = tf.random.normal([Ns, z2.shape[1]], mean=0.0, stddev=1.0, seed=69)
+    else:
+        eps = tf.random.normal(z2.shape, mean=0.0, stddev=1.0, seed=69)
+    # use the re-parameterization trick to sample this mode
+    Zs = z_mu + tf.matmul(eps,z_R)
+    # now conduct ancestral sampling through the directed generative model
+    readouts = sampler.project(
+                    clamped_vars=[("s2","z", Zs)],
+                    readout_vars=[("s0","phi(z)")]
+                )
+    X_hat = readouts[0][2]
+    sampler.clear()
+    # estimate the mean and covariance of the sensory sample space of this mode
+    mu_hat = tf.reduce_mean(X_hat, axis=0, keepdims=True)
+    sigma_hat = stat.calc_covariance(X_hat, mu_=mu_hat, bias=False)
+    return (X_hat, mu_hat, sigma_hat), (z, z_mu, z_cov)
+```
+
+Note inside the `sim_dyn_train.py` script, we have written several helper functions
+for plotting the latent variables, input space samples, and the data generator and
+model-estimated input means/covariances. We have set the number of training iterations
+to be `400` and the online mini-batch size to be `32` (we draw `32` samples from the
+`MoG` each iteration).
+
+Execute the demonstration script as follows:
+
+```bash
+$ python sim_dyn_train.py
+```
+
+and you will see that our exponential linear model produces the following samples:
+
+<img src="../images/demo2/model_samples.jpg" width="350" />
+
+and results in the following fit (Right) as compared to the original `MoG` process (Left):
+
+Original Process           |  NGC Model Fit
+:-------------------------:|:-------------------------:
+![](../images/demo2/dataset.jpg)  |  ![](../images/demo2/model_fit.jpg)
+
+We observe that the NGC model does a decent job of learning to mimic the underlying
+data generating process, although we can see it is not perfect as a few data points
+are not quite captured within its covariance envelope (notably in the orange
+Gaussian blob in the top right of the plot).
+
+Finally, we visualize our model's latent space to see how the 2D codes clustered up
+and obtain the plot below:
+
+<img src="../images/demo2/model_latents.jpg" width="350" />
+
+Desirably, we observe that our latent codes have clustered together and yielded a
+sufficiently separable latent space (in other words, the codes result in
+distinct modes where each mode of the `MoG` is represented a specific blob/grouping
+in latent space.).
+
+As a result, we have successfully learned to mimic a synthetic mixture of Gaussians data
+generating process with our custom, nonlinear NGC system.
 
 
 
 
 
-
-
-
-
-
-
-
-end
+**References:**<br>
+[1] Gama, Joao, Raquel Sebastiao, and Pedro Pereira Rodrigues. "On evaluating
+stream learning algorithms." Machine learning 90.3 (2013): 317-346.
