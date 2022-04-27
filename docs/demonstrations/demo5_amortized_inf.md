@@ -1,4 +1,4 @@
-# Demo 3: Amortized Inference: Speeding Up the Settling Process
+# Demo 5: Amortized Inference: Speeding Up the Settling Process
 
 <i>NOTE: This demonstration is under construction and thus incomplete at the moment...</i>
 

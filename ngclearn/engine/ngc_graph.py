@@ -184,7 +184,7 @@ class NGCGraph:
         var_name, var_value = data
         node.clamp((var_name, var_value), is_persistent=is_persistent)
 
-    def inject(self, node_name, signal):
+    def inject(self, node_name, data):
         """
         Injects an externally provided named value (a vector/matrix) to the desired
         compartment within a particular Node of this NGC graph.

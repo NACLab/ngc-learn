@@ -112,10 +112,9 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
         x_name, x = batch[0]
         N += x.shape[0]
         x_hat = agent.settle(x) # conduct iterative inference
-        ToD_t = calc_ToD(agent) # calc ToD
         # update tracked fixed-point losses
         Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx
-        ToD = calc_ToD(agent) + ToD
+        ToD = calc_ToD(agent) + ToD # calc ToD
         agent.clear()
         if verbose == True:
             print("\r ToD {0}  Lx {1} over {2} samples...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), N),end="")

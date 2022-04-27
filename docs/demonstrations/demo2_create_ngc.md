@@ -458,8 +458,9 @@ sampler = ProjectionGraph()
 sampler.set_cycle(nodes=[s2,s1,s0])
 ```
 
-Creating a `ProjectionGraph` is rather similar to creating an `NGCGraph`. However,
-we should caution that the design of a projection graph should meaningfully mimic
+Creating a `ProjectionGraph` is rather similar to creating an `NGCGraph` (notice
+that we chose to use `FNode`(s) since they work well for feedforward projection schemes).
+However, we should caution that the design of a projection graph should meaningfully mimic 
 what one would envision is the underlying directed, acyclic generative model embodied  
 by their `NGCGraph` (it helps to draw out/visualize the dot-and-arrow structure you
 want graphically first, using similar shorthand as we presented for our model above,
