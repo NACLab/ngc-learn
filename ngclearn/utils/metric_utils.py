@@ -16,12 +16,13 @@ def cat_nll(p, x, epsilon=0.0000001): #1e-7):
         x: true one-hot encoded targets
 
     Returns:
-        the scalar value of Cat.NLL(x_pred, x_true)
+        an (N x 1) column vector, where each row is the Cat.NLL(x_pred, x_true)
+        for that row's datapoint
     """
     p_ = tf.clip_by_value(p, epsilon, 1.0 - epsilon)
     loss = -(x * tf.math.log(p_))
-    nll = tf.reduce_sum(loss,axis=1,keepdims=True) #/(y_true.shape[0] * 1.0)
-    return tf.reduce_mean(nll)
+    nll = tf.reduce_sum(loss,axis=1) #/(y_true.shape[0] * 1.0)
+    return nll #tf.reduce_mean(nll)
 
 def mse(mu, x):
     """
@@ -34,7 +35,7 @@ def mse(mu, x):
         x: target values (x/data)
 
     Returns:
-        a (N x 1) column vector, where each row is the MSE(x_pred, x_true) for that row's datapoint
+        an (N x 1) column vector, where each row is the MSE(x_pred, x_true) for that row's datapoint
     """
     diff = mu - x
     se = diff * diff # squared error
@@ -51,7 +52,7 @@ def bce(p, x, offset=1e-7): #1e-10
         x: target binary values (data) of shape (N x D)
 
     Returns:
-        a (N x 1) column vector, where each row is the BCE(p, x) for that row's datapoint
+        an (N x 1) column vector, where each row is the BCE(p, x) for that row's datapoint
     """
     p_ = tf.clip_by_value(p, offset, 1 - offset)
     return -tf.reduce_sum(x * tf.math.log(p_) + (1.0 - x) * tf.math.log(1.0 - p_), axis=1)

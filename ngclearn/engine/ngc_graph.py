@@ -161,7 +161,7 @@ class NGCGraph:
         """
         return self.nodes.get(node_name) #self.nodes[node_name]
 
-    def clamp(self, node_target, data, is_persistent=True):
+    def clamp(self, node_name, data, is_persistent=True):
         """
         Clamps an externally provided named value (a vector/matrix) to the desired
         compartment within a particular Node of this NGC graph.
@@ -170,21 +170,21 @@ class NGCGraph:
         unless is_persistent = True).
 
         Args:
-            node_name: 2-Tuple containing a named external signal to clamp
+            node_name (Tuple[0]): the (str) name of the node to clamp a data signal to.
 
-                :node_name (Tuple[0]): the (str) name of the node to clamp this data signal to.
+            data: 2-Tuple containing a named external signal to clamp
 
-                :ompartment_name (Tuple[1]): the (str) name of the compartment to clamp this data signal to.
+                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
 
-            signal: the data signal block to clamp to the desired compartment name
+                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
 
             is_persistent: if True, clamped data value will persist throughout simulation (Default = True)
         """
-        node = self.getNode(node_target)
+        node = self.getNode(node_name)
         var_name, var_value = data
         node.clamp((var_name, var_value), is_persistent=is_persistent)
 
-    def inject(self, node_name, data):
+    def inject(self, node_name, signal):
         """
         Injects an externally provided named value (a vector/matrix) to the desired
         compartment within a particular Node of this NGC graph.
@@ -192,13 +192,15 @@ class NGCGraph:
         injected node's dynamics over simulation steps).
 
         Args:
-            node_name: 2-Tuple containing a named external signal to clamp
+            node_name (Tuple[0]): the (str) name of the node to clamp a data signal to.
 
-                :node_name (Tuple[0]): the (str) name of the node to clamp this data signal to.
+            data: 2-Tuple containing a named external signal to clamp
 
-                :ompartment_name (Tuple[1]): the (str) name of the compartment to clamp this data signal to.
+                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
 
-            signal: the data signal block to clamp to the desired compartment name
+                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
+
+            is_persistent: if True, clamped data value will persist throughout simulation (Default = True)
         """
         node = self.getNode(node_name)
         var_name, var_value = data

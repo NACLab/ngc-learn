@@ -30,7 +30,7 @@ class GNCN_t1_Sigma:
     | e2 -> e2 * Sigma2; e1 -> e1 * Sigma1  // Precision weighting
 
     Args:
-        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
+        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-Sigma
 
     | DEFINITION NOTE:
     | args should contain values for the following:
@@ -117,7 +117,7 @@ class GNCN_t1_Sigma:
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
-        ngc_model = NGCGraph(K=K)
+        ngc_model = NGCGraph(K=K, name="gncn_t1_sigma")
         ngc_model.proj_update_mag = -1.0 #-1.0
         ngc_model.proj_weight_mag = 1.0
         ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
@@ -222,11 +222,12 @@ class GNCN_t1_Sigma:
     def set_weights(self, source, tau=0.005): #0.001):
         """
         Deep copies weight variables of another model (of the same exact type)
-        into this model's weight variables
+        into this model's weight variables/parameters.
 
         Args:
             source: the source model to extract/transfer params from
-            tau: if > 0, the Polyak averaging coefficient
+
+            tau: if > 0, the Polyak averaging coefficient (-1 sets to hard deep copy/transfer)
         """
         #self.param_var = copy.deepcopy(source.param_var)
         if tau >= 0.0:

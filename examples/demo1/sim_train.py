@@ -15,11 +15,13 @@ import tensorflow as tf
 import numpy as np
 import time
 
+# import general simulation utilities
 from ngclearn.utils.config import Config
 import ngclearn.utils.transform_utils as transform
 import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_tools
 from ngclearn.utils.data_utils import DataLoader
+
 # import model from museum to train
 from ngclearn.museum.gncn_t1 import GNCN_t1
 from ngclearn.museum.gncn_t1_sigma import GNCN_t1_Sigma
@@ -31,7 +33,7 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Tutorial File:
+Demo/Tutorial #1 File:
 Trains/fits an NGC model to a dataset of sensory patterns, e.g., the MNIST
 database. Note that this script will sequentially run multiple trials/seeds if an
 experimental multi-trial setup is required (the tutorial only requires 1 trial).
@@ -104,10 +106,9 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
         x_name, x = batch[0]
         N += x.shape[0]
         x_hat = agent.settle(x) # conduct iterative inference
-        ToD_t = calc_ToD(agent) # calc ToD
         # update tracked fixed-point losses
         Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx
-        ToD = calc_ToD(agent) + ToD
+        ToD = calc_ToD(agent) + ToD  # calc ToD
         agent.clear()
         if verbose == True:
             print("\r ToD {0}  Lx {1} over {2} samples...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), N),end="")

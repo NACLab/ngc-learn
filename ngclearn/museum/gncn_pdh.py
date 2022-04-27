@@ -31,7 +31,7 @@ class GNCN_PDH:
     | e2 -(e2-z3)-> z3; e1 -(e1-z2)-> z2; e0 -(e0-z1)-> z1  // Error feedback
 
     Args:
-        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
+        args: a Config dictionary containing necessary meta-parameters for the GNCN-PDH
 
     | DEFINITION NOTE:
     | args should contain values for the following:
@@ -45,6 +45,12 @@ class GNCN_PDH:
     | K: # of steps to take when conducting iterative inference/settling
     | act_fx: activation function for layers z1, z2, and z3
     | out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)
+    | n_group: number of neurons w/in a competition group for z2 and z2 (sizes of z2
+        and z1 should be divisible by this number)
+    | n_top_group: number of neurons w/in a competition group for z3 (size of z3
+        should be divisible by this number)
+    | alpha_scale: the strength of self-excitation
+    | beta_scale: the strength of cross-inhibition
 
     @author: Alexander Ororbia
     """
@@ -89,12 +95,10 @@ class GNCN_PDH:
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu2 = SNode(name="mu2", dim=z_dim, act_fx="relu", zeta=0.0)
         e2 = ENode(name="e2", dim=z_dim, precis_kernel=precis_cfg)
-        #e2.use_mod_factor = use_mod_factor
         z2 = SNode(name="z2", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu1 = SNode(name="mu1", dim=z_dim, act_fx="relu", zeta=0.0)
         e1 = ENode(name="e1", dim=z_dim, precis_kernel=precis_cfg)
-        #e1.use_mod_factor = use_mod_factor
         z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
@@ -110,7 +114,8 @@ class GNCN_PDH:
 
         lat_init_top = ("lkwta",n_top_group,alpha_scale,beta_scale)
         lateral_cfg_top = {"type" : "dense", "has_bias": False, "init" : lat_init_top, "coeff": -1.0}
-        z3_to_z3 = z3.wire_to(z3, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg_top) # lateral recurrent connection
+        # lateral recurrent connection
+        z3_to_z3 = z3.wire_to(z3, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg_top)
 
         z3_mu2 = z3.wire_to(mu2, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         mu2.wire_to(e2, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
@@ -118,7 +123,8 @@ class GNCN_PDH:
         e2_z3 = e2.wire_to(z3, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
         e2.wire_to(z2, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
 
-        z2_to_z2 = z2.wire_to(z2, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg) # lateral recurrent connection
+        # lateral recurrent connection
+        z2_to_z2 = z2.wire_to(z2, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg)
 
         z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         z3_mu1 = z3.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
@@ -129,7 +135,8 @@ class GNCN_PDH:
         if use_skip_error is True:
             e1_z3 = e1.wire_to(z3, src_var="phi(z)", dest_var="dz_bu", cable_kernel=ecable_cfg)
 
-        z1_to_z1 = z1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg) # lateral recurrent connection
+        # lateral recurrent connection
+        z1_to_z1 = z1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg)
 
         z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         z2_mu0 = z2.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
@@ -166,7 +173,7 @@ class GNCN_PDH:
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
-        ngc_model = NGCGraph(K=K)
+        ngc_model = NGCGraph(K=K, name="gncn_pdh")
         ngc_model.proj_update_mag = -1.0 #-1.0
         ngc_model.proj_weight_mag = 1.0
         ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
@@ -275,7 +282,12 @@ class GNCN_PDH:
     def set_weights(self, source, tau=0.005): #0.001):
         """
         Deep copies weight variables of another model (of the same exact type)
-        into this model's weight variables
+        into this model's weight variables/parameters.
+
+        Args:
+            source: the source model to extract/transfer params from
+
+            tau: if > 0, the Polyak averaging coefficient (-1 sets to hard deep copy/transfer)
         """
         #self.param_var = copy.deepcopy(source.param_var)
         if tau >= 0.0:
