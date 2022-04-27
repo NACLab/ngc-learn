@@ -107,8 +107,10 @@ class Node:
             #print(" CREATED:  ",cable.name)
         elif point_to_path is not None: # directly share this cable (a shallow copy)
             has_bias = False
+            #print("SHARE CABLE: ",point_to_path.name)
             if cable_kernel is not None:
                 has_bias = cable_kernel.get("has_bias")
+                #print("share bias? ",has_bias)
             cable = DCable(inp=(self,src_var),out=(dest_node,dest_var), point_to=point_to_path, has_bias=has_bias)
         else:
             cable_type = cable_kernel.get("type")

@@ -70,6 +70,8 @@ class DCable(Cable):
         elif self.point_to is not None:
             self.W = self.point_to.W
             self.b = self.point_to.b
+            if self.b is not None:
+                self.has_bias = True
         else:
             in_dim = self.inp_node.dim
             out_dim = self.out_node.dim
@@ -125,6 +127,7 @@ class DCable(Cable):
             #     print("W:\n",self.W)
             #     print(out_value)
             #     print("***************************")
+        #print("FIRE cable {}  bias? {}".format(self.name, self.has_bias))
         if self.has_bias is True:
             # print(out_value)
             # print(self.b)

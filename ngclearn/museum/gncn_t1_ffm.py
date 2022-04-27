@@ -12,7 +12,7 @@ from ngclearn.engine.ngc_graph import NGCGraph
 from ngclearn.engine.nodes.fnode import FNode
 from ngclearn.engine.proj_graph import ProjectionGraph
 
-class GNCN_t1_FFN:
+class GNCN_t1_FFM:
     """
     Structure for constructing the model proposed in:
 
@@ -21,8 +21,8 @@ class GNCN_t1_FFN:
     synaptic plasticity." Neural computation 29.5 (2017): 1229-1262.
 
     This model, under the NGC computational framework,
-    is referred to as the GNCN-t1-FFN, according to the naming convention in
-    (Ororbia & Kifer 2022, Supplementary Material).
+    is referred to as the GNCN-t1-FFM, a slightly modified from of the naming convention in
+    (Ororbia & Kifer 2022, Supplementary Material). "FFM" denotes feedforward mapping.
 
     | Node Name Structure:
     | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z1-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
@@ -83,7 +83,7 @@ class GNCN_t1_FFN:
         # create cable wiring scheme relating nodes to one another
         wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
         dcable_cfg = {"type": "dense", "has_bias": True,
-                      "init" : ("classic_glorot",wght_sd), "seed" : seed}
+                      "init" : ("gaussian",wght_sd), "seed" : seed} #classic_glorot
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
@@ -114,7 +114,7 @@ class GNCN_t1_FFN:
         print(" > Constructing NGC graph")
         ngc_model = NGCGraph(K=K, name="gncn_t1_ffn")
         ngc_model.proj_update_mag = -5.0 #-1.0
-        ngc_model.proj_weight_mag = -1.0
+        ngc_model.proj_weight_mag = -1.0 #-1.0
         ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
         ngc_model.set_cycle(nodes=[mu2,mu1,mu0])
         ngc_model.set_cycle(nodes=[e2,e1,e0])

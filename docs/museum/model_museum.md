@@ -39,7 +39,7 @@ Current models that we have implemented in the Model Museum so far are:
 1. GNCN-t1/Rao - the model proposed in (Rao &amp; Ballard, 1999) [2]
 2. GNCN-t1-Sigma/Friston - the model proposed in (Friston, 2008) [3]
 3. GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
-4. GNCN-t1-FFN - the model proposed in (Whittington &amp; Bogacz, 2017) [4]
+4. GNCN-t1-FFM - the model proposed in (Whittington &amp; Bogacz, 2017) [4]
 
 
 **References:** <br>
