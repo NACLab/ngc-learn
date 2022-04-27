@@ -31,6 +31,7 @@ Welcome to ngc-learn's documentation!
    museum/gncn_t1
    museum/gncn_t1_sigma
    museum/gncn_pdh
+   museum/gncn_t1_ffn
 
 .. toctree::
    :maxdepth: 1
