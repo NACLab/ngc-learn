@@ -393,6 +393,18 @@ def d_sigmoid(x):
     sigm_x = tf.nn.sigmoid(x)
     return (-sigm_x + 1.0) * sigm_x
 
+def inverse_logistic(x, clip_bound=0.03): # 0.03
+    """ Inverse logistic link - logit function """
+    x_ = x
+    if clip_bound > 0.0:
+        x_ = tf.clip_by_value(x_, clip_bound, 1.0 - clip_bound)
+    return tf.math.log( x_/((1.0 - x_) + 1e-6) )
+
+def inverse_tanh(x):
+    """ Inverse hyperbolic tangent """
+    #m = 0.5 * log ( (ones(size(x)) + x) ./ (ones(size(x)) - x))
+    return tf.math.log((1. + x)/(1. - x))
+
 def d_tanh(x):
     tanh_x = tf.nn.tanh(x)
     return -(tanh_x * tanh_x) + 1.0

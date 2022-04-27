@@ -157,15 +157,17 @@ class DCable(Cable):
                 dW = tf.matmul(zf, e_n, transpose_a=True) #* (1.0/Ns)
 
                 if update_radius > 0.0:
-                    dW = tf.clip_by_norm(dW, update_radius)
+                    #dW = tf.clip_by_norm(dW, update_radius)
+                    dW = tf.clip_by_value(dW, -update_radius, update_radius)
                 if self.use_mod_factor is True: # apply modulatory factor matrix to dW
                     W_M = transform_utils.calc_modulatory_factor(self.W)
                     dW = dW * W_M
                 dW = -dW * self.gamma
                 if self.b is not None:
                     db = tf.reduce_sum(e_n, axis=0, keepdims=True)
-                    #if update_radius > 0.0:
-                    #    db = tf.clip_by_norm(db, update_radius)
+                    if update_radius > 0.0:
+                       #db = tf.clip_by_norm(db, update_radius)
+                       db = tf.clip_by_value(db, -update_radius, update_radius)
                     db = -db * self.gamma
                     return [dW, db]
                 return [dW]

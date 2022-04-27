@@ -64,9 +64,6 @@ class GNCN_t1_FFN:
 
         # set up state integration function
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
-        lmbda = float(self.args.getArg("lmbda")) #0.0002
-        prior_cfg = {"prior_type" : "laplace", "lambda" : lmbda}
-        use_mod_factor = False #(self.args.getArg("use_mod_factor").lower() == 'true')
 
         # set up system nodes
         z3 = SNode(name="z3", dim=x_dim, beta=beta, leak=leak, act_fx="identity",
@@ -74,19 +71,19 @@ class GNCN_t1_FFN:
         mu2 = SNode(name="mu2", dim=z_dim, act_fx="identity", zeta=0.0)
         e2 = ENode(name="e2", dim=z_dim)
         z2 = SNode(name="z2", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
-                   integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
+                   integrate_kernel=integrate_cfg)
         mu1 = SNode(name="mu1", dim=z_dim, act_fx="identity", zeta=0.0)
         e1 = ENode(name="e1", dim=z_dim)
         z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
-                   integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)#, lateral_kernel=lateral_cfg)
+                   integrate_kernel=integrate_cfg)#, lateral_kernel=lateral_cfg)
         mu0 = SNode(name="mu0", dim=y_dim, act_fx=out_fx, zeta=0.0)
         e0 = ENode(name="e0", dim=y_dim)
         z0 = SNode(name="z0", dim=y_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
         # create cable wiring scheme relating nodes to one another
         wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
-        dcable_cfg = {"type": "dense", "has_bias": False,
-                      "init" : ("gaussian",wght_sd), "seed" : seed}
+        dcable_cfg = {"type": "dense", "has_bias": True,
+                      "init" : ("classic_glorot",wght_sd), "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
@@ -116,7 +113,7 @@ class GNCN_t1_FFN:
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
         ngc_model = NGCGraph(K=K, name="gncn_t1_ffn")
-        ngc_model.proj_update_mag = -1.0 #-1.0
+        ngc_model.proj_update_mag = -5.0 #-1.0
         ngc_model.proj_weight_mag = -1.0
         ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
         ngc_model.set_cycle(nodes=[mu2,mu1,mu0])
@@ -193,7 +190,7 @@ class GNCN_t1_FFN:
         y_hat = readouts[0][2]
         return y_hat
 
-    def calc_updates(self, avg_update=True):
+    def calc_updates(self, avg_update=True, decay_rate=-1.0): # decay_rate=0.001
         """
         Calculate adjustments to parameters under this given model and its
         current internal state values
@@ -206,6 +203,8 @@ class GNCN_t1_FFN:
         if avg_update is True:
             for p in range(len(delta)):
                 delta[p] = delta[p] * (1.0/(Ns * 1.0))
+                if decay_rate > 0.0: # weight decay
+                    delta[p] = delta[p] - (self.ngc_model.theta[p] * decay_rate)
         return delta
 
     def update(self, x, y, avg_update=True): # convenience function
@@ -214,6 +213,8 @@ class GNCN_t1_FFN:
 
         Args:
             x: a sensory sample or batch of sensory samples
+
+            y: a target or batch of targets
         """
         self.settle(x, y)
         delta = self.calc_updates(avg_update=avg_update)
