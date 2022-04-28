@@ -19,7 +19,7 @@ class GNCN_t1_SC:
     Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
     by learning a sparse code for natural images. Nature 381, 607–609 (1996).
 
-    Note this model imposes a Cauchy prior to induce sparsity in the latent
+    Note this model imposes a (Cauchy) prior to induce sparsity in the latent
     activities z1 (the latent codebook).
     This model would be named, under the NGC computational framework naming convention
     (Ororbia & Kifer 2022), as the GNCN-t1-SC (SC = sparse coding) or GNCN-t1-SC/Olshausen.
@@ -39,7 +39,8 @@ class GNCN_t1_SC:
     | * wght_sd - standard deviation of Gaussian initialization of weights
     | * beta - latent state update factor
     | * leak - strength of the leak variable in the latent states (Default = 0)
-    | * lmbda - strength of the Cauchy prior applied over latent state activities
+    | * lmbda - strength of the prior applied over latent state activities
+    | * prior - type of prior to use (Default = "cauchy")
     | * K - # of steps to take when conducting iterative inference/settling
     | * act_fx - activation function for layers z1 (Default = identity)
     | * out_fx - activation function for layer mu0 (prediction of z0) (Default: identity)
@@ -59,11 +60,14 @@ class GNCN_t1_SC:
         if self.args.hasArg("out_fx") == True:
             out_fx = self.args.getArg("out_fx")
         leak = float(self.args.getArg("leak")) #0.0
+        prior = "cauchy"
+        if self.args.hasArg("prior") == True:
+            prior = self.args.getArg("prior")
 
         # set up state integration function
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
         lmbda = float(self.args.getArg("lmbda")) #0.0002
-        prior_cfg = {"prior_type" : "cauchy", "lambda" : lmbda}
+        prior_cfg = {"prior_type" : prior, "lambda" : lmbda}
         use_mod_factor = False #(self.args.getArg("use_mod_factor").lower() == 'true')
 
         # set up system nodes
