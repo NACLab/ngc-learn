@@ -29,7 +29,7 @@ class GNCN_t1_FFM:
     |   Note that z3 = x and z0 = y, yielding a classifier or regressor
 
     Args:
-        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-FFN
+        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-FFM
 
     | DEFINITION NOTE:
     | args should contain values for the following:

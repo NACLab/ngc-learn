@@ -29,7 +29,7 @@ class GNCN_t1_SC:
     | Cauchy prior applied for p(z1)
 
     Args:
-        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
+        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-SC
 
     | DEFINITION NOTE:
     | args should contain values for the following:
