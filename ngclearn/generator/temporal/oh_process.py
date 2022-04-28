@@ -32,6 +32,7 @@ class OUNoise:
         self.std_dev = std_deviation
         self.dt = dt
         self.x_initial = x_initial # initial condition
+        self.x_prev = None
         self.reset() # ensure at initialization this O-H process starts at the initial condition
 
     def sample(self):

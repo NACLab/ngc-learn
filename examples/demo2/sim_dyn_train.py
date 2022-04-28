@@ -242,6 +242,8 @@ for iter in range(n_iterations):
     Lx = tf.reduce_sum( metric.mse(x_hat, x) ) + Lx * alpha
     # update synaptic parameters given current model internal state
     delta = model.calc_updates()
+    for p in range(len(delta)):
+        delta[p] = delta[p] * (1.0/(x.shape[0] * 1.0))
     opt.apply_gradients(zip(delta, model.theta))
     model.apply_constraints()
     model.clear()

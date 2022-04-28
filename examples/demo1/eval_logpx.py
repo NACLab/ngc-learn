@@ -190,12 +190,12 @@ with tf.device(gpu_tag):
 
     if do_gmm_plot is True:  # sample from density estimator
         sample_plot_fname = "{}samples.png".format(out_dir)
-        n_s = 3 # number of rows
-        n_a = 5
+        n_s = 1 #3 # number of rows
+        n_a = 10 #5 # number of columns
 
         px = py = int(np.sqrt(X.shape[1])) #28
         # sample using GMM learned density
-        n_samp_steps = 1 #20 #7 #10 #2 #3
+        n_samp_steps = 6
         z_in = None
         for nn in range(n_samp_steps):
             #z_samples, y_s = sample_gmm(sampler, num_samples, use_sklearn=False)
@@ -247,7 +247,7 @@ with tf.device(gpu_tag):
     print("      log p(x) = %.2f" % logpx)
     #log_px_list.append(logpx)
 
-    results_fname = "{}logpx_results.txt".format(out_dir)
+    results_fname = "{}logpx.results".format(out_dir)
     log_t = open(results_fname,"a")
     log_t.write("Likelihood Test:\n")
     log_t.write("  log[p(x)] = {0} \n".format(logpx))
