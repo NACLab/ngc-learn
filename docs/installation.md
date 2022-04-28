@@ -11,12 +11,6 @@ Specifically, ngc-learn requires:
 * Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
 * scikit-learn (>=0.24.2) if using ngclearn.density (needed for the examples/)
 
-You can install the dependencies above (and a few extras needed to
-construct the docs) by running:
-
-```console
-$ pip install -r requirements.txt
-```
 
 ## Install from Source
 
@@ -26,7 +20,7 @@ $ git clone https://github.com/ago109/ngc-learn.git
 $ cd ngc-learn
 ```
 
-2. Install the base requirements with:
+2. Install the base requirements (and a few extras for building the docs) with:
 ```console
 $ pip3 install -r requirements.txt
 ```
