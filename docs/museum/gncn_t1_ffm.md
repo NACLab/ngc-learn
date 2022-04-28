@@ -1,7 +1,7 @@
 # GNCN-t1-FFM (Whittington &amp; Bogacz, 2017)
 
 This circuit implements the model proposed in ((Whittington &amp; Bogacz, 2017) [1].
-Specifically, this model is supervised and can be used to process sensory
+Specifically, this model is **supervised** and can be used to process sensory
 pattern (row) vector(s) `x` to predict target (row) vector(s) `y`. This class offers,
 beyond settling and update routines, a prediction function by which ancestral
 projection is carried out to efficiently provide label distribution or regression

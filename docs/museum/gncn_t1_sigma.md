@@ -1,7 +1,7 @@
 # GNCN-t1-Sigma (Friston, 2008)
 
 This circuit implements the model proposed in (Friston, 2008) [1].
-Specifically, this model is unsupervised and can be used to process sensory
+Specifically, this model is **unsupervised** and can be used to process sensory
 pattern (row) vector(s) `x` to infer internal latent states. This class offers,
 beyond settling and update routines, a projection function by which ancestral
 sampling may be carried out given the underlying directed generative model
