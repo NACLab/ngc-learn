@@ -91,7 +91,7 @@ class GNCN_t1_SC:
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
-        ngc_model = NGCGraph(K=K, name="gncn_t1")
+        ngc_model = NGCGraph(K=K, name="gncn_t1_sc")
         ngc_model.proj_update_mag = -1.0 #-1.0
         ngc_model.proj_weight_mag = 1.0
         ngc_model.set_cycle(nodes=[z1,z0])

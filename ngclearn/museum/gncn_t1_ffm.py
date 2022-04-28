@@ -112,7 +112,7 @@ class GNCN_t1_FFM:
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
-        ngc_model = NGCGraph(K=K, name="gncn_t1_ffn")
+        ngc_model = NGCGraph(K=K, name="gncn_t1_ffm")
         ngc_model.proj_update_mag = -5.0 #-1.0
         ngc_model.proj_weight_mag = -1.0 #-1.0
         ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
