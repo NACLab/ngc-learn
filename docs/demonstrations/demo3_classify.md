@@ -1,19 +1,17 @@
 # Demo 3: Creating an NGC Classifier
 
-<i>NOTE: This demonstration is under construction and thus incomplete at the moment...</i>
-
 In this demonstration, we will learn how to create a classifier based on NGC.
 After going through this demonstration, you will:
 
-1.  Learn how to use a simple projection graph and the `extract()` routine to
-initialize the simulated settling process of an NGC model.
+1.  Learn how to use a simple projection graph as well as the `extract()` and
+`inject()` routines to initialize the simulated settling process of an NGC model.
 2.  Craft and simulate an NGC model that can directly classify the image
 patterns in the MNIST database (from Demonstration \# 1), producing results
 comparable to what was reported in (Whittington &amp; Bogacz, 2017).
 
-Note that the folder of interest to this demonstration is:
+Note that the folders of interest to this demonstration are:
 + `examples/demo3/`: this contains the necessary simulation script
-+ `examples/data`: this contains a zipped copy of the MNIST database arrays
++ `examples/data`: this contains the zipped copy of the MNIST database arrays
 
 ## Using an Ancestral Projection Graph to Initialize the Settling Process
 
@@ -256,7 +254,8 @@ them inside a multi-layer perceptron structure with the same layer sizes/archite
 built pure Tensorflow or Pytorch.
 
 Specifically, we will fit a supervised NGC classifier using the labels that come
-with the processed MNIST dataset, in `mnist.zip` (which you worked with in Demonstration \# 1).
+with the processed MNIST dataset, in `mnist.zip` (which you unzipped and worked
+with in Demonstration \# 1). 
 For this part of the demonstration, we will import the full model of [1], You will
 notice in the provided training script `sim_train.py`, we import the `GNCN-t1-FFM`
 (the NGC classifier model) in the header:
