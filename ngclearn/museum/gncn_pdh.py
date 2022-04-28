@@ -16,6 +16,10 @@ class GNCN_PDH:
     """
     Structure for constructing the model proposed in:
 
+    Ororbia, A., and Kifer, D. The neural coding framework for learning
+    generative models. Nature Communications 13, 2064 (2022).
+
+    (And its arXiv paper that preceded the above is shown below:)
     Ororbia, Alexander, and Daniel Kifer. "The neural coding framework for
     learning generative models." arXiv preprint arXiv:2012.03405 (2020).
 
