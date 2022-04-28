@@ -24,7 +24,7 @@ class GNCN_PDH:
     (Ororbia & Kifer 2022).
 
     | Node Name Structure:
-    | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z1-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
+    | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z2-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
     | z3 -(z3-mu1)-> mu1; z2 -(z2-mu0)-> mu0
     | e2 -> e2 * Sigma2; e1 -> e1 * Sigma1  // Precision weighting
     | z3 -> z3 * Lat3;  z2 -> z2 * Lat2;  z1 -> z1 * Lat1 // Lateral competition

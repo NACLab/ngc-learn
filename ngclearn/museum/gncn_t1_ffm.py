@@ -25,7 +25,7 @@ class GNCN_t1_FFM:
     (Ororbia & Kifer 2022, Supplementary Material). "FFM" denotes feedforward mapping.
 
     | Node Name Structure:
-    | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z1-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
+    | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z2-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
     |   Note that z3 = x and z0 = y, yielding a classifier or regressor
 
     Args:

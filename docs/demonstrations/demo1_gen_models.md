@@ -57,10 +57,11 @@ import ngclearn.utils.io_utils as io_tools
 
 where Config is an argument configuration object that reads in values
 set by a user in a configuration file, transform_utils contains mathematical
-functions to alter vectors/matrices (we will use the `binarize()` function), and
-metric_utils contains measurement/performance functions (we will use the binary
-cross entropy routine `bce()`). Finally, we import the models themselves,
-as shown below:
+functions to alter vectors/matrices (we will use the `binarize()` function, which,
+inside of `sim_train.py`, will convert the MNIST image patterns to their binary
+equivalents), and metric_utils contains measurement/performance functions
+(we will use the binary cross entropy routine `bce()`). Finally, we import the
+models themselves, as shown below:
 
 ```python
 from ngclearn.museum.gncn_t1 import GNCN_t1
@@ -380,7 +381,7 @@ Likelihood Test:
   log[p(x)] = -103.13798522949219
 ```
 and if you open and view the image samples, you should see something similar to:<br>
-<img src="../images/demo1/gncn_t1_samples.png" width="350" />
+<img src="../images/demo1/gncn_t1_samples.png" width="450" />
 
 Now go ahead and re-run the same steps above but for your other two models, using
 the final configuration scripts, i.e., `gncn_t1_sigma/analyze.cfg` and
@@ -393,7 +394,7 @@ Likelihood Test:
   log[p(x)] = -100.03035736083984
 ```
 with images as follows:<br>
-<img src="../images/demo1/gncn_t1_sigma_samples.png" width="350" />
+<img src="../images/demo1/gncn_t1_sigma_samples.png" width="450" />
 
 For the GNCN-PDH, you get a log likelihood of:
 ```console
@@ -402,7 +403,7 @@ Likelihood Test:
   log[p(x)] = -96.92353820800781
 ```
 with images as follows:<br>
-<img src="../images/demo1/gncn_pdh_samples.png" width="350" />
+<img src="../images/demo1/gncn_pdh_samples.png" width="450" />
 
 For the three models above, we get log likelihood measurements that are desirably
 within the right ballpack of those reported in related literature [3].

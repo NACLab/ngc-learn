@@ -65,6 +65,8 @@ myst_enable_extensions = [
     #"tasklist",
 ]
 
+pygments_style = "sphinx"
+
 #autodoc_mock_imports = ['tensorflow', 'tensorflow_probability']
 
 # sphinx api-doc variables

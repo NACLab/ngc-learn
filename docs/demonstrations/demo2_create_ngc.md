@@ -432,7 +432,7 @@ the following ngc-learn design shorthand:
 
 ```
 Node Name Structure:
-z2 -(z1-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
+z2 -(z2-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
 ```
 
 One interesting thing to note is that, in the `sim_dyn_train.py` script, we also
@@ -460,7 +460,7 @@ sampler.set_cycle(nodes=[s2,s1,s0])
 
 Creating a `ProjectionGraph` is rather similar to creating an `NGCGraph` (notice
 that we chose to use `FNode`(s) since they work well for feedforward projection schemes).
-However, we should caution that the design of a projection graph should meaningfully mimic 
+However, we should caution that the design of a projection graph should meaningfully mimic
 what one would envision is the underlying directed, acyclic generative model embodied  
 by their `NGCGraph` (it helps to draw out/visualize the dot-and-arrow structure you
 want graphically first, using similar shorthand as we presented for our model above,
@@ -501,6 +501,8 @@ for iter in range(n_iterations):
     Lx = tf.reduce_sum( metric.mse(x_hat, x) ) + Lx * alpha
     # update synaptic parameters given current model internal state
     delta = model.calc_updates()
+    for p in range(len(delta)):
+        delta[p] = delta[p] * (1.0/(x.shape[0] * 1.0))
     opt.apply_gradients(zip(delta, model.theta))
     model.apply_constraints()
     model.clear()

@@ -31,7 +31,7 @@ class NGCGraph:
         self.K = K
         # learning meta-parameters
         self.proj_update_mag = -1.0
-        self.proj_weight_mag = 1.0 #2.0
+        self.proj_weight_mag = -1.0 #2.0
         self.param_axis = 0
 
     def set_cycle(self, nodes):
