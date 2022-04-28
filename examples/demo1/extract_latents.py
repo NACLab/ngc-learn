@@ -30,7 +30,7 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Tutorial File:
+Demo/Tutorial #1 File:
 Extracts/retrieves the latent representations of a (pre-)trained NGC model and
 a provided data sample/pool, i.e., the MNIST database.
 

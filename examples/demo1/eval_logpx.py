@@ -29,7 +29,7 @@ from ngclearn.utils.data_utils import DataLoader
 
 """
 ################################################################################
-Tutorial File:
+Demo/Tutorial #1 File:
 Evaluates/estimates the marginal log likelihood -- log p(x) -- of a
 (pre-)trained NGC model given a data sample/pool, i.e., the MNIST test set.
 

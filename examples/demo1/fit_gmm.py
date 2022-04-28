@@ -24,7 +24,7 @@ from ngclearn.utils.data_utils import DataLoader
 
 """
 ################################################################################
-Tutorial File:
+Demo/Tutorial #1 File:
 Fitting a Gaussian mixture density/prior to a collected latent variable dataset,
 i.e., latent vector codes extracted from a (pre-)trained NGC model.
 
