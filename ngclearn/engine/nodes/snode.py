@@ -170,7 +170,10 @@ class SNode(Node):
                     if self.prior_type == "laplace":
                         z_prior = -tf.math.sign(z) * self.lbmda
                     elif self.prior_type == "cauchy":
-                        z_prior = -(z * (2 * self.lbmda))/(1.0 + tf.math.square(z))
+                        #z_prior = -(z * (2 * self.lbmda))/(1.0 + tf.math.square(z))
+                        z_prior = -(1.0 + tf.math.square(z)) * self.lbmda
+                        #print(z_prior)
+                        #sys.exit(0)
                     elif self.prior_type == "gaussian":
                         z_prior = -z * (2 * self.lbmda)
             if self.integrate_type == "euler":

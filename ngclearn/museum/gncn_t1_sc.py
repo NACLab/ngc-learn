@@ -63,7 +63,7 @@ class GNCN_t1_SC:
         # set up state integration function
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
         lmbda = float(self.args.getArg("lmbda")) #0.0002
-        prior_cfg = {"prior_type" : "laplace", "lambda" : lmbda}
+        prior_cfg = {"prior_type" : "cauchy", "lambda" : lmbda}
         use_mod_factor = False #(self.args.getArg("use_mod_factor").lower() == 'true')
 
         # set up system nodes
