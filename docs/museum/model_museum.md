@@ -40,6 +40,7 @@ Current models that we have implemented in the Model Museum so far are:
 2. GNCN-t1-Sigma/Friston - the model proposed in (Friston, 2008) [3]
 3. GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
 4. GNCN-t1-FFM - the model proposed in (Whittington &amp; Bogacz, 2017) [4]
+5. GNCN-t1-SC - the model proposed in (Olshausen &amp; Field, 1996) [5]
 
 
 **References:** <br>
@@ -53,3 +54,5 @@ Biology 4.11 (2008): e1000211.
 [4] Whittington, James CR, and Rafal Bogacz. "An approximation of the error
 backpropagation algorithm in a predictive coding network with local hebbian
 synaptic plasticity." Neural computation 29.5 (2017): 1229-1262.
+[5] Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
+by learning a sparse code for natural images. Nature 381, 607–609 (1996).

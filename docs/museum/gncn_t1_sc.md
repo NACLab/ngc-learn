@@ -1,6 +1,6 @@
-# GNCN-t1 (Rao &amp; Ballard, 1999)
+# GNCN-t1-SC (Olshausen &amp; Field, 1996)
 
-This circuit implements the model proposed in (Rao &amp; Ballard, 1999) [1].
+This circuit implements the sparse coding model proposed in (Olshausen &amp; Field, 1996) [1].
 Specifically, this model is unsupervised and can be used to process sensory
 pattern (row) vector(s) `x` to infer internal latent states. This class offers,
 beyond settling and update routines, a projection function by which ancestral
@@ -8,7 +8,7 @@ sampling may be carried out given the underlying directed generative model
 formed by this NGC system.
 
 ```{eval-rst}
-.. autoclass:: ngclearn.museum.gncn_t1.GNCN_t1
+.. autoclass:: ngclearn.museum.gncn_t1_sc.GNCN_t1_SC
   :noindex:
 
   .. automethod:: project
@@ -22,6 +22,5 @@ formed by this NGC system.
 ```
 
 **References:** <br>
-[1] Rao, Rajesh PN, and Dana H. Ballard. "Predictive coding in the visual
-cortex: a functional interpretation of some extra-classical receptive-field
-effects." Nature neuroscience 2.1 (1999): 79-87.
+[1] Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
+by learning a sparse code for natural images. Nature 381, 607–609 (1996).

@@ -57,9 +57,10 @@ class SNode(Node):
         prior_kernel: Dict defining the type of prior function to apply over neural activities.
             The expected keys and corresponding value types are specified below:
 
-            :`'prior_type'`: type of distribution to use as a prior over neural activities.
-                If "laplace" is specified, a Laplacian distribution is used (future ngc-learn versions will support
-                others such as "cauchy").
+            :`'prior_type'`: type of (centered) distribution to use as a prior over neural activities.
+                If "laplace" is specified, a Laplacian distribution is used,
+                if "cauchy" is specified, a Cauchy distribution will be used, and
+                if "gaussian" is specified, a Gaussian distribution will be used.
 
             :`'lambda'`: the scale factor controlling the strength of the prior applied to neural activities.
 
@@ -168,6 +169,10 @@ class SNode(Node):
                 if self.lbmda > 0.0:
                     if self.prior_type == "laplace":
                         z_prior = -tf.math.sign(z) * self.lbmda
+                    elif self.prior_type == "cauchy":
+                        z_prior = -(z * (2 * self.lbmda))/(1.0 + tf.math.square(z))
+                    elif self.prior_type == "gaussian":
+                        z_prior = -z * (2 * self.lbmda)
             if self.integrate_type == "euler":
                 '''
                 Euler integration step (under NGC inference dynamics)

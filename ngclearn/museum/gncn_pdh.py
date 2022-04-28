@@ -19,13 +19,14 @@ class GNCN_PDH:
     Ororbia, A., and Kifer, D. The neural coding framework for learning
     generative models. Nature Communications 13, 2064 (2022).
 
-    (And its arXiv paper that preceded the above is shown below:)
-    Ororbia, Alexander, and Daniel Kifer. "The neural coding framework for
-    learning generative models." arXiv preprint arXiv:2012.03405 (2020).
-
     This model, under the NGC computational framework, is referred to as
     the GNCN-t1-Sigma/Friston, according to the naming convention in
     (Ororbia & Kifer 2022).
+
+    | Historical Note:
+    | (The arXiv paper that preceded the publication above is shown below:)
+    | Ororbia, Alexander, and Daniel Kifer. "The neural coding framework for
+    | learning generative models." arXiv preprint arXiv:2012.03405 (2020).
 
     | Node Name Structure:
     | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z2-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
