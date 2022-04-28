@@ -197,43 +197,45 @@ derivative of the mean squared error (MSE). `avg_scalar` is a special signal
 that can be set externally and is to contain a scalar that each value inside of
 `z` and `L` will be multiplied by `1.0/avg_scalar`.
 
-Now that we know how an error node works, let us modify the earlier 5-node circuit
-to do something more interesting with a mismatch computation:
+Now that we know how an error node works, let us create a simple 3-node circuit
+that leverages a mismatch computation:
 
 ```python
-a = SNode(name="a", dim=10, beta=0.05, leak=0.001, act_fx="identity")
+dcable_cfg = {"type": "dense", "has_bias": False,
+              "init" : ("gaussian",0.025), "seed" : 69}
+pos_carryover = {"type": "simple", "coeff": 1.0}
+neg_carryover = {"type": "simple", "coeff": -1.0}
+
+a = SNode(name="a", dim=20, beta=0.05, leak=0.001, act_fx="identity")
 b = SNode(name="b", dim=10, beta=0.05, leak=0.002, act_fx="identity")
-e = ENode(name="e", dim=5)
-c = SNode(name="c", dim=10, beta=0.05, leak=0.0, act_fx="identity")
-d = SNode(name="d", dim=10, beta=0.05, leak=0.0, act_fx="identity")
+e = ENode(name="e", dim=10)
 
 # wire the states a, b, c, and d to error neurons/node e
 a_e = a.wire_to(e, src_var="phi(z)", dest_var="pred_mu", cable_kernel=dcable_cfg)
-b_e = b.wire_to(e, src_var="phi(z)", dest_var="pred_mu", cable_kernel=dcable_cfg)
-c_e = c.wire_to(e, src_var="phi(z)", dest_var="pred_targ", cable_kernel=dcable_cfg)
-d_e = d.wire_to(e, src_var="phi(z)", dest_var="pred_targ", cable_kernel=dcable_cfg)
+b_e = b.wire_to(e, src_var="z", dest_var="pred_targ", cable_kernel=pos_carryover)
 
 # wire error node e back to nodes a, b, c, and d to provide feedback to their states
 e.wire_to(a, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(a_e,"symm_tied"))
-e.wire_to(b, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(b_e,"symm_tied"))
-e.wire_to(c, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(c_e,"symm_tied"))
-e.wire_to(d, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(d_e,"symm_tied"))
+e.wire_to(b, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_carryover)
 
 # set up local Hebbian updates for a_e, b_e, c_e, and d_e
 a_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"))
-b_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"))
-c_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"))
-d_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"))
 ```
 
-where we see that nodes `a` and `b` work together to deposit prediction signals
-into `pred_mu` while nodes `c` and `d` jointly deposit signals into `pred_targ`
-to create a target signal. Notice that we have wired `e` back to all four nodes
-using a special flag/argument in the `wire_to()` routine, i.e., `mirror_path_kernel`,
-which simply takes in a 2-tuple with the first element being the physical cable
-object we want to reuse and the second is a string flag telling ngc-learn how
-to re-use the cable (in this case, `symm_tied` means we use the transpose of the
-underlying weight matrix contained inside the chosen dense cable).
+where we see that node `a` deposits a prediction signal into the `pred_mu`
+compartment of `e` and node `b` deposits a target signal into the `pred_targ`
+compartment of `e` (where a simple cable `pos_carryover` will just multiply
+this signal by `1` and dump it into the appropriate compartment). Notice that we
+have wired `e` back to `a` using a special flag/argument in the `wire_to()` routine,
+i.e., `mirror_path_kernel`. This special argument simply takes in a 2-tuple where
+the first element is the physical cable object we want to reuse while the second
+is a string flag telling ngc-learn how to re-use the cable (in this case, `symm_tied`,
+which means that we use the transpose of the underlying weight matrix contained
+inside of the dense cable `a_e`). Also observe that `e` has been wired back to
+node `b` with a simple cable that multiplies the post-activation of `e` by `-1`.
+The above 3-node circuit is illustrated in the diagram below.
+
+<img src="../images/demo2/ngclearn_nodes_and_cables.png" width="400" />
 
 Before we turn our attention to simulating the interactions/processing of the
 above nodes and cables, there is one more specialized node worthy of mention --
