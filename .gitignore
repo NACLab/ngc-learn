@@ -3,3 +3,6 @@ __pycache__/
 *.mp4
 *.npy
 *.agent
+*.ngc
+*.gmm
+*.results
