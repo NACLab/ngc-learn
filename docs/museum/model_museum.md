@@ -2,7 +2,7 @@
 
 Predictive processing has undergone many important developments over the decades,
 dating back to Hermann von Helmholtz's theory of  “unconscious inference”
-in perception which operationalized the ideas of the 18th century philosopher
+in perception which itself operationalized the ideas of the 18th century philosopher
 Immanuel Kant. It has risen as a promising theoretical and mathematical model
 of various aspects of neural circuitry in computational neuroscience, serving
 as one embodiment of the Bayesian brain hypothesis, and has been shown to be a
@@ -12,7 +12,7 @@ one or a few particular modeling purposes, have been (and still are being) propo
 Given this, one of ngc-learn's aims is to capture an approximate snapshot of as many
 of these architectures/ideas as possible.
 
-Given the generality of the NGC computational framework itself [1], many
+Given the generality of the NGC computational framework [1], many
 flavors of predictive processing can be recovered/derived and it is within
 ngc-learn's Model Museum that we intend to model and preserve variant
 models (as they historically have been and currently are being created). This
