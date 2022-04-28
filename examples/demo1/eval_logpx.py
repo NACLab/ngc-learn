@@ -195,7 +195,7 @@ with tf.device(gpu_tag):
 
         px = py = int(np.sqrt(X.shape[1])) #28
         # sample using GMM learned density
-        n_samp_steps = 6
+        n_samp_steps = 1
         z_in = None
         for nn in range(n_samp_steps):
             #z_samples, y_s = sample_gmm(sampler, num_samples, use_sklearn=False)
