@@ -576,7 +576,7 @@ to be `400` and the online mini-batch size to be `32` (we draw `32` samples from
 
 Execute the demonstration script as follows:
 
-```bash
+```console
 $ python sim_dyn_train.py
 ```
 

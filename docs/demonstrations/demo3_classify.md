@@ -255,7 +255,7 @@ built pure Tensorflow or Pytorch.
 
 Specifically, we will fit a supervised NGC classifier using the labels that come
 with the processed MNIST dataset, in `mnist.zip` (which you unzipped and worked
-with in Demonstration \# 1). 
+with in Demonstration \# 1).
 For this part of the demonstration, we will import the full model of [1], You will
 notice in the provided training script `sim_train.py`, we import the `GNCN-t1-FFM`
 (the NGC classifier model) in the header:
@@ -353,7 +353,7 @@ agent.clear()
 To train your NGC classifier, run the training script in `/examples/demo3/` as
 follows:
 
-```bash
+```console
 $ python sim_train.py --config=gncn_t1_ffm/fit.cfg --gpu_id=0 --n_trials=1
 ```
 
@@ -368,7 +368,7 @@ arrays as well as your learned NGC classifier have been saved to disk for you.
 To examine the classifier's performance on the MNIST test-set, you can execute
 the evaluation script like so:
 
-```bash
+```console
 $ python eval_model.py --config=gncn_t1_ffm/fit.cfg --gpu_id=0
 ```
 
@@ -397,7 +397,7 @@ Finally, since we have collected our training and validation accuracy measuremen
 at the end of each pass through the data (or epoch/iteration), we can run the
 following to obtain a plot of our model's learning curves:
 
-```bash
+```console
 $ python plot_curves.py
 ```
 

@@ -63,6 +63,14 @@ class GNCN_t1_SC:
         prior = "cauchy"
         if self.args.hasArg("prior") == True:
             prior = self.args.getArg("prior")
+        lateral_cfg = None
+        if self.args.hasArg("lat_type") == True:
+            lat_type = self.args.getArg("lat_type")
+            if lat_type == "lkwta":
+                n_group = int(self.args.getArg("n_group"))
+                lat_init = ("lkwta",n_group,0.15,0.1)
+                lateral_cfg = {"type" : "dense", "has_bias": False, "init" : lat_init, "coeff": -1.0}
+
 
         # set up state integration function
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
@@ -83,6 +91,11 @@ class GNCN_t1_SC:
                       "init" : ("gaussian",wght_sd), "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
+
+        if lateral_cfg is not None:
+            print(" -> Setting SC to operate with lateral competition (lkwta form)")
+            # lateral recurrent connection
+            z1_to_z1 = z1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg)
 
         z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
