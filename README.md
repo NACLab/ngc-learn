@@ -16,8 +16,10 @@ under the 3-Clause BSD license.
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
+<!--
 **NOTE:** The documentation of this version is currently being built at the moment (the formal release will be coming shortly,
 so please check in and git pull/re-clone in the next few days for the full version to be fully ported/built).
+-->
 
 ## <b>Documentation</b>
 
@@ -43,6 +45,8 @@ ngc-learn requires:
 2) Numpy (>=1.20.0)
 3) Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
 4) scikit-learn (>=0.24.2) if using ngclearn.density (needed for the examples/)
+
+(Which you can have setup/installed by running `$ pip3 install -r requirements.txt`.)
 
 Once you have ensured that the above dependencies have been installed, you can then
 run the setup script at the top of the <code>ngclearn</code> directory
@@ -89,7 +93,7 @@ $ git clone https://github.com/ngc-learn/ngc-learn.git
 </pre>
 
 
-Version:<br>
+**Version:**<br>
 0.0.1 Alpha
 
 Author:
