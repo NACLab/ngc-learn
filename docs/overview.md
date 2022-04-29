@@ -11,43 +11,44 @@ models that can categorize and forecast as well as agents that can play games an
 complex problems. Behind these achievements is the backpropagation of errors
 (or backprop) algorithm. Although elegant and powerful, a major long-standing
 criticism of backprop has been its biological implausibility. In short, it is not
-likely that billions of neurons that compose the human brain adjust the synapses
-that connect in the way that backprop would prescribe.
+likely that the brain adjusts the synapses that connect the billions of neurons
+that compose it in the way that backprop would prescribe.
 
 Although ANNs are (loosely) inspired by our current understanding of the human brain,
 the connections to the actual mechanisms that drive systems of natural neurons are
 quite loose, at best. Although the question as to how the brain exactly conducts
 credit assignment -- or the process of determining the contribution of each
-and every neuron to overall error on some task (the "blame game") -- is still an
-open one, it would prove invaluable to have a flexible computational framework that
-can facilitate the design and development of brain-inspired neural systems that
-can also learn complex tasks, ranging from generative modeling to interacting and
+and every neuron to the system's overall error on some task (the "blame game") -- is
+still an open one, it would prove invaluable to have a flexible computational and software
+framework that can facilitate the design and development of brain-inspired neural systems that
+can also learn complex tasks. These tasks range from generative modeling to interacting and
 manipulating dynamically-evolving environments. This would benefit researchers
 in fields including, but not limited to, machine learning, (computational)
 neuroscience, and cognitive science.
 
 ngc-learn aims to fill the above need by concretely instantiating an important
 theory in neuroscience known as <i>predictive processing</i>, positing that the brain
-is largely a continual prediction engine, constantly predicting the state of its
-environment and updating its own internal mental model of it. Moreover, prediction
-and correction happens at many levels or regions within the brain -- clusters or
-groups of neurons in one region attempt to predict the state of neurons at another
-region, forming a complex somewhat hierarchical structure that includes neurons
-which attempt to predict actual sensory input. Neurons within this system adjust
-their internal activity values as well the strengths of the synapses that wire
-to them based on how different their predictions were from observed signals.
+is largely a continual prediction engine, constantly hypothesizing the state of its
+environment and updating its own internal mental model of it as data is gathered.
+Moreover, prediction and correction happen at many levels or regions within the
+brain -- clusters or groups of neurons in one region attempt to predict the state
+of neurons at another region, forming a complex, somewhat hierarchical structure
+that includes neurons which attempt to predict actual sensory input. Neurons within
+this system adjust their internal activity values (as well the strengths of the
+synapses that wire to them) based on how different their predictions were from
+observed signals.
 Concretely, ngc-learn implements a general predictive processing framework known
 as neural generative coding (NGC).
 
 The overarching goal of ngc-learn is to provide researchers and engineers with:
-* a modular design that allows for the flexible design, simulation, analysis of
+* a modular design that allows for the flexible creation, simulation, and analysis of
   neural systems fundamentally built and driven by predictive processing;
 * a powerful, approachable tool, written by and maintained by researchers and
 experimenters directly studying and working to advance predictive processing,
 meant to lower the barriers to entry to this field of research;
 * a "model museum" that captures the essence of fundamental and interesting
 predictive processing models and algorithms throughout history, allowing for the
-study of and experimentation with classical and modern systems.
+study of and experimentation with classical and modern ideas.
 
 The ngc-learn software framework was originally developed in 2019 by the Neural Adaptive
 Computing (NAC) laboratory in Rochester Institute of Technology meant as an internal
@@ -55,7 +56,8 @@ tool for predictive processing research (with earlier incarnations in the Scala
 programming language, dating back to early 2017). It remains actively maintained
 and used for predictive processing research in NAC (see ngc-learn's mention/announcement
 in this <a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">engineering blog post</a>).
-We welcome community contributions to this project. For details please check out our contributing guidelines (<i>coming soon!</i>).
+We welcome community contributions to this project. For details please check out our
+contributing guidelines (<i>coming soon!</i>).
 
 <!--
 This release of ngc-learn contains three predictive processing models, X types of
