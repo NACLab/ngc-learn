@@ -41,6 +41,9 @@ class GNCN_t1_SC:
     | * leak - strength of the leak variable in the latent states (Default = 0)
     | * lmbda - strength of the prior applied over latent state activities
     | * prior - type of prior to use (Default = "cauchy")
+    | * lat_type - can be set to lkwta to leverage lateral interactions as in
+        (Ororbia &amp; Kifer, 2022) (Default = None)
+    | * n_group - must be > 0 if lat_type != None and s.t. (z_dim mod n_group) == 0
     | * K - # of steps to take when conducting iterative inference/settling
     | * act_fx - activation function for layers z1 (Default = identity)
     | * out_fx - activation function for layer mu0 (prediction of z0) (Default: identity)

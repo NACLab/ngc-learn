@@ -232,9 +232,16 @@ remain fixed at the value you embed/insert, then you would use the `clamp()` fun
 instead (which is what is being used internally to clamp variables in the `clamped_vars`
 argument of the `settle()` function above).
 
+In the figure below, we graphically what the above simulated NGC system and its
+corresponding conditional generative model (ancestral projection graph) look like
+(the blue dashed arrow just point outs that the layer `s1` of the generative model
+is the same thing as the mean prediction `mu1` of the original NGC model).
+
+<img src="../images/demo3/ngclearn_demo3_arch.png" width="450" />
+
 The three-layer hierarchical classifier above turns out to be very similar to the
 one implemented in ngc-learn's Model Museum -- the [GNCN-t1-FFM](../museum/gncn_t1_ffm.md),
-which is a four-layer discriminative NGC system that emulates the model investigated
+which is itself a four-layer discriminative NGC system that emulates the model investigated
 in [1]. We will import and use this slightly deeper model in the next part of this
 demonstration.
 
@@ -418,6 +425,6 @@ model of `p(y|x)`.
 
 
 **References:** <br>
-Whittington, James CR, and Rafal Bogacz. "An approximation of the error
+[1] Whittington, James CR, and Rafal Bogacz. "An approximation of the error
 backpropagation algorithm in a predictive coding network with local hebbian
 synaptic plasticity." Neural computation 29.5 (2017): 1229-1262.
