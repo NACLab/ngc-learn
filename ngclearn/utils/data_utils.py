@@ -12,7 +12,8 @@ np.random.seed(seed)
 class DataLoader(object):
     """
         A data loader object, meant to allow sampling w/o replacement of one or
-        more named design matrices.
+        more named design matrices. Note that this object is iterable (and
+        implements an __iter__() method).
 
         Args:
             design_matrices:  list of named data design matrices - [("name", matrix), ...]
