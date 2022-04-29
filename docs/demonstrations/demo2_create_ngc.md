@@ -173,7 +173,7 @@ that node to extract information from to create the pre-synaptic Hebbian term.
 (`postact` refers to the post-activation term, the argument itself following the
 same format at `preact`).
 
-In addition to the `SNode`, we need to turn our attention to one more important
+Beyond the `SNode`, we need to study one more important
 type of node -- the `ENode` (see [ENode](ngclearn.engine.nodes.enode)). While,
 in principle, one could build a complete NGC system with just state nodes and
 cables (which will be the subject of future
@@ -206,19 +206,22 @@ dcable_cfg = {"type": "dense", "has_bias": False,
 pos_carryover = {"type": "simple", "coeff": 1.0}
 neg_carryover = {"type": "simple", "coeff": -1.0}
 
+# Notice that we make b and e have the same dimension (10) given that we
+# want to wire their information exchange paths with SCable(s)
+
 a = SNode(name="a", dim=20, beta=0.05, leak=0.001, act_fx="identity")
 b = SNode(name="b", dim=10, beta=0.05, leak=0.002, act_fx="identity")
 e = ENode(name="e", dim=10)
 
-# wire the states a, b, c, and d to error neurons/node e
+# wire the states a and b to error neurons/node e
 a_e = a.wire_to(e, src_var="phi(z)", dest_var="pred_mu", cable_kernel=dcable_cfg)
 b_e = b.wire_to(e, src_var="z", dest_var="pred_targ", cable_kernel=pos_carryover)
 
-# wire error node e back to nodes a, b, c, and d to provide feedback to their states
+# wire error node e back to nodes a and b to provide feedback to their states
 e.wire_to(a, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(a_e,"symm_tied"))
 e.wire_to(b, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_carryover)
 
-# set up local Hebbian updates for a_e, b_e, c_e, and d_e
+# set up local Hebbian updates for a_e
 a_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"))
 ```
 
@@ -233,7 +236,7 @@ is a string flag telling ngc-learn how to re-use the cable (in this case, `symm_
 which means that we use the transpose of the underlying weight matrix contained
 inside of the dense cable `a_e`). Also observe that `e` has been wired back to
 node `b` with a simple cable that multiplies the post-activation of `e` by `-1`.
-The above 3-node circuit is illustrated in the diagram below.
+The above 3-node circuit we have built is illustrated in the diagram below.
 
 <img src="../images/demo2/ngclearn_nodes_and_cables.png" width="400" />
 
