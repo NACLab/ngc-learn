@@ -94,7 +94,7 @@ $ git clone https://github.com/ngc-learn/ngc-learn.git
 
 
 **Version:**<br>
-0.0.1 <!-- Alpha -->
+0.1.0 <!-- 0.0.1 Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>
