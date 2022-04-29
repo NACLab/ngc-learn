@@ -1,4 +1,4 @@
-# Demo 4: Pattern Completion: Auto-Associative Recall
+# Demo 4: Pattern Completion through Auto-Associative Recall
 
 <i>NOTE: This demonstration is under construction and thus incomplete at the moment...</i>
 
