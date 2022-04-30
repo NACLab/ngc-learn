@@ -6,7 +6,7 @@
 [![DOI](https://zenodo.org/badge/483413212.svg)](https://zenodo.org/badge/latestdoi/483413212)
 <!--[![GitHub release](https://img.shields.io/github/release/Naereen/StrapDown.js.svg)](https://GitHub.com/Naereen/StrapDown.js/releases/)-->
 
-<img src="img/ngc-learn-logo.png" width="300">
+<img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing arbitrary
 predictive processing models based on the neural generative coding (NGC) computational
@@ -59,7 +59,7 @@ $ python setup.py install
 If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
-<img src="img/test_ngclearn_install.png" width="512">
+<img src="docs/images/test_ngclearn_install.png" width="512">
 
 ## <b>Attribution:</b>
 
