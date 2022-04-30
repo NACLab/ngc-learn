@@ -147,7 +147,7 @@ NGC shorthand for the above conditional generative model, it would be:
 ```
 Node Name Structure:
 s2 -(s2-s1)-> s1 -(s1-s0-)-> s0
-Note: z3 = x, which yields the model p(s0=y|x)
+Note: s3 = x, which yields the model p(s0=y|x)
 Note: s2-s1 = z2-mu1 and s1-s0 = z1-mu0
 ```
 
