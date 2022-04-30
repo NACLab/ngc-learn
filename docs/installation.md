@@ -35,6 +35,63 @@ it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="images/test_ngclearn_install.png" width="512">
 
+After installation, you can also the tests in the directory `/tests/`, specifically
+```console
+$ python test_fun_dynamics.py
+```
+and should see that all the basic assertion tests yield pass as follows:
+
+```console
+#######################################################################
+ > Testing a proxy NGC graph w/ tied weights
+----------------
+  > Checking ancestral projection graph:
+2022-04-29 21:48:57.745229: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10.0
+ => Test for:  x = 1 = s2.z = s2.phi(z)
+  PASS!
+ => Test for:  x = 1 = s1.z = s1.phi(z)
+  PASS!
+ => Test for:  x = 1 = s0.z = s0.phi(z)
+  PASS!
+ => Test for:  x = x_sample
+Expected:  [[1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]]
+  Output:  [[1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]]
+  PASS!
+----------------
+  > Checking NGC simulation object:
+ => Test for:  0 = e2.z = e2.phi(z)
+  PASS!
+ => Test for:  0 = e1.z = e1.phi(z)
+  PASS!
+ => Test for:  0 = e0.z = e0.phi(z)
+  PASS!
+ => Test for:  x = x_hat
+Expected:  [[1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]]
+  Output:  [[1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]]
+  PASS!
+ => Test for update calculation: all dx should be = 0
+  PASS! (for all 6 dx calculations)
+#######################################################################
+#######################################################################
+ > Testing a proxy NGC graph w/ untied weights
+----------------
+  > Checking NGC simulation object:
+ => Test for:  0 = e2.z = e2.phi(z)
+  PASS!
+ => Test for:  0 = e1.z = e1.phi(z)
+  PASS!
+ => Test for:  0 = e0.z = e0.phi(z)
+  PASS!
+ => Test for:  x = x_hat
+Expected:  [[1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]]
+  Output:  [[1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]]
+  PASS!
+ => Test for update calculation: all dx should be = 0
+  PASS! (for all 6 dx calculations)
+#######################################################################
+```
+
+
 ## A Note on Simulating with the GPU or CPU
 
 Simulations using ngc-learn can be run on either the CPU or GPU (currently, in this
