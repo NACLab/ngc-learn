@@ -132,7 +132,12 @@ def init_weights(kernel, shape, seed):
     """
     init_type = kernel[0]
     params = None
-    if init_type == "anti_diagonal":
+    if init_type == "diagonal":
+        n_cols = shape[1]
+        factor = kernel[1]
+        I = tf.eye(n_cols) # create diagonal I
+        params = I
+    elif init_type == "anti_diagonal":
         n_cols = shape[1]
         factor = kernel[1]
         I = tf.eye(n_cols) # create diagonal I

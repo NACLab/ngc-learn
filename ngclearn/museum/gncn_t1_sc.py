@@ -83,7 +83,7 @@ class GNCN_t1_SC:
 
         # set up system nodes
         z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
-                   integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)#, lateral_kernel=lateral_cfg)
+                   integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
         e0 = ENode(name="e0", dim=x_dim)
         z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
