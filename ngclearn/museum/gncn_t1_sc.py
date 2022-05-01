@@ -27,8 +27,6 @@ class GNCN_t1_SC:
     | Node Name Structure:
     | p(z1) ; z1 -(z1-mu0)-> mu0 ;e0; z0
     | Cauchy prior applied for p(z1)
-    | e0 -(e0-z1)-> z1  // Error feedback
-    | z1-mu0 = (e0-z1)^T // generative weights are tied to error weights
 
     Args:
         args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-SC
@@ -114,6 +112,17 @@ class GNCN_t1_SC:
             # add lateral recurrent connection
             z1_to_z1 = z1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg)
 
+        z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
+        mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
+        z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
+        e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
+        e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+        param_axis = 1
+
+        ### alternative way to construct the same model above ###
+        #### this wiring pattern below means the feedback/error weights are leanred
+        #### while the forward/generative weights are tied to them
         #e0_z1 = e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", cable_kernel=dcable_cfg)
         #z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", mirror_path_kernel=(e0_z1,"symm_tied"))
         #mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
@@ -121,14 +130,6 @@ class GNCN_t1_SC:
         #e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
         #e0_z1.set_update_rule(preact=(e0,"phi(z)"), postact=(z1,"phi(z)")) # update rule
         # param_axis = 0
-
-        z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-        mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-        z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
-        e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
-        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)")) 
-        param_axis = 1
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
