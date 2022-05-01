@@ -67,12 +67,24 @@ class SNode(Node):
 
             :Note: specifying None will result in no prior distribution being applied
 
+        threshold_kernel: Dict defining the type of threshold function to apply over neural activities.
+            The expected keys and corresponding value types are specified below:
+
+            :`'threshold_type'`: type of (centered) distribution to use as a prior over neural activities.
+                If "soft_threshold" is specified, a soft thresholding function is used, and
+                if "cauchy_threshold" is specified, a cauchy thresholding function is used,
+
+            :`'thr_lambda'`: the scale factor controlling the strength of the threshold applied to neural activities.
+
+            :Note: specifying None will result in no threshold function being applied
+
         trace_kernel: (Default = None), supporting option for spiking neurons
 
             :Note: NOT fully tested/integrated in ngc-learn v0.0.1
     """
     def __init__(self, name, dim, beta=1.0, leak=0.0, zeta=1.0, act_fx="identity",
-                 integrate_kernel=None, prior_kernel=None, trace_kernel=None):
+                 integrate_kernel=None, prior_kernel=None, threshold_kernel=None,
+                 trace_kernel=None):
         node_type = "state"
         super().__init__(node_type, name, dim)
         self.use_dfx = False
@@ -81,10 +93,15 @@ class SNode(Node):
             self.use_dfx = integrate_kernel.get("use_dfx")
             self.integrate_type = integrate_kernel.get("integrate_type")
         self.prior_type = None
-        self.lbmda = 0.0
+        self.lmbda = 0.0
         if prior_kernel is not None:
             self.prior_type = prior_kernel.get("prior_type")
-            self.lbmda = prior_kernel.get("lambda")
+            self.lmbda = prior_kernel.get("lambda")
+        self.threshold_type = None
+        self.thr_lmbda = 0.0
+        if threshold_kernel is not None:
+            self.threshold_type = threshold_kernel.get("threshold_type")
+            self.thr_lmbda = threshold_kernel.get("thr_lambda")
 
         fx, dfx = transform_utils.decide_fun(act_fx)
         self.fx = fx
@@ -167,15 +184,15 @@ class SNode(Node):
             #         dz = dz * self.dfx(z)
             z_prior = 0.0
             if self.prior_type is not None:
-                if self.lbmda > 0.0:
+                if self.lmbda > 0.0:
                     if self.prior_type == "laplace":
-                        z_prior = -tf.math.sign(z) * self.lbmda
+                        z_prior = -tf.math.sign(z) * self.lmbda
                     elif self.prior_type == "exp": # Exp: x ~ -exp(-x^2)
-                        z_prior = -(tf.math.exp(-tf.math.square(z)) * z * 2) * self.lbmda
+                        z_prior = -(tf.math.exp(-tf.math.square(z)) * z * 2) * self.lmbda
                     elif self.prior_type == "cauchy":  # Cauchy: x ~ (1.0 + tf.math.square(z))
-                        z_prior = -(z * (2 * self.lbmda))/(1.0 + tf.math.square(z))
+                        z_prior = -(z * (2 * self.lmbda))/(1.0 + tf.math.square(z))
                     elif self.prior_type == "gaussian":
-                        z_prior = -z * (2 * self.lbmda)
+                        z_prior = -z * (2 * self.lmbda)
             if self.integrate_type == "euler":
                 '''
                 Euler integration step (under NGC inference dynamics)
@@ -191,6 +208,10 @@ class SNode(Node):
                 '''
                 dz = dz - z * self.leak + z_prior
                 z = z * self.zeta + dz * self.beta
+                if self.threshold_type == "soft_threshold":
+                    z = transform_utils.threshold_soft(z, self.thr_lmbda)
+                elif self.threshold_type == "cauchy_threshold":
+                    z = transform_utils.threshold_cauchy(z, self.thr_lmbda)
             else:
                 print("Error: Node {0} does not support {1} integration".format(self.name, self.integrate_type))
                 sys.exit(1)

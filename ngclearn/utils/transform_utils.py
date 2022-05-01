@@ -164,30 +164,34 @@ def init_weights(kernel, shape, seed):
     elif init_type == "he_normal":
         initializer = tf.compat.v1.keras.initializers.he_normal()
         params = initializer(shape) #, seed=seed )
-    elif init_type is "classic_glorot":
+    elif init_type == "classic_glorot":
         N = (shape[0] + shape[1]) * 1.0
         bound = 4.0 * np.sqrt(6.0/N)
         params = tf.random.uniform(shape, minval=-bound, maxval=bound, seed=seed)
-    elif init_type is "glorot_normal":
+    elif init_type == "glorot_normal":
         initializer = tf.compat.v1.keras.initializers.glorot_normal()
         params = initializer(shape) #, seed=seed )
-    elif init_type is "glorot_uniform":
+    elif init_type == "glorot_uniform":
         initializer = tf.compat.v1.keras.initializers.glorot_uniform()
         params = initializer(shape) #, seed=seed )
-    elif init_type is "orthogonal":
+    elif init_type == "orthogonal":
         stddev = kernel[1]
         initializer = tf.compat.v1.keras.initializers.orthogonal(gain=stddev)
         params = initializer(shape)
-    elif init_type is "truncated_normal" or init_type == "truncated_gaussian" :
+    elif init_type == "truncated_normal" or init_type == "truncated_gaussian" :
         stddev = kernel[1]
         params = tf.random.truncated_normal(shape, stddev=stddev, seed=seed)
     elif init_type == "normal" or init_type == "gaussian" :
         stddev = kernel[1]
         params = tf.random.normal(shape, stddev=stddev, seed=seed)
-    elif init_type is "alex_uniform": #
+    elif init_type == "alex_uniform": #
         k = 1.0 / (shape[0] * 1.0) # 1/in_features
         bound = np.sqrt(k)
         params = tf.random.uniform(shape, minval=-bound, maxval=bound, seed=seed)
+    elif init_type == "unif_scale":
+        Phi = np.random.randn(shape[0], shape[1]).astype(np.float32)
+        Phi = Phi * np.sqrt(1.0/shape[0])
+        params = tf.cast(Phi,dtype=tf.float32)
     else: # zeros
         params = tf.zeros(shape)
     params = tf.cast(params,dtype=tf.float32)
@@ -250,6 +254,13 @@ def create_competiion_matrix(z_dim, lat_type, beta_scale, alpha_scale, n_group, 
             g_shift += n_group
         V_l = V_l * (1.0 - diag) * beta_scale + diag * alpha_scale
     return V_l
+
+def normalize_by_norm(param, proj_mag=1.0, param_axis=0):
+    #np.maximum(np.linalg.norm(self.Phi, ord=2, axis=0, keepdims=True), 1e-8)
+    p_norm = tf.math.maximum(tf.norm(param, ord=2, axis=param_axis, keepdims=True), 1e-8)
+    #print("NGC norm:\n",p_norm)
+    param = param * (proj_mag / p_norm)
+    return param
 
 def to_one_hot(idx, depth):
     """
@@ -429,6 +440,18 @@ def d_relu6(x):
 
 def d_softplus(x):
     return tf.nn.sigmoid(x) # d/dx of softplus = logistic sigmoid
+
+def threshold_soft(x, lmda): # soft thresholding fx, S(x)=|x|
+    return tf.math.maximum(x - lmda, 0.) - tf.math.maximum(-x - lmda, 0.)
+
+def threshold_cauchy(x, lmda):
+    # threshold function based on that proposed in: https://arxiv.org/abs/2003.12507
+    inner_term = tf.math.sqrt(tf.math.maximum(tf.math.square(x) - lmbda), 0.)
+    f = (x + inner_term) * 0.5
+    g = (x - inner_term) * 0.5
+    term1 = f * tf.greater_equal(x, lmda) # f * (x >= lmda)
+    term2 = g * tf.less_equal(x, -lmda) # g * (x <= -lmda)
+    return term1 + term2
 
 def softmax(x, tau=0.0):
     """

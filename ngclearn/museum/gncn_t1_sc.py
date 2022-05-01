@@ -25,8 +25,10 @@ class GNCN_t1_SC:
     (Ororbia & Kifer 2022), as the GNCN-t1-SC (SC = sparse coding) or GNCN-t1-SC/Olshausen.
 
     | Node Name Structure:
-    | p(z1) ; z1 -(z1-mu0-)-> mu0 ;e0; z0
+    | p(z1) ; z1 -(z1-mu0)-> mu0 ;e0; z0
     | Cauchy prior applied for p(z1)
+    | e0 -(e0-z1)-> z1  // Error feedback
+    | z1-mu0 = (e0-z1)^T // generative weights are tied to error weights
 
     Args:
         args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-SC
@@ -39,8 +41,10 @@ class GNCN_t1_SC:
     | * wght_sd - standard deviation of Gaussian initialization of weights
     | * beta - latent state update factor
     | * leak - strength of the leak variable in the latent states (Default = 0)
-    | * lmbda - strength of the prior applied over latent state activities
     | * prior - type of prior to use (Default = "cauchy")
+    | * lmbda - strength of the prior applied over latent state activities (only if prior != "none")
+    | * threshold - type of threshold to use (Default = "none")
+    | * thr_lmbda - strength of the threshold applied over latent state activities (only if threshold != "none")
     | * lat_type - can be set to lkwta to leverage lateral interactions as in
         (Ororbia &amp; Kifer, 2022) (Default = None)
     | * n_group - must be > 0 if lat_type != None and s.t. (z_dim mod n_group) == 0
@@ -64,8 +68,19 @@ class GNCN_t1_SC:
             out_fx = self.args.getArg("out_fx")
         leak = float(self.args.getArg("leak")) #0.0
         prior = "cauchy"
+        lmbda = 0.0
+        prior_cfg = None
         if self.args.hasArg("prior") == True:
             prior = self.args.getArg("prior")
+            lmbda = float(self.args.getArg("lambda"))
+            prior_cfg = {"prior_type" : prior, "lambda" : lmbda}
+        threshold = "none"
+        thr_lbmda = 0.0
+        thr_cfg = None
+        if self.args.hasArg("threshold") == True:
+            threshold = self.args.getArg("threshold")
+            thr_lbmda = float(self.args.getArg("thr_lambda"))
+            thr_cfg = {"threshold_type" : threshold, "thr_lambda" : thr_lbmda}
         lateral_cfg = None
         if self.args.hasArg("lat_type") == True:
             lat_type = self.args.getArg("lat_type")
@@ -77,13 +92,12 @@ class GNCN_t1_SC:
 
         # set up state integration function
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
-        lmbda = float(self.args.getArg("lmbda")) #0.0002
-        prior_cfg = {"prior_type" : prior, "lambda" : lmbda}
         use_mod_factor = False #(self.args.getArg("use_mod_factor").lower() == 'true')
 
         # set up system nodes
         z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
-                   integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
+                   integrate_kernel=integrate_cfg, prior_kernel=prior_cfg,
+                   threshold_kernel=thr_cfg)
         mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
         e0 = ENode(name="e0", dim=x_dim)
         z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
@@ -91,33 +105,41 @@ class GNCN_t1_SC:
         # create cable wiring scheme relating nodes to one another
         wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
         dcable_cfg = {"type": "dense", "has_bias": False,
-                      "init" : ("gaussian",wght_sd), "seed" : seed}
+                      "init" : ("unif_scale",wght_sd), "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
         if lateral_cfg is not None:
             print(" -> Setting SC to operate with lateral competition (lkwta form)")
-            # lateral recurrent connection
+            # add lateral recurrent connection
             z1_to_z1 = z1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=lateral_cfg)
+
+        #e0_z1 = e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", cable_kernel=dcable_cfg)
+        #z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", mirror_path_kernel=(e0_z1,"symm_tied"))
+        #mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
+        #z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
+        #e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+        #e0_z1.set_update_rule(preact=(e0,"phi(z)"), postact=(z1,"phi(z)")) # update rule
+        # param_axis = 0
 
         z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
         mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
         z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
         e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
         e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
-
-        # set up update rules and make relevant edges aware of these
-        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)")) 
+        param_axis = 1
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
         ngc_model = NGCGraph(K=K, name="gncn_t1_sc")
         ngc_model.proj_update_mag = -1.0 #-1.0
         ngc_model.proj_weight_mag = 1.0
+        ngc_model.param_axis = param_axis
         ngc_model.set_cycle(nodes=[z1,z0])
         ngc_model.set_cycle(nodes=[mu0])
         ngc_model.set_cycle(nodes=[e0])
-        ngc_model.apply_constraints()
+        #ngc_model.apply_constraints()
         self.ngc_model = ngc_model
 
         # build this NGC model's sampling graph
@@ -149,7 +171,7 @@ class GNCN_t1_SC:
         x_sample = readouts[0][2]
         return x_sample
 
-    def settle(self, x):
+    def settle(self, x, K=-1, cold_start=True):
         """
         Run an iterative settling process to find latent states given clamped
         input and output variables
@@ -160,9 +182,14 @@ class GNCN_t1_SC:
         Returns:
             x_hat (predicted x)
         """
+        K_ = K
+        if K_ <= 0:
+            K_ = self.ngc_model.K
         readouts = self.ngc_model.settle(
                         clamped_vars=[("z0","z",x)],
-                        readout_vars=[("mu0","phi(z)")]
+                        readout_vars=[("mu0","phi(z)")],
+                        K=K_,
+                        cold_start=cold_start
                     )
         x_hat = readouts[0][2]
         return x_hat

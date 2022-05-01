@@ -2,6 +2,7 @@ import tensorflow as tf
 import sys
 import numpy as np
 import copy
+import ngclearn.utils.transform_utils as transform
 
 class NGCGraph:
     """
@@ -436,15 +437,14 @@ class NGCGraph:
             for j in range(len(self.learnable_cables)):
                 cable_j = self.learnable_cables[j]
                 #print("W.before:\n",tf.norm(cable_j.W,axis=self.param_axis))
-                cable_j.W.assign(tf.clip_by_norm(cable_j.W, self.proj_weight_mag, axes=[self.param_axis]))
-                #print("W.after :\n",tf.norm(cable_j.W,axis=self.param_axis))
-                #cable_j.W.assign( cable_j.W / (tf.expand_dims(tf.norm(cable_j.W,axis=self.param_axis),axis=self.param_axis) + 1e-6) )
-                # print(cable_j.name)
-                # print("W:\n",cable_j.W)
-                # print("b:\n",cable_j.b)
+                #cable_j.W.assign(tf.clip_by_norm(cable_j.W, self.proj_weight_mag, axes=[self.param_axis]))
+                _W = transform.normalize_by_norm(cable_j.W, self.proj_weight_mag, param_axis=self.param_axis )
+                cable_j.W.assign(_W)
             for j in range(len(self.learnable_nodes)):
                 node_j = self.learnable_nodes[j]
-                node_j.Sigma.assign(tf.clip_by_norm(node_j.Sigma, self.proj_weight_mag, axes=[self.param_axis]))
+                #node_j.Sigma.assign(tf.clip_by_norm(node_j.Sigma, self.proj_weight_mag, axes=[self.param_axis]))
+                _S = transform.normalize_by_norm(node_j.Sigma, self.proj_weight_mag, param_axis=self.param_axis )
+                node_j.Sigma.assign(_S)
 
     def calc_evolved_cable_updates(self, gamma_et=1.0, decay_et=0.0, rule_type="temp_diff", lambda_e=0.01):
         """

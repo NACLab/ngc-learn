@@ -38,7 +38,7 @@ def mse(mu, x):
         an (N x 1) column vector, where each row is the MSE(x_pred, x_true) for that row's datapoint
     """
     diff = mu - x
-    se = diff * diff # squared error
+    se = tf.math.square(diff) #diff * diff # squared error
     # NLL = -( -se )
     return tf.reduce_sum(se, axis=1) # tf.math.reduce_mean(se)
 

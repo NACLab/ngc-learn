@@ -158,7 +158,6 @@ class DCable(Cable):
             if trigger_update is True:
                 zf = self.preact_node.extract(self.preact_comp)
                 dW = tf.matmul(zf, e_n, transpose_a=True) #* (1.0/Ns)
-
                 if update_radius > 0.0:
                     #dW = tf.clip_by_norm(dW, update_radius)
                     dW = tf.clip_by_value(dW, -update_radius, update_radius)
