@@ -42,6 +42,10 @@ class SNode(Node):
 
         act_fx: activation function -- phi(v) -- to apply to neural activities
 
+            :Note: if using either "kwta" or "bkwta", please input how many winners
+                should win the competiton, i.e., use "kwta(N)" or "bkwta(N)" where
+                N is an integer > 0.
+
         integrate_kernel: Dict defining the neural state integration process type. The expected keys and
             corresponding value types are specified below:
 

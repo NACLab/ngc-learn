@@ -46,16 +46,11 @@ def decide_fun(fun_type):
         fx = binary_flip
         d_fx = d_identity
     elif "bkwta" in fun_type:
-        # n_winners = float(fun_type[fun_type.index("(")+1:fun_type.rindex(")")])
-        # # must generate a custom wta function here inside this function creator
-        # def tmp_bkwta(x, K=n_winners): # returns only binary code of K top winner nodes
-        #     values, indices = tf.math.top_k(x, k=K, sorted=False) # Note: we do not care to sort the indices
-        #     kth = tf.expand_dims(tf.reduce_min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
-        #     topK = tf.cast(tf.greater_equal(x, kth), dtype=tf.float32) # cast booleans to floats
-        #     return topK
-        # return custom-set WTA function
         fx = bkwta
         d_fx = d_identity
+    elif "kwta" in fun_type:
+        fx = kwta
+        d_fx = bkwta
     elif fun_type == "tanh":
         fx = tf.nn.tanh
         d_fx = d_tanh
@@ -92,9 +87,6 @@ def decide_fun(fun_type):
     elif fun_type == "sigmoid":
         fx = tf.nn.sigmoid
         d_fx = d_sigmoid
-    elif fun_type == "kwta":
-        fx = kwta
-        d_fx = bkwta #d_identity
     elif fun_type == "softmax":
         fx = softmax
         d_fx = tf.identity
