@@ -398,6 +398,7 @@ Likelihood Test:
   log[p(x)] = -103.13798522949219
 ```
 and if you open and view the image samples, you should see something similar to:<br>
+
 <img src="../images/demo1/gncn_t1_samples.png" width="450" />
 
 Now go ahead and re-run the same steps above but for your other two models, using
@@ -411,6 +412,7 @@ Likelihood Test:
   log[p(x)] = -100.03035736083984
 ```
 with images as follows:<br>
+
 <img src="../images/demo1/gncn_t1_sigma_samples.png" width="450" />
 
 For the GNCN-PDH, you get a log likelihood of:
@@ -420,6 +422,7 @@ Likelihood Test:
   log[p(x)] = -96.92353820800781
 ```
 with images as follows:<br>
+
 <img src="../images/demo1/gncn_pdh_samples.png" width="450" />
 
 For the three models above, we get log likelihood measurements that are desirably
