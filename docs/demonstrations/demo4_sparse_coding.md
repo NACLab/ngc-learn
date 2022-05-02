@@ -311,7 +311,7 @@ from the natural image dataset in [1]. After the simulation terminates, i.e., on
 `sc_cauchy/` sub-directory you have several useful files.
 Among these files, what we want is the serialized, trained sparse coding
 model `model0.ngc`. To extract and visualize the learned filters of this NGC model,
-you then need to run the final script, `viz_model.py`, as follows:
+you then need to run the final script, `viz_filters.py`, as follows:
 
 ```console
 $ python viz_filters.py --model_fname=sc_cauchy/model0.ngc --output_dir=sc_cauchy/
@@ -358,10 +358,10 @@ according to our energy function formulation earlier, `|ToD| = Lx + lambda * spa
 In the experiment we ran for this demonstration, we saw that for the Cauchy prior model,
 at the start of training, the `|ToD|` was `14.18` and `Lx` was `12.42` (in nats)
 and, at the end of training,  the `|ToD|` was `5.24` and `Lx` was `2.13` with
-the ending gap being `ToD| -  Lx = 3.11` nats. With respect to the latent
+the ending gap being `|ToD| -  Lx = 3.11` nats. With respect to the latent
 thresholding model, we observed that, at the start, `|ToD|` was `-12.82` and
 `Lx` was `12.77` and, at the end, the `|ToD|` was `2.59` and `Lx` was `2.50`
-with the ending gap being `ToD| -  Lx = 0.09` nats. The final gap of the
+with the ending gap being `|ToD| -  Lx = 0.09` nats. The final gap of the
 thresholding model is substantially lower than the one of the Cauchy prior model,
 indicating that the latent states of the thresholding model are, indeed,
 the sparsest.
