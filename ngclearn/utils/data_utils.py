@@ -1,3 +1,8 @@
+"""
+Data functions and utilies.
+
+@author Alexander Ororbia
+"""
 import random
 #import tensorflow as tf
 import numpy as np
@@ -8,6 +13,36 @@ import math
 seed = 69
 #tf.random.set_seed(seed=seed)
 np.random.seed(seed)
+
+def create_patches(imgs, pH, pW, batch_size):
+    """
+    Generates a set of patches from an array/list of image arrays (via
+    random sampling with replacement).
+
+    Args:
+        imgs: the array of image arrays to sample from
+
+        pH: patch height
+
+        pW: patch width
+
+        batch_size: how many patches to extract/generate from source images
+
+    Returns:
+        an array (D x (pH * pW)), where each row is a flattened patch sample
+    """
+    H, W, num_images = imgs.shape
+    beginx = np.random.randint(0, W-sz, batch_size)
+    beginy = np.random.randint(0, H-sz, batch_size)
+    inputs_list = []
+    # Get images randomly
+    for i in range(batch_size):
+        idx = np.random.randint(0, num_images)
+        img = imgs[:, :, idx]
+        clop = img[beginy[i]:beginy[i]+sz, beginx[i]:beginx[i]+sz].flatten()
+        inputs_list.append(clop - np.mean(clop))
+    patches = np.array(inputs_list, dtype=np.float32) # Input image patches
+    return patches
 
 class DataLoader(object):
     """

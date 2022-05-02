@@ -1,5 +1,5 @@
 """
-Contains generic saving/loading utilies.
+Generic saving/loading utilies.
 
 @author Alexander Ororbia
 """

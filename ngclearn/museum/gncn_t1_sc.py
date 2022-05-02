@@ -19,14 +19,24 @@ class GNCN_t1_SC:
     Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
     by learning a sparse code for natural images. Nature 381, 607–609 (1996).
 
-    Note this model imposes a (Cauchy) prior to induce sparsity in the latent
+    Note this model imposes a factorial (Cauchy) prior to induce sparsity in the latent
     activities z1 (the latent codebook).
     This model would be named, under the NGC computational framework naming convention
-    (Ororbia & Kifer 2022), as the GNCN-t1-SC (SC = sparse coding) or GNCN-t1-SC/Olshausen.
+    (Ororbia & Kifer 2022), as the GNCN-t1/SC (SC = sparse coding) or GNCN-t1/Olshausen.
 
     | Node Name Structure:
     | p(z1) ; z1 -(z1-mu0)-> mu0 ;e0; z0
     | Cauchy prior applied for p(z1)
+
+    Note: You can also recover the model learned through ISTA by using, instead of
+    a factorial prior over latents, a thresholding function such as the
+    "soft_threshold". This results in the GNCN-t1/SC emulating a system similar
+    to that proposed in:
+
+    Daubechies, Ingrid, Michel Defrise, and Christine De Mol. "An iterative
+    thresholding algorithm for linear inverse problems with a sparsity constraint."
+    Communications on Pure and Applied Mathematics: A Journal Issued by the
+    Courant Institute of Mathematical Sciences 57.11 (2004): 1413-1457.
 
     Args:
         args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-SC

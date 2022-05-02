@@ -433,7 +433,8 @@ def d_relu6(x):
 def d_softplus(x):
     return tf.nn.sigmoid(x) # d/dx of softplus = logistic sigmoid
 
-def threshold_soft(x, lmda): # soft thresholding fx, S(x)=|x|
+def threshold_soft(x, lmda):
+    # soft thresholding fx - S(x) = (|x| - lmbda) *@ sign(x)
     return tf.math.maximum(x - lmda, 0.) - tf.math.maximum(-x - lmda, 0.)
 
 def threshold_cauchy(x, lmda):
