@@ -14,7 +14,7 @@ seed = 69
 #tf.random.set_seed(seed=seed)
 np.random.seed(seed)
 
-def create_patches(imgs, pH, pW, batch_size):
+def generate_patch_set(imgs, patch_shape, batch_size, center_patch=True):
     """
     Generates a set of patches from an array/list of image arrays (via
     random sampling with replacement).
@@ -22,25 +22,29 @@ def create_patches(imgs, pH, pW, batch_size):
     Args:
         imgs: the array of image arrays to sample from
 
-        pH: patch height
-
-        pW: patch width
+        patch_shape: a 2-tuple of the form (pH = patch height, pW = patch width)
 
         batch_size: how many patches to extract/generate from source images
+
+        center_patch: centers each patch by subtracting the patch mean (per-patch)
 
     Returns:
         an array (D x (pH * pW)), where each row is a flattened patch sample
     """
+    pH, pW = patch_shape
     H, W, num_images = imgs.shape
-    beginx = np.random.randint(0, W-sz, batch_size)
-    beginy = np.random.randint(0, H-sz, batch_size)
+    beginx = np.random.randint(0, W-pW, batch_size)
+    beginy = np.random.randint(0, H-pW, batch_size)
     inputs_list = []
     # Get images randomly
     for i in range(batch_size):
         idx = np.random.randint(0, num_images)
         img = imgs[:, :, idx]
-        clop = img[beginy[i]:beginy[i]+sz, beginx[i]:beginx[i]+sz].flatten()
-        inputs_list.append(clop - np.mean(clop))
+        clop = img[beginy[i]:beginy[i]+pW, beginx[i]:beginx[i]+pW].flatten()
+        if center_patch is True:
+            inputs_list.append(clop - np.mean(clop))
+        else:
+            inputs_list.append(clop)
     patches = np.array(inputs_list, dtype=np.float32) # Input image patches
     return patches
 

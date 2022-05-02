@@ -1,4 +1,4 @@
-# Demo 5: Speeding Up the Settling Process with Amortized Inference
+# Demo 6: Speeding Up the Settling Process with Amortized Inference
 
 <i>NOTE: This demonstration is under construction and thus incomplete at the moment...</i>
 
@@ -38,7 +38,7 @@ to speed up the settling process of an NGC model, cutting down the number of
 steps needed over time.
 
 
-**References:**<br>
+## References
 [1] Srivastava, Nitish, Ruslan Salakhutdinov, and Geoffrey Hinton. "Modeling
 documents with a Deep Boltzmann Machine." Proceedings of the Twenty-Ninth
 Conference on Uncertainty in Artificial Intelligence (2013). <br>

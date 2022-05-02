@@ -20,7 +20,8 @@ class GNCN_t1_SC:
     by learning a sparse code for natural images. Nature 381, 607–609 (1996).
 
     Note this model imposes a factorial (Cauchy) prior to induce sparsity in the latent
-    activities z1 (the latent codebook).
+    activities z1 (the latent codebook). Synapses initialized from a (fan-in) scaled
+    uniform distribution. 
     This model would be named, under the NGC computational framework naming convention
     (Ororbia & Kifer 2022), as the GNCN-t1/SC (SC = sparse coding) or GNCN-t1/Olshausen.
 
@@ -46,7 +47,6 @@ class GNCN_t1_SC:
     | * z_dim - # of latent variables in layers z1
     | * x_dim - # of latent variables in layer z0 or sensory x
     | * seed - number to control determinism of weight initialization
-    | * wght_sd - standard deviation of Gaussian initialization of weights
     | * beta - latent state update factor
     | * leak - strength of the leak variable in the latent states (Default = 0)
     | * prior - type of prior to use (Default = "cauchy")
@@ -111,9 +111,9 @@ class GNCN_t1_SC:
         z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
         # create cable wiring scheme relating nodes to one another
-        wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
+        #wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
         dcable_cfg = {"type": "dense", "has_bias": False,
-                      "init" : ("unif_scale",wght_sd), "seed" : seed}
+                      "init" : ("unif_scale",1.0), "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 

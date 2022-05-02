@@ -439,7 +439,7 @@ above training scripts to run each simulation for multiple, different experiment
 trials (each set of files/objects will be indexed by its trial number).
 
 
-## References:
+## References
 [1] Rao, Rajesh PN, and Dana H. Ballard. "Predictive coding in the visual cortex:
 a functional interpretation of some extra-classical receptive-field effects."
 Nature neuroscience 2.1 (1999): 79-87. <br>

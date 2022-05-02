@@ -614,7 +614,6 @@ As a result, we have successfully learned to mimic a synthetic mixture of Gaussi
 generating process with our custom, nonlinear NGC system.
 
 
-
-**References:**<br>
+## References
 [1] Gama, Joao, Raquel Sebastiao, and Pedro Pereira Rodrigues. "On evaluating
 stream learning algorithms." Machine learning 90.3 (2013): 317-346.

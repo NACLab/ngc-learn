@@ -570,3 +570,67 @@ def create_mask_matrix(n_col_m, nrow, ncol):
         else:
             mask = col
     return mask
+
+def global_contrast_normalization(Xin, s, lmda, epsilon):
+    # applies rudimentary global contrast normalization to Xin
+    X = Xin
+    X_average = np.mean(X)
+    X = X - X_average
+    # `su` is here the mean, instead of the sum
+    contrast = np.sqrt(lmda + np.mean(X**2))
+    X = s * X / max(contrast, epsilon)
+    return X
+
+def normalize_image(image):
+    """
+    Maps image array first to [0, image.max() - image.min()]
+    then to [0, 1]
+
+    Arg:
+        image: the image numpy.ndarray
+
+    Returns:
+        image array mapped to [0, 1]
+    """
+    image = image.astype(float)
+    if image.min() != image.max():
+        image -= image.min()
+    nonzeros = np.nonzero(image)
+    image[nonzeros] = image[nonzeros] / image[nonzeros].max()
+    return image
+
+def calc_zca_whitening_matrix(X):
+    """
+    Calculates a ZCA whitening matrix via the Mahalanobis whitening method.
+
+    Note: this is NOT fully tested/integrated yet
+
+    Args:
+        X: a design matrix of shape (M x N),
+            where rows -> features, columns -> observations
+    
+    Returns:
+        the resultant (M x M) ZCA matrix
+    """
+    # Covariance matrix [column-wise variables]: Sigma = (X-mu)' * (X-mu) / N
+    sigma = np.cov(X, rowvar=True) # [M x M]
+    # Singular Value Decomposition. X = U * np.diag(S) * V
+    U,S,V = np.linalg.svd(sigma)
+        # U: [M x M] eigenvectors of sigma.
+        # S: [M x 1] eigenvalues of sigma.
+        # V: [M x M] transpose of U
+    # Whitening constant: prevents division by zero
+    epsilon = 1e-5
+    # ZCA Whitening matrix: U * Lambda * U'
+    ZCAMatrix = np.dot(U, np.dot(np.diag(1.0/np.sqrt(S + epsilon)), U.T)) # [M x M]
+    return ZCAMatrix
+
+def whiten(X):
+    """
+    Whitens image X via ZCA whitening
+
+    Note: this is NOT fully tested/integrated yet
+    """
+    ZCAMatrix = zca_whitening_matrix(X) # get ZCAMatrix
+    xZCAMatrix = np.dot(ZCAMatrix, X) # project X onto the ZCAMatrix
+    return xZCAMatrix

@@ -414,7 +414,7 @@ Doing so should result in a plot that looks similar to the one below:
 
 <img src="../images/demo3/mnist_learning_curves.jpg" width="350" />
 
-As we can observe, this NGC overfits the training sample perfectly (reaching a
+As observed in the plot above, this NGC overfits the training sample perfectly (reaching a 
 training error `0.0`\%) as indicated by the fact that the blue validation
 `V-Acc` curve is a bit higher than the red `Acc` learning curve (which itself
 converges to and remains at perfect training accuracy). Note that these
@@ -424,7 +424,7 @@ that we can readily deploy the projection graph itself as a direct probabilistic
 model of `p(y|x)`.
 
 
-**References:** <br>
+## References
 [1] Whittington, James CR, and Rafal Bogacz. "An approximation of the error
 backpropagation algorithm in a predictive coding network with local hebbian
 synaptic plasticity." Neural computation 29.5 (2017): 1229-1262.
