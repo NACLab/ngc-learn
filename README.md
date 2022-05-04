@@ -9,9 +9,9 @@
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing arbitrary
-predictive processing (coding) models based on the neural generative coding (NGC) computational
-framework. This toolkit is built on top of Tensorflow 2 and is distributed
-under the 3-Clause BSD license.
+predictive processing (or predictive coding) models based on the neural generative 
+coding (NGC) computational framework. This toolkit is built on top of Tensorflow 2 
+and is distributed under the 3-Clause BSD license.
 
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
