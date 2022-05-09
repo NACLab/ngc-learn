@@ -30,7 +30,7 @@ class ENode(Node):
         error_type: type of distance/error measured by this error node. Setting this
             to "mse" will set up squared-error neuronal units (derived from
             L = 0.5 * ( Sum_j (target - mu)^2_j )), and "mae" will set up
-            mean absolute error neuronal units (derived from L = Sum_j |target - mu| ).
+            mean absolute error neuronal units (derived from L = Sum_j \|target - mu\| ).
 
         act_fx: activation function -- phi(v) -- to apply to error activities (Default = "identity")
 
