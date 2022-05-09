@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 DESCRIPTION = 'NGC-Learn'
-LONG_DESCRIPTION = 'A toolkit library for building arbitrary predictive processing architectures based on the neural generative coding (NGC) computational framework (Ororbia & Kifer 2022).'
+LONG_DESCRIPTION = 'A toolkit library for building arbitrary predictive processing/coding architectures based on the neural generative coding (NGC) computational framework (Ororbia & Kifer 2022).'
 
 packages = find_packages()
 # Ensure that we don't pollute the global namespace.
