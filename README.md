@@ -3,8 +3,8 @@
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing arbitrary
-predictive processing (or predictive coding) models based on the neural generative 
-coding (NGC) computational framework. This toolkit is built on top of Tensorflow 2 
+predictive processing (or predictive coding) models based on the neural generative
+coding (NGC) computational framework. This toolkit is built on top of Tensorflow 2
 and is distributed under the 3-Clause BSD license.
 
 It is currently maintained by the
@@ -33,7 +33,9 @@ ngc-learn requires:
 1) Python (>=3.7)
 2) Numpy (>=1.20.0)
 3) Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
-4) scikit-learn (>=0.24.2) if using ngclearn.density (needed for the examples/)
+4) scikit-learn (>=0.24.2) if using ngclearn.density (needed for the demo/tutorial
+    files in `examples/`)
+5) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
 
 (Which you can have setup/installed by running `$ pip3 install -r requirements.txt`.)
 
@@ -83,7 +85,7 @@ $ git clone https://github.com/ngc-learn/ngc-learn.git
 
 
 **Version:**<br>
-0.1.0 <!-- 0.0.1 Alpha -->
+0.2.0 <!-- 0.3.0 Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>
