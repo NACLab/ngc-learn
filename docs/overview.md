@@ -57,8 +57,8 @@ tool for predictive processing research (with earlier incarnations in the Scala
 programming language, dating back to early 2017). It remains actively maintained
 and used for predictive processing research in NAC (see ngc-learn's mention/announcement
 in this <a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">engineering blog post</a>).
-We welcome community contributions to this project. For details please check out our
-contributing guidelines (<i>coming soon!</i>).
+We warmly welcome community contributions to this project. For details please check out our
+[contributing guidelines](https://github.com/ago109/ngc-learn/blob/main/CONTRIBUTING.md).
 
 <!--
 This release of ngc-learn contains three predictive processing models, X types of
