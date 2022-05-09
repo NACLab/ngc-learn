@@ -608,7 +608,7 @@ def calc_zca_whitening_matrix(X):
     Args:
         X: a design matrix of shape (M x N),
             where rows -> features, columns -> observations
-    
+
     Returns:
         the resultant (M x M) ZCA matrix
     """

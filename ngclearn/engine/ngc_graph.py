@@ -8,11 +8,22 @@ class NGCGraph:
     """
     Implements the full model structure/graph for an NGC system composed of
     nodes and cables.
+    Note that when instantiating this object, it is important to call .compile(),
+    like so:
+
+    | graph = NGCGraph(...)
+    | info = graph.compile()
 
     Args:
         K: number of iterative inference/settling steps to simulate
 
         name: (optional) the name of this projection graph (Default="ncn")
+
+        batch_size: fixed batch-size that the underlying compiled static graph system
+            should assume (Note that you can set this also as an argument to .compile() )
+
+            :Note: if "use_graph_optim" is set to False, then this argument is
+                not meaningful as the system will work with variable-length batches
 
     @author: Alexander G. Ororbia
     """
@@ -212,6 +223,7 @@ class NGCGraph:
             node.inject((node_comp, node_value))
 
     def set_cold_state(self, batch_size=-1):
+        """ Sets the underlying node states to their "cold" resting state. """
         for i in range(len(self.exec_cycles)):
             cycle_i = self.exec_cycles[i]
             for j in range(len(cycle_i)):
@@ -284,13 +296,9 @@ class NGCGraph:
             var_name, comp_name, var_value = clamped_var
             if var_value is not None:
                 _batch_size = var_value.shape[0]
-                # if _batch_size != self.batch_size:
-                #     print("ERROR: clamped {} batch_size {} != global.batch_size {} ".format(var_name,
-                #           _batch_size, self.batch_size))
                 node = self.nodes.get(var_name)
                 if node is not None:
-                    node.clamp((comp_name, var_value))
-                    #node.step()
+                    node.clamp((comp_name, var_value)) #node.step()
             # else, CANNOT clamp a variable value to None
 
         # Case 2: Clamp variables that will NOT persist during settling/inference
@@ -298,13 +306,9 @@ class NGCGraph:
             var_name, comp_name, var_value = clamped_var
             if var_value is not None:
                 _batch_size = var_value.shape[0]
-                # if _batch_size != self.batch_size:
-                #     print("ERROR: injected {} batch_size {} != global.batch_size {} ".format(var_name,
-                #           _batch_size, self.batch_size))
                 node = self.nodes.get(var_name)
                 if node is not None:
-                    node.inject((comp_name, var_value))
-                    #node.step(skip_core_calc=True)
+                    node.inject((comp_name, var_value)) #node.step(skip_core_calc=True)
             # else, CANNOT init a variable value with None
 
         if cold_start is True:
@@ -331,7 +335,6 @@ class NGCGraph:
         delta = None
         node_values = None
         for k in range(K_):
-            #tf.print("------------------ STEP ",k)
             if calc_delta == True:
                 if k == self.K-1:
                     node_values, delta = self.step(calc_delta=True, use_optim=self.use_graph_optim)
@@ -341,12 +344,12 @@ class NGCGraph:
                 node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
             # TODO: move back in masking code here (or inside static graph...)
 
+        # parse results from static graph & place correct shallow-copied items in system dictionary
         for ii in range(len(node_values)):
             node_name, comp_name, comp_value = node_values[ii]
             if self.use_graph_optim == True:
                 node_name = node_name.numpy().decode('ascii')
                 comp_name = comp_name.numpy().decode('ascii')
-            #print("NODE: ",node_name)
             vdict = self.values.get(node_name)
             if vdict is not None:
                 vdict[comp_name] = comp_value
@@ -355,6 +358,7 @@ class NGCGraph:
                 vdict = {}
                 vdict[comp_name] = comp_value
                 self.values[node_name] = vdict
+
         #########################################################################
         # Post-process NGC graph by extracting predictions at indicated output nodes
         #########################################################################

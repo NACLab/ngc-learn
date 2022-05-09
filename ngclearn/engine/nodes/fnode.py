@@ -23,6 +23,8 @@ class FNode(Node):
         dim: number of neurons this node will contain/model
 
         act_fx: activation function -- phi(v) -- to apply to neural activities
+
+        batch_size: batch-size this node should assume (for use with static graph optimization)
     """
     def __init__(self, name, dim, act_fx="identity", batch_size=1):
         node_type = "feedforward"

@@ -8,14 +8,11 @@ from ngclearn.utils import transform_utils
 class ENode(Node):
     """
     | Implements a (rate-coded) error node simplified to its fixed-point form:
-    |   e = target - mu
+    |   e = target - mu // in the case of squared error (Gaussian error units)
+    |   e = signum(target - mu) // in the case of absolute error (Laplace error units)
     | where:
     |   target - a desired target activity value (pred_targ)
     |   mu - an external prediction signal of the target activity value (pred_mu)
-
-    | Note that this current version of the ENode has been set to be an MSE
-    | error node, meaning that the above fixed-point error neuron vector is
-    | derived from L = 0.5 * ( Sum_j (target - mu)^2_j )
 
     | Compartments:
     |   * pred_mu - prediction signals (deposited signals summed)
@@ -30,9 +27,14 @@ class ENode(Node):
 
         dim: number of neurons this node will contain/model
 
-        error_type: type of distance/error measured by this error node (fixed to "mse")
+        error_type: type of distance/error measured by this error node. Setting this
+            to "mse" will set up squared-error neuronal units (derived from
+            L = 0.5 * ( Sum_j (target - mu)^2_j )), and "mae" will set up
+            mean absolute error neuronal units (derived from L = Sum_j |target - mu| ).
 
         act_fx: activation function -- phi(v) -- to apply to error activities (Default = "identity")
+
+        batch_size: batch-size this node should assume (for use with static graph optimization)
 
         precis_kernel: 2-Tuple defining the initialization of the precision weighting synapses that will
             modulate the error neural activities. For example, an argument could be: ("uniform", 0.01)
@@ -171,37 +173,39 @@ class ENode(Node):
                     pred_targ = pred_targ * bmask
                     pred_mu = pred_mu * bmask
                 z = None
+                L_batch = None
+                L = None
                 if self.error_type == "mse": # squared error neurons
                     z = e = pred_targ - pred_mu
-
-                    # if self.name == "e0":
-                    #     print("+++++++++++++++++++++++++++++++++++++++++++++++")
-                    #     print(self.name)
-                    #     print("e: ",e)
-                    #     print("pred_targ: ",pred_targ)
-                    #     print("pred_mu: ",pred_mu)
-                    #     print("+++++++++++++++++++++++++++++++++++++++++++++++")
-
                     # compute local loss that this error node represents
                     L_batch = tf.reduce_sum(e * e, axis=1, keepdims=True) #/(e.shape[0] * 2.0)
-                    if Ws is not None: # optionally scale units by a fixed external set of weights
-                        L_batch = L_batch * Ws
-                        z = z * Ws
-                    L = tf.reduce_sum(L_batch)
-                    z = z  * self.ex_scale
-                    if Ns is not None: # optionally scale units and local loss by 1/Ns
-                        L = L * (1.0/Ns)
-                        z = z * (1.0/Ns)
-                    if self.do_inplace == True:
-                        self.compartments["L"].assign( [[L]] )
-                    else:
-                        self.compartments["L"] = np.asarray([[L]])
+                elif self.error_type == "mae": # absolute error neurons
+                    z = e = pred_targ - pred_mu
+                    # compute local loss that this error node represents
+                    L_batch = tf.reduce_sum(tf.math.abs(e), axis=1, keepdims=True) #/(e.shape[0] * 2.0)
+                    z = e = tf.math.sign(e)
                 else:
                     print("Error: {0} for error neuron not implemented yet".format(self.error_type))
                     sys.exit(1)
-                # Spratling-style error neurons
-                # eps2 = 1e-2
-                # self.e = self.z/tf.math.maximum(eps2, self.z_mu)
+                # TODO: implement Spratling-style error neurons derived from KL divergence
+                ## eps2 = 1e-2
+                ## self.e = self.z/tf.math.maximum(eps2, self.z_mu)
+
+                # finish error neuron and local loss calculation
+                if Ws is not None: # optionally scale units by fixed external set of weights
+                    L_batch = L_batch * Ws
+                    z = z * Ws
+                L = tf.reduce_sum(L_batch) # sum across dimensions
+                z = z  * self.ex_scale # apply any fixed magnification
+                if Ns is not None: # optionally scale units and local loss by 1/Ns
+                    L = L * (1.0/Ns)
+                    z = z * (1.0/Ns)
+                if self.do_inplace == True:
+                    self.compartments["L"].assign( [[L]] )
+                else:
+                    self.compartments["L"] = np.asarray([[L]])
+
+                # apply error precision processing if configured
                 if self.Prec is not None:
                     z = tf.matmul(z, self.Prec)
                 if self.do_inplace == True:

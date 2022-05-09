@@ -7,7 +7,11 @@ class ProjectionGraph:
     """
     Implements a projection graph -- useful for conducting ancestral sampling of a
     directed generative model or ancestral projection of a clamped graph.
-    Note that this graph system is NOT learnable.
+    Note that when instantiating this object, it is important to call .compile(),
+    like so:
+
+    | graph = ProjectionGraph(...)
+    | info = graph.compile()
 
     Args:
         name: the name of this projection graph

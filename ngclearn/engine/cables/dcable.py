@@ -29,9 +29,42 @@ class DCable(Cable):
             :input_compartment (Tuple[1]):  the compartment within the destination/output Node that
                 signals transmitted and deposited into
 
-        w_kernel:
+        w_kernel: an N-Tuple defining type of scheme to randomly initialize weights.
 
-        b_kernel:
+            :scheme (Tuple[0]): triggers the type of initalization scheme, for example,
+                "gaussian" will apply an elementwise Gaussian initialization.
+                (See the documentation for init_weights() in ngclearn.utils.transform_utils
+                for details on all the types of initializations and their string codes that can
+                be used.)
+
+            :scheme_arg1 (Tuple[1]): first argument to control the initialization (for many
+                schemes, setting this value to 1.0 or even omitting it is acceptable given that
+                this parameter is ignored, for example, in "unif_scale", the second argument
+                would be ignored.)
+                (See the documentation for init_weights() in ngclearn.utils.transform_utils
+                for details on all the types of initializations and their extra arguments.)
+
+            :scheme_arg2 (Tuple[2]): second argument to control the initialization -- this is
+                generally only necessary to set in the case of lateral competition initialization
+                schemes, such as in the case of "lkwta" which requires a 3-Tuple specified as
+                follows: ("lkwta",alpha_scale,beta_scale) where alpha_scale controls the
+                strength of self-excitation and beta_scale controls the strength
+                of the cross-unit inhibition.
+
+        b_kernel: 2-Tuple defining type of scheme to randomly initialize weights.
+
+            :scheme (Tuple[0]): triggers the type of initalization scheme, for example,
+                "gaussian" will apply an elementwise Gaussian initialization.
+                (See the documentation for init_weights() in ngclearn.utils.transform_utils
+                for details on all the types of initializations and their string codes that can
+                be used.)
+
+            :scheme_arg1 (Tuple[1]): first argument to control the initialization (for many
+                schemes, setting this value to 1.0 or even omitting it is acceptable given that
+                this parameter is ignored, for example, in "unif_scale", the second argument
+                would be ignored.)
+                (See the documentation for init_weights() in ngclearn.utils.transform_utils
+                for details on all the types of initializations and their extra arguments.)
 
         shared_param_path:
 

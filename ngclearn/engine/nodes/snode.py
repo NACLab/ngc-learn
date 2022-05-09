@@ -46,6 +46,8 @@ class SNode(Node):
                 should win the competiton, i.e., use "kwta(N)" or "bkwta(N)" where
                 N is an integer > 0.
 
+        batch_size: batch-size this node should assume (for use with static graph optimization)
+
         integrate_kernel: Dict defining the neural state integration process type. The expected keys and
             corresponding value types are specified below:
 
