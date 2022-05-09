@@ -33,6 +33,12 @@ from ngclearn.engine.ngc_graph import NGCGraph
 from ngclearn.engine.nodes.fnode import FNode
 from ngclearn.engine.proj_graph import ProjectionGraph
 
+from ngclearn2.engine.nodes.snode import SNode as SNode2
+from ngclearn2.engine.nodes.enode import ENode as ENode2
+from ngclearn2.engine.ngc_graph import NGCGraph as NGCGraph2
+from ngclearn2.engine.nodes.fnode import FNode as FNode2
+from ngclearn2.engine.proj_graph import ProjectionGraph as ProjectionGraph2
+
 seed = 69
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 tf.random.set_seed(seed=seed)
@@ -47,7 +53,7 @@ With respect to ToD and MSE, we track the prequential estimate (with a fading
 factor of 0.99) since this NGC will learn from a streaming data process.
 
 Usage:
-$ python sim_train.py --gpu_id=0
+$ python sim_train.py
 
 @author Alexander Ororbia
 ################################################################################
@@ -130,7 +136,7 @@ x_dim = mu1.shape[1]
 
 # Set training settings
 n_iterations = 400
-batch_size = 32 #128 #256
+batch_size = 32
 
 ################################################################################
 # Set up the NGC system and its ancestral projection co-model
@@ -138,10 +144,10 @@ batch_size = 32 #128 #256
 
 # Build an NGC system with 2 latent variable layers
 K = 40
-leak = 0.0001 #0.0001
+leak = 0.0001
 beta = 0.1
 z2_dim = 2
-z1_dim = 64 #32
+z1_dim = 64
 integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
 prior_cfg = {"prior_type" : "laplace", "lambda" : 0.0001}
 
@@ -158,23 +164,24 @@ z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak
 
 # create cable wiring scheme relating nodes to one another
 wght_sd = 0.025 #0.025 #0.05
-dcable_cfg = {"type": "dense", "has_bias": False,
-              "init" : ("gaussian",wght_sd), "seed" : seed}
+dcable_cfg = {"type": "dense", "init" : ("gaussian",wght_sd), "seed" : seed}
 pos_scable_cfg = {"type": "simple", "coeff": 1.0}
 neg_scable_cfg = {"type": "simple", "coeff": -1.0}
+constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":1}
 
-z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-mu1.wire_to(e1, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-z1.wire_to(e1, src_var="z", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-e1.wire_to(z2, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z2_mu1,"symm_tied")) #anti_symm_tied
-#e1.use_mod_factor = use_mod_factor
-e1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+z2_mu1 = z2.wire_to(mu1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+z2_mu1.set_constraint(constraint_cfg)
+mu1.wire_to(e1, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+z1.wire_to(e1, src_comp="z", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+e1.wire_to(z2, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z2_mu1,"A^T"))
+e1.wire_to(z1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
-z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied")) #anti_symm_tied
-e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+z1_mu0 = z1.wire_to(mu0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+z1_mu0.set_constraint(constraint_cfg)
+mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"A^T"))
+e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
 z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
@@ -183,12 +190,11 @@ z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
 # Set up graph - execution cycle/order
 print(" > Constructing NGC graph")
 model = NGCGraph(K=K)
-model.proj_update_mag = -1.0 #-1.0
-model.proj_weight_mag = 1.0
 model.set_cycle(nodes=[z2,z1,z0])
 model.set_cycle(nodes=[mu1,mu0])
 model.set_cycle(nodes=[e1,e0])
 model.apply_constraints()
+info = model.compile(batch_size=batch_size)
 
 # build this NGC model's sampling graph
 z2_dim = model.getNode("z2").dim
@@ -198,10 +204,11 @@ z0_dim = model.getNode("z0").dim
 s2 = FNode(name="s2", dim=z2_dim, act_fx="identity")
 s1 = FNode(name="s1", dim=z1_dim, act_fx="elu")
 s0 = FNode(name="s0", dim=z0_dim, act_fx="identity")
-s2_s1 = s2.wire_to(s1, src_var="phi(z)", dest_var="dz", point_to_path=z2_mu1)
-s1_s0 = s1.wire_to(s0, src_var="phi(z)", dest_var="dz", point_to_path=z1_mu0)
+s2_s1 = s2.wire_to(s1, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z2_mu1,"A"))
+s1_s0 = s1.wire_to(s0, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z1_mu0,"A"))
 sampler = ProjectionGraph()
 sampler.set_cycle(nodes=[s2,s1,s0])
+sampler.compile()
 
 eta = 0.002
 eta_v  = tf.Variable( eta ) # set up optimization process
@@ -216,7 +223,7 @@ def calc_ToD(agent):
     L1 = agent.extract(node_name="e1", node_var_name="L")
     L0 = agent.extract(node_name="e0", node_var_name="L")
     ToD = -(L0 + L1)
-    return ToD
+    return float(ToD)
 
 ToD_list = []
 x_iter = []
@@ -230,18 +237,17 @@ for iter in range(n_iterations):
     Ns = x.shape[0] + Ns * alpha
 
     # conduct iterative inference & update NGC system
-    readouts = model.settle(
-                    clamped_vars=[("z0","z",x)],
-                    readout_vars=[("mu0","phi(z)"),("mu1","phi(z)")]
-                )
+    readouts, delta = model.settle(
+                        clamped_vars=[("z0","z",x)],
+                        readout_vars=[("mu0","phi(z)"),("mu1","phi(z)")]
+                      )
     x_hat = readouts[0][2]
 
     ToD = calc_ToD(model) + ToD * alpha # calc ToD
     ToD_list.append((ToD/Ns))
     x_iter.append(iter)
     Lx = tf.reduce_sum( metric.mse(x_hat, x) ) + Lx * alpha
-    # update synaptic parameters given current model internal state
-    delta = model.calc_updates()
+    #delta = model.calc_updates()
     for p in range(len(delta)):
         delta[p] = delta[p] * (1.0/(x.shape[0] * 1.0))
     opt.apply_gradients(zip(delta, model.theta))
@@ -262,6 +268,8 @@ plt.tight_layout()
 plt.savefig("tod_curve.jpg")
 plt.clf()
 
+model.compile(use_graph_optim=False) # re-compile to allow for variable-length batches
+
 ################################################################################
 # Post-process the model and visualize the latent and sample space
 ################################################################################
@@ -270,10 +278,11 @@ def sample_system(Xs, model, sampler, Ns=-1):
     This routine takes the NGC system and its sampler and produces
     samples of both the latent (z2) and model sample space.
     """
-    readouts = model.settle(
+    readouts, _ = model.settle(
                     clamped_vars=[("z0","z",tf.cast(Xs,dtype=tf.float32))],
-                    readout_vars=[("mu0","phi(z)"),("z2","z")]
-                )
+                    readout_vars=[("mu0","phi(z)"),("z2","z")],
+                    calc_delta=False
+                  )
     z2 = readouts[1][2]
     z = z2
     model.clear()

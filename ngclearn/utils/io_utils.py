@@ -37,6 +37,26 @@ def deserialize(fname):
     fd.close()
     return object
 
+def parse_simulation_info(sim_info):
+    """
+    Parses a simulation information dictionary into a human-readable string.
+
+    Args:
+        sim_info: simulation info dictionary
+
+    Returns:
+        a string presenting the simulation information
+    """
+    sim_str = ""
+    for element_info in sim_info:
+        sim_str = "{}\n################################################\n{}:".format(
+                        sim_str, element_info["object_name"])
+        for key in element_info:
+            if key != "object_name":
+                value = element_info.get(key)
+                sim_str = " {}\n{} = {}".format(sim_str, key, value)
+    return sim_str
+
 def plot_sample_img(x_s, px, py, fname, plt, rotNeg90=False):
     """
     Plots a (1 x (px * py)) array as a (px x py) gray-scale image and

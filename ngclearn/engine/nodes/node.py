@@ -13,57 +13,100 @@ class Node:
     Args:
         node_type: the string concretely denoting this node's type
 
+        name: str name of this node
+
         dim: number of neurons this node will contain
     """
     def __init__(self, node_type, name, dim):
         self.node_type = node_type
         self.name = name
-        self.dim = dim # dimensionality of this node's neural activity
-        self.input_nodes = []
-        self.input_cables = []
+        self.dim = dim
+        self.batch_size = 1
+        self.t = 0 # tracks this node's current notion of discrete time
 
-        # node meta-parameters
         self.is_learnable = False
-        self.beta = 0.1
-        self.leak = 0.0
-        self.zeta = 1.0
-
-        # embedded vector statistics
-        # self.dz = None
-        # self.z = None
-        # self.phi_z = None
-        self.stat = {}
-        self.stat["dz"] = None
-        self.stat["dz_td"] = None
-        self.stat["dz_bu"] = None
-        self.stat["z"] = None
-        self.stat["phi(z)"] = None
-        self.stat["mask"] = None # a binary mask that can be used to make this node's activity values
-
-        self.tick = {}
-
         self.is_clamped = False
+        self.compartment_names = None
+        self.compartments = None
+        self.mask_names = None
+        self.masks = None
+        self.connected_cables = []
+        self.do_inplace = True # forces variables to be overriden/set in-place in memory
+        self.injected = {}
 
-    ############################################################################
-    # Setup Routines
-    ############################################################################
+    def set_status(self, status=("static",1)):
+        """
+        Sets the status of this node to be either "static" or "dynamic".
 
-    def build_tick(self):
-        """ Internal function for managing this node's notion of time """
-        self.tick = {}
-        for key in self.stat:
-            self.tick[key] = 0
+        Note: Making this node "dynamic" in the sense that it can handle mini-batches of
+        samples of arbitrary length BUT you CANNOT use "use_graph_optim = True"
+        static-graph acceleration used w/in the NGCGraph .settle() routine, meaning
+        your simulation run slower than when using acceleration.
 
-    def wire_to(self, dest_node, src_var, dest_var, cable_kernel=None, mirror_path_kernel=None, point_to_path=None):
+        Args:
+            status: 2-tuple where 1st element contains a string status flag and the
+                2nd element contains the (integer) batch_size. If status is set
+                to "dynamic", the second argument is arbitrary (setting it to 1 is
+                sufficient), and if status is set to "static" you MUST choose
+                a fixed batch_size that you will use w.r.t. this node.
+        """
+        if status[0] == "dynamic":
+            self.do_inplace = False
+            self.batch_size = status[1]
+        else:
+            self.do_inplace = True
+            self.batch_size = status[1]
+
+    def compile(self):
+        """
+        Executes the "compile()" routine for this node. Sub-class nodes can
+        extend this in case they contain other elements besides compartments
+        that must be configured properly for global simulation usage.
+
+        Returns:
+            a dictionary containing post-compilation check information about this cable
+        """
+        info = {}
+        # set all variables & masks for each compartment to ensure they adhere to .batch_size
+        for cname in self.compartment_names:
+            curr_comp = self.compartments.get(cname)
+            if curr_comp is not None:
+                comp_dim = curr_comp.shape[1]
+                if "phi(z)" in cname:
+                    self.compartments[cname] = \
+                        tf.Variable(tf.zeros([self.batch_size,comp_dim]), name="{}_phi_z".format(self.name))
+                else:
+                    self.compartments[cname] = \
+                        tf.Variable(tf.zeros([self.batch_size,comp_dim]), name="{}_{}".format(self.name, cname))
+        for mname in self.mask_names:
+            curr_mask = self.masks.get(mname)
+            if curr_mask is not None:
+                mask_dim = curr_mask.shape[1]
+                self.masks[mname] = tf.Variable(tf.ones([self.batch_size,mask_dim]), name="{}_{}".format(self.name, mname))
+        info["object_type"] = self.node_type
+        info["object_name"] = self.name
+        info["n_connected_cables"] = len(self.connected_cables)
+        info["n_compartments"] = len(self.compartments)
+        info["compartments"] = self.compartment_names
+        info["n_masks"] = len(self.masks)
+        info["masks"] = self.mask_names
+        info["do_inplace"] = self.do_inplace
+        info["batch_size"] = self.batch_size
+        return info
+
+    def set_constraint(self, constraint_kernel):
+        pass
+
+    def wire_to(self, dest_node, src_comp, dest_comp, cable_kernel=None, mirror_path_kernel=None):
         """
         A wiring function that connects this node to another external node via a cable (or synaptic bundle)
 
         Args:
             dest_node: destination node (a Node object) to wire this node to
 
-            src_var: name of the compartment inside this node to transmit a signal from (to destination node)
+            src_comp: name of the compartment inside this node to transmit a signal from (to destination node)
 
-            dest_var: name of the compartment inside the destination node to transmit a signal to
+            dest_comp: name of the compartment inside the destination node to transmit a signal to
 
             cable_kernel: Dict defining how to initialize the cable that will connect this node to the destination node.
                 The expected keys and corresponding value types are specified below:
@@ -80,7 +123,7 @@ class Node:
 
                 :`'seed'`: integer seed to deterministically control initialization of synapses in a DCable
 
-                :Note: either cable_kernel, mirror_path_kernel, or point_to_path MUST be set to something that is not None
+                :Note: either cable_kernel, mirror_path_kernel MUST be set to something that is not None
 
             mirror_path_kernel: 2-Tuple that allows a currently existing cable to be re-used as a transformation.
                 The value types inside each slot of the tuple are specified below:
@@ -89,75 +132,42 @@ class Node:
 
                 :mirror_type (Tuple[1]): how should the cable be mirrored? If "symm_tied" is specified, then the transpose
                     of this cable will be used to transmit information from this node to a destination node, if "anti_symm_tied"
-                    is specified, the negative transpose of this cable will be used
+                    is specified, the negative transpose of this cable will be used, and if "tied" is specified,
+                    then this cable will be used exactly in the same way it was used in its source cable.
 
-                :Note: either cable_kernel, mirror_path_kernel, or point_to_path MUST be set to something that is not None
-
-            point_to_path: a DCable that we want to shallow-copy and directly/identically use to transmit information from this
-                node to a destination node (note that its shape/dimensions must be correct, otherwise this will break)
-
-                :Note: either cable_kernel, mirror_path_kernel, or point_to_path MUST be set to something that is not None
+                :Note: either cable_kernel, mirror_path_kernel MUST be set to something that is not None
         """
-        if cable_kernel is None and mirror_path_kernel is None and point_to_path is None:
-            print("Error: Must either set |cable_kernel| or |mirror_path_kernel| or |point_to_path| argument! for node({})".format(self.name))
+        if cable_kernel is None and mirror_path_kernel is None:
+            print("Error: Must either set |cable_kernel| or |mirror_path_kernel| argument! for node({})".format(self.name))
             sys.exit(1)
-        cable = None
-        if mirror_path_kernel is not None: # directly share/shallow copy this cable but in reverse (with a transpose)
-            cable = DCable(inp=(self,src_var),out=(dest_node,dest_var), shared_param_path=mirror_path_kernel, has_bias=False)
-            #print(" CREATED:  ",cable.name)
-        elif point_to_path is not None: # directly share this cable (a shallow copy)
-            has_bias = False
-            #print("SHARE CABLE: ",point_to_path.name)
-            if cable_kernel is not None:
-                has_bias = cable_kernel.get("has_bias")
-                #print("share bias? ",has_bias)
-            cable = DCable(inp=(self,src_var),out=(dest_node,dest_var), point_to=point_to_path, has_bias=has_bias)
+        if mirror_path_kernel is not None: # directly share/shallow copy this cable
+            #bias_init = cable_kernel.get("bias_init") # <--- for RBMs
+            cable = DCable(inp=(self,src_comp),out=(dest_node,dest_comp), shared_param_path=mirror_path_kernel)
         else:
             cable_type = cable_kernel.get("type")
             coeff = cable_kernel.get("coeff")
             if cable_type == "dense":
-                if coeff is None:
-                    coeff = 1.0
                 cable_init = cable_kernel.get("init")
-                has_bias = cable_kernel.get("has_bias")
+                bias_init = cable_kernel.get("bias_init")
                 seed = cable_kernel.get("seed")
                 if seed is None:
                     seed = 69
-                cable = DCable(inp=(self,src_var),out=(dest_node,dest_var), init_kernel=cable_init, has_bias=has_bias, coeff=coeff, seed=seed)
-                #print(" CREATED:  ",cable.name)
+                cable = DCable(inp=(self, src_comp), out=(dest_node, dest_comp), w_kernel=cable_init, b_kernel=bias_init, seed=seed)
+                if coeff is not None:
+                    cable.coeff = coeff
             else:
-                #coeff = cable_kernel["coeff"]
-                cable = SCable(inp=(self,src_var),out=(dest_node,dest_var), coeff=coeff)
-        dest_node.input_nodes.append(  self  )
-        dest_node.input_cables.append( cable )
+                cable = SCable(inp=(self,src_comp),out=(dest_node,dest_comp), coeff=coeff)
+        dest_node.connected_cables.append(cable)
         return cable
 
-    def extract(self, var_name):
+    def extract(self, comp_name):
         """
         Extracts the data signal value that is currently stored inside of a target compartment
 
         Args:
-            var_name: the name of the compartment in this node to extract data from
+            comp_name: the name of the compartment in this node to extract data from
         """
-        return self.stat[var_name]
-
-    def extract_params(self):
-        return []
-
-    def inject(self, data):
-        """
-        Injects an externally provided named value (a vector/matrix) to the desired
-        compartment within this node.
-
-        Args:
-            data: 2-Tuple containing a named external signal to clamp
-
-                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
-
-                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
-        """
-        var_name, var_value = data
-        self.stat[var_name] = var_value
+        return self.compartments[comp_name]
 
     def clamp(self, data, is_persistent=True):
         """
@@ -173,45 +183,30 @@ class Node:
 
             is_persistent: if True, prevents this node from overriding the clamped data over time (Default = True)
         """
-        var_name, var_value = data
-        self.stat[var_name] = var_value
+        comp_name, signal = data
+        self.injected[comp_name] = 1.0
+        if self.do_inplace == True:
+            self.compartments[comp_name].assign(signal)
+        else:
+            self.compartments[comp_name] = (signal)
+            # print(self.name)
+            # print("{} \n {}".format(comp_name, tf.norm(self.compartments[comp_name])))
         if is_persistent is True:
             self.is_clamped = True
 
-    def clear(self):
-        """ Wipes/clears values of each compartment in this node (and sets .is_clamped = False). """
-        self.build_tick()
-        # self.is_clamped = False
-        # self.stat["dz"] = None
-        # self.stat["dz_td"] = None
-        # self.stat["dz_bu"] = None
-        # self.stat["z"] = None
-        # self.stat["phi(z)"] = None
-        # self.stat["mask"] = None
-        for key in self.stat:
-            self.stat[key] = None
-
-    def deep_store_state(self):
+    def inject(self, data):
         """
-        Performs a deep copy of all compartment statistics.
+        Injects an externally provided named value (a vector/matrix) to the desired
+        compartment within this node.
 
-        Returns:
-            Dict containing a deep copy of each named compartment of this node
+        Args:
+            data: 2-Tuple containing a named external signal to clamp
+
+                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
+
+                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
         """
-        stat_cpy = {}
-        for key in self.stat:
-            value = self.stat.get(key)
-            if value is not None:
-                stat_cpy[key] = value + 0
-        return stat_cpy
-
-    def check_correctness(self):
-        """ Executes a basic wiring correctness check. """
-        pass
-
-    ############################################################################
-    # Signal Transmission Routines
-    ############################################################################
+        self.clamp(data, is_persistent=False)
 
     def step(self, skip_core_calc=False):
         """
@@ -233,3 +228,77 @@ class Node:
                 (i.e., clipping by Frobenius norm)
         """
         return []
+
+    def clear(self):
+        """ Wipes/clears values of each compartment in this node (and sets .is_clamped = False). """
+        #print("CLEAR for {} w/ ip = {}".format(self.name, self.do_inplace))
+        self.t = 0
+        self.injected = {}
+        for comp_name in self.compartment_names:
+            comp_value = self.compartments.get(comp_name)
+            if comp_value is not None:
+                if self.do_inplace == True:
+                    self.compartments[comp_name].assign(comp_value * 0)
+                else:
+                    self.compartments[comp_name] = (comp_value * 0)
+        for mask_name in self.mask_names:
+            mask_value = self.masks.get(mask_name)
+            if mask_value is not None:
+                if self.do_inplace == True:
+                    self.masks[mask_name].assign(mask_value * 0 + 1)
+                else:
+                    self.masks[mask_name] = (mask_value * 0 + 1)
+
+    def set_cold_state(self, batch_size=-1):
+        """
+        Sets each compartment to its cold zero-state of shape (batch_size x D).
+        Note that this fills each vector/matrix state of each compartment to
+        all zero values.
+
+        Args:
+            batch_size: the axis=0 dimension of each compartment @ its cold zero-state
+        """
+        batch_size_ = batch_size
+        if batch_size_ <= 0:
+            batch_size_ = self.batch_size
+        for comp_name in self.compartment_names:
+            if self.injected.get(comp_name) is None:
+                comp_value = self.compartments.get(comp_name)
+                if comp_value is not None:
+                    if comp_value.shape[0] > 1:
+                        zero_state = tf.zeros([batch_size, comp_value.shape[1]])
+                    else:
+                        zero_state = tf.zeros([1, comp_value.shape[1]])
+                    if self.do_inplace == True:
+                        self.compartments[comp_name].assign(zero_state + 0)
+                    else:
+                        self.compartments[comp_name] = (zero_state + 0)
+        for comp_name in self.mask_names:
+            if self.injected.get(comp_name) is None:
+                comp_value = self.masks.get(comp_name)
+                if comp_value is not None:
+                    if comp_value.shape[0] > 1:
+                        zero_state = tf.ones([batch_size, comp_value.shape[1]])
+                    else:
+                        zero_state = tf.ones([1, comp_value.shape[1]])
+                    if self.do_inplace == True:
+                        self.masks[comp_name].assign(zero_state + 0)
+                    else:
+                        self.masks[comp_name] = (zero_state + 0)
+
+    def extract_params(self):
+        return []
+
+    def deep_store_state(self):
+        """
+        Performs a deep copy of all compartment statistics.
+
+        Returns:
+            Dict containing a deep copy of each named compartment of this node
+        """
+        stat_cpy = {}
+        for key in self.compartments:
+            value = self.compartments.get(key)
+            if value is not None:
+                stat_cpy[key] = value + 0
+        return stat_cpy

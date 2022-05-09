@@ -46,167 +46,196 @@ class ENode(Node):
                 Understand that care should be taken w/ respect to this particular argument as precision
                 synapses involve an approximate inversion throughout simulation steps
 
+        constraint_kernel: Dict defining the constraint type to be applied to the learnable parameters
+            of this node. The expected keys and corresponding value types are specified below:
+
+            :`'clip_type'`: type of clipping constraint to be applied to learnable parameters/synapses.
+                If "norm_clip" is specified, then norm-clipping will be applied (with a check if the
+                norm exceeds "clip_mag"), and if "forced_norm_clip" then norm-clipping will be applied
+                regardless each time apply_constraint() is called.
+
+            :`'clip_mag'`: the magnitude of the worse-case bounds of the clip to apply/enforce.
+
+            :`'clip_axis'`: the axis along which the clipping is to be applied (to each matrix).
+
+            :Note: specifying None will mean no constraints are applied to this node's parameters
+
         ex_scale: a scale factor to amplify error neuron signals (Default = 1)
     """
-    def __init__(self, name, dim, error_type="mse", act_fx="identity", precis_kernel=None,
-                 ex_scale=1.0):
+    def __init__(self, name, dim, error_type="mse", act_fx="identity", batch_size=1,
+                 precis_kernel=None, constraint_kernel=None, ex_scale=1.0):
         node_type = "error"
         super().__init__(node_type, name, dim)
+        self.dim = dim
+        self.batch_size = batch_size
         self.error_type = error_type
-        self.use_mod_factor = False
         self.ex_scale = ex_scale
+        self.act_fx = act_fx
+        self.fx = tf.identity
+        self.dfx = None
+        self.is_clamped = False
 
-        fx, dfx = transform_utils.decide_fun(act_fx)
-        self.fx = fx
-        self.dfx = dfx
+        self.compartment_names = ["pred_mu", "pred_targ", "z", "phi(z)", "L",
+                                  "weights", "avg_scalar"]
+        self.compartments = {}
+        for name in self.compartment_names:
+            if "phi(z)" in name:
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_phi_z".format(self.name))
+            elif "weights" in name:
+                self.compartments[name] = None #tf.Variable(tf.ones([1,1]), name="{}_{}".format(self.name, name))
+            elif "avg_scalar" in name:
+                self.compartments[name] = None #tf.Variable(tf.ones([1,1]), name="{}_{}".format(self.name, name))
+            elif "L" in name:
+                self.compartments[name] = tf.Variable(tf.zeros([1,1]), name="{}_{}".format(self.name, name))
+            else:
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_{}".format(self.name, name))
+        self.mask_names = ["mask"]
+        self.masks = {}
+        for name in self.mask_names:
+            self.masks[name] = tf.Variable(tf.ones([batch_size,dim]), name="{}_{}".format(self.name, name))
 
+        self.connected_cables = []
+
+        self.use_mod_factor = False
+
+        # fixed-point error neurons can have associated with them a special precision
+        # synaptic parameter matrix, as set up below (if a precision kernel is given as an argument)
         self.Prec = None # the precision matrix for this node
         self.Sigma = None # the covariance matrix for this node
+        self.precis_kernel = precis_kernel
         if precis_kernel is not None: # (init_type, sigma)
             self.is_learnable = True # if precision is used, then this node becomes "learnable"
-            prec_type, prec_sigma = precis_kernel
-            #if self.prec_sigma > 0.0:
+            prec_init_type, prec_sigma = precis_kernel
+            # NOTE: we ignore "prec_init_type" for now b/c we want to ensure a uniform initialization is used
+            #       for empirical stability reasons
             # create potential precision synapses at point of connection to target_node
             diag = tf.eye(self.dim) #* prec_sigma
             init = diag + tf.random.uniform([self.dim,self.dim],minval=-prec_sigma,maxval=prec_sigma) * (1.0 - diag)
             #init = diag + init_weights("orthogonal", [self.z_dims[l],self.z_dims[l]], stddev=prec_sigma, seed=seed) * (1.0 - diag)
             Sigma = tf.Variable(init, name="Sigma_{0}".format(self.name) )
             self.Sigma = Sigma
+        self.constraint_kernel = constraint_kernel
 
-        # node meta-parameters
-        # None so far
+    def compile(self):
+        """
+        Executes the "compile()" routine for this cable.
 
-        # error neuron-specific vector statistics
-        self.stat["pred_mu"] = None
-        self.stat["pred_targ"] = None
-        self.stat["L"] = None
-        self.stat["avg_scalar"] = None # if clamped/set, will scale error neurons and loss by 1/N, N = mini-batch size
-        self.stat["weights"] = None
+        Returns:
+            a dictionary containing post-compilation check information about this cable
+        """
+        info = super().compile()
+        # we have to special re-compile the L compartment to be (1 x 1)
+        self.compartments["L"] = tf.Variable(tf.zeros([1,1]), name="{}_L".format(self.name))
 
-        self.build_tick()
+        info["error_type"] = self.error_type
+        info["ex_scale"] = self.ex_scale
+        info["phi(x)"] = self.act_fx
+        if self.precis_kernel is not None:
+            info["precision.form"] = self.precis_kernel
+        return info
 
-    ############################################################################
-    # Setup Routines
-    ############################################################################
-
-    def clear(self):
-        super().clear()
-        self.stat["pred_mu"] = None
-        self.stat["pred_targ"] = None
-        self.stat["L"] = None
-        self.stat["avg_scalar"] = None
-        self.stat["weights"] = None
-
-    def check_correctness(self):
-        """ Executes a basic wiring correctness check. """
-        is_correct = True
-        for j in range(len(self.input_nodes)):
-            n_j = self.input_nodes[j]
-            cable_j = self.input_cables[j]
-            dest_var_j = cable_j.out_var
-            if dest_var_j != "pred_mu" and dest_var_j != "pred_targ":
-                is_correct = False
-                print("ERROR: Cable {0} mis-wires to {1}.{2}".format(cable_j.name, self.name, dest_var_j))
-                break
-        n_ins = len(self.input_nodes)
-        if n_ins != 2:
-            print("ERROR: Only two nodes can exactly wire to this error node, not {0}".format(n_ins))
-            is_correct = False
-        return is_correct
-
-    ############################################################################
-    # Signal Transmission Routines
-    ############################################################################
+    def set_constraint(self, constraint_kernel):
+        self.constraint_kernel = constraint_kernel
 
     def step(self, skip_core_calc=False):
-        Ws = self.stat.get("weights")
-        Ns = self.stat.get("avg_scalar")
-        z = self.stat.get("z")
-        #pre_z = None
-        dz = None
-        if self.is_clamped is False and skip_core_calc is False:
-            for j in range(len(self.input_nodes)):
-                n_j = self.input_nodes[j]
-                cable_j = self.input_cables[j]
-                dest_var_j = cable_j.out_var
-                tick_j = self.tick.get(dest_var_j)
-                var_j = self.stat.get(dest_var_j) # get current value of component
-                dz_j = cable_j.propagate(n_j)
-                if tick_j > 0: #if var_j is not None:
-                    var_j = var_j + dz_j
+        bmask = self.masks.get("mask")
+        Ws = self.compartments.get("weights")
+        Ns = self.compartments.get("avg_scalar")
+        ########################################################################
+        if skip_core_calc == False:
+            if self.is_clamped == False:
+                # clear any relevant compartments that are NOT stateful before accruing
+                # new deposits (this is crucial to ensure any desired stateless properties)
+                if self.do_inplace == True:
+                    self.compartments["pred_mu"].assign(self.compartments["pred_mu"] * 0)
+                    self.compartments["pred_targ"].assign(self.compartments["pred_targ"] * 0)
                 else:
-                    var_j = dz_j
-                self.stat[dest_var_j] = var_j
-                self.tick[dest_var_j] = self.tick[dest_var_j] + 1
+                    self.compartments["pred_mu"] = (self.compartments["pred_mu"] * 0)
+                    self.compartments["pred_targ"]= (self.compartments["pred_targ"] * 0)
 
-            pred_mu = self.stat.get("pred_mu")
-            pred_targ = self.stat.get("pred_targ")
+                # gather deposits from any connected nodes & insert them into the
+                # right compartments/regions -- deposits in this logic are linearly combined
+                for cable in self.connected_cables:
+                    deposit = cable.propagate()
+                    dest_comp = cable.dest_comp
+                    if self.do_inplace == True:
+                        self.compartments[dest_comp].assign(self.compartments[dest_comp] + deposit)
+                    else:
+                        self.compartments[dest_comp] = (deposit + self.compartments[dest_comp])
 
-            # TODO: should this block of code for masking be moved elsewhere to improve efficiency?
-            bmask = self.stat.get("mask")
-            if bmask is not None: # applies mask to all component variables of this node
-                if pred_mu is not None:
-                    pred_mu = pred_mu * bmask
-                if pred_targ is not None:
+                # core logic for the (node-internal) dendritic calculation
+                # error neurons are a fixed-point result/calculation as below:
+                pred_targ = self.compartments["pred_targ"]
+                pred_mu = self.compartments["pred_mu"]
+                if bmask is not None:
                     pred_targ = pred_targ * bmask
+                    pred_mu = pred_mu * bmask
+                z = None
+                if self.error_type == "mse": # squared error neurons
+                    z = e = pred_targ - pred_mu
 
-            if pred_mu is None:
-                print("ERROR:  {0}.pred_mu is NONE!".format(self.name))
-                sys.exit(1)
-            if pred_targ is None:
-                print("ERROR:  {0}.pred_targ is NONE!".format(self.name))
-                sys.exit(1)
+                    # if self.name == "e0":
+                    #     print("+++++++++++++++++++++++++++++++++++++++++++++++")
+                    #     print(self.name)
+                    #     print("e: ",e)
+                    #     print("pred_targ: ",pred_targ)
+                    #     print("pred_mu: ",pred_mu)
+                    #     print("+++++++++++++++++++++++++++++++++++++++++++++++")
 
-            if self.error_type == "mse":
-                dz = pred_targ - pred_mu
-                #dz = -dz
-                #z = z * self.zeta + dz * self.beta - z * leak
-                z = dz
-                e = z
-                # compute local loss that this error node represents
-                L_batch = tf.reduce_sum(e * e, axis=1, keepdims=True) #/(e.shape[0] * 2.0)
-                if Ws is not None: # optionally scale units by a fixed external set of weights
-                    L_batch = L_batch * Ws
-                    z = z * Ws
-                L = tf.reduce_sum(L_batch)
-                z = z  * self.ex_scale
-                if Ns is not None: # optionally scale units and local loss by 1/Ns
-                    L = L * (1.0/Ns)
-                    z = z * (1.0/Ns)
-                self.stat["L"] = L
-            else:
-                print("Error: {0} for error neuron not implemented yet".format(self.error_type))
-                sys.exit(1)
-            # Spratling-style error neurons
-            # eps2 = 1e-2
-            # self.e = self.z/tf.math.maximum(eps2, self.z_mu)
-            if self.Prec is not None:
-                #pre_z = e + 0
-                z = tf.matmul(z, self.Prec)
-                #sys.exit(0)
-        # the post-activation function is computed always, even if pre-activation is clamped
-        phi_z = self.fx(z)
-        self.stat["dz"] = dz
-        #self.stat["pre_z"] = pre_z # FOR COMPATIBILITY WITH PRECISION CALC
-        self.stat["z"] = z
-        self.stat["phi(z)"] = phi_z
-        # print("***************")
-        # print("{}.phi(z) =\n{}".format(self.name,phi_z))
+                    # compute local loss that this error node represents
+                    L_batch = tf.reduce_sum(e * e, axis=1, keepdims=True) #/(e.shape[0] * 2.0)
+                    if Ws is not None: # optionally scale units by a fixed external set of weights
+                        L_batch = L_batch * Ws
+                        z = z * Ws
+                    L = tf.reduce_sum(L_batch)
+                    z = z  * self.ex_scale
+                    if Ns is not None: # optionally scale units and local loss by 1/Ns
+                        L = L * (1.0/Ns)
+                        z = z * (1.0/Ns)
+                    if self.do_inplace == True:
+                        self.compartments["L"].assign( [[L]] )
+                    else:
+                        self.compartments["L"] = np.asarray([[L]])
+                else:
+                    print("Error: {0} for error neuron not implemented yet".format(self.error_type))
+                    sys.exit(1)
+                # Spratling-style error neurons
+                # eps2 = 1e-2
+                # self.e = self.z/tf.math.maximum(eps2, self.z_mu)
+                if self.Prec is not None:
+                    z = tf.matmul(z, self.Prec)
+                if self.do_inplace == True:
+                    self.compartments["z"].assign(z)
+                else:
+                    self.compartments["z"] = z
 
-        bmask = self.stat.get("mask")
+            # else, no deposits are accrued (b/c this node is hard-clamped to a signal)
+            ########################################################################
+
+        # apply post-activation non-linearity
+        if self.do_inplace == True:
+            self.compartments["phi(z)"].assign(self.fx(self.compartments["z"]))
+        else:
+            self.compartments["phi(z)"] = (self.fx(self.compartments["z"]))
+
         if bmask is not None: # applies mask to all component variables of this node
-            for key in self.stat:
-                self.stat[key] = self.stat.get(key) * bmask
-            # if self.stat.get("dz") is not None:
-            #     self.stat["dz"] = self.stat.get("dz") * bmask
-            # if self.stat.get("dz_bu") is not None:
-            #     self.stat["dz_bu"] = self.stat.get("dz_bu") * bmask
-            # if self.stat.get("z") is not None:
-            #     self.stat["z"] = self.stat.get("z") * bmask
-            # if self.stat.get("phi(z)") is not None:
-            #     self.stat["phi(z)"] = self.stat.get("phi(z)") * bmask
+            for key in self.compartments:
+                if "L" not in key:
+                    if self.compartments.get(key) is not None:
+                        if self.do_inplace == True:
+                            self.compartments[key].assign( self.compartments.get(key) * bmask )
+                        else:
+                            self.compartments[key] = ( self.compartments.get(key) * bmask )
 
-        self.build_tick()
+        ########################################################################
+        self.t += 1
+
+        # a node returns a list of its named component values
+        values = []
+        for comp_name in self.compartments:
+            comp_value = self.compartments.get(comp_name)
+            values.append((self.name, comp_name, comp_value))
+        return values
 
     def compute_precision(self, rebuild_cov=True):
         """
@@ -217,45 +246,25 @@ class ENode(Node):
                 rebuild_cov: rebuild the underlying covariance matrix after re-computing
                     precision (Default = True)
         """
-        eps = 0.00025 #0.0001 # stability factor for precision/covariance computation
-        cov_l = self.Sigma #tf.math.abs(self.Sigma[l])
-
-        diag_l = tf.eye(cov_l.shape[1])
-        vari_l = tf.math.maximum(1.0, cov_l) * diag_l # restrict diag( Sigma ) to be >= 1.0
-        # #vari_l = tf.math.abs(cov_l * diag_l) # variance is restricted to be positive
-        cov_l = vari_l + (cov_l * (1.0 - diag_l))
-        #cov_l = cov_l + (1.0 - diag_l) * 0.001
-        cov_l = cov_l + eps
-
-        # min_val = 0.005
-        # m_l = tf.cast(tf.math.less(cov_l, min_val),dtype=tf.float32)
-        # cov_l = cov_l * (1.0 - m_l) + (m_l * min_val)
-        #cov_l = cov_l * (1.0 - diag_l) + diag_l
-        if rebuild_cov is True:
-            self.Sigma.assign( cov_l )
-
+        diag_l = tf.eye(self.Sigma.shape[1])
         # Note for Numerical Stability:
         #   Add small pertturbation eps * I to covariance before decomposing
         #   (due to rapidly decaying Eigen values)
         #R = tf.linalg.cholesky(cov_l + diag_l) # decompose
-        R = tf.linalg.cholesky(cov_l) # + diag_l * eps) # decompose
-        #R = tf.linalg.cholesky(cov_l)
+        if rebuild_cov is True:
+            eps = 0.00025 #0.0001 # stability factor for precision/covariance computation
+            cov_l = self.Sigma #tf.math.abs(self.Sigma[l])
+            #diag_l = tf.eye(cov_l.shape[1])
+            vari_l = tf.math.maximum(1.0, cov_l) * diag_l # restrict diag( Sigma ) to be >= 1.0
+            cov_l = vari_l + (cov_l * (1.0 - diag_l))
+            cov_l = cov_l + eps
+            self.Sigma.assign( cov_l )
+        else:
+            cov_l = self.Sigma + 0
+        R = tf.linalg.cholesky(cov_l) # decompose
         prec_l = tf.transpose(tf.linalg.triangular_solve(R,diag_l,lower=True))
         self.Prec = prec_l
-
-        # eps = 0.0005 #0.0001
-        # cov_l = self.Sigma #tf.math.abs(self.Sigma[l])
-        # diag_l = tf.eye(cov_l.shape[1])
-        # vari_l = tf.math.abs(cov_l * diag_l) # variance is restricted to be positive
-        # cov_l = vari_l + (cov_l * (1.0 - diag_l))
-        # if rebuild_cov is True:
-        #     self.Sigma.assign( cov_l )
-        # # Note for Numerical Stability: Add small pertturbation eps * I to covariance before decomposing
-        # #                               (due to rapidly decaying Eigen values)
-        # R = tf.linalg.cholesky(cov_l + diag_l * eps) # decompose
-        # #R = tf.linalg.cholesky(cov_l) # decompose
-        # prec_l = tf.transpose(tf.linalg.triangular_solve(R,diag_l,lower=True))
-        # self.Prec = prec_l
+        return R, prec_l
 
     def calc_update(self, update_radius=-1.0):
         delta = []
@@ -264,7 +273,7 @@ class ENode(Node):
             Prec_l = self.Prec
             #e_noprec = self.stat.get("pre_z")
             #e = e_noprec
-            e = self.stat.get("phi(z)")
+            e = self.compartments.get("phi(z)")
             B = tf.matmul(e, e, transpose_a=True)
             #dW = tf.matmul(tf.matmul(-Prec_l, B), Prec_l) - Prec_l
             dW = (B - Prec_l) * 0.5 # d_L_l / d_cov_l (derivative w.r.t. covariance)
@@ -278,3 +287,24 @@ class ENode(Node):
             dW = -dW
             delta.append(dW)
         return delta
+
+    def apply_constraints(self):
+        """
+        | Apply any constraints to the learnable parameters contained within
+        | this cable. This function will execute any of the following
+        | pre-configured constraints:
+        | 1) compute new precision matrices
+        | 2) project synapses to adhere to any embedded norm constraints
+        """
+        self.compute_precision()
+
+        if self.constraint_kernel is not None:
+            clip_type = self.constraint_kernel.get("clip_type")
+            clip_mag = float(self.constraint_kernel.get("clip_mag"))
+            clip_axis = int(self.constraint_kernel.get("clip_axis"))
+            if clip_mag > 0.0: # apply constraints
+                if clip_type == "norm_clip":
+                    self.Sigma.assign(tf.clip_by_norm(self.Sigma, clip_mag, axes=[clip_axis]))
+                elif clip_type == "forced_norm_clip":
+                    _S = transform_utils.normalize_by_norm(self.Sigma, clip_mag, param_axis=clip_axis )
+                    self.Sigma.assign(_S)

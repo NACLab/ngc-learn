@@ -105,7 +105,8 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
     for batch in dataset:
         x_name, x = batch[0]
         N += x.shape[0]
-        x_hat = agent.settle(x) # conduct iterative inference
+        x_hat = agent.settle(x, calc_update=False) # conduct iterative inference
+
         # update tracked fixed-point losses
         Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx
         ToD = calc_ToD(agent) + ToD  # calc ToD
@@ -129,7 +130,7 @@ with tf.device(gpu_tag):
         L1 = agent.ngc_model.extract(node_name="e1", node_var_name="L")
         L0 = agent.ngc_model.extract(node_name="e0", node_var_name="L")
         ToD = -(L0 + L1 + L2)
-        return ToD
+        return float(ToD)
 
     for trial in range(n_trials): # for each trial
         agent = None # set up NGC model

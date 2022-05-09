@@ -27,7 +27,7 @@ Demo/Tutorial #3 File:
 Fits an NGC classifier to the MNIST database.
 
 Usage:
-$ python sim_train.py --gpu_id=0
+$ python sim_train.py --config=gncn_t1_ffm/fit.cfg --gpu_id=0
 
 @author Alexander Ororbia
 ################################################################################
@@ -115,7 +115,7 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
 
         agent.clear()
         if verbose == True:
-            print("\r Acc {0}  Ly {1} over {2} samples...".format((Acc/(N * 1.0)), (Ly/(N * 1.0)), N),end="")
+            print("\r Acc {}  Ly {} over {} samples...".format((Acc/(N * 1.0)), (Ly/(N * 1.0)), N),end="")
     if verbose == True:
         print()
     Ly = Ly / N
@@ -129,18 +129,22 @@ with tf.device(gpu_tag):
     def calc_ToD(agent):
         """Measures the total discrepancy (ToD) of a given NGC model"""
         ToD = 0.0
+        #print("TOD:")
         L2 = agent.ngc_model.extract(node_name="e2", node_var_name="L")
+        #tf.print(L2)
         L1 = agent.ngc_model.extract(node_name="e1", node_var_name="L")
+        #tf.print(L1)
         L0 = agent.ngc_model.extract(node_name="e0", node_var_name="L")
+        #tf.print(L0)
         ToD = -(L0 + L1 + L2)
-        return ToD
+        return float(ToD)
 
     for trial in range(n_trials): # for each trial
         agent = GNCN_t1_FFM(args) # set up NGC model
-        print(" >> Built model = {}".format(agent.ngc_model.name))
 
         eta_v  = tf.Variable( eta ) # set up optimization process
         opt = tf.keras.optimizers.Adam(eta_v)#, beta_1=0.9, beta_2=0.999, epsilon=1e-6)
+        print(" >> Built model = {}".format(agent.ngc_model.name))
 
         Ly_series = []
         Acc_series = []
@@ -151,7 +155,7 @@ with tf.device(gpu_tag):
         # create a  training loop
         ToD, Ly, Acc = eval_model(agent, train_set, calc_ToD, verbose=True)
         vToD, vLy, vAcc = eval_model(agent, dev_set, calc_ToD, verbose=True)
-        print("{} | ToD = {}  Ly = {} ; vToD = {}  vLy = {}".format(-1, Acc, Ly, vAcc, vLy))
+        print("{} | Acc = {}  Ly = {} ; vAcc = {}  vLy = {}".format(-1, Acc, Ly, vAcc, vLy))
 
         Ly_series.append(Ly)
         Acc_series.append(Acc)
@@ -169,10 +173,13 @@ with tf.device(gpu_tag):
             n_s = 0
             # Run single epoch/pass/iteration through dataset
             ####################################################################
+            mark = 0.0
+            inf_time = 0.0
             for batch in train_set:
                 n_s += batch[0][1].shape[0] # track num samples seen so far
                 x_name, x = batch[0]
                 y_name, y = batch[1]
+                mark += 1
 
                 # run ancestral projection to get initial conditions
                 y_hat_ = agent.predict(x) # run p(y|x)
@@ -180,26 +187,28 @@ with tf.device(gpu_tag):
                 mu1 = agent.ngc_sampler.extract("s1","z") # extract value of s1
                 mu0 = agent.ngc_sampler.extract("s0","z") # extract value of s0
 
-                agent.ngc_model.inject("mu2", ("z", mu2)) # initialize expectation of z3
-                agent.ngc_model.inject("z2", ("z", mu2)) # initialize state of z2
-                agent.ngc_model.inject("mu1", ("z", mu1)) # initialize expectation of z2
-                agent.ngc_model.inject("z1", ("z", mu1)) # initialize state of z1
-                agent.ngc_model.inject("mu0", ("z", mu0)) # initialize expectation of z1
+                agent.ngc_model.inject([("mu2", "z", mu2), ("z2", "z", mu2),
+                                        ("mu1", "z", mu1), ("z1", "z", mu1),
+                                        ("mu0", "z", mu0)])
 
                 # conduct iterative inference
+                inf_t = time.time()
                 y_hat = agent.settle(x, y)
+                inf_t = time.time() - inf_t
+                inf_time += inf_t
+
                 ToD_t = calc_ToD(agent) # calc ToD
                 Ly = tf.reduce_sum( metric.cat_nll(y_hat, y) ) + Ly
 
                 # update synaptic parameters given current model internal state
-                delta = agent.calc_updates()
+                delta = agent.calc_updates(avg_update=False)
                 opt.apply_gradients(zip(delta, agent.ngc_model.theta))
                 agent.ngc_model.apply_constraints()
                 agent.clear()
 
                 ToD = ToD_t + ToD
-                print("\r train.ToD {0}  Ly {1}  with {2} samples seen...".format(
-                      (ToD/(n_s * 1.0)), (Ly/(n_s * 1.0)), n_s),
+                print("\r train.ToD {}  Ly {}  with {} samples seen (time = {} s)".format(
+                      (ToD/(n_s * 1.0)), (Ly/(n_s * 1.0)), n_s, (inf_time/mark)),
                       end=""
                       )
             ####################################################################

@@ -87,7 +87,7 @@ def calc_ToD(agent):
     L1 = agent.ngc_model.extract(node_name="e1", node_var_name="L")
     L0 = agent.ngc_model.extract(node_name="e0", node_var_name="L")
     ToD = -(L0 + L1 + L2)
-    return ToD
+    return float(ToD)
 ```
 
 This function is used to measure the internal disorder, or approximate free energy,

@@ -33,51 +33,62 @@ class Cable:
 
         seed: integer seed to control determinism of any underlying synapses
             associated with this cable
-
-        coeff: a scalar float to control any signal scaling associated with this cable
     """
-    def __init__(self, cable_type, inp, out, name=None, seed=69, coeff=1.0):
+    def __init__(self, cable_type, inp, out, name=None, seed=69):
         self.cable_type = cable_type
         self.seed = seed
         self.name = name
         self.is_learnable = False
-        self.coeff = coeff
-        self.W = None
-        self.b = None
-        self.gamma = 1.0
-        self.use_mod_factor = False # does the weight update use weight modulation?
 
-        inp_node, inp_var = inp
-        out_node, out_var = out
-        self.inp_node = inp_node
-        self.inp_var = inp_var
-        self.out_node = out_node
-        self.out_var = out_var
+        src_node, src_comp = inp
+        self.src_node = src_node
+        self.src_comp = src_comp # source compartment
+        dest_node, dest_comp = out
+        self.dest_node = dest_node
+        self.dest_comp = dest_comp # destination compartment
 
         if name == None:
-            self.name = "{0}-to-{1}_{2}".format(inp_node.name, out_node.name, self.cable_type)
+            self.name = "{0}-to-{1}_{2}".format(src_node.name, dest_node.name, self.cable_type)
 
+        # pre-activity region for first term of local update rule
         self.preact_node = None
         self.preact_comp = None
+        # post-activity region for second term of local update rule
         self.postact_node = None
         self.postact_comp = None
-        self.deriv_node = None
-        self.deriv_comp = None
 
-    def propagate(self, node):
+    def compile(self):
         """
-        Internal transmission function that computes the correct transformation
-        of a source node to a destination node
-
-        Args:
-            node: source node to extracted relevant information from and transform
+        Executes the "compile()" routine for this cable. Sub-class cables can
+        extend this in case they contain other elements that must be configured
+        properly for global simulation usage.
 
         Returns:
-            the resultant transformed signal (transformation f information from "node")
+            a dictionary containing post-compilation check information about this cable
         """
-        return 0.0
+        info = {} # hash table to store any useful information for post-compile analysis
+        if self.src_node is None:
+            print("Source node missing for cable {}".format(self.name))
+        if self.src_comp is None:
+            print("Source compartment missing for cable {}".format(self.name))
+        if self.dest_node is None:
+            print("Destination node missing for cable {}".format(self.name))
+        if self.dest_comp is None:
+            print("Destination compartment missing for cable {}".format(self.name))
+        info["object_type"] = self.cable_type
+        info["object_name"] = self.name
+        info["is_learnable"] = self.is_learnable
+        info["seed"] = self.seed
+        info["src_node"] = self.src_node.name
+        info["src_comp"] = self.src_comp
+        info["dest_node"] = self.src_node.name
+        info["dest_comp"] = self.src_comp
+        return info
 
-    def set_update_rule(self, preact, postact, deriv_node=None, gamma=1.0, use_mod_factor=False):
+    def set_constraint(self, constraint_kernel):
+        self.constraint_kernel = constraint_kernel
+
+    def set_update_rule(self, preact, postact, gamma=1.0, use_mod_factor=False):
         """
         Sets the synaptic adjustment rule for this cable (currently a 2-factor local synaptic Hebbian update rule).
 
@@ -102,8 +113,6 @@ class Cable:
                 :postact_compartment (Tuple[1]): the component in the postact_node to extract the necessary
                     signal to compute the second factor the synaptic/cable update
 
-            deriv_node: <UNUSED>
-
             gamma: scaling factor for the synaptic update
 
             use_mod_factor: if True, triggers the modulatory matrix weighting factor to be
@@ -111,35 +120,42 @@ class Cable:
 
                 :Note: This is un-tested/not fully integrated
         """
-        self.gamma = gamma
-        self.use_mod_factor = use_mod_factor
-        self.is_learnable = True
         preact_node, preact_comp = preact
         self.preact_node = preact_node
         self.preact_comp = preact_comp
+
         postact_node, postact_comp = postact
         self.postact_node = postact_node
         self.postact_comp = postact_comp
-        if deriv_node is not None:
-            deriv_node, deriv_comp = deriv_node
-            self.deriv_node = deriv_node
-            self.deriv_comp = deriv_comp
 
-    def calc_update(self, update_radius=-1.0):
+        self.gamma = gamma
+        self.use_mod_factor = use_mod_factor
+        self.is_learnable = True
+
+    def propagate(self):
+        """
+        Internal transmission function that computes the correct transformation
+        of a source node to a destination node
+
+        Returns:
+            the resultant transformed signal (transformation f information from "node")
+        """
+        return 0.0
+
+    def calc_update(self):
         """
         Calculates the updates to the internal synapses that compose this cable
         given this cable's pre-configured synaptic update rule.
 
         Args:
-            update_radius: radius of Gaussian ball to constrain computed update matrices by
+            clip_kernel: radius of Gaussian ball to constrain computed update matrices by
                 (i.e., clipping by Frobenius norm)
         """
         return []
 
-    def clear(self):
+    def apply_constraints(self):
         """
-        Clears/wipes any information that have remained persistent w/in this cable
-
-        NOTE: this is currently UNUSED
+        Apply any constraints to the learnable parameters contained within
+        this cable.
         """
         pass

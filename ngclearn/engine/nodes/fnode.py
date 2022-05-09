@@ -24,66 +24,107 @@ class FNode(Node):
 
         act_fx: activation function -- phi(v) -- to apply to neural activities
     """
-    def __init__(self, name, dim, act_fx="identity"):
+    def __init__(self, name, dim, act_fx="identity", batch_size=1):
         node_type = "feedforward"
         super().__init__(node_type, name, dim)
+        self.dim = dim
+        self.batch_size = batch_size
+        self.is_clamped = False
 
+        self.act_fx = act_fx
         fx, dfx = transform_utils.decide_fun(act_fx)
         self.fx = fx
         self.dfx = dfx
+        self.n_winners = -1
+        if "bkwta" in act_fx:
+            self.n_winners = int(act_fx[act_fx.index("(")+1:act_fx.rindex(")")])
 
-        self.build_tick()
+        self.compartment_names = ["dz", "z", "phi(z)"]
+        self.compartments = {}
+        for name in self.compartment_names:
+            if "phi(z)" in name:
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_phi_z".format(self.name))
+            else:
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_{}".format(self.name, name))
+        self.mask_names = ["mask"]
+        self.masks = {}
+        for name in self.mask_names:
+            self.masks[name] = tf.Variable(tf.ones([batch_size,dim]), name="{}_{}".format(self.name, name))
 
-    def check_correctness(self):
-        """ Executes a basic wiring correctness check. """
-        is_correct = True
-        for j in range(len(self.input_nodes)):
-            n_j = self.input_nodes[j]
-            cable_j = self.input_cables[j]
-            dest_var_j = cable_j.out_var
-            if dest_var_j != "dz":
-                is_correct = False
-                print("ERROR: Cable {0} mis-wires to {1}.{2} (can only be .dz)".format(cable_j.name, self.name, dest_var_j))
-                break
-        return is_correct
+        self.connected_cables = []
 
-    ############################################################################
-    # Signal Transmission Routines
-    ############################################################################
+    def compile(self):
+        """
+        Executes the "compile()" routine for this cable.
+
+        Returns:
+            a dictionary containing post-compilation check information about this cable
+        """
+        info = super().compile()
+        info["phi(x)"] = self.act_fx
+        return info
 
     def step(self, skip_core_calc=False):
-        z = self.stat.get("z")
-        phi_z = self.stat["phi(z)"]
-        if self.is_clamped is False and skip_core_calc is False:
-
-            for j in range(len(self.input_nodes)):
-                n_j = self.input_nodes[j]
-                cable_j = self.input_cables[j]
-                dest_var_j = cable_j.out_var
-                # print("Parent ",n_j.name)
-                # print("     z = ",n_j.extract("z"))
-                # print("phi(z) = ",n_j.extract("phi(z)"))
-                tick_j = self.tick.get(dest_var_j)
-                var_j = self.stat.get(dest_var_j) # get current value of component
-                dz_j = cable_j.propagate(n_j)
-                if tick_j > 0: #if var_j is not None:
-                    var_j = var_j + dz_j
+        bmask = self.masks.get("mask")
+        ########################################################################
+        if skip_core_calc == False:
+            if self.is_clamped == False:
+                # clear any relevant compartments that are NOT stateful before accruing
+                # new deposits (this is crucial to ensure any desired stateless properties)
+                if self.do_inplace == True:
+                    self.compartments["dz"].assign(self.compartments["dz"] * 0)
                 else:
-                    var_j = dz_j
-                self.stat[dest_var_j] = var_j
-                self.tick[dest_var_j] = self.tick[dest_var_j] + 1
-            dz = self.stat.get("dz")
-            if dz is None:
-                dz = 0.0
+                    self.compartments["dz"] = (self.compartments["dz"] * 0)
 
-            """
-            Feedforward integration step
-            Equation:
-            z <- dz
-            """
-            z = dz
-        # the post-activation function is computed always, even if pre-activation is clamped
-        phi_z = self.fx(z)
-        self.stat["z"] = z
-        self.stat["phi(z)"] = phi_z
-        self.build_tick()
+                # gather deposits from any connected nodes & insert them into the
+                # right compartments/regions -- deposits in this logic are linearly combined
+                for cable in self.connected_cables:
+                    deposit = cable.propagate()
+                    dest_comp = cable.dest_comp
+                    if self.do_inplace == True:
+                        self.compartments[dest_comp].assign(self.compartments[dest_comp] + deposit)
+                    else:
+                        self.compartments[dest_comp] = (deposit + self.compartments[dest_comp])
+
+                # core logic for the (node-internal) dendritic calculation
+                dz = self.compartments["dz"]
+                '''
+                Feedforward integration step
+                Equation:
+                z <- dz
+                '''
+                z = dz
+                if self.do_inplace == True:
+                    self.compartments["z"].assign(z)
+                else:
+                    self.compartments["z"] = z
+            # else, no deposits are accrued (b/c this node is hard-clamped to a signal)
+            ########################################################################
+
+        # apply post-activation non-linearity
+        phi_z = None
+        if self.n_winners > 0:
+            phi_z = self.fx(self.compartments["z"],K=self.n_winners)
+        else:
+            phi_z = self.fx(self.compartments["z"])
+        if self.do_inplace == True:
+            self.compartments["phi(z)"].assign(phi_z)
+        else:
+            self.compartments["phi(z)"] = (phi_z)
+
+        if bmask is not None: # applies mask to all component variables of this node
+            for key in self.compartments:
+                if self.compartments.get(key) is not None:
+                    if self.do_inplace == True:
+                        self.compartments[key].assign( self.compartments.get(key) * bmask )
+                    else:
+                        self.compartments[key] = ( self.compartments.get(key) * bmask )
+        ########################################################################
+        self.t += 1
+
+        # a node returns a list of its named component values
+        values = []
+        for comp_name in self.compartments:
+            comp_value = self.compartments.get(comp_name)
+            values.append((self.name, comp_name, comp_value))
+        return values

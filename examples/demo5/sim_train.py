@@ -26,6 +26,7 @@ from ngclearn.utils.data_utils import DataLoader
 
 # import sparse coding model from museum to train
 from ngclearn.museum.gncn_t1_sc import GNCN_t1_SC
+from gncn_t1_ista import GNCN_t1_ISTA
 
 seed = 69
 tf.random.set_seed(seed=seed)
@@ -33,8 +34,8 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Demo/Tutorial #4 File:
-Trains/fits an sparse coding model to the "natural scenes" dataset.
+Demo/Tutorial #5 File:
+Trains/fits a deep ISTA model to the Olivetti faces dataset.
 Note that this script will sequentially run multiple trials/seeds if an
 experimental multi-trial setup is required (the tutorial only requires 1 trial).
 
@@ -93,6 +94,7 @@ save_marker = 1
 
 args = Config(cfg_fname)
 
+model_type = args.getArg("model_type")
 out_dir = args.getArg("out_dir")
 batch_size = 1 # we want to randomly sample 1 image at a time
 dev_batch_size = 1 #int(args.getArg("dev_batch_size"))
@@ -117,9 +119,12 @@ train_set = DataLoader(design_matrices=[("z0",X)], batch_size=batch_size)
 # create development/validation sample
 xfname = args.getArg("dev_xfname")
 X = tf.cast(np.load(xfname),dtype=tf.float32).numpy()
+ptrs = np.random.permutation(X.shape[0])
+ptrs = ptrs[0:50]
+X = X[ptrs,:]
 dev_set = DataLoader(design_matrices=[("z0",X)], batch_size=dev_batch_size, disable_shuffle=True)
 
-patch_size = (16,16) # 16x16 patches - this follows the setup of (Olshausen &amp; Field, 1996)
+patch_size = (20,20)
 num_patches = 250
 
 args.setArg("x_dim",(patch_size[0] * patch_size[1]))
@@ -131,8 +136,10 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
     ToD = 0.0 # total disrepancy over entire data pool
     Lx = 0.0 # metric/loss over entire data pool
     N = 0.0 # number samples seen so far
+    mark = 0.0
     for batch in dataset:
         x_name, x = batch[0]
+        mark += 1
         # generate patches on-the-fly for sample x
         x_p = generate_patch_set(x, patch_size, num_patches)
         x = x_p
@@ -144,7 +151,7 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
         ToD = calc_ToD(agent, lmda) + ToD  # calc ToD
         agent.clear()
         if verbose == True:
-            print("\r ToD {}  Lx {} over {} samples...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), N),end="")
+            print("\r ToD {}  Lx {} over {} images...".format((ToD/(N * 1.0)), (Lx/(N * 1.0)), mark),end="")
     if verbose == True:
         print()
     Lx = Lx / N
@@ -162,16 +169,22 @@ with tf.device(gpu_tag):
         z1_sparsity = tf.reduce_sum(tf.math.abs(z1)) * lmda # sparsity penalty term
         L0 = tf.reduce_sum(tf.math.square(e0)) # reconstruction term
         ToD = -(L0 + z1_sparsity)
-        return float(ToD)
+        return ToD
 
     for trial in range(n_trials): # for each trial
         args.setArg("batch_size",num_patches)
-        agent = GNCN_t1_SC(args) # set up NGC model
+        #agent = GNCN_t1_SC(args)
+        agent = GNCN_t1_ISTA(args)  # set up NGC model
         print(" >> Built model = {}".format(agent.ngc_model.name))
 
         eta_v  = tf.Variable( eta ) # set up optimization process
         #opt = tf.compat.v1.train.AdamOptimizer(learning_rate=eta_v,beta1=0.9, beta2=0.999, epsilon=1e-6)
-        opt = tf.keras.optimizers.SGD(eta_v)
+        if opt_type == "adam":
+            opt = tf.keras.optimizers.Adam(eta_v)
+            inf_opt = tf.keras.optimizers.Adam(eta)
+        else: # default is SGD
+            opt = tf.keras.optimizers.SGD(eta_v)
+            inf_opt = tf.keras.optimizers.SGD(eta)
 
         Lx_series = []
         ToD_series = []
@@ -180,7 +193,8 @@ with tf.device(gpu_tag):
 
         ############################################################################
         # create a  training loop
-        ToD, Lx = eval_model(agent, train_set, calc_ToD, verbose=True)
+        ToD = Lx = 0.0
+        #ToD, Lx = eval_model(agent, train_set, calc_ToD, verbose=True)
         vToD, vLx = eval_model(agent, dev_set, calc_ToD, verbose=True)
         print("{} | ToD = {}  Lx = {} ; vToD = {}  vLx = {}".format(-1, ToD, Lx, vToD, vLx))
         Lx_series.append(Lx)
@@ -196,8 +210,8 @@ with tf.device(gpu_tag):
         inf_time = 0.0
         mark = 0.0
         for i in range(num_iter): # for each training iteration/epoch
-            ToD = 0.0 # track ToD
-            Lx = 0.0 # track patch loss
+            ToD = 0.0 # track window average of online ToD
+            Lx = 0.0 # track window average of online mean patch loss
             n_s = 0
             # run single epoch/pass/iteration through dataset
             ####################################################################
@@ -219,9 +233,13 @@ with tf.device(gpu_tag):
                 Lx = tf.reduce_sum( metric.mse(x_hat, x) ) + Lx
 
                 # update synaptic parameters given current model internal state
-                delta = agent.calc_updates(avg_update=False)
+                delta, s_delta = agent.calc_updates(avg_update=False)
                 opt.apply_gradients(zip(delta, agent.ngc_model.theta))
                 agent.ngc_model.apply_constraints()
+
+                inf_opt.apply_gradients(zip(s_delta, agent.ngc_sampler.theta))
+                agent.ngc_sampler.apply_constraints()
+
                 agent.clear()
 
                 print("\r train.ToD {}  Lx {}  with {} samples seen (t = {})".format(

@@ -20,7 +20,7 @@ NGC computational processing system.
 
   .. automethod:: set_cycle
     :noindex:
-  .. automethod:: check_correctness
+  .. automethod:: compile
     :noindex:
   .. automethod:: clone_state
     :noindex:

@@ -77,57 +77,56 @@ Constructing the above system for (Olshausen &amp; Field, 1996) is done,
 using nodes and cables, as follows:
 
 ```python
-x_dim = # ... dimension of image data ...
+x_dim = # ... dimension of patch data ...
 # ---- build a sparse coding linear generative model with a Cauchy prior ----
-K = 1000
-beta = 0.01
+K = 300
+beta = 0.05
+# general model configurations
 integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
 prior_cfg = {"prior_type" : "cauchy", "lambda" : 0.14} # configure latent prior
+# cable configurations
+dcable_cfg = {"type": "dense", "init" : ("unif_scale",1.0), "seed" : seed}
+pos_scable_cfg = {"type": "simple", "coeff": 1.0}
+neg_scable_cfg = {"type": "simple", "coeff": -1.0}
+constraint_cfg = {"clip_type":"forced_norm_clip","clip_mag":1.0,"clip_axis":1}
 
 # set up system nodes
-z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=0.0, act_fx="identity",
+z1 = SNode(name="z1", dim=100, beta=beta, leak=leak, act_fx=act_fx,
            integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
-mu0 = SNode(name="mu0", dim=x_dim, act_fx="identity", zeta=0.0)
+mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
 e0 = ENode(name="e0", dim=x_dim)
 z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
-# create cable wiring scheme relating nodes to one another
-wght_sd = 0.025
-dcable_cfg = {"type": "dense", "has_bias": False,
-              "init" : ("gaussian",wght_sd), "seed" : seed}
-pos_scable_cfg = {"type": "simple", "coeff": 1.0}
-neg_scable_cfg = {"type": "simple", "coeff": -1.0}
-
-z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
-e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
-# set up the synaptic update rule
+# create the rest of the cable wiring scheme
+z1_mu0 = z1.wire_to(mu0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+z1_mu0.set_constraint(constraint_cfg)
+mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
+e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
 param_axis = 1
 
 # Set up graph - execution cycle/order
-print(" > Constructing NGC graph")
-model = NGCGraph(K=K, name="gncn_t1_sc")
-model.proj_weight_mag = 1.0
-model.param_axis = param_axis # set projection axis to be = 1 to constrain columns
+model = NGCGraph(K=K, name="gncn_t1_sc", batch_size=batch_size)
 model.set_cycle(nodes=[z1,z0])
 model.set_cycle(nodes=[mu0])
 model.set_cycle(nodes=[e0])
-model.apply_constraints()
+model.compile()
 ```
 
 while building its ancestral sampling co-model is done with the following code block:
 
 ```python
 # build this NGC model's sampling graph
-z1_dim = model.getNode("z1").dim
-z0_dim = model.getNode("z0").dim
+z1_dim = ngc_model.getNode("z1").dim
+z0_dim = ngc_model.getNode("z0").dim
 s1 = FNode(name="s1", dim=z1_dim, act_fx=act_fx)
 s0 = FNode(name="s0", dim=z0_dim, act_fx=out_fx)
-s1_s0 = s1.wire_to(s0, src_var="phi(z)", dest_var="dz", point_to_path=z1_mu0)
+s1_s0 = s1.wire_to(s0, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z1_mu0,"tied"))
 sampler = ProjectionGraph()
+sampler.set_cycle(nodes=[s1,s0])
+sampler.compile()
 ```
 
 Notice that we have, in our `NGCGraph`, taken care to set the `.param_axis`
@@ -145,38 +144,40 @@ To build the version of our model using a thresholding function
 
 ```python
 x_dim = # ... dimension of image data ...
-K = 100
-beta = 0.1
+K = 300
+beta = 0.05
+# general model configurations
 integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
- # configure latent threshold function
+# configure latent threshold function
 thr_cfg = {"threshold_type" : "soft_threshold", "thr_lambda" : 5e-3}
+# cable configurations
+dcable_cfg = {"type": "dense", "init" : ("unif_scale",1.0), "seed" : seed}
+pos_scable_cfg = {"type": "simple", "coeff": 1.0}
+neg_scable_cfg = {"type": "simple", "coeff": -1.0}
+constraint_cfg = {"clip_type":"forced_norm_clip","clip_mag":1.0,"clip_axis":1}
 
 # set up system nodes
-z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=0.0, act_fx="relu",
+z1 = SNode(name="z1", dim=100, beta=beta, leak=leak, act_fx=act_fx,
            integrate_kernel=integrate_cfg, threshold_kernel=thr_cfg)
-mu0 = SNode(name="mu0", dim=x_dim, act_fx="identity", zeta=0.0)
+mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
 e0 = ENode(name="e0", dim=x_dim)
 z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
 # create the rest of the cable wiring scheme
-z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
-e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
-# set up the synaptic update rule
+z1_mu0 = z1.wire_to(mu0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+z1_mu0.set_constraint(constraint_cfg)
+mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
+e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
-param_axis = 1
 
 # Set up graph - execution cycle/order
-print(" > Constructing NGC graph")
-model = NGCGraph(K=K, name="gncn_t1_sc")
-model.proj_weight_mag = 1.0
-model.param_axis = param_axis # set projection axis to be = 1 to constrain columns
+model = NGCGraph(K=K, name="gncn_t1_sc", batch_size=batch_size)
 model.set_cycle(nodes=[z1,z0])
 model.set_cycle(nodes=[mu0])
 model.set_cycle(nodes=[e0])
-model.apply_constraints()
+model.compile()
 ```
 
 Note that the ancestral projection this model using thresholding would be the same
@@ -197,7 +198,7 @@ def calc_ToD(agent, lmda):
     z1_sparsity = tf.reduce_sum(tf.math.abs(z1)) * lmda # sparsity penalty term
     L0 = tf.reduce_sum(tf.math.square(e0)) # reconstruction term
     ToD = -(L0 + z1_sparsity)
-    return ToD
+    return float(ToD)
 ```
 
 In fact, the above total discrepancy, in the case of a sparse coding model,
@@ -219,7 +220,7 @@ code and further enter the `examples/data/` sub-folder. Unzip the file
 `natural_scenes.zip` to create one more sub-folder that contains two numpy arrays,
 the first labeled `natural_scenes/raw_dataX.npy` and another labeled as
 `natural_scenes/dataX.npy`. The first one contains the original, `512 x 512` raw pixel
-image arrays (flattend) while the second contains the pre-processed, whitened/normalized
+image arrays (flattened) while the second contains the pre-processed, whitened/normalized
 (and flattened) image data arrays (these are the pre-processed image patterns used
 in [1]). You will, in this demonstration, only be working with `natural_scenes/dataX.npy`.
 Two (raw) images sampled from the original dataset (`raw_dataX.npy`) are shown below:
@@ -233,7 +234,8 @@ One way to write the training loop for our sparse coding models would be the fol
 
 ```python
 args = # load in Config object with user-defined arguments
-agent = GNCN_t1_SC(args) # instantiate the NGC sparse coding model
+args.setArg("batch_size",num_patches)
+agent = GNCN_t1_SC(args) # set up NGC model
 opt = tf.keras.optimizers.SGD(0.01) # set up optimization process
 
 ############################################################################
@@ -243,9 +245,9 @@ vToD, vLx = eval_model(agent, dev_set, calc_ToD, verbose=True)
 print("{} | ToD = {}  Lx = {} ; vToD = {}  vLx = {}".format(-1, ToD, Lx, vToD, vLx))
 
 ########################################################################
+mark = 0.0
 for i in range(num_iter): # for each training iteration/epoch
-    ToD = 0.0 # track window average of online ToD
-    Lx = 0.0 # track window average of online mean patch loss
+    ToD = Lx = 0.0
     n_s = 0
     # run single epoch/pass/iteration through dataset
     ####################################################################
@@ -255,9 +257,11 @@ for i in range(num_iter): # for each training iteration/epoch
         x_p = generate_patch_set(x, patch_size, num_patches)
         x = x_p
         n_s += x.shape[0] # track num samples seen so far
+        mark += 1
 
         x_hat = agent.settle(x) # conduct iterative inference
-        ToD_t = calc_ToD(agent) # calc ToD
+        ToD_t = calc_ToD(agent, lmda) # calc ToD
+
         ToD = ToD_t + ToD
         Lx = tf.reduce_sum( metric.mse(x_hat, x) ) + Lx
 
@@ -267,8 +271,8 @@ for i in range(num_iter): # for each training iteration/epoch
         agent.ngc_model.apply_constraints()
         agent.clear()
 
-        print("\r train.ToD {0}  Lx {1}  with {2} samples seen...".format(
-              (ToD/(n_s * 1.0)), (Lx/(n_s * 1.0)), n_s),
+        print("\r train.ToD {}  Lx {}  with {} samples seen (t = {})".format(
+              (ToD/(n_s * 1.0)), (Lx/(n_s * 1.0)), n_s, (inf_time/mark)),
               end=""
               )
     ####################################################################
@@ -319,7 +323,7 @@ $ python viz_filters.py --model_fname=sc_cauchy/model0.ngc --output_dir=sc_cauch
 
 which will iterate through your model's dictionary atoms (stored within its
 single synaptic weight matrix) and ultimately produce a visual plot of the filters
-which should look very similar to the one below:
+which should look like the one below:
 
 <img src="../images/demo4/sc_cauchy_filters.jpg" width="450" />
 
@@ -338,7 +342,7 @@ run:
 $ python viz_filters.py --model_fname=sc_ista/model0.ngc --output_dir=sc_ista/
 ```
 
-and you should obtain a filter plot similar to the one below:
+and you should obtain a filter plot like the one below:
 
 <img src="../images/demo4/sc_ista_filters.jpg" width="450" />
 
@@ -347,9 +351,13 @@ sparse coding systems learned to function as edge detectors, each tuned to
 a particular position, orientation, and frequency. These learned feature detectors,
 as discussed in [1], appear to behave similar to the primary visual area (V1)
 neurons of the cerebral cortex in the brain. Although, in the end, the edge
-detectors learned by both our models qualitatively appear to be very similar,
+detectors learned by both our models qualitatively appear to be similar,
 we should note that the latent codes (when inferring them given sensory input)
 for the model that used the thresholding function are ultimately sparser.
+Furthermore, the filters for the model with thresholding appear to smoother
+and with fewer occurrences of less-than-useful slots than the Cauchy model
+(or filters that did not appear to extract any particularly interpretable
+features).
 
 This difference in sparsity can be verified by examining the difference/gap
 between the absolute value of the total discrepancy `ToD` and the reconstruction
@@ -365,7 +373,6 @@ with the ending gap being `|ToD| -  Lx = 0.09` nats. The final gap of the
 thresholding model is substantially lower than the one of the Cauchy prior model,
 indicating that the latent states of the thresholding model are, indeed,
 the sparsest.
-
 
 ## References
 [1] Olshausen, B., Field, D. Emergence of simple-cell receptive field properties

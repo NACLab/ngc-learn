@@ -47,6 +47,7 @@ and `z2` will be clamped to a sensory input vector `x`.
 Building the above NGC system entails writing the following:
 
 ```python
+batch_size = 128
 x_dim = # dimensionality of input space
 y_dim = # dimensionality of output/target space
 beta = 0.1
@@ -58,29 +59,29 @@ z2 = SNode(name="z2", dim=x_dim, beta=beta, leak=leak, act_fx="identity",
 mu1 = SNode(name="mu1", dim=z_dim, act_fx="identity", zeta=0.0)
 e1 = ENode(name="e1", dim=z_dim)
 z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=leak, act_fx="relu6",
-           integrate_kernel=integrate_cfg)#, lateral_kernel=lateral_cfg)
+           integrate_kernel=integrate_cfg)
 mu0 = SNode(name="mu0", dim=y_dim, act_fx="softmax", zeta=0.0)
 e0 = ENode(name="e0", dim=y_dim)
 z0 = SNode(name="z0", dim=y_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
 # create cable wiring scheme relating nodes to one another
 wght_sd = 0.02
-dcable_cfg = {"type": "dense", "has_bias": True,
+dcable_cfg = {"type": "dense", "bias_init": ("zeros"),
               "init" : ("gaussian",wght_sd), "seed" : 1234}
 pos_scable_cfg = {"type": "simple", "coeff": 1.0} # a positive cable
 neg_scable_cfg = {"type": "simple", "coeff": -1.0} # a negative cable
 
-z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-mu1.wire_to(e1, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-z1.wire_to(e1, src_var="z", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-e1.wire_to(z2, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z2_mu1,"symm_tied"))
-e1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+z2_mu1 = z2.wire_to(mu1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+mu1.wire_to(e1, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+z1.wire_to(e1, src_comp="z", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+e1.wire_to(z2, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z2_mu1,"A^T"))
+e1.wire_to(z1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
-z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
-e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+z1_mu0 = z1.wire_to(mu0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"A^T"))
+e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
 z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
@@ -91,6 +92,7 @@ model = NGCGraph(K=5)
 model.set_cycle(nodes=[z2,z1,z0])
 model.set_cycle(nodes=[mu1,mu0])
 model.set_cycle(nodes=[e1,e0])
+model.compile(batch_size=batch_size)
 ```
 
 noting that `x_dim` and `y_dim` would be determined by your input dataset's
@@ -134,10 +136,11 @@ z0_dim = ngc_model.getNode("z0").dim
 s2 = FNode(name="s2", dim=z2_dim, act_fx="identity")
 s1 = FNode(name="s1", dim=z1_dim, act_fx=act_fx)
 s0 = FNode(name="s0", dim=z0_dim, act_fx=out_fx)
-s2_s1 = s2.wire_to(s1, src_var="phi(z)", dest_var="dz", point_to_path=z2_mu1)
-s1_s0 = s1.wire_to(s0, src_var="phi(z)", dest_var="dz", point_to_path=z1_mu0)
+s2_s1 = s2.wire_to(s1, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z2_mu1,"A"))
+s1_s0 = s1.wire_to(s0, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z1_mu0,"A"))
 sampler = ProjectionGraph()
 sampler.set_cycle(nodes=[s2,s1,s0])
+sampler.compile()
 ```
 
 which explicitly instantiates the conditional generative embodied by the NGC
@@ -162,7 +165,7 @@ like so:
 ```python
 y = # test label/batch sampled from the test-set
 x = # test data point/batch sampled from the test-set
-readouts = self.ngc_sampler.project(
+readouts = sampler.project(
                 clamped_vars=[("s2","z",x)],
                 readout_vars=[("s0","phi(z)")]
             )
@@ -170,8 +173,8 @@ y_hat = readouts[0][2] # get probability distribution p(y|x)
 ```
 
 Given our ancestral projection graph, we can now revisit our original goal
-of improving our NGC system's learning process by tying together our ancestral
-projection graph back with the simulation system itself. To do so, all we need to
+of improving our NGC system's learning process by tying together it
+back with the simulation system itself. To do so, all we need to do
 is make use of two functions, i.e., `extract()` and `inject()`, provided by
 both the `ProjectionGraph` and `NGCGraph` objects. Tying together the two objects
 would then work as follows (below we emulate one step of online learning):
@@ -181,7 +184,7 @@ y = # test label/batch sampled from the test-set
 x = # test data point/batch sampled from the test-set
 
 # first, run the projection graph
-readouts = self.ngc_sampler.project(
+readouts = sampler.project(
                 clamped_vars=[("s2","z",x)],
                 readout_vars=[("s0","phi(z)")]
             )
@@ -192,18 +195,14 @@ s1 = sampler.extract("s1","z")
 s0 = sampler.extract("s0","z")
 
 # third, initialize the simulated NGC system with the above information
-model.inject("z2", ("z", s2)) # <-- this is redundant & can be omitted - we will be clamping x to it as below
-model.inject("mu1", ("z", s1)) # initialize expectation of z2
-model.inject("z1", ("z", s1))  # initialize z1
-model.inject("mu0", ("z", s0))  # initialize expectation of z1
+model.inject([("mu1", "z", s1), ("z1", "z", s1), ("mu0", "z", s0)])
 
 # finally, run/simulate the NGC system as normal
-readouts = model.settle(
-                clamped_vars=[("z2","z",x),("z0","z",y)],
-                readout_vars=[("mu0","phi(z)"),("mu1","phi(z)")]
-            )
+readouts, delta = model.settle(
+                    clamped_vars=[("z2","z",x),("z0","z",y)],
+                    readout_vars=[("mu0","phi(z)"),("mu1","phi(z)")]
+                  )
 y_hat = readouts[0][2]
-delta = model.calc_updates()
 for p in range(len(delta)):
     delta[p] = delta[p] * (1.0/(x.shape[0] * 1.0))
 opt.apply_gradients(zip(delta, model.theta))
@@ -335,15 +334,11 @@ y = # ... label/batch drawn from data loader ...
 
 # run ancestral projection to get initial conditions
 y_hat_ = agent.predict(x) # run p(y|x)
-mu2 = agent.ngc_sampler.extract("s2","z") # extract value of s2
 mu1 = agent.ngc_sampler.extract("s1","z") # extract value of s1
 mu0 = agent.ngc_sampler.extract("s0","z") # extract value of s0
 
-agent.ngc_model.inject("mu2", ("z", mu2)) # initialize expectation of z3
-agent.ngc_model.inject("z2", ("z", mu2)) # initialize state of z2
-agent.ngc_model.inject("mu1", ("z", mu1)) # initialize expectation of z2
-agent.ngc_model.inject("z1", ("z", mu1)) # initialize state of z1
-agent.ngc_model.inject("mu0", ("z", mu0)) # initialize expectation of z1
+# set initial conditions for NGC system
+agent.ngc_model.inject([("mu1", "z", mu1), ("z1", "z", mu1), ("mu0", "z", mu0)])
 
 # conduct iterative inference/setting as normal
 y_hat = agent.settle(x, y)
@@ -414,7 +409,7 @@ Doing so should result in a plot that looks similar to the one below:
 
 <img src="../images/demo3/mnist_learning_curves.jpg" width="350" />
 
-As observed in the plot above, this NGC overfits the training sample perfectly (reaching a 
+As observed in the plot above, this NGC overfits the training sample perfectly (reaching a
 training error `0.0`\%) as indicated by the fact that the blue validation
 `V-Acc` curve is a bit higher than the red `Acc` learning curve (which itself
 converges to and remains at perfect training accuracy). Note that these

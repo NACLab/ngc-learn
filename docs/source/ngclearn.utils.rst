@@ -12,14 +12,6 @@ ngclearn.utils.config module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.utils.data\_loaders module
------------------------------------
-
-.. automodule:: ngclearn.utils.data_loaders
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.utils.data\_utils module
 ---------------------------------
 

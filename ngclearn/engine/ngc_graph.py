@@ -16,24 +16,23 @@ class NGCGraph:
 
     @author: Alexander G. Ororbia
     """
-    def __init__(self, K=10, name="ncn"):
+    def __init__(self, K=5, name="ncn", batch_size=1):
         self.name = name
         self.theta = [] # set of learnable synaptic parameters
         self.omega = [] # set of non-learnable or slowly-evolved synaptic parameters
-        self.exec_cycles = [] # node execution cycles
+        self.exec_cycles = [] # this simulation's execution cycles
         self.nodes = {}
         self.cables = {}
+        self.values = {}
+        self.values_tmp = []
         self.learnable_cables = []
         self.learnable_nodes = []
-
-        self.evolved_cable_pairs = [] # (target_cable_name_to_alter, src_cable_name)
-
-        # inference meta-parameters
         self.K = K
-        # learning meta-parameters
-        self.proj_update_mag = -1.0
-        self.proj_weight_mag = -1.0 #2.0
-        self.param_axis = 0
+        self.batch_size = batch_size
+        self.use_graph_optim = True
+        # these data members below are for the .evolve() routine
+        self.opt = None
+        self.evolve_flag = False
 
     def set_cycle(self, nodes):
         """
@@ -42,12 +41,12 @@ class NGCGraph:
         Args:
             nodes: an ordered list of Node(s) to create an execution cycle for
         """
-        self.exec_cycles.append(nodes)
-        for j in range(len(nodes)): # collect any learnable cables
-            n_j = nodes[j]
-            self.nodes[n_j.name] = n_j
-            for i in range(len(n_j.input_cables)): # for each cable i
-                cable_i = n_j.input_cables[i]
+        cycle = []
+        for node in nodes:
+            cycle.append(node)
+            self.nodes[node.name] = node
+            for i in range(len(node.connected_cables)): # for each cable i
+                cable_i = node.connected_cables[i]
                 self.cables[cable_i.name] = cable_i
                 if cable_i.cable_type == "dense":
                     if cable_i.shared_param_path is None and cable_i.is_learnable is True:
@@ -57,13 +56,6 @@ class NGCGraph:
                             self.theta.append(cable_i.W)
                         if cable_i.b is not None:
                             self.theta.append(cable_i.b)
-                    # else:
-                    #     # if cable is non-learnable or slowly evolved, store in omega
-                    #     if cable_i.W is not None:
-                    #         self.omega.append(cable_i.W)
-                    #     if cable_i.b is not None:
-                    #         self.omega.append(cable_i.b)
-
         for j in range(len(nodes)): # collect any learnable nodes
             n_j = nodes[j]
             if n_j.is_learnable is True:
@@ -71,34 +63,45 @@ class NGCGraph:
                 if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
                     n_j.compute_precision()
                     self.theta.append(n_j.Sigma)
+        self.exec_cycles.append(cycle)
 
-    def set_evolve_pair(self, pair):
+    def compile(self, use_graph_optim=True, batch_size=-1):
         """
-        NOTE: Untested function - not yet integrated fully
-        """
-        targName, srcName = pair
-        self.evolved_cable_pairs.append( (targName, srcName) )
-        targ_cable = self.cables.get(targName)
-        if targ_cable.W is not None:
-            self.omega.append(targ_cable.W)
-        if targ_cable.b is not None:
-            self.omega.append(targ_cable.b)
+        Executes a global "compile" of this simulation object to ensure internal
+        system coherence. (Only call this function after the constructor has been
+        set).
 
-    def check_correctness(self):
+        Args:
+            use_graph_optim: if True, this simulation will use static graph
+                acceleration (Default = True)
+
+            batch_size: if > 0, will set the integer global batch_size of this
+                simulation object (otherwise, self.batch_size will be used)
+
+        Returns:
+            a dictionary containing post-compilation information about this simulation object
         """
-        Executes a basic correctness check for this graph (examines if the structure is valid)
-        """
-        flag = True
+        if batch_size > 0:
+            self.batch_size = batch_size
+        sim_info = [] # list of hash tables containing properties of each element
+                      # in this simulation object
+        self.use_graph_optim = use_graph_optim
         for i in range(len(self.exec_cycles)):
             cycle_i = self.exec_cycles[i]
             for j in range(len(cycle_i)):
                 node_j = cycle_i[j]
-                flag = node_j.check_correctness()
-                if flag is False:
-                    break
-        if flag is False:
-            print("ERROR: NGC-graph is incorrect!")
-        return flag
+                if self.use_graph_optim == True:
+                    # all nodes using graph optimization flag MUST be static
+                    node_j.set_status(status=("static",self.batch_size))
+                else:
+                    node_j.set_status(status=("dynamic",self.batch_size))
+                info_j = node_j.compile()
+                sim_info.append(info_j) # aggregate information hash tables
+                #sim_info = {**sim_info, **info_j}
+        for cable_name in self.cables:
+            info_j = self.cables[cable_name].compile()
+            sim_info.append(info_j) # aggregate information hash tables
+        return sim_info
 
     def clone_state(self):
         """
@@ -129,10 +132,10 @@ class NGCGraph:
             for j in range(len(cycle_i)):
                 node_j = cycle_i[j]
                 state_j = state_map.get(node_j.name)
-                for key in node_j.stat:
+                for key in node_j.compartments:
                     value_j = state_j.get(key)
                     if value_j is not None:
-                        node_j.stat[key] = value_j + 0
+                        node_j.compartments[key] = value_j + 0
 
     def extract(self, node_name, node_var_name):
         """
@@ -144,10 +147,11 @@ class NGCGraph:
             node_var_name: compartment name w/in Node to extract signal from
 
         Returns:
-            an extracted signal (vector/matrix)
+            an extracted signal (vector/matrix) OR None if node does not exist
         """
         if self.nodes.get(node_name) is not None:
-            return self.nodes[node_name].extract(node_var_name)
+            return self.values.get(node_name).get(node_var_name)
+            #return self.nodes[node_name].extract(node_var_name)
         return None
 
     def getNode(self, node_name):
@@ -162,7 +166,7 @@ class NGCGraph:
         """
         return self.nodes.get(node_name) #self.nodes[node_name]
 
-    def clamp(self, node_name, data, is_persistent=True):
+    def clamp(self, clamp_targets): # inject is a wrapper function over clamp
         """
         Clamps an externally provided named value (a vector/matrix) to the desired
         compartment within a particular Node of this NGC graph.
@@ -171,21 +175,20 @@ class NGCGraph:
         unless is_persistent = True).
 
         Args:
-            node_name (Tuple[0]): the (str) name of the node to clamp a data signal to.
+            clamp_targets: 3-Tuple containing a named external signal to clamp
 
-            data: 2-Tuple containing a named external signal to clamp
+                :node_name (Tuple[0]): the (str) name of the node to clamp a data signal to.
 
-                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
+                :compartment_name (Tuple[1]): the (str) name of the node's compartment to clamp this data signal to.
 
-                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
+                :signal (Tuple[2]): the data signal block to clamp to the desired compartment name
 
-            is_persistent: if True, clamped data value will persist throughout simulation (Default = True)
         """
-        node = self.getNode(node_name)
-        var_name, var_value = data
-        node.clamp((var_name, var_value), is_persistent=is_persistent)
+        for clamp_target in clamp_targets:
+            node_name, node_comp, node_value = clamp_target
+            self.nodes[node_name].clamp((node_comp, node_value))
 
-    def inject(self, node_name, data):
+    def inject(self, injection_targets):
         """
         Injects an externally provided named value (a vector/matrix) to the desired
         compartment within a particular Node of this NGC graph.
@@ -193,23 +196,32 @@ class NGCGraph:
         injected node's dynamics over simulation steps).
 
         Args:
-            node_name (Tuple[0]): the (str) name of the node to clamp a data signal to.
+            injection_targets: 3-Tuple containing a named external signal to clamp
 
-            data: 2-Tuple containing a named external signal to clamp
+                :node_name (Tuple[0]): the (str) name of the node to clamp a data signal to.
 
-                :compartment_name (Tuple[0]): the (str) name of the compartment to clamp this data signal to.
+                :compartment_name (Tuple[1]): the (str) name of the compartment to clamp this data signal to.
 
-                :signal (Tuple[1]): the data signal block to clamp to the desired compartment name
+                :signal (Tuple[2]): the data signal block to clamp to the desired compartment name
 
             is_persistent: if True, clamped data value will persist throughout simulation (Default = True)
         """
-        node = self.getNode(node_name)
-        var_name, var_value = data
-        node.inject((var_name, var_value))
+        for clamp_target in injection_targets:
+            node_name, node_comp, node_value = clamp_target
+            node = self.getNode(node_name)
+            node.inject((node_comp, node_value))
 
-    #@tf.function
-    def settle(self, clamped_vars=[], readout_vars=[], init_vars=[], cold_start=True, K=-1,
-               debug=False, masked_vars=[]):
+    def set_cold_state(self, batch_size=-1):
+        for i in range(len(self.exec_cycles)):
+            cycle_i = self.exec_cycles[i]
+            for j in range(len(cycle_i)):
+                node_j = cycle_i[j]
+                node_j.set_cold_state(batch_size=batch_size)
+                #node_j.step(skip_core_calc=True)
+
+    # TODO: add in early-stopping to settle routine...
+    def settle(self, clamped_vars=None, readout_vars=None, init_vars=None, cold_start=True, K=-1,
+               debug=False, masked_vars=None, calc_delta=True):
         """
         Execute this NGC graph's iterative inference using the execution pathway(s)
         defined at construction/initialization.
@@ -240,171 +252,159 @@ class NGCGraph:
                 Note that this list takes the form:
                 [(node1_name, node1_compartment, mask, value), node2_name, node2_compartment, mask, value),...]
 
+            calc_delta: (Default = True)
+
         Returns:
-            readouts - a 3-tuple list of the form [(node1_name, node1_compartment, value), node2_name, node2_compartment, value),...]
+            readouts, delta;
+                where "readouts" is a 3-tuple list of the form [(node1_name, node1_compartment, value),
+                node2_name, node2_compartment, value),...], and
+                "delta" is a list of synaptic adjustment matrices (in the same order as .theta)
         """
-        #########################################################################
-        # Model graph/system setup
-        #########################################################################
-        batch_size = 1
+        if clamped_vars is None:
+            clamped_vars = []
+        if readout_vars is None:
+            readout_vars = []
+        if init_vars is None:
+            init_vars = []
+        if masked_vars is None:
+            masked_vars = []
+
+        K_ = K
+        if K_ < 0:
+            K_ = self.K
+
+        if len(clamped_vars) > 0:
+            batch_size = clamped_vars[0][2].shape[0]
+            self.set_cold_state(batch_size)
+        else:
+            self.set_cold_state()
+
         # Case 1: Clamp variables that will persist during settling/inference
         for clamped_var in clamped_vars:
             var_name, comp_name, var_value = clamped_var
             if var_value is not None:
-                batch_size = var_value.shape[0]
+                _batch_size = var_value.shape[0]
+                # if _batch_size != self.batch_size:
+                #     print("ERROR: clamped {} batch_size {} != global.batch_size {} ".format(var_name,
+                #           _batch_size, self.batch_size))
                 node = self.nodes.get(var_name)
                 if node is not None:
-                    node.clamp((comp_name, var_value), is_persistent=True) #"z"
-                    node.step()
+                    node.clamp((comp_name, var_value))
+                    #node.step()
             # else, CANNOT clamp a variable value to None
 
         # Case 2: Clamp variables that will NOT persist during settling/inference
         for clamped_var in init_vars:
             var_name, comp_name, var_value = clamped_var
             if var_value is not None:
-                batch_size = var_value.shape[0]
+                _batch_size = var_value.shape[0]
+                # if _batch_size != self.batch_size:
+                #     print("ERROR: injected {} batch_size {} != global.batch_size {} ".format(var_name,
+                #           _batch_size, self.batch_size))
                 node = self.nodes.get(var_name)
                 if node is not None:
-                    node.clamp( (comp_name, var_value), is_persistent=False) #"z"
-                    node.step(skip_core_calc=True)
+                    node.inject((comp_name, var_value))
+                    #node.step(skip_core_calc=True)
             # else, CANNOT init a variable value with None
 
         if cold_start is True:
-            # Initialize the state values of every non-clamped node to zero matrices
+            # Initialize the values of every non-clamped node
             for i in range(len(self.exec_cycles)):
                 cycle_i = self.exec_cycles[i]
                 for j in range(len(cycle_i)):
                     node_j = cycle_i[j]
-                    if node_j.node_type == "spike_state": # spiking neurons take extra care to zero-init
-                        pad = tf.zeros([batch_size, node_j.dim])
-                        node_j.clamp( ("Jz", pad), is_persistent=False)
-                        node_j.clamp( ("Vz", pad+0), is_persistent=False)
-                        node_j.clamp( ("rfr_z", pad+0), is_persistent=False)
-                        node_j.clamp( ("Sz", pad+0), is_persistent=False)
-                        node_j.clamp( ("phi(z)", pad+0), is_persistent=False)
-                        node_j.step(skip_core_calc=True)
-                    else:
-                        if node_j.extract("z") is None:
-                            node_j.clamp( ("z", tf.zeros([batch_size, node_j.dim])), is_persistent=False)
-                            node_j.step(skip_core_calc=True)
+                    node_j.step(skip_core_calc=True)
 
-            # apply any desired masking variables
-            for masked_var in masked_vars:
-                var_name, var_comp, mask, clamped_val = masked_var
-                node = self.nodes.get(var_name)
-                if node is not None:
-                    curr_val = node.extract(var_comp) #("z")
-                    curr_val = clamped_val * mask + curr_val * (1.0 - mask)
-                    node.clamp( (var_comp, curr_val), is_persistent=False)
-                    node.step(skip_core_calc=True)
-                else:
-                    print("Node({}) does not exist for masking target".format(var_name))
+        # TODO: re-integrate back this block of code
+        # apply any desired masking variables
+        # for masked_var in masked_vars:
+        #     var_name, var_comp, mask, clamped_val = masked_var
+        #     node = self.nodes.get(var_name)
+        #     if node is not None:
+        #         curr_val = node.extract(var_comp) #("z")
+        #         curr_val = clamped_val * mask + curr_val * (1.0 - mask)
+        #         node.clamp( (var_comp, curr_val), is_persistent=False)
+        #         node.step(skip_core_calc=True)
+        #     else:
+        #         print("Node({}) does not exist for masking target".format(var_name))
 
-        def debug_print():
-            print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            print("State Neurons:")
-            print("z0.zf: ",self.extract("z0","phi(z)").numpy())
-            print("z1.zf: ",self.extract("z1","phi(z)").numpy())
-            print("z2.zf: ",self.extract("z2","phi(z)").numpy())
-            print("z3.zf: ",self.extract("z3","phi(z)").numpy())
-            print("Expectations:")
-            print("mu0.zf: ",self.extract("mu0","phi(z)").numpy())
-            print("mu1.zf: ",self.extract("mu1","phi(z)").numpy())
-            print("mu2.zf: ",self.extract("mu2","phi(z)").numpy())
-            print("Error Neurons:")
-            print("e0.zf: ",self.extract("e0","phi(z)").numpy())
-            print("e1.zf: ",self.extract("e1","phi(z)").numpy())
-            print("e2.zf: ",self.extract("e2","phi(z)").numpy())
-
-            print("Stats:")
-            print("e1_tm1.zf: ",self.extract("e1_tm1","phi(z)").numpy())
-            print("e2_tm1.zf: ",self.extract("e2_tm1","phi(z)").numpy())
-            print("de1.zf: ",self.extract("de1","phi(z)").numpy())
-            print("de2.zf: ",self.extract("de2","phi(z)").numpy())
-
-            #print("z0.z : ",self.extract("z0","z").numpy())
-            # print("z0.zf: ",self.extract("z0","phi(z)").numpy())
-            # #print("e0.z : ",self.extract("e0","z").numpy())
-            # print("e0.zf: ",self.extract("e0","phi(z)").numpy())
-            # #print("mu0.z : ",self.extract("mu0","z").numpy())
-            # #print("mu0.zf: ",self.extract("mu0","phi(z)").numpy())
-            # #print("e1.z : ",self.extract("e1","z").numpy())
-            # print("z1.zf: ",self.extract("z1","phi(z)").numpy())
-            # print("e1.zf: ",self.extract("e1","phi(z)").numpy())
-            # #print("z1.z : ",self.extract("z1","z").numpy())
-            #
-            # #print("mu1.z : ",self.extract("mu1","z").numpy())
-            # #print("mu1.zf: ",self.extract("mu1","phi(z)").numpy())
-            # #print("z2.z : ",self.extract("z2","z").numpy())
-            # print("z2.zf: ",self.extract("z2","phi(z)").numpy())
-
-            print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-
-        K_ = K
-        if K_ < 0:
-            K_ = self.K
-        # if debug is True:
-        #     print("STEP -1")
-        #     debug_print()
-
-        #########################################################################
-        # Conduct inference by running through execution cycles
-        #########################################################################
+        delta = None
+        node_values = None
         for k in range(K_):
-            ####################################################################
-            # Every step inside this for-loop is one iteration of NGC inference
-            for i in range(len(self.exec_cycles)): # for each programmed exec cycle
-                cycle_i = self.exec_cycles[i]
-                for j in range(len(cycle_i)): # for each node (in order) in exec cycle i
-                    node_j = cycle_i[j]
-                    node_j.step()
-                    # print("*****************")
-                    # print(node_j.name)
-                    # print(node_j.extract("z"))
-                    # print(node_j.extract("phi(z)"))
+            #tf.print("------------------ STEP ",k)
+            if calc_delta == True:
+                if k == self.K-1:
+                    node_values, delta = self.step(calc_delta=True, use_optim=self.use_graph_optim)
+                else: # delta is computed at very last iteration of the simulation
+                    node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
+            else: # OR, never compute delta inside the simulation
+                node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
+            # TODO: move back in masking code here (or inside static graph...)
 
-                # apply any masking variables at this stage in inference
-                for masked_var in masked_vars:
-                    var_name, var_comp, mask, clamped_val = masked_var
-                    node = self.nodes.get(var_name)
-                    if node is not None:
-                        curr_val = node.extract(var_comp) #("z")
-                        curr_val = clamped_val * mask + curr_val * (1.0 - mask)
-                        node.clamp( (var_comp, curr_val), is_persistent=False)
-                        node.step(skip_core_calc=True)
-                    else:
-                        print("Node({}) does not exist for masking target".format(var_name))
-            ####################################################################
-            if debug is True:
-                print("___STEP ",k)
-                debug_print()
-        #########################################################################
-
+        for ii in range(len(node_values)):
+            node_name, comp_name, comp_value = node_values[ii]
+            if self.use_graph_optim == True:
+                node_name = node_name.numpy().decode('ascii')
+                comp_name = comp_name.numpy().decode('ascii')
+            #print("NODE: ",node_name)
+            vdict = self.values.get(node_name)
+            if vdict is not None:
+                vdict[comp_name] = comp_value
+                self.values[node_name] = vdict
+            else:
+                vdict = {}
+                vdict[comp_name] = comp_value
+                self.values[node_name] = vdict
         #########################################################################
         # Post-process NGC graph by extracting predictions at indicated output nodes
         #########################################################################
         readouts = []
         for var_name, comp_name in readout_vars:
-            node = self.nodes.get(var_name)
-            var_value = node.extract(comp_name)
-            readouts.append( (var_name, comp_name, var_value) )
+            value = self.values.get(var_name).get(comp_name)
+            readouts.append( (var_name, comp_name, value) )
+        return readouts, delta
 
-        return readouts
+    def step(self, calc_delta=False, use_optim=True):
+        if use_optim == True:
+            values, delta = self._step_fast(calc_delta)
+        else:
+            values, delta = self._step(calc_delta)
+        return values, delta
+
+    @tf.function
+    def _step_fast(self, calc_delta=False): # optimized call to _step()
+        values, delta = self._step(calc_delta)
+        return values, delta
+
+    def _step(self, calc_delta=False):
+        delta = None
+        values = []
+        for cycle in self.exec_cycles:
+            for node in cycle:
+                node_values = node.step()
+                values = values + node_values
+        if calc_delta == True:
+            delta = self.calc_updates()
+        if self.opt is not None and self.evolve_flag == True:
+            self.opt.apply_gradients(zip(delta, self.theta))
+            self.apply_constraints()
+            self.clear()
+        return values, delta
 
     def calc_updates(self, debug_map=None):
         """
             Calculates the updates to synaptic weight matrices along each
-            non-identity wire within this NCN operation graph via a
-            generalized Hebbian learning rule (or via calculus if a wire
-            is an attention wire).
+            learnable wire within this graph via a
+            generalized Hebbian learning rule.
 
             Args:
-                debug_map: (Default = None), a Dict to place named signals inside (for debugging)
+                debug_map: (Default = None), a Dict to place named signals
+                    inside (for debugging)
         """
         delta = []
         for j in range(len(self.learnable_cables)):
             cable_j = self.learnable_cables[j]
-            delta_j = cable_j.calc_update(update_radius=self.proj_update_mag)
+            delta_j = cable_j.calc_update()
             delta = delta + delta_j
             if debug_map is not None:
                 if len(delta_j) == 2: #dW, db
@@ -422,106 +422,85 @@ class NGCGraph:
         """
         | Apply any constraints to the signals embedded in this graph. This function
             will execute any of the following pre-configured constraints:
-        | 1) compute new precision matrices
+        | 1) compute new precision matrices (if applicable)
         | 2) project weights to adhere to vector norm constraints
         """
         # compute error node precision synapses
+        # for j in range(len(self.learnable_nodes)):
+        #     node_j = self.learnable_nodes[j]
+        #     node_j.compute_precision()
+        # apply constraints to any applicable (learnable) cables
+        for j in range(len(self.learnable_cables)):
+            cable_j = self.learnable_cables[j]
+            cable_j.apply_constraints()
+        # apply constraints to any applicable (learnable) nodes
         for j in range(len(self.learnable_nodes)):
             node_j = self.learnable_nodes[j]
-            node_j.compute_precision()
-            # print(node_j.name)
-            # print("Sigma:\n",node_j.Sigma)
-            # print("Prec :\n",node_j.Prec)
-        # apply constraints
-        if self.proj_weight_mag > 0.0:
-            for j in range(len(self.learnable_cables)):
-                cable_j = self.learnable_cables[j]
-                #print("W.before:\n",tf.norm(cable_j.W,axis=self.param_axis))
-                #cable_j.W.assign(tf.clip_by_norm(cable_j.W, self.proj_weight_mag, axes=[self.param_axis]))
-                _W = transform.normalize_by_norm(cable_j.W, self.proj_weight_mag, param_axis=self.param_axis )
-                cable_j.W.assign(_W)
-            for j in range(len(self.learnable_nodes)):
-                node_j = self.learnable_nodes[j]
-                #node_j.Sigma.assign(tf.clip_by_norm(node_j.Sigma, self.proj_weight_mag, axes=[self.param_axis]))
-                _S = transform.normalize_by_norm(node_j.Sigma, self.proj_weight_mag, param_axis=self.param_axis )
-                node_j.Sigma.assign(_S)
+            node_j.apply_constraints()
 
-    def calc_evolved_cable_updates(self, gamma_et=1.0, decay_et=0.0, rule_type="temp_diff", lambda_e=0.01):
+    def set_optimization(self, opt_algo):
         """
-        Applies a slow evolution of specific target cables/synapses via a
-        temporal difference rule that uses information from a set of source cables/synapses
-
-        NOTE: this function is not tested/fully integrated yet
+        Sets the internal optimization algorithm used by this simulation object.
 
         Args:
-            gamma_et:
-            decay_et:
-            rule_type: lra, temp_diff, hybrid (i.e., lra + weighted temp_diff)
-
+            opt_algo: optimization algorithm to be used, e.g., SGD, Adam, etc.
+                (Note: must be a valid TF2 optimizer.)
         """
-        delta = []
-        for pair in self.evolved_cable_pairs:
-            targ_name, src_name = pair
-            targ_cable = self.cables.get(targ_name) # the cable to evolve
-            src_cable = self.cables.get(src_name)
+        self.opt = opt_algo
 
-            # TODO: try temporal difference of z_t and z_t-1 for each layer and
-            # compute change to weights (recurrent learning)
+    def evolve(self, clamped_vars=None, readout_vars=None, init_vars=None,
+               cold_start=True, K=-1, masked_vars=None):
+        """
+        Evolves this simulation object for one full K-step episode given
+        input information through clamped and initialized variables. Note that
+        this is a convenience function written to embody an NGC system's
+        full settling process, its local synaptic update calculations, as well
+        as the optimization of and application of constraints to the synaptic
+        parameters contained within .theta.
 
-            # calc update to cable.W thru temporal difference rule: src.W_t - src.W_tm1
-            # src_W_t = src_cable.W # src.W_t
-            # src_W_tm1 = targ_cable.Wmem # src.W_tm1
-            # if src_W_tm1 is None:
-            #     src_W_tm1 = 0.0
-            # dW = src_W_t - src_W_tm1 # temporal difference adjustment
-            # dW = -tf.transpose(dW)
+        Args:
+            clamped_vars: list of 3-tuple strings containing named Nodes, their compartments, and values to (persistently)
+                clamp on. Note that this list takes the form:
+                [(node1_name, node1_compartment, value), node2_name, node2_compartment, value),...]
 
-            if rule_type == "lra": # lra
-                # LRA update rule
-                e_n = src_cable.postact_node.extract(src_cable.postact_comp)
-                zf = src_cable.preact_node.extract(src_cable.preact_comp)
+            readout_vars: list of 2-tuple strings containing Nodes and their compartments to read from (in this function's output).
+                Note that this list takes the form:
+                [(node1_name, node1_compartment), node2_name, node2_compartment),...]
 
-                dW = -tf.matmul(zf, e_n, transpose_a=True)
-                dW = tf.transpose(dW)
-            elif rule_type == "hybrid":
-                e_n = src_cable.postact_node.extract(src_cable.postact_comp)
-                zf = src_cable.preact_node.extract(src_cable.preact_comp)
-                dW = -tf.matmul(zf, e_n, transpose_a=True)
-                dW = tf.transpose(dW)
+            init_vars: list of 3-tuple strings containing named Nodes, their compartments, and values to initialize each
+                Node from. Note that this list takes the form:
+                [(node1_name, node1_compartment, value), node2_name, node2_compartment, value),...]
 
-                src_W_t = src_cable.W # src.W_t
-                src_W_tm1 = targ_cable.Wmem # src.W_tm1
-                if src_W_tm1 is None:
-                    src_W_tm1 = 0.0
-                dW2 = src_W_t - src_W_tm1 # temporal difference adjustment
-                dW2 = tf.transpose(-dW2)
+            cold_start: initialize all non-clamped/initialized Nodes (i.e., their compartments contain None)
+                to zero-vector starting points
 
-                targ_cable.Wmem = src_cable.W + 0
+            K: number simulation steps to run (Default = -1), if <= 0, then self.K will
+                be used instead
 
-                dW = dW + dW2 * lambda_e
-            else: # temp_diff
-                # TD update rule
-                # calc update thru temporal difference (TD) rule: src.W_t - src.W_tm1
-                src_W_t = src_cable.W # src.W_t
-                src_W_tm1 = targ_cable.Wmem # src.W_tm1
-                if src_W_tm1 is None:
-                    src_W_tm1 = 0.0
-                dW = src_W_t - src_W_tm1 # temporal difference adjustment
-                dW = tf.transpose(-dW)
-                targ_cable.Wmem = src_cable.W + 0 # set memory of src.W_tm1 to be src.W_t
+            masked_vars: list of 4-tuple that instruct which nodes/compartments/masks/clamped values to apply.
+                This list is used to trigger auto-associative recalls from this NGC graph.
+                Note that this list takes the form:
+                [(node1_name, node1_compartment, mask, value), node2_name, node2_compartment, mask, value),...]
 
-            dW = dW * gamma_et
-            if decay_et > 0.0:
-                dW = dW - targ_cable.W * decay_et
-            delta.append( dW )
-
-        return delta
+        Returns:
+            readouts, delta;
+                where "readouts" is a 3-tuple list of the form [(node1_name, node1_compartment, value),
+                node2_name, node2_compartment, value),...]
+        """
+        self.evolve_flag = True
+        readouts, _ = self.settle(
+                        clamped_vars=clamped_vars, readout_vars=readout_vars,
+                        init_vars=init_vars, cold_start=cold_start, K=K,
+                        masked_vars=masked_vars, calc_delta=True
+                      )
+        return readouts
 
     def clear(self):
         """
         Clears/deletes any persistent signals currently embedded w/in this graph's Nodes
         """
-        for c in range(len(self.exec_cycles)):
-            cycle_c = self.exec_cycles[c]
-            for i in range(len(cycle_c)):
-                cycle_c[i].clear()
+        self.values = {}
+        self.values_tmp = []
+        for node_name in self.nodes:
+            node = self.nodes.get(node_name)
+            node.clear()

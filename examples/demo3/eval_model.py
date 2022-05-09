@@ -56,6 +56,7 @@ save_marker = 1
 
 args = Config(cfg_fname)
 
+out_dir = args.getArg("out_dir")
 model_fname = args.getArg("model_fname")
 dev_batch_size = int(args.getArg("dev_batch_size")) #128 #32
 
@@ -68,11 +69,10 @@ X = ( tf.cast(np.load(xfname),dtype=tf.float32) ).numpy()
 Y = ( tf.cast(np.load(yfname),dtype=tf.float32) ).numpy()
 dev_set = DataLoader(design_matrices=[("z3",X),("z0",Y)], batch_size=dev_batch_size, disable_shuffle=True)
 
-def eval_model(agent, dataset, calc_ToD, verbose=False):
+def eval_model(agent, dataset, verbose=False):
     """
         Evaluates performance of agent on this fixed-point data sample
     """
-    ToD = 0.0 # total disrepancy over entire data pool
     Ly = 0.0 # metric/loss over entire data pool
     Acc = 0.0
     N = 0.0 # number samples seen so far
@@ -94,29 +94,27 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
 
         agent.clear()
         if verbose == True:
-            print("\r Acc {0}  Ly {1} over {2} samples...".format((Acc/(N * 1.0)), (Ly/(N * 1.0)), N),end="")
+            print("\r Acc {}  Ly {} over {} samples...".format((Acc/(N * 1.0)), (Ly/(N * 1.0)), N),end="")
     if verbose == True:
         print()
     Ly = Ly / N
     Acc = Acc / N
-    return ToD, Ly, Acc
+    return Ly, Acc
 
 ################################################################################
 # Start simulation
 ################################################################################
 with tf.device(gpu_tag):
-    def calc_ToD(agent):
-        """Measures the total discrepancy (ToD) of a given NGC model"""
-        ToD = 0.0
-        L2 = agent.ngc_model.extract(node_name="e2", node_var_name="L")
-        L1 = agent.ngc_model.extract(node_name="e1", node_var_name="L")
-        L0 = agent.ngc_model.extract(node_name="e0", node_var_name="L")
-        ToD = -(L0 + L1 + L2)
-        return ToD
 
     agent = io_tools.deserialize(model_fname)
     print(" > Loading model: ",model_fname)
 
     ############################################################################
-    vToD, vLy, vAcc = eval_model(agent, dev_set, calc_ToD, verbose=True)
+    vLy, vAcc = eval_model(agent, dev_set, verbose=True)
     print(" Ly = {}  Acc = {}".format(vLy, vAcc))
+
+    results_fname = "{}generalization_acc.results".format(out_dir)
+    log_t = open(results_fname,"a")
+    log_t.write("Generalization on {}:\n".format(xfname))
+    log_t.write("  Acc = {} \n  Ly = {} \n".format(vAcc, vLy))
+    log_t.close()

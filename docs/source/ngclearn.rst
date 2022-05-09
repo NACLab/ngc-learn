@@ -11,6 +11,7 @@ Subpackages
    ngclearn.engine
    ngclearn.museum
    ngclearn.utils
+   ngclearn.generator
 
 Module contents
 ---------------

@@ -87,10 +87,21 @@ class SNode(Node):
             :Note: NOT fully tested/integrated in ngc-learn v0.0.1
     """
     def __init__(self, name, dim, beta=1.0, leak=0.0, zeta=1.0, act_fx="identity",
-                 integrate_kernel=None, prior_kernel=None, threshold_kernel=None,
-                 trace_kernel=None):
+                 batch_size=1, integrate_kernel=None, prior_kernel=None,
+                 threshold_kernel=None, trace_kernel=None):
         node_type = "state"
         super().__init__(node_type, name, dim)
+        self.dim = dim
+        self.batch_size = batch_size
+        self.is_clamped = False
+
+        self.beta = beta
+        self.leak = leak
+        self.zeta = zeta
+
+        self.integrate_kernel = integrate_kernel
+        self.prior_kernel = prior_kernel
+        self.threshold_kernel = threshold_kernel
         self.use_dfx = False
         self.integrate_type = "euler" # Default = euler
         if integrate_kernel is not None:
@@ -107,6 +118,7 @@ class SNode(Node):
             self.threshold_type = threshold_kernel.get("threshold_type")
             self.thr_lmbda = threshold_kernel.get("thr_lambda")
 
+        self.act_fx = act_fx
         fx, dfx = transform_utils.decide_fun(act_fx)
         self.fx = fx
         self.dfx = dfx
@@ -114,145 +126,145 @@ class SNode(Node):
         if "bkwta" in act_fx:
             self.n_winners = int(act_fx[act_fx.index("(")+1:act_fx.rindex(")")])
 
-        # node meta-parameters
-        self.beta = beta
-        self.leak = leak
-        self.zeta = zeta
+        self.compartment_names = ["dz_bu", "dz_td", "z", "phi(z)"]
+        self.compartments = {}
+        for name in self.compartment_names:
+            if "phi(z)" in name:
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_phi_z".format(self.name))
+            else:
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_{}".format(self.name, name))
+        self.mask_names = ["mask"]
+        self.masks = {}
+        for name in self.mask_names:
+            self.masks[name] = tf.Variable(tf.ones([batch_size,dim]), name="{}_{}".format(self.name, name))
 
-        self.a = None
-        if trace_kernel is not None:
-            # (trace) filter parameters (for compatibility with spiking neuron models)
-            self.tau = integrate_kernel.get("tau") #5.0 # filter time constant -- where dt (or T) = 0.001 (to model ms)
-            self.dt = integrate_kernel.get("dt") #1.0 # integration time constant (ms)
-            # derived settings that are a function of other spiking neuron settings
-            self.a = np.exp(-self.dt/self.tau)
+        self.connected_cables = []
 
-        self.build_tick()
+    def compile(self):
+        """
+        Executes the "compile()" routine for this cable.
 
-    def check_correctness(self):
-        """ Executes a basic wiring correctness check. """
-        is_correct = True
-        for j in range(len(self.input_nodes)):
-            n_j = self.input_nodes[j]
-            cable_j = self.input_cables[j]
-            dest_var_j = cable_j.out_var
-            #if dest_var_j != "dz":
-            if dest_var_j != "dz_td" and dest_var_j != "dz_bu" and dest_var_j != "dz":
-                is_correct = False
-                print("ERROR: Cable {0} mis-wires to {1}.{2} (can only be .dz)".format(cable_j.name, self.name, dest_var_j))
-                break
-        return is_correct
-
-    ############################################################################
-    # Signal Transmission Routines
-    ############################################################################
+        Returns:
+            a dictionary containing post-compilation check information about this cable
+        """
+        info = super().compile()
+        info["beta"] = self.beta
+        info["leak"] = self.leak
+        info["zeta"] = self.zeta
+        info["phi(x)"] = self.act_fx
+        info["integration.form"] = self.integrate_kernel
+        if self.prior_kernel is not None:
+            info["prior.form"] = self.prior_kernel
+        if self.threshold_kernel is not None:
+            info["threshold.form"] = self.threshold_kernel
+        return info
 
     def step(self, skip_core_calc=False):
-        z = self.stat.get("z")
-        phi_z = self.stat.get("phi(z)")
-        if self.is_clamped is False and skip_core_calc is False:
+        bmask = self.masks.get("mask")
+        ########################################################################
 
-            for j in range(len(self.input_nodes)):
-                n_j = self.input_nodes[j]
-                cable_j = self.input_cables[j]
-                dest_var_j = cable_j.out_var
-                # print("Parent ",n_j.name)
-                # print("     z = ",n_j.extract("z"))
-                # print("phi(z) = ",n_j.extract("phi(z)"))
-                tick_j = self.tick.get(dest_var_j)
-                var_j = self.stat.get(dest_var_j) # get current value of component
-                dz_j = cable_j.propagate(n_j)
-                if tick_j > 0: #if var_j is not None:
-                    var_j = var_j + dz_j
+        if skip_core_calc == False:
+            if self.is_clamped == False:
+                # clear any relevant compartments that are NOT stateful before accruing
+                # new deposits (this is crucial to ensure any desired stateless properties)
+                if self.do_inplace == True:
+                    self.compartments["dz_bu"].assign(self.compartments["dz_bu"] * 0)
+                    self.compartments["dz_td"].assign(self.compartments["dz_td"] * 0)
                 else:
-                    var_j = dz_j
-                self.stat[dest_var_j] = var_j
-                self.tick[dest_var_j] = self.tick[dest_var_j] + 1
-            dz_td = self.stat.get("dz_td") # top-down compartment
-            dz_bu = self.stat.get("dz_bu") # bottom-up compartment
-            if dz_td is None:
-                dz_td = 0.0
-            if dz_bu is None:
-                dz_bu = 0.0
-            dz = None
-            if self.use_dfx is True:
-                dz = dz_td + (dz_bu * self.dfx(z)) # (dz_td + dz_bu) * self.dfx(z)
-            else:
-                dz = dz_td + dz_bu
-            # if self.V is not None: # apply lateral filtering connections in V
-            #      dz = dz - tf.matmul(phi_z, self.V)
-            # if dz is None:
-            #     dz = 0.0
-            # else:
-            #     if self.use_dfx is True:
-            #         dz = dz * self.dfx(z)
-            z_prior = 0.0
-            if self.prior_type is not None:
-                if self.lmbda > 0.0:
-                    if self.prior_type == "laplace":
-                        z_prior = -tf.math.sign(z) * self.lmbda
-                    elif self.prior_type == "exp": # Exp: x ~ -exp(-x^2)
-                        z_prior = -(tf.math.exp(-tf.math.square(z)) * z * 2) * self.lmbda
-                    elif self.prior_type == "cauchy":  # Cauchy: x ~ (1.0 + tf.math.square(z))
-                        z_prior = -(z * (2 * self.lmbda))/(1.0 + tf.math.square(z))
-                    elif self.prior_type == "gaussian":
-                        z_prior = -z * (2 * self.lmbda)
-            if self.integrate_type == "euler":
-                '''
-                Euler integration step (under NGC inference dynamics)
+                    self.compartments["dz_bu"] = (self.compartments["dz_bu"] * 0)
+                    self.compartments["dz_td"] = (self.compartments["dz_td"] * 0)
 
-                Constants/meta-parameters:
-                beta - strength of update to node state z
-                leak - controls strength of leak variable/decay
-                zeta - if set to 0 turns off recurrent carry-over of node's current state value
-                prior(z) - distributional prior placed over z (such as kurtotic prior, e.g. Laplace/Cauchy)
+                # gather deposits from any connected nodes & insert them into the
+                # right compartments/regions -- deposits in this logic are linearly combined
+                for cable in self.connected_cables:
+                    deposit = cable.propagate()
+                    dest_comp = cable.dest_comp
+                    if self.do_inplace == True:
+                        self.compartments[dest_comp].assign(self.compartments[dest_comp] + deposit)
+                    else:
+                        self.compartments[dest_comp] = (deposit + self.compartments[dest_comp])
 
-                Dynamics Equation:
-                z <- z * zeta + ( dz * beta - z * leak + prior(z) )
-                '''
-                dz = dz - z * self.leak + z_prior
-                z = z * self.zeta + dz * self.beta
-                if self.threshold_type == "soft_threshold":
-                    z = transform_utils.threshold_soft(z, self.thr_lmbda)
-                elif self.threshold_type == "cauchy_threshold":
-                    z = transform_utils.threshold_cauchy(z, self.thr_lmbda)
-            else:
-                print("Error: Node {0} does not support {1} integration".format(self.name, self.integrate_type))
-                sys.exit(1)
-        # the post-activation function is computed always, even if pre-activation is clamped
+                # core logic for the (node-internal) dendritic calculation
+                dz_bu = self.compartments["dz_bu"]
+                dz_td = self.compartments["dz_td"]
+                z = self.compartments["z"]
+                dz = None
+                if self.use_dfx is True:
+                    dz = dz_td + (dz_bu * self.dfx(z)) # (dz_td + dz_bu) * self.dfx(z)
+                else:
+                    dz = dz_td + dz_bu
+                z_prior = 0.0
+                if self.prior_type is not None:
+                    if self.lmbda > 0.0:
+                        if self.prior_type == "laplace":
+                            z_prior = -tf.math.sign(z) * self.lmbda
+                        elif self.prior_type == "exp": # Exp: x ~ -exp(-x^2)
+                            z_prior = -(tf.math.exp(-tf.math.square(z)) * z * 2) * self.lmbda
+                        elif self.prior_type == "cauchy":  # Cauchy: x ~ (1.0 + tf.math.square(z))
+                            z_prior = -(z * (2 * self.lmbda))/(1.0 + tf.math.square(z))
+                        elif self.prior_type == "gaussian":
+                            z_prior = -z * (2 * self.lmbda)
+                if self.integrate_type == "euler":
+                    '''
+                    Euler integration step (under NGC inference dynamics)
+
+                    Constants/meta-parameters:
+                    beta - strength of update to node state z
+                    leak - controls strength of leak variable/decay
+                    zeta - if set to 0 turns off recurrent carry-over of node's current state value
+                    prior(z) - distributional prior placed over z (such as kurtotic prior, e.g. Laplace/Cauchy)
+
+                    Dynamics Equation:
+                    z <- z * zeta + ( dz * beta - z * leak + prior(z) )
+                    '''
+                    # print("+++++++++++++++++++++++++++++++++++++++++++++++")
+                    # print(self.name)
+                    # print("Z: ",z)
+                    # print("dZ: ",dz)
+                    dz = dz - z * self.leak + z_prior
+                    z = z * self.zeta + dz * self.beta
+                    # print("Z: ",z)
+                    # print("+++++++++++++++++++++++++++++++++++++++++++++++")
+                    if self.threshold_type == "soft_threshold":
+                        z = transform_utils.threshold_soft(z, self.thr_lmbda)
+                    elif self.threshold_type == "cauchy_threshold":
+                        z = transform_utils.threshold_cauchy(z, self.thr_lmbda)
+                else:
+                    tf.print("Error: Node {0} does not support {1} integration".format(self.name, self.integrate_type))
+                    sys.exit(1)
+                if self.do_inplace == True:
+                    self.compartments["z"].assign(z)
+                else:
+                    self.compartments["z"] = z
+
+            # else, no deposits are accrued (b/c this node is hard-clamped to a signal)
+            ########################################################################
+
+        # apply post-activation non-linearity
         phi_z = None
         if self.n_winners > 0:
-            #print("-------------")
-            #print(self.name)
-            #print("***************")
-            #print(self.n_winners)
-            #print(self.fx)
-            #print("***************")
-            phi_z = self.fx(z,K=self.n_winners)
+            phi_z = self.fx(self.compartments["z"],K=self.n_winners)
         else:
-            phi_z = self.fx(z)
-        #phi_z = self.fx(z)
-        self.stat["z"] = z
-        self.stat["phi(z)"] = phi_z
+            phi_z = self.fx(self.compartments["z"])
+        if self.do_inplace == True:
+            self.compartments["phi(z)"].assign(phi_z)
+        else:
+            self.compartments["phi(z)"] = (phi_z)
 
-        if self.a is not None:
-            ##########################################################################
-            # apply variable trace filters z_l(t) = (alpha * z_l(t))*(1−s`(t)) +s_l(t)
-            phi_z = tf.add((phi_z * self.a) * (-Sz + 1.0), Sz)
-            self.stat["phi(z)"] = phi_z
-            ##########################################################################
-
-        bmask = self.stat.get("mask")
         if bmask is not None: # applies mask to all component variables of this node
-            for key in self.stat:
-                self.stat[key] = self.stat.get(key) * bmask
-            # if self.stat.get("dz") is not None:
-            #     self.stat["dz"] = self.stat.get("dz") * bmask
-            # if self.stat.get("dz_bu") is not None:
-            #     self.stat["dz_bu"] = self.stat.get("dz_bu") * bmask
-            # if self.stat.get("z") is not None:
-            #     self.stat["z"] = self.stat.get("z") * bmask
-            # if self.stat.get("phi(z)") is not None:
-            #     self.stat["phi(z)"] = self.stat.get("phi(z)") * bmask
+            for key in self.compartments:
+                if self.compartments.get(key) is not None:
+                    if self.do_inplace == True:
+                        self.compartments[key].assign( self.compartments.get(key) * bmask )
+                    else:
+                        self.compartments[key] = ( self.compartments.get(key) * bmask )
 
-        self.build_tick()
+        ########################################################################
+        self.t += 1
+
+        # a node returns a list of its named component values
+        values = []
+        for comp_name in self.compartments:
+            comp_value = self.compartments.get(comp_name)
+            values.append((self.name, comp_name, comp_value))
+        return values

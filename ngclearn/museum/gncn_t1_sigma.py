@@ -12,6 +12,8 @@ from ngclearn.engine.ngc_graph import NGCGraph
 from ngclearn.engine.nodes.fnode import FNode
 from ngclearn.engine.proj_graph import ProjectionGraph
 
+from ngclearn.utils.io_utils import parse_simulation_info
+
 class GNCN_t1_Sigma:
     """
     Structure for constructing the model proposed in:
@@ -34,23 +36,25 @@ class GNCN_t1_Sigma:
 
     | DEFINITION NOTE:
     | args should contain values for the following:
-    | z_top_dim: # of latent variables in layer z3 (top-most layer)
-    | z_dim: # of latent variables in layers z1 and z2
-    | x_dim: # of latent variables in layer z0 or sensory x
-    | seed: number to control determinism of weight initialization
-    | wght_sd: standard deviation of Gaussian initialization of weights
-    | beta: latent state update factor
-    | leak: strength of the leak variable in the latent states
-    | lmbda: strength of the Laplacian prior applied over latent state activities
-    | K: # of steps to take when conducting iterative inference/settling
-    | act_fx: activation function for layers z1, z2, and z3
-    | out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)
+    | * batch_size - the fixed batch-size to be fed into this model
+    | * z_top_dim: # of latent variables in layer z3 (top-most layer)
+    | * z_dim: # of latent variables in layers z1 and z2
+    | * x_dim: # of latent variables in layer z0 or sensory x
+    | * seed: number to control determinism of weight initialization
+    | * wght_sd: standard deviation of Gaussian initialization of weights
+    | * beta: latent state update factor
+    | * leak: strength of the leak variable in the latent states
+    | * lmbda: strength of the Laplacian prior applied over latent state activities
+    | * K: # of steps to take when conducting iterative inference/settling
+    | * act_fx: activation function for layers z1, z2, and z3
+    | * out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)
 
     @author: Alexander Ororbia
     """
     def __init__(self, args):
         self.args = args
 
+        batch_size = int(self.args.getArg("batch_size"))
         z_top_dim = int(self.args.getArg("z_top_dim"))
         z_dim = int(self.args.getArg("z_dim"))
         x_dim = int(self.args.getArg("x_dim"))
@@ -68,18 +72,18 @@ class GNCN_t1_Sigma:
         lmbda = float(self.args.getArg("lmbda")) #0.0002
         prior_cfg = {"prior_type" : "laplace", "lambda" : lmbda}
         precis_cfg = ("uniform", 0.01)
-        #use_mod_factor = (self.args.getArg("use_mod_factor").lower() == 'true')
+        constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":0}
 
         z3 = SNode(name="z3", dim=z_top_dim, beta=beta, leak=leak, act_fx=act_fx,
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu2 = SNode(name="mu2", dim=z_dim, act_fx="identity", zeta=0.0)
         e2 = ENode(name="e2", dim=z_dim, precis_kernel=precis_cfg)
-        #e2.use_mod_factor = use_mod_factor
+        e2.set_constraint(constraint_cfg)
         z2 = SNode(name="z2", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu1 = SNode(name="mu1", dim=z_dim, act_fx="identity", zeta=0.0)
         e1 = ENode(name="e1", dim=z_dim, precis_kernel=precis_cfg)
-        #e1.use_mod_factor = use_mod_factor
+        e1.set_constraint(constraint_cfg)
         z1 = SNode(name="z1", dim=z_dim, beta=beta, leak=leak, act_fx=act_fx,
                    integrate_kernel=integrate_cfg, prior_kernel=prior_cfg)
         mu0 = SNode(name="mu0", dim=x_dim, act_fx=out_fx, zeta=0.0)
@@ -88,27 +92,30 @@ class GNCN_t1_Sigma:
 
         # create cable wiring scheme relating nodes to one another
         wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
-        dcable_cfg = {"type": "dense", "has_bias": False, "init" : ("gaussian",wght_sd), "seed" : seed}
+        dcable_cfg = {"type": "dense", "init" : ("gaussian",wght_sd), "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
-        z3_mu2 = z3.wire_to(mu2, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-        mu2.wire_to(e2, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-        z2.wire_to(e2, src_var="z", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e2.wire_to(z3, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z3_mu2,"symm_tied"))
-        e2.wire_to(z2, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+        z3_mu2 = z3.wire_to(mu2, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+        z3_mu2.set_constraint(constraint_cfg)
+        mu2.wire_to(e2, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+        z2.wire_to(e2, src_comp="z", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+        e2.wire_to(z3, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z3_mu2,"A^T"))
+        e2.wire_to(z2, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
-        z2_mu1 = z2.wire_to(mu1, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-        mu1.wire_to(e1, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-        z1.wire_to(e1, src_var="z", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e1.wire_to(z2, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z2_mu1,"symm_tied"))
-        e1.wire_to(z1, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+        z2_mu1 = z2.wire_to(mu1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+        z2_mu1.set_constraint(constraint_cfg)
+        mu1.wire_to(e1, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+        z1.wire_to(e1, src_comp="z", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+        e1.wire_to(z2, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z2_mu1,"A^T"))
+        e1.wire_to(z1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
-        z1_mu0 = z1.wire_to(mu0, src_var="phi(z)", dest_var="dz_td", cable_kernel=dcable_cfg)
-        mu0.wire_to(e0, src_var="phi(z)", dest_var="pred_mu", cable_kernel=pos_scable_cfg)
-        z0.wire_to(e0, src_var="phi(z)", dest_var="pred_targ", cable_kernel=pos_scable_cfg)
-        e0.wire_to(z1, src_var="phi(z)", dest_var="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
-        e0.wire_to(z0, src_var="phi(z)", dest_var="dz_td", cable_kernel=neg_scable_cfg)
+        z1_mu0 = z1.wire_to(mu0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+        z1_mu0.set_constraint(constraint_cfg)
+        mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
+        z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
+        e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"A^T"))
+        e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
         # set up update rules and make relevant edges aware of these
         z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"))
@@ -118,11 +125,11 @@ class GNCN_t1_Sigma:
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
         ngc_model = NGCGraph(K=K, name="gncn_t1_sigma")
-        ngc_model.proj_update_mag = -1.0 #-1.0
-        ngc_model.proj_weight_mag = 1.0
         ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
         ngc_model.set_cycle(nodes=[mu2,mu1,mu0])
         ngc_model.set_cycle(nodes=[e2,e1,e0])
+        info = ngc_model.compile(batch_size=batch_size)
+        self.info = parse_simulation_info(info)
         ngc_model.apply_constraints()
         self.ngc_model = ngc_model
 
@@ -136,12 +143,16 @@ class GNCN_t1_Sigma:
         s2 = FNode(name="s2", dim=z2_dim, act_fx=act_fx)
         s1 = FNode(name="s1", dim=z1_dim, act_fx=act_fx)
         s0 = FNode(name="s0", dim=z0_dim, act_fx=out_fx)
-        s3_s2 = s3.wire_to(s2, src_var="phi(z)", dest_var="dz", point_to_path=z3_mu2)
-        s2_s1 = s2.wire_to(s1, src_var="phi(z)", dest_var="dz", point_to_path=z2_mu1)
-        s1_s0 = s1.wire_to(s0, src_var="phi(z)", dest_var="dz", point_to_path=z1_mu0)
+        s3_s2 = s3.wire_to(s2, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z3_mu2,"A"))
+        s2_s1 = s2.wire_to(s1, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z2_mu1,"A"))
+        s1_s0 = s1.wire_to(s0, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z1_mu0,"A"))
         sampler = ProjectionGraph()
         sampler.set_cycle(nodes=[s3,s2,s1,s0])
+        sampler_info = sampler.compile()
+        self.sampler_info = parse_simulation_info(sampler_info)
         self.ngc_sampler = sampler
+
+        self.delta = None
 
     def project(self, z_sample):
         """
@@ -161,7 +172,7 @@ class GNCN_t1_Sigma:
         x_sample = readouts[0][2]
         return x_sample
 
-    def settle(self, x):
+    def settle(self, x, calc_update=True):
         """
         Run an iterative settling process to find latent states given clamped
         input and output variables
@@ -169,17 +180,22 @@ class GNCN_t1_Sigma:
         Args:
             x: sensory input to reconstruct/predict
 
+            calc_update: if True, computes synaptic updates @ end of settling
+                process (Default = True)
+
         Returns:
             x_hat (predicted x)
         """
-        readouts = self.ngc_model.settle(
-                        clamped_vars=[("z0","z", x)],
-                        readout_vars=[("mu0","phi(z)"),("mu1","phi(z)"),("mu2","phi(z)")]
-                    )
+        readouts, delta = self.ngc_model.settle(
+                            clamped_vars=[("z0","z", x)],
+                            readout_vars=[("mu0","phi(z)"),("mu1","phi(z)"),("mu2","phi(z)")],
+                            calc_delta=calc_update
+                          )
+        self.delta = delta # store delta to constructor for later retrieval
         x_hat = readouts[0][2]
         return x_hat
 
-    def calc_updates(self, avg_update=True):
+    def calc_updates(self, avg_update=True, decay_rate=-1.0): # decay_rate=0.001
         """
         Calculate adjustments to parameters under this given model and its
         current internal state values
@@ -188,20 +204,24 @@ class GNCN_t1_Sigma:
             delta, a list of synaptic matrix updates (that follow order of .theta)
         """
         Ns = self.ngc_model.extract("z0","phi(z)").shape[0]
-        delta = self.ngc_model.calc_updates()
+        #delta = self.ngc_model.calc_updates()
+        delta = self.delta
         if avg_update is True:
             for p in range(len(delta)):
                 delta[p] = delta[p] * (1.0/(Ns * 1.0))
+                if decay_rate > 0.0: # weight decay
+                    delta[p] = delta[p] - (self.ngc_model.theta[p] * decay_rate)
         return delta
 
-    def update(self, x, avg_update=True):
+    def update(self, x, avg_update=True): # convenience function
         """
-        Updates synaptic parameters/connections given sensory input
+        Updates synaptic parameters/connections given inputs x and y
 
         Args:
             x: a sensory sample or batch of sensory samples
         """
-        self.settle(x)
+        _, delta = self.settle(x, calc_update=True)
+        self.delta = delta
         delta = self.calc_updates(avg_update=avg_update)
         self.opt.apply_gradients(zip(delta, self.ngc_model.theta))
         self.ngc_model.apply_constraints()
@@ -210,6 +230,7 @@ class GNCN_t1_Sigma:
         """Clears the states/values of the stateful nodes in this NGC system"""
         self.ngc_model.clear()
         self.ngc_sampler.clear()
+        self.delta = None
 
     def print_norms(self):
         """Prints the Frobenius norms of each parameter of this system"""

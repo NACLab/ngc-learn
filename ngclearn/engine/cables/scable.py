@@ -38,12 +38,23 @@ class SCable(Cable):
     """
     def __init__(self, inp, out, coeff=1.0, name=None, seed=69):
         cable_type = "simple"
-        super().__init__(cable_type, inp, out, name, seed, coeff=coeff)
+        super().__init__(cable_type, inp, out, name, seed)
+        self.coeff = coeff
 
-    def propagate(self, node):
-        inp_value = node.extract(self.inp_var)
-        out_value = inp_value * self.coeff
-        return out_value
+    def compile(self):
+        """
+        Executes the "compile()" routine for this node. Sub-class nodes can
+        extend this in case they contain other elements besides compartments
+        that must be configured properly for global simulation usage.
 
-    # def clear(self):
-    #     self.cable_out = None
+        Returns:
+            a dictionary containing post-compilation check information about this cable
+        """
+        info = super().compile()
+        info["coefficient"] = self.coeff
+        return info
+
+    def propagate(self):
+        in_signal = self.src_node.extract(self.src_comp) # extract input signal
+        out_signal = in_signal * self.coeff
+        return out_signal
