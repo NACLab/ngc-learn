@@ -75,7 +75,8 @@ paper:
 
 ## <b>Development:</b>
 
-Information/updates coming soon on community contributions.
+To learn more about making a contribution to ngc-learn, please see our
+[Contributing guide](CONTRIBUTING.md).
 
 <b>Source Code</b>
 You can check/pull the latest source code for this library via:
