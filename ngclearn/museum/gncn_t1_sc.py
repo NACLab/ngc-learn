@@ -33,7 +33,8 @@ class GNCN_t1_SC:
 
     Note: You can also recover the model learned through ISTA by using, instead of
     a factorial prior over latents, a thresholding function such as the
-    "soft_threshold". This results in the GNCN-t1/SC emulating a system similar
+    "soft_threshold". (Make sure you set "prior" to "none" in this case.)
+    This results in the GNCN-t1/SC emulating a system similar
     to that proposed in:
 
     Daubechies, Ingrid, Michel Defrise, and Christine De Mol. "An iterative
@@ -42,7 +43,7 @@ class GNCN_t1_SC:
     Courant Institute of Mathematical Sciences 57.11 (2004): 1413-1457.
 
     Args:
-        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1-SC
+        args: a Config dictionary containing necessary meta-parameters for the GNCN-t1/SC
 
     | DEFINITION NOTE:
     | args should contain values for the following:

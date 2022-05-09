@@ -83,6 +83,7 @@ class GNCN_PDH:
         n_top_group = int(self.args.getArg("n_top_group")) #18
         alpha_scale = float(self.args.getArg("alpha_scale"))
         beta_scale = float(self.args.getArg("beta_scale"))
+        wght_sd = float(self.args.getArg("wght_sd"))
 
         use_dfx = False
         if self.args.hasArg("use_dfx"):
@@ -115,7 +116,6 @@ class GNCN_PDH:
         z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
         # create cable wiring scheme relating nodes to one another
-        wght_sd = float(self.args.getArg("wght_sd"))
         dcable_cfg = {"type": "dense", "init" : ("gaussian",wght_sd), "seed" : seed}
         ecable_cfg = {"type": "dense", "init" : ("gaussian",wght_sd), "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}

@@ -18,17 +18,18 @@ class GNCN_t1_ISTA:
     """
     A demonstration model to illustrate how to build an NGC structure that is
     compliant with the basic functional requirements of the ngc-learn
-    Model Museum.
+    Model Museum. (This code is meant to accompany/be used for
+    Demonstration #5 in the ngc-learn docs.)
 
     Note that this model implements a "deep ISTA" model or, rather, an NGC
-    system the strictly assumes its latent sparse codes (z1, z2, and z3) must
+    system the strictly assumes its latent sparse codes (z1 and z2) must
     be guided to sparse representations using a soft thresholding function.
     This model could be named, under the naming convention of (Ororbia & Kifer 2022),
     as GNCN-t1/ISTA.
 
     | Node Name Structure:
-    | z3 -(z3-mu2)-> mu2 ;e2; z2 -(z2-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
-    | Soft-thresholding function applied over z3, z2, and z1
+    | z2 -(z2-mu1)-> mu1 ;e1; z1 -(z1-mu0-)-> mu0 ;e0; z0
+    | Soft-thresholding function applied over z2 and z1
 
     Args:
         args: a Config dictionary containing necessary meta-parameters for the GNCN-t1
@@ -36,8 +37,8 @@ class GNCN_t1_ISTA:
     | DEFINITION NOTE:
     | args should contain values for the following:
     | * batch_size - the fixed batch-size to be fed into this model
-    | * z_top_dim - # of latent variables in layer z3 (top-most layer)
-    | * z_dim - # of latent variables in layers z1 and z2
+    | * z_top_dim - # of latent variables in layer z2 (top-most layer)
+    | * z_dim - # of latent variables in layers z1
     | * x_dim - # of latent variables in layer z0 or sensory x
     | * seed - number to control determinism of weight initialization
     | * wght_sd - standard deviation of Gaussian initialization of weights
@@ -47,7 +48,7 @@ class GNCN_t1_ISTA:
     | * thr_lmbda - strength of the threshold applied over latent state activities
         (only if threshold != "none")
     | * K - # of steps to take when conducting iterative inference/settling
-    | * act_fx - activation function for layers z1, z2, and z3
+    | * act_fx - activation function for layers z1 and z2
     | * out_fx - activation function for layer mu0 (prediction of z0) (Default: sigmoid)
 
     """
@@ -225,7 +226,6 @@ class GNCN_t1_ISTA:
             # now compute updates to recognition model given current state of system
             z1 = readouts[1][2]
             z2 = readouts[2][2]
-            #z3 = readouts[3][2]
             self.ngc_sampler.project(
                 clamped_vars=[("s0","z",tf.cast(x,dtype=tf.float32)),
                               ("s1","z",s1),("s2","z",s2),

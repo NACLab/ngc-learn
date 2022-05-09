@@ -183,7 +183,7 @@ model.compile()
 Note that the ancestral projection this model using thresholding would be the same
 as the one we built earlier.
 Notably, the above models can also be imported from the Model Museum,
-specifically using [GNCN-t1-SC](../museum/gncn_t1_sc.md), which
+specifically using [GNCN-t1/SC](../museum/gncn_t1_sc.md), which
 internally implements the `NGCGraph`(s) depicted above.
 
 Finally, for both the first model (which emulates [1]) and the second model
@@ -309,7 +309,7 @@ run the following the script:
 $ python sim_train.py --config=sc_cauchy/fit.cfg --gpu_id=0 --n_trials=1
 ```
 
-which will train a GNCN-t1-SC (with a Cauchy prior) on `16 x 16` pixel patches
+which will train a GNCN-t1/SC (with a Cauchy prior) on `16 x 16` pixel patches
 from the natural image dataset in [1]. After the simulation terminates, i.e., once
 `400` iterations/passes through the data have been made, you will notice in the
 `sc_cauchy/` sub-directory you have several useful files.
