@@ -125,9 +125,9 @@ class GNCN_t1_Sigma:
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
         ngc_model = NGCGraph(K=K, name="gncn_t1_sigma")
-        ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
-        ngc_model.set_cycle(nodes=[mu2,mu1,mu0])
-        ngc_model.set_cycle(nodes=[e2,e1,e0])
+        ngc_model.set_cycle(nodes=[z3, z2, z1, z0])
+        ngc_model.set_cycle(nodes=[mu2, mu1, mu0])
+        ngc_model.set_cycle(nodes=[e2, e1, e0])
         info = ngc_model.compile(batch_size=batch_size)
         self.info = parse_simulation_info(info)
         ngc_model.apply_constraints()
@@ -147,7 +147,7 @@ class GNCN_t1_Sigma:
         s2_s1 = s2.wire_to(s1, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z2_mu1,"A"))
         s1_s0 = s1.wire_to(s0, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z1_mu0,"A"))
         sampler = ProjectionGraph()
-        sampler.set_cycle(nodes=[s3,s2,s1,s0])
+        sampler.set_cycle(nodes=[s3, s2, s1, s0])
         sampler_info = sampler.compile()
         self.sampler_info = parse_simulation_info(sampler_info)
         self.ngc_sampler = sampler
