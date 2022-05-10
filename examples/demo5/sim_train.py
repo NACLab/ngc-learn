@@ -25,7 +25,6 @@ import ngclearn.utils.io_utils as io_tools
 from ngclearn.utils.data_utils import DataLoader
 
 # import sparse coding model from museum to train
-from ngclearn.museum.gncn_t1_sc import GNCN_t1_SC
 from gncn_t1_ista import GNCN_t1_ISTA
 
 seed = 69
