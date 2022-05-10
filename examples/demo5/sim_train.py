@@ -24,7 +24,7 @@ import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_tools
 from ngclearn.utils.data_utils import DataLoader
 
-# import sparse coding model from museum to train
+# import deep ISTA model from museum to train
 from gncn_t1_ista import GNCN_t1_ISTA
 
 seed = 69
