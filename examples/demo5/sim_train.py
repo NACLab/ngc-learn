@@ -172,7 +172,6 @@ with tf.device(gpu_tag):
 
     for trial in range(n_trials): # for each trial
         args.setArg("batch_size",num_patches)
-        #agent = GNCN_t1_SC(args)
         agent = GNCN_t1_ISTA(args)  # set up NGC model
         print(" >> Built model = {}".format(agent.ngc_model.name))
 
