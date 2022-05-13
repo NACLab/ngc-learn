@@ -50,12 +50,8 @@ class Cable:
         if name == None:
             self.name = "{0}-to-{1}_{2}".format(src_node.name, dest_node.name, self.cable_type)
 
-        # pre-activity region for first term of local update rule
-        self.preact_node = None
-        self.preact_comp = None
-        # post-activity region for second term of local update rule
-        self.postact_node = None
-        self.postact_comp = None
+        self.params = {} # what internal synaptic/learnable parameters belong to this cable
+        self.update_terms = {} # maps param names to their ordered tuples of update terms
 
     def compile(self):
         """
@@ -88,7 +84,7 @@ class Cable:
     def set_constraint(self, constraint_kernel):
         self.constraint_kernel = constraint_kernel
 
-    def set_update_rule(self, preact, postact, gamma=1.0, use_mod_factor=False):
+    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False, param=None):
         """
         Sets the synaptic adjustment rule for this cable (currently a 2-factor local synaptic Hebbian update rule).
 
@@ -119,18 +115,10 @@ class Cable:
                 applied to the resultant synaptic update
 
                 :Note: This is un-tested/not fully integrated
+
+            param: a list of strings, each containing named parameters that are to be learned w/in this cable
         """
-        preact_node, preact_comp = preact
-        self.preact_node = preact_node
-        self.preact_comp = preact_comp
-
-        postact_node, postact_comp = postact
-        self.postact_node = postact_node
-        self.postact_comp = postact_comp
-
-        self.gamma = gamma
-        self.use_mod_factor = use_mod_factor
-        self.is_learnable = True
+        pass
 
     def propagate(self):
         """

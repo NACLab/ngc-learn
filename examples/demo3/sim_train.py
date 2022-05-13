@@ -129,17 +129,14 @@ with tf.device(gpu_tag):
     def calc_ToD(agent):
         """Measures the total discrepancy (ToD) of a given NGC model"""
         ToD = 0.0
-        #print("TOD:")
         L2 = agent.ngc_model.extract(node_name="e2", node_var_name="L")
-        #tf.print(L2)
         L1 = agent.ngc_model.extract(node_name="e1", node_var_name="L")
-        #tf.print(L1)
         L0 = agent.ngc_model.extract(node_name="e0", node_var_name="L")
-        #tf.print(L0)
         ToD = -(L0 + L1 + L2)
         return float(ToD)
 
     for trial in range(n_trials): # for each trial
+
         agent = GNCN_t1_FFM(args) # set up NGC model
 
         eta_v  = tf.Variable( eta ) # set up optimization process
@@ -162,7 +159,7 @@ with tf.device(gpu_tag):
         vLy_series.append(vLy)
         vAcc_series.append(Acc)
 
-        PATIENCE = 30 #20
+        PATIENCE = 30
         impatience = 0
         vAcc_best = vAcc
         sim_start_time = time.time()

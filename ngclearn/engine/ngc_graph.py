@@ -2,6 +2,8 @@ import tensorflow as tf
 import sys
 import numpy as np
 import copy
+from ngclearn.engine.nodes.node import Node
+from ngclearn.engine.cables.cable import Cable
 import ngclearn.utils.transform_utils as transform
 
 class NGCGraph:
@@ -37,15 +39,51 @@ class NGCGraph:
         self.values = {}
         self.values_tmp = []
         self.learnable_cables = []
+        self.unique_learnable_objects = {}
         self.learnable_nodes = []
         self.K = K
         self.batch_size = batch_size
         self.use_graph_optim = True
+        self.injection_table = {}
         # these data members below are for the .evolve() routine
         self.opt = None
         self.evolve_flag = False
 
-    def set_cycle(self, nodes):
+    def set_learning_order(self, param_order):
+        """
+        Forces this simulation object to arrange its .theta and delta to
+        follow a particular order.
+
+        Args:
+            param_order: a list of Cables/Nodes which will dictate the strict order
+                in which parameter updates will be calculated and how they are
+                arranged in .theta (note that delta and theta will match the same
+                dictated order)
+        """
+        self.theta = []
+        self.learnable_cables = []
+        self.unique_learnable_objects = {}
+        self.learnable_nodes = []
+        for obj in param_order:
+            obj_name = obj.name
+            if obj.is_learnable == True:
+                if isinstance(obj,Node) == True:
+                    self.learnable_nodes.append(n_j)
+                    if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
+                        n_j.compute_precision()
+                        self.theta.append(n_j.Sigma)
+                    # else, this would break if a novel node is deemed learnable... (FIXME)
+                elif isinstance(obj,Cable) == True:
+                    self.learnable_cables.append(obj)
+                    for pname in obj.params:
+                        param = obj.params.get(pname)
+                        update_terms = obj.update_terms.get(pname)
+                        key_check = "{}.{}".format(obj.name,pname)
+                        if update_terms is not None and self.unique_learnable_objects.get(key_check) is None:
+                            self.theta.append(param)
+                            self.unique_learnable_objects["{}.{}".format(obj.name,pname)] = 1
+
+    def set_cycle(self, nodes, param_order=None):
         """
         Set an execution cycle in this graph
 
@@ -59,22 +97,36 @@ class NGCGraph:
             for i in range(len(node.connected_cables)): # for each cable i
                 cable_i = node.connected_cables[i]
                 self.cables[cable_i.name] = cable_i
-                if cable_i.cable_type == "dense":
-                    if cable_i.shared_param_path is None and cable_i.is_learnable is True:
-                        # if cable is learnable (locally), store in theta
-                        self.learnable_cables.append(cable_i)
-                        if cable_i.W is not None:
-                            self.theta.append(cable_i.W)
-                        if cable_i.b is not None:
-                            self.theta.append(cable_i.b)
+                if param_order is None:
+                    if cable_i.cable_type == "dense":
+                        #if cable_i.shared_param_path is None and cable_i.is_learnable is True:
+                        if cable_i.is_learnable is True:
+                            # if cable is learnable (locally), store in theta
+                            self.learnable_cables.append(cable_i)
+                            for pname in cable_i.params:
+                                param = cable_i.params.get(pname)
+                                update_terms = cable_i.update_terms.get(pname)
+                                key_check = "{}.{}".format(cable_i.name,pname)
+                                if update_terms is not None and self.unique_learnable_objects.get(key_check) is None:
+                                    self.theta.append(param)
+                                    self.unique_learnable_objects["{}.{}".format(cable_i.name,pname)] = 1
         for j in range(len(nodes)): # collect any learnable nodes
             n_j = nodes[j]
-            if n_j.is_learnable is True:
-                self.learnable_nodes.append(n_j)
-                if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
-                    n_j.compute_precision()
-                    self.theta.append(n_j.Sigma)
+            if param_order is None:
+                if n_j.is_learnable is True:
+                    self.learnable_nodes.append(n_j)
+                    if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
+                        n_j.compute_precision()
+                        self.theta.append(n_j.Sigma)
         self.exec_cycles.append(cycle)
+
+        if param_order is not None:
+            self.set_learning_order(param_order)
+
+    def set_theta(self, theta_target):
+        for j in range(len(self.theta)):
+            px_j = theta_target[j]
+            self.theta[j].assign(px_j)
 
     def compile(self, use_graph_optim=True, batch_size=-1):
         """
@@ -94,6 +146,9 @@ class NGCGraph:
         """
         if batch_size > 0:
             self.batch_size = batch_size
+        if batch_size <= 0:
+            batch_size = self.batch_size
+
         sim_info = [] # list of hash tables containing properties of each element
                       # in this simulation object
         self.use_graph_optim = use_graph_optim
@@ -112,6 +167,12 @@ class NGCGraph:
         for cable_name in self.cables:
             info_j = self.cables[cable_name].compile()
             sim_info.append(info_j) # aggregate information hash tables
+
+        if self.use_graph_optim == True:
+            # run a resting state settle() to compile the static graph
+            for k in range(3):
+                self.settle()
+            self.clear()
         return sim_info
 
     def clone_state(self):
@@ -193,11 +254,16 @@ class NGCGraph:
                 :compartment_name (Tuple[1]): the (str) name of the node's compartment to clamp this data signal to.
 
                 :signal (Tuple[2]): the data signal block to clamp to the desired compartment name
-
         """
         for clamp_target in clamp_targets:
             node_name, node_comp, node_value = clamp_target
             self.nodes[node_name].clamp((node_comp, node_value))
+
+            node_inj_table = self.injection_table.get(node_name) # get node table
+            if node_inj_table is None:
+                node_inj_table = {}
+            node_inj_table[node_comp] = 2 # set node's comp to flag 2
+            self.injection_table[node_name] = node_inj_table
 
     def inject(self, injection_targets):
         """
@@ -222,13 +288,22 @@ class NGCGraph:
             node = self.getNode(node_name)
             node.inject((node_comp, node_value))
 
+            node_inj_table = self.injection_table.get(node_name) # get node table
+            if node_inj_table is None:
+                node_inj_table = {}
+            node_inj_table[node_comp] = 1 # set node's comp to flag 1
+            self.injection_table[node_name] = node_inj_table
+
     def set_cold_state(self, batch_size=-1):
         """ Sets the underlying node states to their "cold" resting state. """
         for i in range(len(self.exec_cycles)):
             cycle_i = self.exec_cycles[i]
             for j in range(len(cycle_i)):
                 node_j = cycle_i[j]
-                node_j.set_cold_state(batch_size=batch_size)
+                node_inj_table = self.injection_table.get(node_j.name)
+                if node_inj_table is None:
+                    node_inj_table = {}
+                node_j.set_cold_state(node_inj_table, batch_size=batch_size)
                 #node_j.step(skip_core_calc=True)
 
     # TODO: add in early-stopping to settle routine...
@@ -292,24 +367,10 @@ class NGCGraph:
             self.set_cold_state()
 
         # Case 1: Clamp variables that will persist during settling/inference
-        for clamped_var in clamped_vars:
-            var_name, comp_name, var_value = clamped_var
-            if var_value is not None:
-                _batch_size = var_value.shape[0]
-                node = self.nodes.get(var_name)
-                if node is not None:
-                    node.clamp((comp_name, var_value)) #node.step()
-            # else, CANNOT clamp a variable value to None
+        self.clamp(clamped_vars)
 
         # Case 2: Clamp variables that will NOT persist during settling/inference
-        for clamped_var in init_vars:
-            var_name, comp_name, var_value = clamped_var
-            if var_value is not None:
-                _batch_size = var_value.shape[0]
-                node = self.nodes.get(var_name)
-                if node is not None:
-                    node.inject((comp_name, var_value)) #node.step(skip_core_calc=True)
-            # else, CANNOT init a variable value with None
+        self.inject(init_vars)
 
         if cold_start is True:
             # Initialize the values of every non-clamped node
@@ -317,8 +378,10 @@ class NGCGraph:
                 cycle_i = self.exec_cycles[i]
                 for j in range(len(cycle_i)):
                     node_j = cycle_i[j]
-                    node_j.step(skip_core_calc=True)
-
+                    node_inj_table = self.injection_table.get(node_j.name)
+                    if node_inj_table is None:
+                        node_inj_table = {}
+                    node_j.step(node_inj_table, skip_core_calc=True)
         # TODO: re-integrate back this block of code
         # apply any desired masking variables
         # for masked_var in masked_vars:
@@ -342,7 +405,8 @@ class NGCGraph:
                     node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
             else: # OR, never compute delta inside the simulation
                 node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
-            # TODO: move back in masking code here (or inside static graph...)
+
+                # TODO: move back in masking code here (or inside static graph...)
 
         # parse results from static graph & place correct shallow-copied items in system dictionary
         for ii in range(len(node_values)):
@@ -358,7 +422,6 @@ class NGCGraph:
                 vdict = {}
                 vdict[comp_name] = comp_value
                 self.values[node_name] = vdict
-
         #########################################################################
         # Post-process NGC graph by extracting predictions at indicated output nodes
         #########################################################################
@@ -369,30 +432,43 @@ class NGCGraph:
         return readouts, delta
 
     def step(self, calc_delta=False, use_optim=True):
+        # feed in injection table externally to node-system (to avoid getting
+        # compiled as part of the static graph)
         if use_optim == True:
-            values, delta = self._step_fast(calc_delta)
+            values, delta = self._step_fast(self.injection_table, calc_delta)
         else:
-            values, delta = self._step(calc_delta)
+            values, delta = self._step(self.injection_table, calc_delta)
+        # update injection look-up table
+        for node_name in self.injection_table:
+            node_table = self.injection_table.get(node_name)
+            for comp_name in node_table:
+                inj_value = node_table.get(comp_name)
+                if inj_value == 1:
+                    node_table[comp_name] = None
         return values, delta
 
     @tf.function
-    def _step_fast(self, calc_delta=False): # optimized call to _step()
-        values, delta = self._step(calc_delta)
+    def _step_fast(self, injection_table, calc_delta=False): # optimized call to _step()
+        values, delta = self._step(injection_table, calc_delta)
         return values, delta
 
-    def _step(self, calc_delta=False):
+    def _step(self, injection_table, calc_delta=False):
         delta = None
         values = []
         for cycle in self.exec_cycles:
             for node in cycle:
-                node_values = node.step()
+                node_inj_table = injection_table.get(node.name)
+                if node_inj_table is None:
+                    node_inj_table = {}
+                node_values = node.step(node_inj_table)
                 values = values + node_values
         if calc_delta == True:
             delta = self.calc_updates()
         if self.opt is not None and self.evolve_flag == True:
-            self.opt.apply_gradients(zip(delta, self.theta))
-            self.apply_constraints()
-            self.clear()
+            if delta is not None:
+                self.opt.apply_gradients(zip(delta, self.theta))
+                self.apply_constraints()
+                self.clear()
         return values, delta
 
     def calc_updates(self, debug_map=None):
@@ -411,11 +487,17 @@ class NGCGraph:
             delta_j = cable_j.calc_update()
             delta = delta + delta_j
             if debug_map is not None:
+                # --------------------------------------------------------------
+                # NOTE: this has not been tested...might not work as expected...
                 if len(delta_j) == 2: #dW, db
-                    debug_map[cable_j.W.name] = delta_j[0]
-                    debug_map[cable_j.b.name] = delta_j[1]
+                    if cable_j.params.get("A"):
+                        debug_map[cable_j.params["A"].name] = delta_j[0]
+                    if cable_j.params.get("b"):
+                        debug_map[cable_j.params["b"].name] = delta_j[1]
                 else: #dW
-                    debug_map[cable_j.W.name] = delta_j[0]
+                    if cable_j.params.get("A"):
+                        debug_map[cable_j.params["A"].name] = delta_j[0]
+                # --------------------------------------------------------------
         for j in range(len(self.learnable_nodes)):
             node_j = self.learnable_nodes[j]
             delta_j = node_j.calc_update()
@@ -429,10 +511,6 @@ class NGCGraph:
         | 1) compute new precision matrices (if applicable)
         | 2) project weights to adhere to vector norm constraints
         """
-        # compute error node precision synapses
-        # for j in range(len(self.learnable_nodes)):
-        #     node_j = self.learnable_nodes[j]
-        #     node_j.compute_precision()
         # apply constraints to any applicable (learnable) cables
         for j in range(len(self.learnable_cables)):
             cable_j = self.learnable_cables[j]
@@ -505,6 +583,7 @@ class NGCGraph:
         """
         self.values = {}
         self.values_tmp = []
+        self.injection_table = {}
         for node_name in self.nodes:
             node = self.nodes.get(node_name)
             node.clear()

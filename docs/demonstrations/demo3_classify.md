@@ -66,8 +66,8 @@ z0 = SNode(name="z0", dim=y_dim, beta=beta, integrate_kernel=integrate_cfg, leak
 
 # create cable wiring scheme relating nodes to one another
 wght_sd = 0.02
-dcable_cfg = {"type": "dense", "bias_init": ("zeros"),
-              "init" : ("gaussian",wght_sd), "seed" : 1234}
+init_kernels = {"A_init" : ("gaussian",wght_sd), "b_init" : ("zeros")}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 1234}
 pos_scable_cfg = {"type": "simple", "coeff": 1.0} # a positive cable
 neg_scable_cfg = {"type": "simple", "coeff": -1.0} # a negative cable
 
@@ -84,8 +84,8 @@ e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,
 e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
-z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
-z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), param=["A","b"])
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A","b"])
 
 # Set up graph - execution cycle/order
 model = NGCGraph(K=5)

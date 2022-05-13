@@ -106,8 +106,8 @@ class GNCN_t1_SC:
         z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
         # create cable wiring scheme relating nodes to one another
-        #wght_sd = float(self.args.getArg("wght_sd")) #0.025 #0.05 # 0.055
-        dcable_cfg = {"type": "dense", "init" : ("unif_scale",1.0), "seed" : seed}
+        init_kernels = {"A_init" : ("unif_scale",1.0)}
+        dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
         param_axis = 1
@@ -119,7 +119,7 @@ class GNCN_t1_SC:
         z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
         e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"A^T"))
         e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
-        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
         #param_axis = 1
 
         #z1_to_z1 = z1.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"A*A^T"))

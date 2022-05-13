@@ -161,31 +161,38 @@ class SNode(Node):
             info["threshold.form"] = self.threshold_kernel
         return info
 
-    def step(self, skip_core_calc=False):
+    def step(self, injection_table=None, skip_core_calc=False):
+        if injection_table is None:
+            injection_table = {}
+
         bmask = self.masks.get("mask")
         ########################################################################
-
         if skip_core_calc == False:
-            if self.is_clamped == False:
-                # clear any relevant compartments that are NOT stateful before accruing
-                # new deposits (this is crucial to ensure any desired stateless properties)
-                if self.do_inplace == True:
+            # clear any relevant compartments that are NOT stateful before accruing
+            # new deposits (this is crucial to ensure any desired stateless properties)
+            if self.do_inplace == True:
+                if injection_table.get("dz_bu") is None:
                     self.compartments["dz_bu"].assign(self.compartments["dz_bu"] * 0)
+                if injection_table.get("dz_td") is None:
                     self.compartments["dz_td"].assign(self.compartments["dz_td"] * 0)
-                else:
+            else:
+                if injection_table.get("dz_bu") is None:
                     self.compartments["dz_bu"] = (self.compartments["dz_bu"] * 0)
+                if injection_table.get("dz_td") is None:
                     self.compartments["dz_td"] = (self.compartments["dz_td"] * 0)
 
-                # gather deposits from any connected nodes & insert them into the
-                # right compartments/regions -- deposits in this logic are linearly combined
-                for cable in self.connected_cables:
-                    deposit = cable.propagate()
-                    dest_comp = cable.dest_comp
+            # gather deposits from any connected nodes & insert them into the
+            # right compartments/regions -- deposits in this logic are linearly combined
+            for cable in self.connected_cables:
+                deposit = cable.propagate()
+                dest_comp = cable.dest_comp
+                if injection_table.get(dest_comp) is None:
                     if self.do_inplace == True:
                         self.compartments[dest_comp].assign(self.compartments[dest_comp] + deposit)
                     else:
                         self.compartments[dest_comp] = (deposit + self.compartments[dest_comp])
 
+            if injection_table.get("z") is None:
                 # core logic for the (node-internal) dendritic calculation
                 dz_bu = self.compartments["dz_bu"]
                 dz_td = self.compartments["dz_td"]
@@ -195,6 +202,7 @@ class SNode(Node):
                     dz = dz_td + (dz_bu * self.dfx(z)) # (dz_td + dz_bu) * self.dfx(z)
                 else:
                     dz = dz_td + dz_bu
+
                 z_prior = 0.0
                 if self.prior_type is not None:
                     if self.lmbda > 0.0:
@@ -219,39 +227,35 @@ class SNode(Node):
                     Dynamics Equation:
                     z <- z * zeta + ( dz * beta - z * leak + prior(z) )
                     '''
-                    # print("+++++++++++++++++++++++++++++++++++++++++++++++")
-                    # print(self.name)
-                    # print("Z: ",z)
-                    # print("dZ: ",dz)
                     dz = dz - z * self.leak + z_prior
                     z = z * self.zeta + dz * self.beta
-                    # print("Z: ",z)
-                    # print("+++++++++++++++++++++++++++++++++++++++++++++++")
                     if self.threshold_type == "soft_threshold":
                         z = transform_utils.threshold_soft(z, self.thr_lmbda)
                     elif self.threshold_type == "cauchy_threshold":
                         z = transform_utils.threshold_cauchy(z, self.thr_lmbda)
+
                 else:
                     tf.print("Error: Node {0} does not support {1} integration".format(self.name, self.integrate_type))
                     sys.exit(1)
-                if self.do_inplace == True:
-                    self.compartments["z"].assign(z)
-                else:
-                    self.compartments["z"] = z
-
-            # else, no deposits are accrued (b/c this node is hard-clamped to a signal)
+                if injection_table.get("z") is None:
+                    if self.do_inplace == True:
+                        self.compartments["z"].assign(z)
+                    else:
+                        self.compartments["z"] = z
             ########################################################################
+        # else, skip this core "chunk of computation" if externally set
 
         # apply post-activation non-linearity
-        phi_z = None
-        if self.n_winners > 0:
-            phi_z = self.fx(self.compartments["z"],K=self.n_winners)
-        else:
-            phi_z = self.fx(self.compartments["z"])
-        if self.do_inplace == True:
-            self.compartments["phi(z)"].assign(phi_z)
-        else:
-            self.compartments["phi(z)"] = (phi_z)
+        if injection_table.get("phi(z)") is None:
+            phi_z = None
+            if self.n_winners > 0:
+                phi_z = self.fx(self.compartments["z"],K=self.n_winners)
+            else:
+                phi_z = self.fx(self.compartments["z"])
+            if self.do_inplace == True:
+                self.compartments["phi(z)"].assign(phi_z)
+            else:
+                self.compartments["phi(z)"] = (phi_z)
 
         if bmask is not None: # applies mask to all component variables of this node
             for key in self.compartments:
@@ -262,10 +266,12 @@ class SNode(Node):
                         self.compartments[key] = ( self.compartments.get(key) * bmask )
 
         ########################################################################
-        self.t += 1
+        if skip_core_calc == False:
+            self.t = self.t + 1
 
         # a node returns a list of its named component values
         values = []
+        injected = []
         for comp_name in self.compartments:
             comp_value = self.compartments.get(comp_name)
             values.append((self.name, comp_name, comp_value))

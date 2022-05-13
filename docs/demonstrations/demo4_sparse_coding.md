@@ -85,7 +85,8 @@ beta = 0.05
 integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
 prior_cfg = {"prior_type" : "cauchy", "lambda" : 0.14} # configure latent prior
 # cable configurations
-dcable_cfg = {"type": "dense", "init" : ("unif_scale",1.0), "seed" : seed}
+init_kernels = {"A_init" : ("unif_scale",1.0)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
 pos_scable_cfg = {"type": "simple", "coeff": 1.0}
 neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 constraint_cfg = {"clip_type":"forced_norm_clip","clip_mag":1.0,"clip_axis":1}
@@ -104,7 +105,7 @@ mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_
 z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
 e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
 e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
-z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
 param_axis = 1
 
 # Set up graph - execution cycle/order
@@ -170,7 +171,7 @@ mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_
 z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
 e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
 e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
-z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
 
 # Set up graph - execution cycle/order
 model = NGCGraph(K=K, name="gncn_t1_sc", batch_size=batch_size)

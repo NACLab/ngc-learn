@@ -89,37 +89,36 @@ z0 = SNode(name="z0", dim=z0_dim, beta=beta, leak=0.0,
            integrate_kernel=integrate_cfg)
 
 # create cable wiring scheme relating nodes to one another
-dcable_cfg = {"type": "dense", "init" : ("diagonal",1), "seed" : seed}
+init_kernels = {"A_init" : ("diagonal",1)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
 pos_scable_cfg = {"type": "simple", "coeff": 1.0}
 neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
 z3_mu2 = z3.wire_to(mu2, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
 mu2.wire_to(e2, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
 z2.wire_to(e2, src_comp="z", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
-e2.wire_to(z3, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z3_mu2,"symm_tied"))
+e2.wire_to(z3, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z3_mu2,"A^T"))
 e2.wire_to(z2, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 z2_mu1 = z2.wire_to(mu1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
 mu1.wire_to(e1, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
 z1.wire_to(e1, src_comp="z", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
-e1.wire_to(z2, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z2_mu1,"symm_tied"))
+e1.wire_to(z2, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z2_mu1,"A^T"))
 e1.wire_to(z1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 z1_mu0 = z1.wire_to(mu0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
 mu0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
 z0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
-e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"symm_tied"))
+e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,"A^T"))
 e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
-z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"))
-z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
-z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"), param=["A"])
+z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
 
 # Set up graph - execution cycle/order
 ngc_model = NGCGraph(K=10, name="gncn_t1_ffm")
-ngc_model.proj_update_mag = -1.0
-ngc_model.proj_weight_mag = -1.0
 ngc_model.set_cycle(nodes=[z3,z2,z1,z0])
 ngc_model.set_cycle(nodes=[mu2,mu1,mu0])
 ngc_model.set_cycle(nodes=[e2,e1,e0])
@@ -136,9 +135,9 @@ s3 = FNode(name="s3", dim=z3_dim, act_fx="identity")
 s2 = FNode(name="s2", dim=z2_dim, act_fx="relu")
 s1 = FNode(name="s1", dim=z1_dim, act_fx="relu")
 s0 = FNode(name="s0", dim=z0_dim, act_fx="identity")
-s3_s2 = s3.wire_to(s2, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z3_mu2,"tied"))
-s2_s1 = s2.wire_to(s1, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z2_mu1,"tied"))
-s1_s0 = s1.wire_to(s0, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z1_mu0,"tied"))
+s3_s2 = s3.wire_to(s2, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z3_mu2,"A"))
+s2_s1 = s2.wire_to(s1, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z2_mu1,"A"))
+s1_s0 = s1.wire_to(s0, src_comp="phi(z)", dest_comp="dz", mirror_path_kernel=(z1_mu0,"A"))
 sampler = ProjectionGraph()
 sampler.set_cycle(nodes=[s3,s2,s1,s0])
 sampler_info = sampler.compile()
@@ -269,13 +268,13 @@ e0_z1 = e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", cable_kernel=dcable
 e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
-z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"))
-z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
-z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"), param=["A"])
+z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
 
-e2_z3.set_update_rule(preact=(e2,"phi(z)"), postact=(z3,"phi(z)"))
-e1_z2.set_update_rule(preact=(e1,"phi(z)"), postact=(z2,"phi(z)"))
-e0_z1.set_update_rule(preact=(e0,"phi(z)"), postact=(z1,"phi(z)"))
+e2_z3.set_update_rule(preact=(e2,"phi(z)"), postact=(z3,"phi(z)"), param=["A"])
+e1_z2.set_update_rule(preact=(e1,"phi(z)"), postact=(z2,"phi(z)"), param=["A"])
+e0_z1.set_update_rule(preact=(e0,"phi(z)"), postact=(z1,"phi(z)"), param=["A"])
 
 
 # Set up graph - execution cycle/order

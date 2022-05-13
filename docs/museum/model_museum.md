@@ -43,8 +43,9 @@ Current models that we have implemented in the Model Museum so far include:
 1. GNCN-t1/Rao - the model proposed in (Rao &amp; Ballard, 1999) [2]
 2. GNCN-t1-Sigma/Friston - the model proposed in (Friston, 2008) [3]
 3. GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
-4. GNCN-t1-FFM - the model proposed in (Whittington &amp; Bogacz, 2017) [4]
+4. GNCN-t1-FFM - the model developed in (Whittington &amp; Bogacz, 2017) [4]
 5. GNCN-t1-SC - the model proposed in (Olshausen &amp; Field, 1996) [5]
+6. Harmonium - the model developed in (Hinton 1999) [6]
 
 (If there is a model you think should be exhibited/integrated into the Model
 Museum, and/or would like to contribute, please write us at ago@cs.rit.edu or
@@ -64,3 +65,5 @@ backpropagation algorithm in a predictive coding network with local hebbian
 synaptic plasticity." Neural computation 29.5 (2017): 1229-1262. <br>
 [5] Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
 by learning a sparse code for natural images. Nature 381, 607–609 (1996).
+[6] Hinton, Geoffrey E. "Training products of experts by maximizing contrastive
+likelihood." Technical Report, Gatsby computational neuroscience unit (1999).

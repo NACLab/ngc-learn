@@ -89,7 +89,8 @@ class GNCN_t1:
 
         # create cable wiring scheme relating nodes to one another
         wght_sd = float(self.args.getArg("wght_sd"))
-        dcable_cfg = {"type": "dense", "init" : ("gaussian",wght_sd), "seed" : seed}
+        init_kernels = {"A_init" : ("gaussian",wght_sd)}
+        dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
         constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":0}
@@ -116,9 +117,9 @@ class GNCN_t1:
         e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
         # set up update rules and make relevant edges aware of these
-        z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"))
-        z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
-        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+        z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"), param=["A"])
+        z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
+        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")

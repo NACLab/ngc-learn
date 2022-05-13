@@ -104,8 +104,8 @@ a = SNode(name="a", dim=64, beta=0.1, leak=0.001, act_fx="relu",
 b = SNode(name="b", dim=32, beta=0.05, leak=0.002, act_fx="identity",
           integrate_kernel=integrate_cfg, prior_kernel=None)
 
-dcable_cfg = {"type": "dense", "bias_init": ("zeros"),
-              "init" : ("gaussian",0.025), "seed" : 69}
+init_kernels = {"A_init" : ("gaussian",0.025)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 69}
 a_b = a.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
 ```
 
@@ -162,7 +162,7 @@ a local Hebbian-like update. For example, if we want the cable `a_c` to evolve
 over time, we notify the node that it needs to update according to:
 
 ```python
-a_c.set_update_rule(preact=(a,"phi(z)"), postact=(c,"phi(z)"))
+a_c.set_update_rule(preact=(a,"phi(z)"), postact=(c,"phi(z)"), param=["A"])
 ```
 
 where the above sets a (two-factor) Hebbian update that will compute an adjustment
@@ -200,7 +200,8 @@ Now that we know how an error node works, let us create a simple 3-node circuit
 that leverages an error node mismatch computation:
 
 ```python
-dcable_cfg = {"type": "dense", "init" : ("gaussian",0.025), "seed" : 69}
+init_kernels = {"A_init" : ("gaussian",0.025)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 69}
 pos_carryover = {"type": "simple", "coeff": 1.0}
 neg_carryover = {"type": "simple", "coeff": -1.0}
 
@@ -220,7 +221,7 @@ e.wire_to(a, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(a_e,"A^T"
 e.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_carryover)
 
 # set up local Hebbian updates for a_e
-a_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"))
+a_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"), param=["A"])
 ```
 
 where we see that node `a` deposits a prediction signal into the `pred_mu`
@@ -421,7 +422,8 @@ We create the desired NGC model as follows:
 batch_size = 32
 # create cable wiring scheme relating nodes to one another
 wght_sd = 0.025 #0.025 #0.05
-dcable_cfg = {"type": "dense",  "init" : ("gaussian",wght_sd), "seed" : seed}
+init_kernels = {"A_init" : ("gaussian",wght_sd)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 69}
 pos_scable_cfg = {"type": "simple", "coeff": 1.0}
 neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":1}
@@ -441,8 +443,8 @@ e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,
 e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
-z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
-z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
 
 # Set up graph - execution cycle/order
 model = NGCGraph(K=K)

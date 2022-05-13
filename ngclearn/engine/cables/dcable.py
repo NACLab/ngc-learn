@@ -10,6 +10,9 @@ class DCable(Cable):
     A dense cable that transforms signals that travel across via a bundle of synapses.
     (In other words, a linear projection followed by an optional base-rate/bias shift.)
 
+    Note: a dense cable only contains two possible learnable parameters, "A" and "b"
+    each with only two terms for their local Hebbian updates.
+
     Args:
         inp: 2-Tuple defining the nodal points that this cable will connect.
             The value types inside each slot of the tuple are specified below:
@@ -101,7 +104,7 @@ class DCable(Cable):
             associated with this cable
 
     """
-    def __init__(self, inp, out, w_kernel=None, b_kernel=None, shared_param_path=None,
+    def __init__(self, inp, out, init_kernels=None, shared_param_path=None,
                  clip_kernel=None, constraint_kernel=None, seed=69, name=None):
         cable_type = "dense"
         super().__init__(cable_type, inp, out, name, seed)
@@ -111,52 +114,58 @@ class DCable(Cable):
         self.is_learnable = False
         self.shared_param_path = shared_param_path
         self.path_type = None
-        self.w_kernel = w_kernel
-        self.b_kernel = b_kernel
         self.coeff = 1.0
         self.clip_kernel = clip_kernel
         self.constraint_kernel = constraint_kernel
 
-        self.W = None
-        self.b = None
+        self.params["A"] = None
+        self.update_terms["A"] = None
+        self.params["b"] = None
+        self.update_terms["b"] = None
+
+        in_dim = self.src_node.dim
+        out_dim = self.dest_node.dim
+
         if self.shared_param_path is not None:
             cable_to_mirror, path_type = shared_param_path
             """
-                path_type = symm_tied, anti_symm_tied
+                path_type = A, A^T, -A^T, A^T+b, -A^T+b
             """
             self.path_type = path_type
-            self.W = cable_to_mirror.W
-            if self.path_type == "A": #"tied":
-                self.b = cable_to_mirror.b
-            else: # A^T or -A^T # symm_tied or anti_symm_tied
-                if self.b_kernel is not None:
-                    b = transform_utils.init_weights(kernel=self.b_kernel, shape=[1, out_dim], seed=self.seed)
-                    #b = tf.zeros([1,out_dim])
-                    self.b = tf.Variable(b, name="b_{0}".format(self.name))
-        else:
-            in_dim = self.src_node.dim
-            out_dim = self.dest_node.dim
-            init_type = w_kernel[0]
-            if init_type == "lkwta":
-                if in_dim != out_dim:
-                    print("ERROR: input-side dim {0} != output-side dim {1}".format(in_dim,out_dim))
-                    sys.exit(1)
-                #lat_type = lateral_kernel.get("lat_type")
-                n_group = w_kernel[1] #("n_group")
-                alpha_scale = w_kernel[2] #("alpha_scale")
-                beta_scale = w_kernel[3] #("beta_scale")
-                #if n_group > 0:
-                # create potential lateral competition synapses within this node
-                W = transform_utils.create_competiion_matrix(in_dim, init_type, beta_scale, -alpha_scale, n_group, band=-1)
-                self.W = tf.Variable( W, name="W_{0}".format(self.name) )
-            else:
-                W = transform_utils.init_weights(kernel=self.w_kernel, shape=[in_dim, out_dim], seed=self.seed)
-                self.W = tf.Variable(W, name="W_{0}".format(self.name))
-            if b_kernel is not None:
-                b = transform_utils.init_weights(kernel=self.b_kernel, shape=[1, out_dim], seed=self.seed)
-                #b = tf.zeros([1,out_dim])
-                self.b = tf.Variable(b, name="b_{0}".format(self.name))
-            #self.W_empty = self.W * 0
+            A = cable_to_mirror.params["A"]
+            b = cable_to_mirror.params["b"]
+            if "A" in self.path_type: # share A matrix
+                self.params["A"] = A
+            if "b" in self.path_type: # share b bias vector
+                self.params["b"] = b
+
+        if init_kernels is not None:
+            A_init = init_kernels.get("A_init") # get A's init schem
+            if A_init is not None and self.params.get("A") is None:
+                scheme = A_init[0] # N-tuple specifying init scheme
+                if scheme[0] == "lkwta":
+                    if in_dim != out_dim:
+                        print("ERROR: input-side dim {0} != output-side dim {1}".format(in_dim,out_dim))
+                        sys.exit(1)
+                    n_group = scheme[1] #("n_group")
+                    alpha_scale = scheme[2] #("alpha_scale")
+                    beta_scale = scheme[3] #("beta_scale")
+                    # create potential lateral competition synapses within this node
+                    A = transform_utils.create_competiion_matrix(in_dim, A_init, beta_scale, -alpha_scale, n_group, band=-1)
+                    A = tf.Variable( A, name="A_{0}".format(self.name) )
+                    self.params["A"] = A
+                else:
+                    A = transform_utils.init_weights(kernel=A_init, shape=[in_dim, out_dim], seed=self.seed)
+                    A = tf.Variable(A, name="A_{0}".format(self.name))
+                    self.params["A"] = A
+            b_init = init_kernels.get("b_init") # get b's init scheme
+            if b_init is not None and self.params.get("b") is None:
+                #scheme = b_init[0] # N-tuple specifying init scheme
+                b = transform_utils.init_weights(kernel=b_init, shape=[1, out_dim], seed=self.seed)
+                b = tf.Variable(b, name="b_{0}".format(self.name))
+                self.params["b"] = b
+        if self.path_type is None:
+            self.path_type = "none"
 
     def compile(self):
         """
@@ -166,37 +175,46 @@ class DCable(Cable):
             a dictionary containing post-compilation check information about this cable
         """
         info = super().compile()
+        if self.path_type is None:
+            self.path_type = "none"
         in_dim = self.src_node.dim
         out_dim = self.dest_node.dim
-        W = self.W
-        b = self.b
+        A = self.params.get("A")
+        b = self.params.get("b")
         if self.path_type is not None:
             info["path_type"] = self.path_type
-            if self.path_type == "A^T" or self.path_type == "-A^T":
-                W = tf.transpose(W)
-            elif self.path_type == "A*A^T":
-                W = tf.matmul(W,W,transpose_b=True)
-        info["W.shape"] = W.shape
-        if W.shape[0] != in_dim:
-            print("ERROR: DCable {} self.W row_dim {} != out_dim {}".format(self.name, W.shape[0], in_dim))
-        if W.shape[1] != out_dim:
-            print("ERROR: DCable {} self.W col_dim {} != out_dim {}".format(self.name, W.shape[1], out_dim))
-        if self.b is not None:
+            if A is not None and self.path_type is not None:
+                if "A^T" in self.path_type:
+                    A = tf.transpose(A)
+                elif self.path_type == "A*A^T":
+                    A = tf.matmul(A,A,transpose_b=True)
+        if A is not None:
+            info["A.shape"] = A.shape
+            if A.shape[0] != in_dim:
+                print("ERROR: DCable {} self.A row_dim {} != out_dim {}".format(self.name, A.shape[0], in_dim))
+            if A.shape[1] != out_dim:
+                print("ERROR: DCable {} self.A col_dim {} != out_dim {}".format(self.name, A.shape[1], out_dim))
+        if b is not None:
             info["b.shape"] = b.shape
             if b.shape[1] != out_dim:
-                print("ERROR: DCable {} self.b col_dim {} != out_dim {}".format(self.name, W.shape[1], out_dim))
+                print("ERROR: DCable {} self.b col_dim {} != out_dim {}".format(self.name, b.shape[1], out_dim))
         return info
 
 
-    def set_update_rule(self, preact, postact, gamma=1.0, use_mod_factor=False):
-        preact_node, preact_comp = preact
-        self.preact_node = preact_node
-        self.preact_comp = preact_comp
-
-        postact_node, postact_comp = postact
-        self.postact_node = postact_node
-        self.postact_comp = postact_comp
-
+    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False, param=None):
+        if preact is None and postact is None:
+            print("ERROR: Both preact and postact CANNOT be None for {}".format(self.name))
+            sys.exit(1)
+        if preact is not None:
+            preact_node, preact_comp = preact
+        if postact is not None:
+            postact_node, postact_comp = postact
+        if param is not None:
+            for pname in param:
+                self.update_terms[pname] = (preact, postact)
+        else:
+            print("ERROR: *param* target cannot be None for {}".format(self.name))
+            sys.exit(1)
         self.gamma = gamma
         self.use_mod_factor = use_mod_factor
         self.is_learnable = True
@@ -204,63 +222,94 @@ class DCable(Cable):
     def propagate(self):
         in_signal = self.src_node.extract(self.src_comp) # extract input signal
         out_signal = None
-        if self.shared_param_path is not None:
-            if self.path_type == "A^T": # "symm_tied":
-                out_signal = tf.matmul(in_signal, self.W, transpose_b=True)
-                if self.b is not None:
-                    out_signal = out_signal + self.b
-            elif self.path_type == "-A^T": # "anti_symm_tied":
-                out_signal = tf.matmul(in_signal, -self.W, transpose_b=True)
-                if self.b is not None:
-                    out_signal = out_signal + self.b
-            elif self.path_type == "A*A^T":
-                V = tf.matmul(self.W,self.W,transpose_b=True)
+        A = self.params.get("A")
+        b = self.params.get("b")
+        if A is None and b is None:
+            tf.print("ERROR: Both *A* and *b* CANNOT be None for {}".format(self.name))
+            sys.exit(1)
+
+        if self.path_type is not None:
+            if self.path_type == "A*A^T":
+                # Case 1: lateral cross-inhibition shared pattern
+                V = tf.matmul(A,A,transpose_b=True)
                 V = tf.eye(V.shape[1]) - V
                 out_signal = tf.matmul(in_signal, V)
-            elif self.path_type == "A": # "tied":
-                out_signal = tf.matmul(in_signal, self.W)
-                if self.b is not None:
-                    out_signal = out_signal + self.b
-        else:
-            out_signal = tf.matmul(in_signal, self.W)
-            if self.b is not None:
-                out_signal = out_signal + self.b
+                if b is not None: # (A * input) + b
+                    out_signal = out_signal + b
+                return out_signal # terminal - return output here
+        #print("A ",A.shape)
+        #sys.exit(0)
+        if A is not None: # Case 2a: A * input
+            if self.path_type == "A^T":
+                out_signal = tf.matmul(in_signal, A, transpose_b=True)
+            elif self.path_type == "-A^T":
+                out_signal = tf.matmul(in_signal, -A, transpose_b=True)
+            else: # self.path_type == "none" or "A" or "A+b"
+                out_signal = tf.matmul(in_signal, A)
+        if b is not None: # Apply bias if applicable
+            if out_signal is None:
+                out_signal = in_signal
+            out_signal = out_signal + b
+
         out_signal = out_signal * self.coeff
         return out_signal # return output signal
 
     def calc_update(self):
+        delta = []
+
         clip_type = "none"
         if self.clip_kernel is not None:
             self.clip_type = clip_kernel[0]
             self.clip_radius = clip_kernel[1]
-        if self.is_learnable == True and self.shared_param_path is None:
-            # Generalized Hebbian rule over arbitrary node signals
-            postact_term = self.postact_node.extract(self.postact_comp)
-            preact_term = self.preact_node.extract(self.preact_comp)
-            dW = tf.matmul(preact_term, postact_term, transpose_a=True)
-            if clip_type == "norm_clip":
-                dW = tf.clip_by_norm(dW, clip_radius)
-            elif clip_type == "hard_clip":
-                dW = tf.clip_by_value(dW, -clip_radius, clip_radius)
-            if self.use_mod_factor == True: # apply modulatory factor matrix to dW
-                W_M = transform_utils.calc_modulatory_factor(self.W)
-                dW = dW * W_M
-            dW = -dW * self.gamma
-            if self.b is not None:
-                db = tf.reduce_sum(postact_term, axis=0, keepdims=True)
-                if clip_type == "hard_clip":
-                    db = tf.clip_by_value(db, -clip_radius, clip_radius)
-                db = -db * self.gamma
-                return [dW, db]
-            return [dW]
-        elif self.is_learnable == True:
-            if self.b is not None:
-                db = tf.reduce_sum(postact_term, axis=0, keepdims=True)
-                if clip_type == "hard_clip":
-                    db = tf.clip_by_value(db, -clip_radius, clip_radius)
-                db = -db * self.gamma
-                return [db]
-        return []
+
+        A = self.params.get("A")
+        b = self.params.get("b")
+
+        dA = None
+        db = None
+        if self.is_learnable == True:
+            if A is not None:
+                A_terms = self.update_terms.get("A")
+                if A_terms is not None:
+                    preact, postact = A_terms
+                    if preact is None and postact is None:
+                        tf.print("ERROR: Both preact and postact for *A* CANNOT be None for {}".format(self.name))
+                        sys.exit(1)
+                    preact_node, preact_comp = preact
+                    postact_node, postact_comp = postact
+                    postact_term = postact_node.extract(postact_comp)
+                    preact_term = preact_node.extract(preact_comp)
+
+                    dA = tf.matmul(preact_term, postact_term, transpose_a=True)
+                    if clip_type == "norm_clip":
+                        dA = tf.clip_by_norm(dA, clip_radius)
+                    elif clip_type == "hard_clip":
+                        dA = tf.clip_by_value(dA, -clip_radius, clip_radius)
+                    if self.use_mod_factor == True: # apply modulatory factor matrix to dA
+                        A_M = transform_utils.calc_modulatory_factor(A)
+                        dA = dA * A_M
+                    dA = -dA * self.gamma
+            if b is not None:
+                b_terms = self.update_terms.get("b")
+                if b_terms is not None:
+                    preact, postact = b_terms
+                    if postact is None:
+                        tf.print("ERROR: postact for *b* CANNOT be None for {}".format(self.name))
+                        sys.exit(1)
+                    #preact_node, preact_comp = preact
+                    postact_node, postact_comp = postact
+                    postact_term = postact_node.extract(postact_comp)
+
+                    if b is not None:
+                        db = tf.reduce_sum(postact_term, axis=0, keepdims=True)
+                        if clip_type == "hard_clip":
+                            db = tf.clip_by_value(db, -clip_radius, clip_radius)
+                        db = -db * self.gamma
+        if dA is not None:
+            delta.append(dA)
+        if db is not None:
+            delta.append(db)
+        return delta
 
     def apply_constraints(self):
         """
@@ -275,8 +324,10 @@ class DCable(Cable):
                 clip_mag = float(self.constraint_kernel.get("clip_mag"))
                 clip_axis = int(self.constraint_kernel.get("clip_axis"))
                 if clip_mag > 0.0: # apply constraints
-                    if clip_type == "norm_clip":
-                        self.W.assign(tf.clip_by_norm(self.W, clip_mag, axes=[clip_axis]))
-                    elif clip_type == "forced_norm_clip":
-                        _W = transform_utils.normalize_by_norm(self.W, clip_mag, param_axis=clip_axis )
-                        self.W.assign(_W)
+                    A = self.params.get("A")
+                    if A is not None:
+                        if clip_type == "norm_clip":
+                            A.assign(tf.clip_by_norm(A, clip_mag, axes=[clip_axis]))
+                        elif clip_type == "forced_norm_clip":
+                            _A = transform_utils.normalize_by_norm(A, clip_mag, param_axis=clip_axis )
+                            A.assign(_A)

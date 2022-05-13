@@ -17,7 +17,7 @@ class Config:
 
     @author: Alex Ororbia
     """
-    def __init__(self, fname):
+    def __init__(self, fname=None):
         self.fname = fname
         self.variables = {}
 

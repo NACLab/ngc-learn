@@ -113,7 +113,8 @@ beta = 0.05
 integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True}
 thr_cfg = {"threshold_type" : "soft_threshold", "thr_lambda" : 5e-3}
 # cable configurations
-dcable_cfg = {"type": "dense", "init" : ("unif_scale",1.0), "seed" : seed}
+init_kernels = {"A_init" : ("unif_scale",1.0)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
 pos_scable_cfg = {"type": "simple", "coeff": 1.0}
 neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 constraint_cfg = {"clip_type":"forced_norm_clip","clip_mag":1.0,"clip_axis":1}
@@ -146,8 +147,8 @@ e0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z1_mu0,
 e0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
-z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"))
-z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"))
+z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
+z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
 
 # Set up graph - execution cycle/order
 print(" > Constructing NGC graph")
@@ -239,8 +240,8 @@ s2.wire_to(e2_inf, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scab
 st2.wire_to(e2_inf, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
 
 # set up update rules and make relevant edges aware of these
-s0_s1.set_update_rule(preact=(s0,"phi(z)"), postact=(e1_inf,"phi(z)"))
-s1_s2.set_update_rule(preact=(s1,"phi(z)"), postact=(e2_inf,"phi(z)"))
+s0_s1.set_update_rule(preact=(s0,"phi(z)"), postact=(e1_inf,"phi(z)"), param=["A"])
+s1_s2.set_update_rule(preact=(s1,"phi(z)"), postact=(e2_inf,"phi(z)"), param=["A"])
 
 sampler = ProjectionGraph()
 sampler.set_cycle(nodes=[s0,s1,s2])
@@ -356,4 +357,4 @@ in sparse coding algorithms with applications to object recognition."
 arXiv preprint arXiv:1010.3467 (2010). <br>
 [4] Samaria, Ferdinando S., and Andy C. Harter. "Parameterisation of a
 stochastic model for human face identification." Proceedings of 1994 IEEE
-workshop on applications of computer vision. IEEE, 1994.
+workshop on applications of computer vision (1994).

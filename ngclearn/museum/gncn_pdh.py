@@ -91,9 +91,6 @@ class GNCN_PDH:
             print(" > Using Activation Function Derivative...")
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : use_dfx}
         precis_cfg = ("uniform", 0.01)
-        # beta_scale = 0.1 # alpha_scale = 0.15
-        lat_init = ("lkwta",n_group,alpha_scale,beta_scale)
-        lateral_cfg = {"type" : "dense", "init" : lat_init, "coeff": -1.0}
         constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":0}
         use_mod_factor = False
         add_extra_skip =  False
@@ -116,13 +113,18 @@ class GNCN_PDH:
         z0 = SNode(name="z0", dim=x_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
 
         # create cable wiring scheme relating nodes to one another
-        dcable_cfg = {"type": "dense", "init" : ("gaussian",wght_sd), "seed" : seed}
-        ecable_cfg = {"type": "dense", "init" : ("gaussian",wght_sd), "seed" : seed}
+        init_kernels = {"A_init" : ("gaussian",wght_sd)}
+        dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
+        ecable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
-        lat_init_top = ("lkwta",n_top_group,alpha_scale,beta_scale)
-        lateral_cfg_top = {"type" : "dense", "init" : lat_init_top, "coeff": -1.0}
+        # beta_scale = 0.1 # alpha_scale = 0.15
+        lat_init = {"A_init" : ("lkwta",n_group,alpha_scale,beta_scale)}
+        lateral_cfg = {"type" : "dense", "init_kernels" : lat_init, "coeff": -1.0}
+
+        top_lat_init = {"A_init" : ("lkwta",n_top_group,alpha_scale,beta_scale)}
+        lateral_cfg_top = {"type" : "dense", "init_kernels" : top_lat_init, "coeff": -1.0}
         # lateral recurrent connection
         z3_to_z3 = z3.wire_to(z3, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=lateral_cfg_top)
 
@@ -174,23 +176,23 @@ class GNCN_PDH:
                 e0_z3.set_constraint(constraint_cfg)
 
         # set up update rules and make relevant edges aware of these
-        z3_mu1.set_update_rule(preact=(z3,"phi(z)"), postact=(e1,"phi(z)"), use_mod_factor=use_mod_factor)
-        z2_mu0.set_update_rule(preact=(z2,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor)
+        z3_mu1.set_update_rule(preact=(z3,"phi(z)"), postact=(e1,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
+        z2_mu0.set_update_rule(preact=(z2,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
         if add_extra_skip is True:
-            z3_mu0.set_update_rule(preact=(z3,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor)
-        z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"), use_mod_factor=use_mod_factor)
-        z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), use_mod_factor=use_mod_factor)
-        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor)
+            z3_mu0.set_update_rule(preact=(z3,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
+        z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
+        z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
+        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
         e_gamma = 1.0
-        e2_z3.set_update_rule(preact=(e2,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor)
-        e1_z2.set_update_rule(preact=(e1,"phi(z)"), postact=(z2,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor)
-        e0_z1.set_update_rule(preact=(e0,"phi(z)"), postact=(z1,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor)
+        e2_z3.set_update_rule(preact=(e2,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
+        e1_z2.set_update_rule(preact=(e1,"phi(z)"), postact=(z2,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
+        e0_z1.set_update_rule(preact=(e0,"phi(z)"), postact=(z1,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
         if use_skip_error is True:
-            e0_z2.set_update_rule(preact=(e0,"phi(z)"), postact=(z2,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor)
-            e1_z3.set_update_rule(preact=(e1,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor)
+            e0_z2.set_update_rule(preact=(e0,"phi(z)"), postact=(z2,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
+            e1_z3.set_update_rule(preact=(e1,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
         if add_extra_skip is True:
             if use_skip_error is True:
-                e0_z3.set_update_rule(preact=(e0,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor)
+                e0_z3.set_update_rule(preact=(e0,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")

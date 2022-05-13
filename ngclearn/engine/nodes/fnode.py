@@ -66,7 +66,7 @@ class FNode(Node):
         info["phi(x)"] = self.act_fx
         return info
 
-    def step(self, skip_core_calc=False):
+    def step(self, injection_table=None, skip_core_calc=False):
         bmask = self.masks.get("mask")
         ########################################################################
         if skip_core_calc == False:

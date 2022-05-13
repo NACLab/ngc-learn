@@ -32,7 +32,6 @@ class Node:
         self.masks = None
         self.connected_cables = []
         self.do_inplace = True # forces variables to be overriden/set in-place in memory
-        self.injected = {}
 
     def set_status(self, status=("static",1)):
         """
@@ -92,6 +91,7 @@ class Node:
         info["masks"] = self.mask_names
         info["do_inplace"] = self.do_inplace
         info["batch_size"] = self.batch_size
+
         return info
 
     def set_constraint(self, constraint_kernel):
@@ -115,11 +115,8 @@ class Node:
                     If "dense" is specified, a DCable (dense cable/bundle/matrix of synapses) will be used to
                     transmit/transform information along.
 
-                :`'has_bias'`: if True, adds a bias/base-rate vector to the DCable that be used for wiring
-
-                :`'init'`: type of distribution to use initialize the cable/synapses.
-                    If "gaussian" is specified, for example, a Gaussian distribution will be used to initialize
-                    each scalar element inside the DCable synaptic matrix (biases are always set to zero)
+                :`'init_kernels'`: a Dict specifying how parameters w/in the learnable parts of the cable are to
+                    randomly initialized
 
                 :`'seed'`: integer seed to deterministically control initialization of synapses in a DCable
 
@@ -140,19 +137,22 @@ class Node:
         if cable_kernel is None and mirror_path_kernel is None:
             print("Error: Must either set |cable_kernel| or |mirror_path_kernel| argument! for node({})".format(self.name))
             sys.exit(1)
+        init_kernels = None
+        if cable_kernel is not None:
+            init_kernels = cable_kernel.get("init_kernels")
         if mirror_path_kernel is not None: # directly share/shallow copy this cable
             #bias_init = cable_kernel.get("bias_init") # <--- for RBMs
-            cable = DCable(inp=(self,src_comp),out=(dest_node,dest_comp), shared_param_path=mirror_path_kernel)
+            cable = DCable(inp=(self,src_comp),out=(dest_node,dest_comp), shared_param_path=mirror_path_kernel,
+                           init_kernels=init_kernels)
         else:
             cable_type = cable_kernel.get("type")
             coeff = cable_kernel.get("coeff")
             if cable_type == "dense":
-                cable_init = cable_kernel.get("init")
-                bias_init = cable_kernel.get("bias_init")
                 seed = cable_kernel.get("seed")
                 if seed is None:
                     seed = 69
-                cable = DCable(inp=(self, src_comp), out=(dest_node, dest_comp), w_kernel=cable_init, b_kernel=bias_init, seed=seed)
+                cable = DCable(inp=(self, src_comp), out=(dest_node, dest_comp), init_kernels=init_kernels,
+                               seed=seed)
                 if coeff is not None:
                     cable.coeff = coeff
             else:
@@ -184,13 +184,17 @@ class Node:
             is_persistent: if True, prevents this node from overriding the clamped data over time (Default = True)
         """
         comp_name, signal = data
-        self.injected[comp_name] = 1.0
+        # if is_persistent is True:
+        #     ptr = self.comp_map[comp_name]
+        #     self.injected[ptr] = 2 # 2 means purely clamped
+        # else:
+        #     ptr = self.comp_map[comp_name]
+        #     self.injected[ptr] = 1  # 1 means this value can change w/ dynamics
+
         if self.do_inplace == True:
             self.compartments[comp_name].assign(signal)
         else:
             self.compartments[comp_name] = (signal)
-            # print(self.name)
-            # print("{} \n {}".format(comp_name, tf.norm(self.compartments[comp_name])))
         if is_persistent is True:
             self.is_clamped = True
 
@@ -208,13 +212,15 @@ class Node:
         """
         self.clamp(data, is_persistent=False)
 
-    def step(self, skip_core_calc=False):
+    def step(self, injection_table=None, skip_core_calc=False):
         """
         Executes this nodes internal integration/calculation for one discrete step
         in time, i.e., runs simulation of this node for one time step.
 
         Args:
-            skip_core_calc: skips the core components of this node's calculation
+            injection_table:
+
+            skip_core_calc: skips the core components of this node's calculation (Default = False)
         """
         pass
 
@@ -232,8 +238,9 @@ class Node:
     def clear(self):
         """ Wipes/clears values of each compartment in this node (and sets .is_clamped = False). """
         #print("CLEAR for {} w/ ip = {}".format(self.name, self.do_inplace))
+        #tf.print("=============== CLEAR ===============")
         self.t = 0
-        self.injected = {}
+
         for comp_name in self.compartment_names:
             comp_value = self.compartments.get(comp_name)
             if comp_value is not None:
@@ -249,24 +256,30 @@ class Node:
                 else:
                     self.masks[mask_name] = (mask_value * 0 + 1)
 
-    def set_cold_state(self, batch_size=-1):
+    def set_cold_state(self, injection_table=None, batch_size=-1):
         """
         Sets each compartment to its cold zero-state of shape (batch_size x D).
         Note that this fills each vector/matrix state of each compartment to
         all zero values.
 
         Args:
+            injection_table:
+
             batch_size: the axis=0 dimension of each compartment @ its cold zero-state
         """
+        if injection_table is None:
+            injection_table = {}
+
         batch_size_ = batch_size
         if batch_size_ <= 0:
             batch_size_ = self.batch_size
         for comp_name in self.compartment_names:
-            if self.injected.get(comp_name) is None:
+            #if self.injected.get(comp_name) is None:
+            if injection_table.get(comp_name) is None:
                 comp_value = self.compartments.get(comp_name)
                 if comp_value is not None:
                     if comp_value.shape[0] > 1:
-                        zero_state = tf.zeros([batch_size, comp_value.shape[1]])
+                        zero_state = tf.zeros([batch_size_, comp_value.shape[1]])
                     else:
                         zero_state = tf.zeros([1, comp_value.shape[1]])
                     if self.do_inplace == True:
@@ -274,17 +287,19 @@ class Node:
                     else:
                         self.compartments[comp_name] = (zero_state + 0)
         for comp_name in self.mask_names:
-            if self.injected.get(comp_name) is None:
-                comp_value = self.masks.get(comp_name)
-                if comp_value is not None:
-                    if comp_value.shape[0] > 1:
-                        zero_state = tf.ones([batch_size, comp_value.shape[1]])
-                    else:
-                        zero_state = tf.ones([1, comp_value.shape[1]])
-                    if self.do_inplace == True:
-                        self.masks[comp_name].assign(zero_state + 0)
-                    else:
-                        self.masks[comp_name] = (zero_state + 0)
+            #ptr = self.comp_map[comp_name]
+            #if self.injected.get(comp_name) is None:
+            #if self.injected[ptr] == 0:
+            comp_value = self.masks.get(comp_name)
+            if comp_value is not None:
+                if comp_value.shape[0] > 1:
+                    zero_state = tf.ones([batch_size_, comp_value.shape[1]])
+                else:
+                    zero_state = tf.ones([1, comp_value.shape[1]])
+                if self.do_inplace == True:
+                    self.masks[comp_name].assign(zero_state + 0)
+                else:
+                    self.masks[comp_name] = (zero_state + 0)
 
     def extract_params(self):
         return []

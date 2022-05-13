@@ -77,20 +77,19 @@ class ENode(Node):
         self.dfx = None
         self.is_clamped = False
 
-        self.compartment_names = ["pred_mu", "pred_targ", "z", "phi(z)", "L",
-                                  "weights", "avg_scalar"]
+        self.compartment_names = ["pred_mu", "pred_targ", "z", "phi(z)", "L"]# "weights", "avg_scalar"]
         self.compartments = {}
         for name in self.compartment_names:
+            name_v = None
             if "phi(z)" in name:
-                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_phi_z".format(self.name))
-            elif "weights" in name:
-                self.compartments[name] = None #tf.Variable(tf.ones([1,1]), name="{}_{}".format(self.name, name))
-            elif "avg_scalar" in name:
-                self.compartments[name] = None #tf.Variable(tf.ones([1,1]), name="{}_{}".format(self.name, name))
+                name_v = "{}_phi_z".format(self.name)
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name=name_v)
             elif "L" in name:
-                self.compartments[name] = tf.Variable(tf.zeros([1,1]), name="{}_{}".format(self.name, name))
+                name_v = "{}_{}".format(self.name, name)
+                self.compartments[name] = tf.Variable(tf.zeros([1,1]), name=name_v)
             else:
-                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_{}".format(self.name, name))
+                name_v = "{}_{}".format(self.name, name)
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name=name_v)
         self.mask_names = ["mask"]
         self.masks = {}
         for name in self.mask_names:
@@ -139,7 +138,7 @@ class ENode(Node):
     def set_constraint(self, constraint_kernel):
         self.constraint_kernel = constraint_kernel
 
-    def step(self, skip_core_calc=False):
+    def step(self, injection_table=None, skip_core_calc=False):
         bmask = self.masks.get("mask")
         Ws = self.compartments.get("weights")
         Ns = self.compartments.get("avg_scalar")
