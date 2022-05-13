@@ -133,6 +133,7 @@ with tf.device(gpu_tag):
         return float(ToD)
 
     for trial in range(n_trials): # for each trial
+
         agent = None # set up NGC model
         print(" >> Building ",model_type)
         if model_type == "GNCN_t1":
@@ -172,9 +173,12 @@ with tf.device(gpu_tag):
             n_s = 0
             # run single epoch/pass/iteration through dataset
             ####################################################################
+            mark = 0
             for batch in train_set:
                 n_s += batch[0][1].shape[0] # track num samples seen so far
                 x_name, x = batch[0]
+                mark += 1
+
                 x_hat = agent.settle(x) # conduct iterative inference
                 ToD_t = calc_ToD(agent) # calc ToD
                 Lx = tf.reduce_sum( metric.bce(x_hat, x) ) + Lx

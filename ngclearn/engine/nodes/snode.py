@@ -269,6 +269,15 @@ class SNode(Node):
         if skip_core_calc == False:
             self.t = self.t + 1
 
+        # if self.name == "z1" or self.name == "z2" or self.name == "z3":
+        #     tf.print("########################################################")
+        #     tf.print("{}  @ t = {}".format(self.name, self.t))
+        #     tf.print("dz_bu: ",self.compartments["dz_bu"])
+        #     tf.print("dz_td: ",self.compartments["dz_td"])
+        #     tf.print("    z: ",self.compartments["z"])
+        #     tf.print(" f(z): ",self.compartments["phi(z)"])
+        #     tf.print("########################################################")
+
         # a node returns a list of its named component values
         values = []
         injected = []

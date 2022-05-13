@@ -176,23 +176,23 @@ class GNCN_PDH:
                 e0_z3.set_constraint(constraint_cfg)
 
         # set up update rules and make relevant edges aware of these
-        z3_mu1.set_update_rule(preact=(z3,"phi(z)"), postact=(e1,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
+        z3_mu1.set_update_rule(preact=(z3,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
         z2_mu0.set_update_rule(preact=(z2,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
         if add_extra_skip is True:
-            z3_mu0.set_update_rule(preact=(z3,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
-        z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
-        z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
-        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])
+            z3_mu0.set_update_rule(preact=(z3,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
+        z3_mu2.set_update_rule(preact=(z3,"phi(z)"), postact=(e2,"phi(z)"), param=["A"])
+        z2_mu1.set_update_rule(preact=(z2,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
+        z1_mu0.set_update_rule(preact=(z1,"phi(z)"), postact=(e0,"phi(z)"), param=["A"])
         e_gamma = 1.0
-        e2_z3.set_update_rule(preact=(e2,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
+        e2_z3.set_update_rule(preact=(e2,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, param=["A"])
         e1_z2.set_update_rule(preact=(e1,"phi(z)"), postact=(z2,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
         e0_z1.set_update_rule(preact=(e0,"phi(z)"), postact=(z1,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
         if use_skip_error is True:
-            e0_z2.set_update_rule(preact=(e0,"phi(z)"), postact=(z2,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
-            e1_z3.set_update_rule(preact=(e1,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
+            e0_z2.set_update_rule(preact=(e0,"phi(z)"), postact=(z2,"phi(z)"), gamma=e_gamma, param=["A"])
+            e1_z3.set_update_rule(preact=(e1,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, param=["A"])
         if add_extra_skip is True:
             if use_skip_error is True:
-                e0_z3.set_update_rule(preact=(e0,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, use_mod_factor=use_mod_factor, param=["A"])
+                e0_z3.set_update_rule(preact=(e0,"phi(z)"), postact=(z3,"phi(z)"), gamma=e_gamma, param=["A"])
 
         # Set up graph - execution cycle/order
         print(" > Constructing NGC graph")
@@ -200,7 +200,7 @@ class GNCN_PDH:
         ngc_model.set_cycle(nodes=[z3, z2, z1, z0])
         ngc_model.set_cycle(nodes=[mu2, mu1, mu0])
         ngc_model.set_cycle(nodes=[e2, e1, e0])
-        info = ngc_model.compile(batch_size=batch_size)
+        info = ngc_model.compile(batch_size=batch_size, use_graph_optim=True)
         self.info = parse_simulation_info(info)
         ngc_model.apply_constraints()
         self.ngc_model = ngc_model

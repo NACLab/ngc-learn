@@ -115,6 +115,7 @@ class ENode(Node):
             #init = diag + init_weights("orthogonal", [self.z_dims[l],self.z_dims[l]], stddev=prec_sigma, seed=seed) * (1.0 - diag)
             Sigma = tf.Variable(init, name="Sigma_{0}".format(self.name) )
             self.Sigma = Sigma
+            #self.Prec = tf.Variable(tf.zeros([self.dim,self.dim]), name="Prec_{0}".format(self.name) )
         self.constraint_kernel = constraint_kernel
 
     def compile(self):
@@ -264,9 +265,11 @@ class ENode(Node):
             self.Sigma.assign( cov_l )
         else:
             cov_l = self.Sigma + 0
+            self.Sigma.assign( cov_l )
         R = tf.linalg.cholesky(cov_l) # decompose
         prec_l = tf.transpose(tf.linalg.triangular_solve(R,diag_l,lower=True))
         self.Prec = prec_l
+        #self.Prec.assign(prec_l)
         return R, prec_l
 
     def calc_update(self, update_radius=-1.0):
@@ -299,7 +302,7 @@ class ENode(Node):
         | 1) compute new precision matrices
         | 2) project synapses to adhere to any embedded norm constraints
         """
-        self.compute_precision()
+        R, Prec_l = self.compute_precision()
 
         if self.constraint_kernel is not None:
             clip_type = self.constraint_kernel.get("clip_type")
@@ -311,3 +314,4 @@ class ENode(Node):
                 elif clip_type == "forced_norm_clip":
                     _S = transform_utils.normalize_by_norm(self.Sigma, clip_mag, param_axis=clip_axis )
                     self.Sigma.assign(_S)
+        return Prec_l

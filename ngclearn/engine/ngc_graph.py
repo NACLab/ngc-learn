@@ -32,6 +32,7 @@ class NGCGraph:
     def __init__(self, K=5, name="ncn", batch_size=1):
         self.name = name
         self.theta = [] # set of learnable synaptic parameters
+        self.Prec = []
         self.omega = [] # set of non-learnable or slowly-evolved synaptic parameters
         self.exec_cycles = [] # this simulation's execution cycles
         self.nodes = {}
@@ -61,6 +62,7 @@ class NGCGraph:
                 dictated order)
         """
         self.theta = []
+        self.Prec = []
         self.learnable_cables = []
         self.unique_learnable_objects = {}
         self.learnable_nodes = []
@@ -72,6 +74,7 @@ class NGCGraph:
                     if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
                         n_j.compute_precision()
                         self.theta.append(n_j.Sigma)
+                        self.Prec.append(n_j.Prec)
                     # else, this would break if a novel node is deemed learnable... (FIXME)
                 elif isinstance(obj,Cable) == True:
                     self.learnable_cables.append(obj)
@@ -118,6 +121,7 @@ class NGCGraph:
                     if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
                         n_j.compute_precision()
                         self.theta.append(n_j.Sigma)
+                        self.Prec.append(n_j.Prec)
         self.exec_cycles.append(cycle)
 
         if param_order is not None:
@@ -405,8 +409,15 @@ class NGCGraph:
                     node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
             else: # OR, never compute delta inside the simulation
                 node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
-
-                # TODO: move back in masking code here (or inside static graph...)
+            # TODO: move back in masking code here (or inside static graph...)
+            # tf.print("-------------------- {} ---------------------".format(k))
+            # tf.print("z3:  ",self.getNode("z3").extract("z"))
+            # tf.print("mu2:  ",self.getNode("mu2").extract("z"))
+            # tf.print("z2:  ",self.getNode("z2").extract("z"))
+            # tf.print("e2:  ",self.getNode("e2").extract("z"))
+            # tf.print("mu1:  ",self.getNode("mu1").extract("z"))
+            # tf.print("z1:  ",self.getNode("z1").extract("z"))
+            # tf.print("e1:  ",self.getNode("e1").extract("z"))
 
         # parse results from static graph & place correct shallow-copied items in system dictionary
         for ii in range(len(node_values)):
@@ -516,9 +527,11 @@ class NGCGraph:
             cable_j = self.learnable_cables[j]
             cable_j.apply_constraints()
         # apply constraints to any applicable (learnable) nodes
+        #self.Prec = []
         for j in range(len(self.learnable_nodes)):
             node_j = self.learnable_nodes[j]
-            node_j.apply_constraints()
+            Prec_l = node_j.apply_constraints()
+            #self.Prec.append(Prec_l)
 
     def set_optimization(self, opt_algo):
         """

@@ -143,15 +143,15 @@ class DCable(Cable):
             A_init = init_kernels.get("A_init") # get A's init schem
             if A_init is not None and self.params.get("A") is None:
                 scheme = A_init[0] # N-tuple specifying init scheme
-                if scheme[0] == "lkwta":
+                if scheme == "lkwta":
                     if in_dim != out_dim:
                         print("ERROR: input-side dim {0} != output-side dim {1}".format(in_dim,out_dim))
                         sys.exit(1)
-                    n_group = scheme[1] #("n_group")
-                    alpha_scale = scheme[2] #("alpha_scale")
-                    beta_scale = scheme[3] #("beta_scale")
+                    n_group = A_init[1] #("n_group")
+                    alpha_scale = A_init[2] #("alpha_scale")
+                    beta_scale = A_init[3] #("beta_scale")
                     # create potential lateral competition synapses within this node
-                    A = transform_utils.create_competiion_matrix(in_dim, A_init, beta_scale, -alpha_scale, n_group, band=-1)
+                    A = transform_utils.create_competiion_matrix(in_dim, scheme, beta_scale, -alpha_scale, n_group, band=-1)
                     A = tf.Variable( A, name="A_{0}".format(self.name) )
                     self.params["A"] = A
                 else:
