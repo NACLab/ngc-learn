@@ -160,6 +160,8 @@ class DCable(Cable):
                     self.params["A"] = A
             b_init = init_kernels.get("b_init") # get b's init scheme
             if b_init is not None and self.params.get("b") is None:
+                print(self.name)
+                print("B_INIT!")
                 #scheme = b_init[0] # N-tuple specifying init scheme
                 b = transform_utils.init_weights(kernel=b_init, shape=[1, out_dim], seed=self.seed)
                 b = tf.Variable(b, name="b_{0}".format(self.name))

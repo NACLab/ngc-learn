@@ -48,10 +48,10 @@ class ProjectionGraph:
                 if cable_i.cable_type == "dense":
                     if cable_i.shared_param_path is None and cable_i.is_learnable is True:
                         self.learnable_cables.append(cable_i)
-                        if cable_i.W is not None:
-                            self.theta.append(cable_i.W)
-                        if cable_i.b is not None:
-                            self.theta.append(cable_i.b)
+                        for pname in cable_i.params:
+                            param = cable_i.params.get(pname)
+                            if param is not None:
+                                self.theta.append( param )
 
     def compile(self, batch_size=-1):
         """
@@ -201,11 +201,17 @@ class ProjectionGraph:
             delta_j = cable_j.calc_update()
             delta = delta + delta_j
             if debug_map is not None:
+                # --------------------------------------------------------------
+                # NOTE: this has not been tested...might not work as expected...
                 if len(delta_j) == 2: #dW, db
-                    debug_map[cable_j.W.name] = delta_j[0]
-                    debug_map[cable_j.b.name] = delta_j[1]
+                    if cable_j.params.get("A"):
+                        debug_map[cable_j.params["A"].name] = delta_j[0]
+                    if cable_j.params.get("b"):
+                        debug_map[cable_j.params["b"].name] = delta_j[1]
                 else: #dW
-                    debug_map[cable_j.W.name] = delta_j[0]
+                    if cable_j.params.get("A"):
+                        debug_map[cable_j.params["A"].name] = delta_j[0]
+            # --------------------------------------------------------------
         for j in range(len(self.learnable_nodes)):
             node_j = self.learnable_nodes[j]
             delta_j = node_j.calc_update()

@@ -130,7 +130,6 @@ class GNCN_t1_ISTA:
         self.info = parse_simulation_info(info)
         self.ngc_model = ngc_model
 
-
         # set up this NGC model's initialization graph
         inf_constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":0}
         z2_dim = ngc_model.getNode("z2").dim
@@ -155,8 +154,8 @@ class GNCN_t1_ISTA:
         st2.wire_to(e2_inf, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
 
         # set up update rules and make relevant edges aware of these
-        s0_s1.set_update_rule(preact=(s0,"phi(z)"), postact=(e1_inf,"phi(z)"))
-        s1_s2.set_update_rule(preact=(s1,"phi(z)"), postact=(e2_inf,"phi(z)"))
+        s0_s1.set_update_rule(preact=(s0,"phi(z)"), postact=(e1_inf,"phi(z)"), param=["A"])
+        s1_s2.set_update_rule(preact=(s1,"phi(z)"), postact=(e2_inf,"phi(z)"), param=["A"])
 
         sampler = ProjectionGraph()
         sampler.set_cycle(nodes=[s0,s1,s2])

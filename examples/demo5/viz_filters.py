@@ -59,7 +59,7 @@ print("Filters will be of shape: {}x{} ".format(px,py))
 
 with tf.device('/CPU:0'):
     ### retrieve the dictionary ###
-    W1 = ( model.ngc_model.cables.get("z1-to-mu0_dense").W )
+    W1 = ( model.ngc_model.cables.get("z1-to-mu0_dense").params["A"] )
     print(W1.shape)
 
     n_viz_filters = W1.shape[0] # 100 #W1.shape[0]
@@ -83,7 +83,7 @@ with tf.device('/CPU:0'):
     #plt.show()
 
     if viz_encoder == True:
-        W1 = ( model.ngc_sampler.cables.get("s0-to-s1_dense").W )
+        W1 = ( model.ngc_sampler.cables.get("s0-to-s1_dense").params["A"] )
         W1 = tf.transpose(W1)
         print(W1.shape)
 

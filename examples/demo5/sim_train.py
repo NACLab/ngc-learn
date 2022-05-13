@@ -234,7 +234,6 @@ with tf.device(gpu_tag):
                 delta, s_delta = agent.calc_updates(avg_update=False)
                 opt.apply_gradients(zip(delta, agent.ngc_model.theta))
                 agent.ngc_model.apply_constraints()
-
                 inf_opt.apply_gradients(zip(s_delta, agent.ngc_sampler.theta))
                 agent.ngc_sampler.apply_constraints()
 
