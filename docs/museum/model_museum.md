@@ -64,6 +64,6 @@ Biology 4.11 (2008): e1000211. <br>
 backpropagation algorithm in a predictive coding network with local hebbian
 synaptic plasticity." Neural computation 29.5 (2017): 1229-1262. <br>
 [5] Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
-by learning a sparse code for natural images. Nature 381, 607–609 (1996).
+by learning a sparse code for natural images. Nature 381, 607–609 (1996). <br>
 [6] Hinton, Geoffrey E. "Training products of experts by maximizing contrastive
 likelihood." Technical Report, Gatsby computational neuroscience unit (1999).
