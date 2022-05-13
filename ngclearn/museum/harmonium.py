@@ -24,7 +24,7 @@ class Harmonium:
     | Node Name Structure:
     | z1 -(z1-z0)-> z0
     | z0 -(z0-z1)-> z1
-    | Note: z0-z1 = (z1-z0)^T (transpose-tied synapses)
+    | Note: z1-z0 = (z0-z1)^T (transpose-tied synapses)
 
     Args:
         args: a Config dictionary containing necessary meta-parameters for the harmonium
@@ -83,6 +83,7 @@ class Harmonium:
         pos_phase = NGCGraph(K=1, name="rbm_pos")
         pos_phase.set_cycle(nodes=[z0, z1]) # z0 -> z1
         pos_phase.apply_constraints()
+        pos_phase.set_learning_order([z1_z0, z0_z1]) 
         info = pos_phase.compile(batch_size=batch_size, use_graph_optim=True)
         self.pos_info = parse_simulation_info(info)
         self.pos_phase = pos_phase
