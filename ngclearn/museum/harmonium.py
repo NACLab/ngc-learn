@@ -83,7 +83,7 @@ class Harmonium:
         pos_phase = NGCGraph(K=1, name="rbm_pos")
         pos_phase.set_cycle(nodes=[z0, z1]) # z0 -> z1
         pos_phase.apply_constraints()
-        info = pos_phase.compile(batch_size=batch_size, use_graph_optim=False)
+        info = pos_phase.compile(batch_size=batch_size, use_graph_optim=True)
         self.pos_info = parse_simulation_info(info)
         self.pos_phase = pos_phase
 
