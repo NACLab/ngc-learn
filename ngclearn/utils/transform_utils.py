@@ -6,6 +6,7 @@ activation functions and other relevant data transformation tools/utilities.
 """
 import tensorflow as tf
 import numpy as np
+from ngclearn.utils.stat_utils import sample_bernoulli
 
 def decide_fun(fun_type):
     """
@@ -32,6 +33,7 @@ def decide_fun(fun_type):
     |   * "sign" - signum (derivative not generated)
     |   * "clip_fx" - clipping function (derivative not generated)
     |   * "heaviside" - Heaviside function  (derivative not generated)
+    |   * "bernoulli" - the Bernoulli sampling function  (derivative not generated)
 
     Args:
         fun_type: a string stating the name of activation function and its 1st
@@ -89,6 +91,12 @@ def decide_fun(fun_type):
         d_fx = d_sigmoid
     elif fun_type == "softmax":
         fx = softmax
+        d_fx = tf.identity
+    elif fun_type == "bernoulli":
+        fx = bernoulli
+        d_fx = tf.identity
+    elif fun_type == "binarize":
+        fx = binarize
         d_fx = tf.identity
     else:
         fx = tf.identity
@@ -381,6 +389,9 @@ def binary_flip(x_b):
         the flipped binary vector form of x_b
     """
     return (-x_b + 1.0)
+
+def bernoulli(x): # wraps bernoulli sampler as an activation fx
+    return sample_bernoulli(x)
 
 def identity(z):
     return z

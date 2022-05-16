@@ -13,6 +13,7 @@ from ngclearn.engine.nodes.fnode import FNode
 from ngclearn.engine.proj_graph import ProjectionGraph
 
 from ngclearn.utils.io_utils import parse_simulation_info
+from ngclearn.utils.stat_utils import sample_bernoulli
 
 class Harmonium:
     """
@@ -25,6 +26,12 @@ class Harmonium:
     | z1 -(z1-z0)-> z0
     | z0 -(z0-z1)-> z1
     | Note: z1-z0 = (z0-z1)^T (transpose-tied synapses)
+
+    Another important reference for designing stable harmoniums is here:
+
+    Hinton, Geoffrey E. "A practical guide to training restricted Boltzmann
+    machines." Neural networks: Tricks of the trade. Springer, Berlin,
+    Heidelberg, 2012. 599-619.
 
     Args:
         args: a Config dictionary containing necessary meta-parameters for the harmonium
@@ -49,9 +56,10 @@ class Harmonium:
         x_dim = int(self.args.getArg("x_dim"))
 
         seed = int(self.args.getArg("seed"))
-        K = int(self.args.getArg("K"))
-        act_fx = self.args.getArg("act_fx") #"tanh"
-        out_fx = "identity"
+        self.seed = seed
+        #K = int(self.args.getArg("K"))
+        act_fx = self.args.getArg("act_fx")
+        out_fx = "sigmoid"
         if self.args.hasArg("out_fx") == True:
             out_fx = self.args.getArg("out_fx")
         wght_sd = float(self.args.getArg("wght_sd"))
@@ -62,11 +70,11 @@ class Harmonium:
         dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
-        #constraint_cfg = {"clip_type":"forced_norm_clip","clip_mag":1.0,"clip_axis":1}
+        #constraint_cfg = {"clip_type":"forced_norm_clip","clip_mag":1.0,"clip_axis":0}
 
-        # set up positive phase nodes
+        ## set up positive phase nodes
         z1 = SNode(name="z1", dim=z_dim, beta=1, act_fx=act_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg)
+                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
         z0 = SNode(name="z0", dim=x_dim, beta=1, act_fx="identity", zeta=0.0,
                      integrate_kernel=integrate_cfg)
         z0_z1 = z0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", cable_kernel=dcable_cfg)
@@ -74,8 +82,9 @@ class Harmonium:
                            cable_kernel=dcable_cfg)
         #z0_z1.set_constraint(constraint_cfg)
 
-        # set up positive phase update
-        z0_z1.set_update_rule(preact=(z0,"phi(z)"), postact=(z1,"phi(z)"), param=["A","b"])
+        ## set up positive phase update
+        #z0_z1.set_update_rule(preact=(z0,"phi(z)"), postact=(z1,"S(z)"), param=["A","b"]) # <- more faithful to RBM math
+        z0_z1.set_update_rule(preact=(z0,"phi(z)"), postact=(z1,"phi(z)"), param=["A","b"]) # <- reduces sampling noise
         z1_z0.set_update_rule(postact=(z0,"phi(z)"), param=["b"])
 
         # build positive graph
@@ -83,33 +92,33 @@ class Harmonium:
         pos_phase = NGCGraph(K=1, name="rbm_pos")
         pos_phase.set_cycle(nodes=[z0, z1]) # z0 -> z1
         pos_phase.apply_constraints()
-        pos_phase.set_learning_order([z1_z0, z0_z1]) 
+        pos_phase.set_learning_order([z1_z0, z0_z1])
         info = pos_phase.compile(batch_size=batch_size, use_graph_optim=True)
         self.pos_info = parse_simulation_info(info)
         self.pos_phase = pos_phase
 
         # set up negative phase nodes
         z1n_i = SNode(name="z1n_i", dim=z_dim, beta=1, act_fx=act_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg)
+                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
         z0n = SNode(name="z0n", dim=x_dim, beta=1, act_fx=out_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg)
+                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
         z1n = SNode(name="z1n", dim=z_dim, beta=1, act_fx=act_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg)
-        n1_n0 = z1n_i.wire_to(z0n, src_comp="phi(z)", dest_comp="dz_td", mirror_path_kernel=(z0_z1,"A^T"),
+                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
+        n1_n0 = z1n_i.wire_to(z0n, src_comp="S(z)", dest_comp="dz_td", mirror_path_kernel=(z0_z1,"A^T"),
                             cable_kernel=dcable_cfg) # reuse A but create new b
         n0_n1 = z0n.wire_to(z1n, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z0_z1,"A+b")) # reuse A  & b
 
-        # set up negative phase update
+        # set up negative phaszupdate
         n0_n1.set_update_rule(preact=(z0n,"phi(z)"), postact=(z1n,"phi(z)"), param=["A","b"])
         n1_n0.set_update_rule(postact=(z0n,"phi(z)"), param=["b"])
 
         # build negative graph
         print(" > Constructing Negative Phase Graph")
-        neg_phase = NGCGraph(K=K, name="rbm_neg")
+        neg_phase = NGCGraph(K=1, name="rbm_neg")
         neg_phase.set_cycle(nodes=[z1n_i, z0n, z1n]) # z1 -> z0 -> z1
-        neg_phase.apply_constraints()
+        #neg_phase.apply_constraints()
         neg_phase.set_learning_order([n1_n0, n0_n1]) # forces order: c, W, b
-        info = neg_phase.compile(batch_size=batch_size, use_graph_optim=False)
+        info = neg_phase.compile(batch_size=batch_size, use_graph_optim=True)
         self.neg_info = parse_simulation_info(info)
         self.neg_phase = neg_phase
 
@@ -134,7 +143,7 @@ class Harmonium:
         ## run positive phase
         readouts, delta = self.pos_phase.settle(
                             clamped_vars=[("z0","z", x)],
-                            readout_vars=[("z1","phi(z)")],
+                            readout_vars=[("z1","S(z)")],
                             calc_delta=calc_update
                           )
         self.pos_delta = delta
@@ -142,14 +151,62 @@ class Harmonium:
         z1_pos = readouts[0][2]
         ## run negative phase
         readouts, delta = self.neg_phase.settle(
-                            init_vars=[("z1n_i","phi(z)", z1_pos)],
-                            readout_vars=[("z0n","phi(z)"),("z1n","z")],
+                            init_vars=[("z1n_i","S(z)", z1_pos)],
+                            readout_vars=[("z0n","phi(z)"),("z1n","phi(z)")],
                             calc_delta=calc_update
                           )
         self.neg_delta = delta
         ## return reconstruction (from negative phase)
         x_hat = readouts[0][2]
         return x_hat
+
+    def sample(self, K, x_sample=None, batch_size=1):
+        """
+        Samples the underlying harmonium to generate a chain of patterns from
+        a block Gibbs sampling process.
+
+        Args:
+            K: number of steps to run the Gibbs sampler
+
+            x_sample: inital condition for the sampler (Default = None), if None,
+                this will generate an initial sample of size (batch_size, z1_dim)
+                where z1_dim is the dimensionality of the latent state.
+
+            batch_size: if x_sample is None, then this dictates how many
+                samples in parallel to create per step of running the Gibbs sampler
+        """
+        samples = []
+        z1_sample = None
+        ## set up initial condition for the block Gibbs sampler
+        if x_sample is not None:
+            ## run positive phase
+            readouts, _ = self.pos_phase.settle(
+                            clamped_vars=[("z0","z", x_sample)],
+                            readout_vars=[("z1","S(z)")],
+                            calc_delta=False
+                          )
+            z1_sample = readouts[0][2]
+        else:
+            z1_dim = self.neg_phase.getNode("z1n").dim
+            p_init = tf.random.uniform([1,z1_dim], minval=0, maxval=1, seed=self.seed)
+            z1_sample = sample_bernoulli(p_init)
+        self.pos_phase.clear()
+
+        ## run block Gibbs sampler to generate a chain of pattern samples
+        self.neg_phase.inject([("z1n_i", "S(z)", z1_sample)]) # start chain at sample
+        for k in range(K):
+            readouts, _ = self.neg_phase.settle(
+                            #init_vars=[("z1n_i","S(z)", z1_sample)],
+                            readout_vars=[("z0n", "phi(z)"), ("z1n", "phi(z)")],
+                            calc_delta=False, K=1
+                          )
+            z0_prob = readouts[0][2] # the "sample" of z0
+            z1_prob = readouts[1][2]
+            samples.append(z0_prob)
+            self.neg_phase.clear()
+            self.neg_phase.inject([("z1n_i", "phi(z)", z1_prob)])
+
+        return samples
 
     def calc_updates(self, avg_update=True, decay_rate=-1.0): # decay_rate=0.001
         """

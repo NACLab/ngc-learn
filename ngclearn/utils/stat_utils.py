@@ -50,6 +50,20 @@ def sample_gaussian(n_s, mu=0.0, sig=1.0, n_dim=-1):
     eps = tf.random.normal([n_s, dim], mean=0.0, stddev=1.0, seed=seed)
     return mu + eps * sig
 
+def sample_bernoulli(p):
+    """
+    Samples a multivariate Bernoulli distribution
+
+    Args:
+        p: probabilities to samples of shape (n_s x D)
+
+    Returns:
+        an (n_s x D) (binary) matrix of Bernoulli samples (one vector sample per row)
+    """
+    eps = tf.random.uniform(shape=p.shape, minval=0.0, maxval=1.0, dtype=tf.float32, seed=seed)
+    samples = tf.math.greater(p, eps)
+    return tf.cast(samples,dtype=tf.float32)
+
 def calc_log_gauss_pdf(X, mu, cov):
     """
     Calculates the log Gaussian probability density function (PDF)

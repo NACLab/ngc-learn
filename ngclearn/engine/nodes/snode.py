@@ -22,11 +22,12 @@ class SNode(Node):
     | where:
     |   zeta - controls the strength of recurrent carry-over, if set to 0 no carry-over is used (stateless)
 
-    | Compartments:
+    | Key Compartments:
     |   * dz_td - the top-down pressure compartment (deposited signals summed)
     |   * dz_bu - the bottom-up pressure compartment, potentially weighted by phi'(x)) (deposited signals summed)
     |   * z - the state neural activities
-    |   * phi(z) -  the post-activation of the state activities
+    |   * phi(z) - the post-activation of the state activities
+    |   * S(z) - the sampled state of phi(z) (Default = identity or f(phi(z)) = phi(z))
     |   * mask - a binary mask to be applied to the neural activities
 
     Args:
@@ -87,10 +88,13 @@ class SNode(Node):
         trace_kernel: (Default = None), supporting option for spiking neurons
 
             :Note: NOT fully tested/integrated in ngc-learn v0.0.1
+
+        samp_fx: the sampling/stochastic activation function -- S(v) -- to apply
+            to neural activities (Default = identity)
     """
     def __init__(self, name, dim, beta=1.0, leak=0.0, zeta=1.0, act_fx="identity",
                  batch_size=1, integrate_kernel=None, prior_kernel=None,
-                 threshold_kernel=None, trace_kernel=None):
+                 threshold_kernel=None, trace_kernel=None, samp_fx="identity"):
         node_type = "state"
         super().__init__(node_type, name, dim)
         self.dim = dim
@@ -120,6 +124,7 @@ class SNode(Node):
             self.threshold_type = threshold_kernel.get("threshold_type")
             self.thr_lmbda = threshold_kernel.get("thr_lambda")
 
+        # build post-activation function
         self.act_fx = act_fx
         fx, dfx = transform_utils.decide_fun(act_fx)
         self.fx = fx
@@ -127,12 +132,19 @@ class SNode(Node):
         self.n_winners = -1
         if "bkwta" in act_fx:
             self.n_winners = int(act_fx[act_fx.index("(")+1:act_fx.rindex(")")])
+        # build stochastic sampling function
+        self.samp_fx = samp_fx
+        sfx, sdfx = transform_utils.decide_fun(samp_fx)
+        self.sfx = sfx
+        self.sdfx = sdfx
 
-        self.compartment_names = ["dz_bu", "dz_td", "z", "phi(z)"]
+        self.compartment_names = ["dz_bu", "dz_td", "z", "phi(z)", "S(z)"]
         self.compartments = {}
         for name in self.compartment_names:
             if "phi(z)" in name:
                 self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_phi_z".format(self.name))
+            elif "S(z)" in name:
+                self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_S_z".format(self.name))
             else:
                 self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]), name="{}_{}".format(self.name, name))
         self.mask_names = ["mask"]
@@ -245,17 +257,37 @@ class SNode(Node):
             ########################################################################
         # else, skip this core "chunk of computation" if externally set
 
-        # apply post-activation non-linearity
-        if injection_table.get("phi(z)") is None:
+        if injection_table.get("phi(z)") is None: # apply post-activation non-linearity
             phi_z = None
             if self.n_winners > 0:
                 phi_z = self.fx(self.compartments["z"],K=self.n_winners)
             else:
                 phi_z = self.fx(self.compartments["z"])
+            # if self.name == "z1n_i":
+            #     tf.print("############################################################")
+            #     tf.print("APPLY phi(z)")
+            #     tf.print(self.compartments["z"])
+            #     tf.print(phi_z)
+            #     tf.print("############################################################")
             if self.do_inplace == True:
                 self.compartments["phi(z)"].assign(phi_z)
             else:
                 self.compartments["phi(z)"] = (phi_z)
+
+        if injection_table.get("S(z)") is None: # apply stochastic/sampling function
+            S_z = self.sfx(self.compartments["phi(z)"])
+            if self.do_inplace == True:
+                self.compartments["S(z)"].assign(S_z)
+            else:
+                self.compartments["S(z)"] = (S_z)
+
+        # if self.name == "z1n_i":
+        #     tf.print("############################################################")
+        #     tf.print(self.name)
+        #     tf.print(self.compartments["z"])
+        #     tf.print(self.compartments["phi(z)"])
+        #     tf.print(self.compartments["S(z)"])
+        #     tf.print("############################################################")
 
         if bmask is not None: # applies mask to all component variables of this node
             for key in self.compartments:

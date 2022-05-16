@@ -71,17 +71,17 @@ class Node:
             curr_comp = self.compartments.get(cname)
             if curr_comp is not None:
                 comp_dim = curr_comp.shape[1]
-                if "phi(z)" in cname:
-                    self.compartments[cname] = \
-                        tf.Variable(tf.zeros([self.batch_size,comp_dim]), name="{}_phi_z".format(self.name))
-                else:
-                    self.compartments[cname] = \
-                        tf.Variable(tf.zeros([self.batch_size,comp_dim]), name="{}_{}".format(self.name, cname))
+                comp_var_name = curr_comp.name
+                comp_var_name = comp_var_name[0:curr_comp.name.index(":"):1]
+                self.compartments[cname] = \
+                    tf.Variable(tf.zeros([self.batch_size,comp_dim]), name=comp_var_name)
         for mname in self.mask_names:
             curr_mask = self.masks.get(mname)
             if curr_mask is not None:
+                mask_var_name = curr_mask.name
+                mask_var_name = mask_var_name[0:curr_mask.name.index(":"):1]
                 mask_dim = curr_mask.shape[1]
-                self.masks[mname] = tf.Variable(tf.ones([self.batch_size,mask_dim]), name="{}_{}".format(self.name, mname))
+                self.masks[mname] = tf.Variable(tf.ones([self.batch_size,mask_dim]), name=mask_var_name)
         info["object_type"] = self.node_type
         info["object_name"] = self.name
         info["n_connected_cables"] = len(self.connected_cables)
