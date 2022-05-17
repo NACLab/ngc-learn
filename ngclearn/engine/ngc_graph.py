@@ -32,7 +32,6 @@ class NGCGraph:
     def __init__(self, K=5, name="ncn", batch_size=1):
         self.name = name
         self.theta = [] # set of learnable synaptic parameters
-        self.Prec = []
         self.omega = [] # set of non-learnable or slowly-evolved synaptic parameters
         self.exec_cycles = [] # this simulation's execution cycles
         self.nodes = {}
@@ -62,7 +61,6 @@ class NGCGraph:
                 dictated order)
         """
         self.theta = []
-        self.Prec = []
         self.learnable_cables = []
         self.unique_learnable_objects = {}
         self.learnable_nodes = []
@@ -74,7 +72,6 @@ class NGCGraph:
                     if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
                         n_j.compute_precision()
                         self.theta.append(n_j.Sigma)
-                        self.Prec.append(n_j.Prec)
                     # else, this would break if a novel node is deemed learnable... (FIXME)
                 elif isinstance(obj,Cable) == True:
                     self.learnable_cables.append(obj)
@@ -121,7 +118,6 @@ class NGCGraph:
                     if n_j.node_type == "error": # only error nodes have a possible learnable matrix, i.e., Sigma
                         n_j.compute_precision()
                         self.theta.append(n_j.Sigma)
-                        self.Prec.append(n_j.Prec)
         self.exec_cycles.append(cycle)
 
         if param_order is not None:
@@ -527,11 +523,9 @@ class NGCGraph:
             cable_j = self.learnable_cables[j]
             cable_j.apply_constraints()
         # apply constraints to any applicable (learnable) nodes
-        #self.Prec = []
         for j in range(len(self.learnable_nodes)):
             node_j = self.learnable_nodes[j]
             Prec_l = node_j.apply_constraints()
-            #self.Prec.append(Prec_l)
 
     def set_optimization(self, opt_algo):
         """

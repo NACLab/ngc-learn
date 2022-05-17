@@ -69,7 +69,6 @@ class Harmonium:
         init_kernels = {"A_init" : ("gaussian",wght_sd), "b_init" : ("zeros")}
         dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
-        neg_scable_cfg = {"type": "simple", "coeff": -1.0}
         #constraint_cfg = {"clip_type":"forced_norm_clip","clip_mag":1.0,"clip_axis":0}
 
         ## set up positive phase nodes
@@ -80,7 +79,7 @@ class Harmonium:
         z0_z1 = z0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", cable_kernel=dcable_cfg)
         z1_z0 = z1.wire_to(z0, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z0_z1,"A^T"),
                            cable_kernel=dcable_cfg)
-        #z0_z1.set_constraint(constraint_cfg)
+        z0_z1.set_decay(decay_kernel=("l1",0.00005))
 
         ## set up positive phase update
         #z0_z1.set_update_rule(preact=(z0,"phi(z)"), postact=(z1,"S(z)"), param=["A","b"]) # <- more faithful to RBM math
@@ -93,7 +92,7 @@ class Harmonium:
         pos_phase.set_cycle(nodes=[z0, z1]) # z0 -> z1
         pos_phase.apply_constraints()
         pos_phase.set_learning_order([z1_z0, z0_z1])
-        info = pos_phase.compile(batch_size=batch_size, use_graph_optim=True)
+        info = pos_phase.compile(batch_size=batch_size)
         self.pos_info = parse_simulation_info(info)
         self.pos_phase = pos_phase
 
@@ -107,6 +106,7 @@ class Harmonium:
         n1_n0 = z1n_i.wire_to(z0n, src_comp="S(z)", dest_comp="dz_td", mirror_path_kernel=(z0_z1,"A^T"),
                             cable_kernel=dcable_cfg) # reuse A but create new b
         n0_n1 = z0n.wire_to(z1n, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z0_z1,"A+b")) # reuse A  & b
+        n1_n1 = z1n.wire_to(z1n_i, src_comp="z", dest_comp="dz_bu", cable_kernel=pos_scable_cfg) # close the loop!
 
         # set up negative phaszupdate
         n0_n1.set_update_rule(preact=(z0n,"phi(z)"), postact=(z1n,"phi(z)"), param=["A","b"])
@@ -116,9 +116,8 @@ class Harmonium:
         print(" > Constructing Negative Phase Graph")
         neg_phase = NGCGraph(K=1, name="rbm_neg")
         neg_phase.set_cycle(nodes=[z1n_i, z0n, z1n]) # z1 -> z0 -> z1
-        #neg_phase.apply_constraints()
         neg_phase.set_learning_order([n1_n0, n0_n1]) # forces order: c, W, b
-        info = neg_phase.compile(batch_size=batch_size, use_graph_optim=True)
+        info = neg_phase.compile(batch_size=batch_size)
         self.neg_info = parse_simulation_info(info)
         self.neg_phase = neg_phase
 
@@ -205,7 +204,6 @@ class Harmonium:
             samples.append(z0_prob)
             self.neg_phase.clear()
             self.neg_phase.inject([("z1n_i", "phi(z)", z1_prob)])
-
         return samples
 
     def calc_updates(self, avg_update=True, decay_rate=-1.0): # decay_rate=0.001

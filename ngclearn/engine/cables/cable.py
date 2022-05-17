@@ -39,6 +39,8 @@ class Cable:
         self.seed = seed
         self.name = name
         self.is_learnable = False
+        self.constraint_kernel = None
+        self.decay_kernel = None
 
         src_node, src_comp = inp
         self.src_node = src_node
@@ -84,7 +86,11 @@ class Cable:
     def set_constraint(self, constraint_kernel):
         self.constraint_kernel = constraint_kernel
 
-    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False, param=None):
+    def set_decay(self, decay_kernel):
+        self.decay_kernel = decay_kernel
+
+    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False,
+                        param=None, decay_kernel=None):
         """
         Sets the synaptic adjustment rule for this cable (currently a 2-factor local synaptic Hebbian update rule).
 
@@ -117,6 +123,15 @@ class Cable:
                 :Note: This is un-tested/not fully integrated
 
             param: a list of strings, each containing named parameters that are to be learned w/in this cable
+
+            decay_kernel: 2-Tuple defining the type of weight decay to be applied to the synapses.
+                The value types inside each slot of the tuple are specified below:
+
+                :decay_type (Tuple[0]): string indicating which type of weight decay to use,
+                    "l2" will trigger L2-penalty decay, while "l1" will trigger L1-penalty decay
+
+                :decay_coefficient (Tuple[1]): scalar/float to control magnitude of decay applied
+                    to computed local updates
         """
         pass
 

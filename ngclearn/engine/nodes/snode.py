@@ -263,12 +263,6 @@ class SNode(Node):
                 phi_z = self.fx(self.compartments["z"],K=self.n_winners)
             else:
                 phi_z = self.fx(self.compartments["z"])
-            # if self.name == "z1n_i":
-            #     tf.print("############################################################")
-            #     tf.print("APPLY phi(z)")
-            #     tf.print(self.compartments["z"])
-            #     tf.print(phi_z)
-            #     tf.print("############################################################")
             if self.do_inplace == True:
                 self.compartments["phi(z)"].assign(phi_z)
             else:
@@ -281,14 +275,6 @@ class SNode(Node):
             else:
                 self.compartments["S(z)"] = (S_z)
 
-        # if self.name == "z1n_i":
-        #     tf.print("############################################################")
-        #     tf.print(self.name)
-        #     tf.print(self.compartments["z"])
-        #     tf.print(self.compartments["phi(z)"])
-        #     tf.print(self.compartments["S(z)"])
-        #     tf.print("############################################################")
-
         if bmask is not None: # applies mask to all component variables of this node
             for key in self.compartments:
                 if self.compartments.get(key) is not None:
@@ -300,15 +286,6 @@ class SNode(Node):
         ########################################################################
         if skip_core_calc == False:
             self.t = self.t + 1
-
-        # if self.name == "z1" or self.name == "z2" or self.name == "z3":
-        #     tf.print("########################################################")
-        #     tf.print("{}  @ t = {}".format(self.name, self.t))
-        #     tf.print("dz_bu: ",self.compartments["dz_bu"])
-        #     tf.print("dz_td: ",self.compartments["dz_td"])
-        #     tf.print("    z: ",self.compartments["z"])
-        #     tf.print(" f(z): ",self.compartments["phi(z)"])
-        #     tf.print("########################################################")
 
         # a node returns a list of its named component values
         values = []

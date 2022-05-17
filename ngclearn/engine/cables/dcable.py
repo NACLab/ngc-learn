@@ -117,6 +117,7 @@ class DCable(Cable):
         self.coeff = 1.0
         self.clip_kernel = clip_kernel
         self.constraint_kernel = constraint_kernel
+        self.decay_kernel = None
 
         self.params["A"] = None
         self.update_terms["A"] = None
@@ -201,7 +202,8 @@ class DCable(Cable):
         return info
 
 
-    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False, param=None):
+    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False,
+                        param=None, decay_kernel=None):
         if preact is None and postact is None:
             print("ERROR: Both preact and postact CANNOT be None for {}".format(self.name))
             sys.exit(1)
@@ -218,6 +220,8 @@ class DCable(Cable):
         self.gamma = gamma
         self.use_mod_factor = use_mod_factor
         self.is_learnable = True
+        if self.decay_kernel is None:
+            self.decay_kernel = decay_kernel
 
     def propagate(self):
         in_signal = self.src_node.extract(self.src_comp) # extract input signal
@@ -317,7 +321,9 @@ class DCable(Cable):
         | this cable. This function will execute any of the following
         | pre-configured constraints:
         | 1) project weights to adhere to vector norm constraints
+        | 2) apply weight decay (to non-bias synaptic matrices)
         """
+        ## apply synaptic constraints
         if self.constraint_kernel is not None:
             if self.is_learnable == True:
                 clip_type = self.constraint_kernel.get("clip_type")
@@ -331,3 +337,15 @@ class DCable(Cable):
                         elif clip_type == "forced_norm_clip":
                             _A = transform_utils.normalize_by_norm(A, clip_mag, param_axis=clip_axis )
                             A.assign(_A)
+        ## apply synaptic weight decay
+        if self.decay_kernel is not None:
+            decay_type = self.decay_kernel[0]
+            decay_coeff = self.decay_kernel[1]
+            if decay_coeff > 0.0:
+                A = self.params.get("A")
+                if decay_type == "l2":
+                    factor = A * 0.5 # derivative of 0.5 * A^2
+                    A.assign_sub(factor * decay_coeff)
+                elif decay_type == "l1":
+                    factor = tf.math.sign(A) # derivative of |A|
+                    A.assign_sub(factor * decay_coeff)

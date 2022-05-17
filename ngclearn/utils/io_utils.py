@@ -93,3 +93,26 @@ def plot_sample_img(x_s, px, py, fname, plt, rotNeg90=False):
     plt.savefig(fname,dpi=my_dpi, bbox_inches='tight',pad_inches = 0)
     plt.clf()
     plt.close()
+
+def plot_img_grid(samples, fname, nx, ny, px, py, plt, rotNeg90=False): # rows, cols,...
+    px_dim = px
+    py_dim = py
+    canvas = np.empty((px_dim*nx, py_dim*ny))
+    ptr = 0
+    for i in range(0,nx,1):
+        for j in range(0,ny,1):
+            #xs = tf.expand_dims(tf.cast(samples[ptr,:],dtype=tf.float32),axis=0)
+            xs = np.expand_dims(samples[ptr,:],axis=0)
+            #xs = xs.numpy() #tf.make_ndarray(x_mean)
+            xs = xs[0].reshape(px_dim, py_dim)
+            if rotNeg90 is True:
+                xs = np.rot90(xs, -1)
+            canvas[(nx-i-1)*px_dim:(nx-i)*px_dim, j*py_dim:(j+1)*py_dim] = xs
+            ptr += 1
+    plt.figure(figsize=(12, 14))
+    plt.imshow(canvas, origin="upper", cmap="gray")
+    plt.tight_layout()
+    plt.axis('off')
+    #print(" SAVE: {0}{1}".format(out_dir,"gmm_decoded_samples.jpg"))
+    plt.savefig("{0}".format(fname), bbox_inches='tight', pad_inches=0)
+    plt.clf()
