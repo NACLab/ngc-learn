@@ -406,8 +406,8 @@ for example, a Gaussian restricted Boltzmann machine (GRBM).
 ## References
 [1] SMOLENSKY, P. "Information Processing in Dynamical Systems: Foundations of
 Harmony Theory." Parallel distributed processing: explorations in the
-microstructure of cognition 1 (1986).
+microstructure of cognition 1 (1986). <br>
 [2] Geoffrey Hinton. Products of Experts. International conference on artificial
-neural networks (1999).
+neural networks (1999).  <br>
 [3] Hinton, Geoffrey E. "Training products of experts by maximizing contrastive
 likelihood." Technical Report, Gatsby computational neuroscience unit (1999).
