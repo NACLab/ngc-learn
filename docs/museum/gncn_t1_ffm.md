@@ -15,7 +15,7 @@ vector outputs. Note that "FFM" denotes "feedforward mapping".
     :noindex:
   .. automethod:: settle
     :noindex:
-  .. automethod:: update
+  .. automethod:: calc_updates
     :noindex:
   .. automethod:: clear
     :noindex:

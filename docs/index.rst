@@ -34,6 +34,7 @@ Welcome to ngc-learn's documentation!
    museum/gncn_pdh
    museum/gncn_t1_ffm
    museum/gncn_t1_sc
+   museum/harmonium
 
 .. toctree::
    :maxdepth: 1

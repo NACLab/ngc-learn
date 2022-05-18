@@ -15,7 +15,7 @@ formed by this NGC system.
     :noindex:
   .. automethod:: settle
     :noindex:
-  .. automethod:: update
+  .. automethod:: calc_updates
     :noindex:
   .. automethod:: clear
     :noindex:

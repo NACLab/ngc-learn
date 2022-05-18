@@ -337,8 +337,8 @@ in which they were produced by the Markov chain constructed above.
 
 We finally take the Harmonium that we have constructed above and fit it to
 some MNIST digits (the same dataset we used in Demonstration \#1). Specifically,
-we will leverage the `Harmonium` model in the Model Museum as it implements the
-above core components/functions internally. In the  
+we will leverage the [Harmonium](../museum/harmonium.md), model in the Model Museum
+as it implements the above core components/functions internally. In the  
 script `sim_train.py`, you will find a general simulated training loop similar to
 what we have developed in previous demonstrations that will fit our Harmonium
 to the MNIST database by cycling through it several times, saving the final

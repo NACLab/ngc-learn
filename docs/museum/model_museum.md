@@ -45,7 +45,7 @@ Current models that we have implemented in the Model Museum so far include:
 3. GNCN-PDH - the model proposed in (Ororbia &amp; Kifer, 2022) [1]
 4. GNCN-t1-FFM - the model developed in (Whittington &amp; Bogacz, 2017) [4]
 5. GNCN-t1-SC - the model proposed in (Olshausen &amp; Field, 1996) [5]
-6. Harmonium - the model developed in (Hinton 1999) [6]
+6. Harmonium - the model developed in (Smolensky, 1986; Hinton 1999) [6] [7]
 
 (If there is a model you think should be exhibited/integrated into the Model
 Museum, and/or would like to contribute, please write us at ago@cs.rit.edu or
@@ -66,4 +66,7 @@ synaptic plasticity." Neural computation 29.5 (2017): 1229-1262. <br>
 [5] Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
 by learning a sparse code for natural images. Nature 381, 607–609 (1996). <br>
 [6] Hinton, Geoffrey E. "Training products of experts by maximizing contrastive
-likelihood." Technical Report, Gatsby computational neuroscience unit (1999).
+likelihood." Technical Report, Gatsby computational neuroscience unit (1999). <br>
+[7] Smolensky, P. "Information Processing in Dynamical Systems: Foundations of
+Harmony Theory." Parallel distributed processing: explorations in the
+microstructure of cognition 1 (1986).
