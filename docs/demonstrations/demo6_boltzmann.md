@@ -121,7 +121,7 @@ the created graphs to construct a block Gibbs sampler needed to create "fantasiz
 data patterns from a trained Harmonium.
 
 
-## Restricted Boltzmann Machines: Positive and Negative Graphs
+## Restricted Boltzmann Machines: Positive &amp; Negative Graphs
 
 We begin by first specifying the structure of the Harmonium system we would like to
 simulate. In NGC shorthand, the above positive and negative phase graphs would
@@ -404,7 +404,7 @@ for example, a Gaussian restricted Boltzmann machine (GRBM).
 
 
 ## References
-[1] SMOLENSKY, P. "Information Processing in Dynamical Systems: Foundations of
+[1] Smolensky, P. "Information Processing in Dynamical Systems: Foundations of
 Harmony Theory." Parallel distributed processing: explorations in the
 microstructure of cognition 1 (1986). <br>
 [2] Geoffrey Hinton. Products of Experts. International conference on artificial
