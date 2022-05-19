@@ -56,8 +56,7 @@ the top of your general simulation scripts as follows:
 mid = -1 # the gpu_id (run nivida-smi to find your system's GPU identifiers)
 if mid >= 0:
     print(" > Using GPU ID {0}".format(mid))
-    os.environ["CUDA_VISIBLE_DEVICES"]="{0}".format(mid)
-    #gpu_tag = '/GPU:0'
+    os.environ["CUDA_VISIBLE_DEVICES"]="{0}".format(mid)'
     gpu_tag = '/GPU:0'
 else:
     os.environ["CUDA_VISIBLE_DEVICES"]="-1"
