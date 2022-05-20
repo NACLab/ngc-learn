@@ -17,7 +17,7 @@ from ngclearn.utils.stat_utils import sample_bernoulli
 
 class Harmonium:
     """
-    Structure for constructing the sparse coding model proposed in:
+    Structure for constructing the Harmonium model proposed in:
 
     Hinton, Geoffrey E. "Training products of experts by maximizing contrastive
     likelihood." Technical Report, Gatsby computational neuroscience unit (1999).
@@ -27,26 +27,29 @@ class Harmonium:
     | z0 -(z0-z1)-> z1
     | Note: z1-z0 = (z0-z1)^T (transpose-tied synapses)
 
-    Another important reference for designing stable harmoniums is here:
+    Another important reference for designing stable Harmoniums is here:
 
     Hinton, Geoffrey E. "A practical guide to training restricted Boltzmann
     machines." Neural networks: Tricks of the trade. Springer, Berlin,
     Heidelberg, 2012. 599-619.
 
+    Note: if you set the *samp_fx* to the "identity", you force the Harmonium to
+        to work as a mean-field Harmonium/Botlzmann machine
+
     Args:
-        args: a Config dictionary containing necessary meta-parameters for the harmonium
+        args: a Config dictionary containing necessary meta-parameters for the Harmonium
 
     | DEFINITION NOTE:
     | args should contain values for the following:
     | * batch_size - the fixed batch-size to be fed into this model
-    | * z_dim - # of latent variables in layers z1
+    | * z_dim - # of latent variables in layer z1
     | * x_dim - # of latent variables in layer z0 (or sensory x)
     | * seed - number to control determinism of weight initialization
     | * wght_sd - standard deviation of Gaussian initialization of weights
     | * K - # of steps to take when conducting Contrastive Divergence
-    | * act_fx - activation function for layers z1 (Default: sigmoid)
+    | * act_fx - activation function for layer z1 (Default: sigmoid)
     | * out_fx - activation function for layer z0 (prediction of z0) (Default: sigmoid)
-
+    | * samp_fx - sampling function for layer z1 (Default = bernoulli)
     """
     def __init__(self, args):
         self.args = args
@@ -57,6 +60,9 @@ class Harmonium:
 
         seed = int(self.args.getArg("seed"))
         self.seed = seed
+        samp_fx = "bernoulli"
+        if self.args.hasArg("samp_fx") == True:
+            samp_fx = self.args.getArg("samp_fx")
         #K = int(self.args.getArg("K"))
         act_fx = self.args.getArg("act_fx")
         out_fx = "sigmoid"
@@ -73,7 +79,7 @@ class Harmonium:
 
         ## set up positive phase nodes
         z1 = SNode(name="z1", dim=z_dim, beta=1, act_fx=act_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
+                     integrate_kernel=integrate_cfg, samp_fx=samp_fx)
         z0 = SNode(name="z0", dim=x_dim, beta=1, act_fx="identity", zeta=0.0,
                      integrate_kernel=integrate_cfg)
         z0_z1 = z0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", cable_kernel=dcable_cfg)
@@ -98,11 +104,11 @@ class Harmonium:
 
         # set up negative phase nodes
         z1n_i = SNode(name="z1n_i", dim=z_dim, beta=1, act_fx=act_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
+                     integrate_kernel=integrate_cfg, samp_fx=samp_fx)
         z0n = SNode(name="z0n", dim=x_dim, beta=1, act_fx=out_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
+                     integrate_kernel=integrate_cfg, samp_fx=samp_fx)
         z1n = SNode(name="z1n", dim=z_dim, beta=1, act_fx=act_fx, zeta=0.0,
-                     integrate_kernel=integrate_cfg, samp_fx="bernoulli")
+                     integrate_kernel=integrate_cfg, samp_fx=samp_fx)
         n1_n0 = z1n_i.wire_to(z0n, src_comp="S(z)", dest_comp="dz_td", mirror_path_kernel=(z0_z1,"A^T"),
                             cable_kernel=dcable_cfg) # reuse A but create new b
         n0_n1 = z0n.wire_to(z1n, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z0_z1,"A+b")) # reuse A  & b
