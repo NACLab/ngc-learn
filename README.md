@@ -96,7 +96,7 @@ Rochester Institute of Technology, Department of Computer Science
 
 ## <b>Copyright:</b>
 
-Copyright (C) 2021 The Neural Adaptive Computing Laboratory - All Rights Reserved
+Copyright (C) 2021 The Neural Adaptive Computing Laboratory - All Rights Reserved<br>
 You may use, distribute and modify this code under the
 terms of the BSD 3-clause license.
 
