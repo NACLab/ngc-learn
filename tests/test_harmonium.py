@@ -1,3 +1,38 @@
+"""
+Test the basic/key dynamics of an NGC Harmonium system constructed with Node(s)
+and Cable(s), checked against an analytical/hand-coded RBM.
+-------------------------------------------------------------------------------
+This code runs the "harmonium test" for NGC projection and dynamics:
++ create a Harmonium from the Model Museum specifically set to be a mean-field
+  model (no sampling in its latent feature detectors)
++ create a hand-coded RBM with weights set to be equal to those initialized in
+  the Harmonium class (weight matrix, visible bias, hidden bias)
++ running both Harmonium class and hand-coded RBM, should get a Euclidean norm
+  of the difference between the values returned by each for positive phase hidden
+  state, negative phase  visible state, and negative phase hidden state, that
+  is exactly equal to zero
++ running both Harmonium and hand-coded RBM, should get a Euclidean norm of the
+  difference between the values returned by each for the visible bias gradient,
+  the weight matrix W gradient, and the hidden bias gradient to be exactly zero
+The test above is repeated for five iterations (or training steps). Since both
+the Harmonium class and the RBM hand-coded object are updated with SGD, they
+should NOT diverge and always yield Euclidean norms exactly equal to zero at
+each iteration.
+-------------------------------------------------------------------------------
+
+The following models are tested:
+a Harmonium (or 1-layer NGC generative model) built from the Model Museum
+
+This (non-exhaustive) test script checks for qualitative irregularities in each
+model's behavior and, indirectly, the functioning of ngc-learn's nodes and cables.
+Please read the documentations in /docs/ for an overview and description/use of
+Nodes and Cables as well as for practical use-cases through the
+demonstrations (under the /examples directory).
+
+As this is strictly a qualitative set of tests, it is up to the developer / user
+to examine for specific irregularities.
+"""
+
 import os
 import sys, getopt, optparse
 import pickle
