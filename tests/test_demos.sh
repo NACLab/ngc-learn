@@ -7,6 +7,11 @@
 # will take some time to run. All demo code should run without breaking assuming
 # that you have unzipped all of the ZIP files w/in the /examples/data/ sub-directory
 # and placed the resulting folders of data arrays exactly in /examples/data/
+#
+# You can run this (for a more qualitative global check) all of the demos/tutorials
+# with the following master execution script (but you will HAVE to currently
+# check the outputs of each demonstration in their respective folder matches
+# what appears in the tutorials themselves)
 
 echo "-> Executing ALL demonstration scripts!"
 cd ../examples/ # enter demo directoy, start running demo scripts
