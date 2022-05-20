@@ -21,7 +21,7 @@ each iteration.
 -------------------------------------------------------------------------------
 
 The following models are tested:
-a Harmonium (or 1-layer NGC generative model) built from the Model Museum
+a Harmonium (or 2-layer NGC generative model) built from the Model Museum
 
 This (non-exhaustive) test script checks for qualitative irregularities in each
 model's behavior and, indirectly, the functioning of ngc-learn's nodes and cables.
@@ -48,12 +48,11 @@ from ngclearn.utils.config import Config
 import ngclearn.utils.transform_utils as transform
 import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_tools
-from ngclearn.utils.data_utils import DataLoader
 
 # import harmonium from museum to train
 from ngclearn.museum.harmonium import Harmonium
 
-def calc(x, c, W, b):
+def calc(x, c, W, b):  # analytical/hand-coded RBM
     h = tf.nn.sigmoid(tf.matmul(x, W) + b)
     xR = tf.nn.sigmoid(tf.matmul(h, W, transpose_b=True) + c)
     hR = tf.nn.sigmoid(tf.matmul(xR, W) + b)

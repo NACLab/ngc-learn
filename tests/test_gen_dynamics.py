@@ -18,7 +18,7 @@ each iteration.
 -------------------------------------------------------------------------------
 
 The following models are tested:
-a 2-layer NGC directed generative model
+a 3-layer NGC directed generative model
 
 This (non-exhaustive) test script checks for qualitative irregularities in each
 model's behavior and, indirectly, the functioning of ngc-learn's nodes and cables.
