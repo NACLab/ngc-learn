@@ -38,16 +38,11 @@ $ python test_identity.py
 ```
 
 ```sh
-$ python test_harmonium.py
+$ python test_gen_dynamics.py
 ```
 
-and you can run (for a more qualitative global check) all of the demos/tutorials
-with the following master execution script (but you will have to currently
-check the outputs of each demonstration in their respective folder matches
-what appears in the tutorials themselves):
-
 ```sh
-$ ./test_demos.sh
+$ python test_harmonium.py
 ```
 
 Submission
