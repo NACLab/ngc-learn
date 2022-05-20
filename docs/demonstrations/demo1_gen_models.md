@@ -395,7 +395,7 @@ should be the same as what was printed to I/O when you evaluation script finishe
 ```console
 $ cat gncn_t1/logpx_results.txt
 Likelihood Test:
-  log[p(x)] = -103.13798522949219
+  log[p(x)] = -103.63043212890625
 ```
 and if you open and view the image samples, you should see something similar to:<br>
 
@@ -409,7 +409,7 @@ For the GNCN-t1-Sigma, you get a log likelihood of:
 ```console
 $ cat gncn_t1_sigma/logpx_results.txt
 Likelihood Test:
-  log[p(x)] = -100.03035736083984
+  log[p(x)] = -99.73319244384766
 ```
 with images as follows:<br>
 
@@ -419,7 +419,7 @@ For the GNCN-PDH, you get a log likelihood of:
 ```console
 $ cat gncn_t1_sigma/logpx_results.txt
 Likelihood Test:
-  log[p(x)] = -96.92353820800781
+  log[p(x)] = -97.39334106445312
 ```
 with images as follows:<br>
 

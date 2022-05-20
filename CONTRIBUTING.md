@@ -37,7 +37,14 @@ You can run all the tests with the following commands in the `tests/` folder of 
 $ python test_identity.py
 ```
 
-and:
+```sh
+$ python test_harmonium.py
+```
+
+and you can run (for a more qualitative global check) all of the demos/tutorials
+with the following master execution script (but you will have to currently
+check the outputs of each demonstration in their respective folder matches
+what appears in the tutorials themselves):
 
 ```sh
 $ ./test_demos.sh
