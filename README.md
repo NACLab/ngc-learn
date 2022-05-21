@@ -19,8 +19,7 @@ The official blog-post related to the source paper behind this software library
 can be found
 <a href="https://go.nature.com/3rgl1K8">here</a>.<br>
 You can find the related paper (which also appears under the Editors' Highlights page
-for Applied Physics and Mathematics),  
-<a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>.
+for Applied Physics and Mathematics), <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>.
 
 <!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
