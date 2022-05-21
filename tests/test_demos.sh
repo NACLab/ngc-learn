@@ -5,8 +5,8 @@
 
 # WARNING: this will execute ALL of the demo files in order, so beware that this
 # will take some time to run. All demo code should run without breaking assuming
-# that you have unzipped all of the ZIP files w/in the /examples/data/ sub-directory
-# and placed the resulting folders of data arrays exactly in /examples/data/
+# that you have unzipped all of the ZIP files w/in the /demos/data/ sub-directory
+# and placed the resulting folders of data arrays exactly in /demos/data/
 #
 # You can run this (for a more qualitative global check) all of the demos/tutorials
 # with the following master execution script (but you will HAVE to currently
@@ -14,7 +14,7 @@
 # what appears in the tutorials themselves)
 
 echo "-> Executing ALL demonstration scripts!"
-cd ../examples/ # enter demo directoy, start running demo scripts
+cd ../demos/ # enter demo directoy, start running demo scripts
 echo "Running Demo 1"
 cd demo1/
 ./exec_experiments.sh

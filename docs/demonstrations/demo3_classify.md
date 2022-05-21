@@ -10,8 +10,8 @@ patterns in the MNIST database (from Demonstration \# 1), producing results
 comparable to what was reported in (Whittington &amp; Bogacz, 2017).
 
 Note that the folders of interest to this demonstration are:
-+ `examples/demo3/`: this contains the necessary simulation script
-+ `examples/data`: this contains the zipped copy of the MNIST database arrays
++ `demos/demo3/`: this contains the necessary simulation script
++ `demos/data`: this contains the zipped copy of the MNIST database arrays
 
 ## Using an Ancestral Projection Graph to Initialize the Settling Process
 
@@ -352,7 +352,7 @@ agent.ngc_model.apply_constraints()
 agent.clear()
 ```
 
-To train your NGC classifier, run the training script in `/examples/demo3/` as
+To train your NGC classifier, run the training script in `/demos/demo3/` as
 follows:
 
 ```console
@@ -360,12 +360,12 @@ $ python sim_train.py --config=gncn_t1_ffm/fit.cfg --gpu_id=0 --n_trials=1
 ```
 
 which will execute a training process using the experimental configuration file
-`/examples/demo3/gncn_t1_ffm/fit.cfg` written for you. After your model finishes
+`/demos/demo3/gncn_t1_ffm/fit.cfg` written for you. After your model finishes
 training you should see a validation score similar to the one below:
 
 <img src="../images/demo3/valid_acc_output.png" width="650" />
 
-You will also notice that in your folder `/examples/demo3/gncn_t1_ffm/` several
+You will also notice that in your folder `/demos/demo3/gncn_t1_ffm/` several
 arrays as well as your learned NGC classifier have been saved to disk for you.
 To examine the classifier's performance on the MNIST test-set, you can execute
 the evaluation script like so:
@@ -404,7 +404,7 @@ $ python plot_curves.py
 ```
 
 which, internally, has been hard-coded to point to the local directory
-`examples/demo3/gncn_t1_ffm/` containing the relevant measurements/numpy arrays.
+`demos/demo3/gncn_t1_ffm/` containing the relevant measurements/numpy arrays.
 Doing so should result in a plot that looks similar to the one below:
 
 <img src="../images/demo3/mnist_learning_curves.jpg" width="350" />

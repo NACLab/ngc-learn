@@ -15,7 +15,7 @@ you will learn how to design an ancestral projection graph to aid in fantasizing
 patterns that look like the target data generating process.
 
 Note that the folder of interest to this demonstration is:
-+ `examples/demo2/`: this contains the necessary simulation script
++ `demos/demo2/`: this contains the necessary simulation script
 
 ## Theoretical Motivation: Nodes, Compartments, and Cables
 At its core, part of ngc-learn's fundamental design is inspired by (neural)
@@ -371,7 +371,7 @@ Now that we familiarized ourselves with the basic mechanics of nodes and cables
 as well as how they fit within a simulation graph, let us apply our knowledge to build
 a nonlinear NGC generative model that learns to mimic a streaming data generating
 process. Note that this part of the demonstration corresponds to the materials/scripts
-provided within `examples/demo2/`.
+provided within `demos/demo2/`.
 
 In ngc-learn, within the `generator` module, there are a few data
 generators to facilitate prototyping and simulation studies. Simulated data

@@ -12,8 +12,8 @@ the results of imposing a kurtotic prior as well as a thresholding function
 over latent codes.
 
 Note that the folders of interest to this demonstration are:
-+ `examples/demo4/`: this contains the necessary simulation scripts
-+ `examples/data`: this contains the zipped copy of the natural image arrays
++ `demos/demo4/`: this contains the necessary simulation scripts
++ `demos/data`: this contains the zipped copy of the natural image arrays
 
 ## On Dictionary Learning
 
@@ -212,12 +212,12 @@ layer `z1`.
 
 We will now simulate the learning of the feature detectors using the two
 sparse coding models that we have built above. The code provided in
-`sim_train.py` in `/examples/demo4/` will execute a simulation of the above
-two models on the natural images found in `examples/data/natural_scenes.zip`),
+`sim_train.py` in `/demos/demo4/` will execute a simulation of the above
+two models on the natural images found in `demos/data/natural_scenes.zip`),
 which is a dataset composed of several images of the American Northwest.
 
-First, navigate to the `examples/` directory to access the example/demonstration
-code and further enter the `examples/data/` sub-folder. Unzip the file
+First, navigate to the `demos/` directory to access the example/demonstration
+code and further enter the `demos/data/` sub-folder. Unzip the file
 `natural_scenes.zip` to create one more sub-folder that contains two numpy arrays,
 the first labeled `natural_scenes/raw_dataX.npy` and another labeled as
 `natural_scenes/dataX.npy`. The first one contains the original, `512 x 512` raw pixel

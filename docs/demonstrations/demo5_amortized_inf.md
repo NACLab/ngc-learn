@@ -14,8 +14,8 @@ dataset used in [4] and visualize the acquired filters of the learned representa
 system.
 
 Note that the folders of interest to this demonstration are:
-+ `examples/demo5/`: this contains the necessary simulation scripts
-+ `examples/data`: this contains the zipped copy of the face image arrays
++ `demos/demo5/`: this contains the necessary simulation scripts
++ `demos/data`: this contains the zipped copy of the face image arrays
 
 ## Speeding Up the Settling Process with Amortized Inference
 
@@ -61,7 +61,7 @@ for this demonstration, we want to build a model for synthesizing human faces,
 specifically those contained in the Olivetti faces database.
 
 For this part of the demonstration, you will need to unzip the data contained
-in `examples/data/faces.zip` (in the `examples/data/` sub-folder) to create
+in `demos/data/faces.zip` (in the `demos/data/` sub-folder) to create
 the necessary sub-folder which contains a single numpy array, `faces/dataX.npy`.
 This data file contains the flattened vectors of `40` images of size `256 x 256`
 pixels (pixel values have been normalized to the range of `[0,1]`), each
@@ -299,7 +299,7 @@ Model Museum, which requires that NGC systems provide an API to their key
 task-specific functions. `gncn_t1_ista.py` specifically implements all of the
 code we developed above for the deep ISTA model and its corresponding
 recognition model while `sim_train.py` is used to fit the model to the
-Olivetti dataset you unzipped into the `examples/data/` directory.
+Olivetti dataset you unzipped into the `demos/data/` directory.
 
 To train our deep ISTA model, you should execute the following:
 

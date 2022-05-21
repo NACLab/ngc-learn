@@ -20,8 +20,8 @@ in accordance to Contrastive Divergence.
 defined by the negative phase graph.
 
 Note that the folders of interest to this demonstration are:
-+ `examples/demo6/`: this contains the necessary simulation scripts
-+ `examples/data`: this contains the zipped copy of the digit image arrays
++ `demos/demo6/`: this contains the necessary simulation scripts
++ `demos/data`: this contains the zipped copy of the digit image arrays
 
 ## On Single-Wing Harmoniums
 
