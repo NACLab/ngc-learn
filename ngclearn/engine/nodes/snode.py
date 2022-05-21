@@ -85,9 +85,7 @@ class SNode(Node):
 
             :Note: specifying None will result in no threshold function being applied
 
-        trace_kernel: (Default = None), supporting option for spiking neurons
-
-            :Note: NOT fully tested/integrated in ngc-learn v0.0.1
+        trace_kernel: <unused> (Default = None)
 
         samp_fx: the sampling/stochastic activation function -- S(v) -- to apply
             to neural activities (Default = identity)
@@ -166,6 +164,7 @@ class SNode(Node):
         info["leak"] = self.leak
         info["zeta"] = self.zeta
         info["phi(x)"] = self.act_fx
+        info["S(x)"] = self.samp_fx
         info["integration.form"] = self.integrate_kernel
         if self.prior_kernel is not None:
             info["prior.form"] = self.prior_kernel

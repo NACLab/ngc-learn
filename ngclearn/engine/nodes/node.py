@@ -28,6 +28,8 @@ class Node:
         self.is_clamped = False
         self.compartment_names = None
         self.compartments = None
+        self.constant_names = None
+        self.constants = None
         self.mask_names = None
         self.masks = None
         self.connected_cables = []
@@ -89,6 +91,9 @@ class Node:
         info["compartments"] = self.compartment_names
         info["n_masks"] = len(self.masks)
         info["masks"] = self.mask_names
+        if self.constants is not None:
+            info["n_constants"] = len(self.constants)
+            info["constants"] = self.constant_names
         info["do_inplace"] = self.do_inplace
         info["batch_size"] = self.batch_size
 

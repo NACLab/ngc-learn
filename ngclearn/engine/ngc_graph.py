@@ -542,7 +542,7 @@ class NGCGraph:
         """
         Evolves this simulation object for one full K-step episode given
         input information through clamped and initialized variables. Note that
-        this is a convenience function written to embody an NGC system's
+        this is a *convenience function* written to embody an NGC system's
         full settling process, its local synaptic update calculations, as well
         as the optimization of and application of constraints to the synaptic
         parameters contained within .theta.
