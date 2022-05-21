@@ -33,12 +33,6 @@ from ngclearn.engine.ngc_graph import NGCGraph
 from ngclearn.engine.nodes.fnode import FNode
 from ngclearn.engine.proj_graph import ProjectionGraph
 
-from ngclearn2.engine.nodes.snode import SNode as SNode2
-from ngclearn2.engine.nodes.enode import ENode as ENode2
-from ngclearn2.engine.ngc_graph import NGCGraph as NGCGraph2
-from ngclearn2.engine.nodes.fnode import FNode as FNode2
-from ngclearn2.engine.proj_graph import ProjectionGraph as ProjectionGraph2
-
 seed = 69
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 tf.random.set_seed(seed=seed)
