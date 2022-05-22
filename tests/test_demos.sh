@@ -34,5 +34,9 @@ cd ../
 echo "Running Demo 5"
 cd demo5/
 ./exec_experiments.sh
+cd ../
+echo "Running Demo 6"
+cd demo6/
+./exec_experiments.sh
 cd ../../ # leave demo directoy, we are done!
 echo "-> Master demo test completed!"
