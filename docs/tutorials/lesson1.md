@@ -1,5 +1,7 @@
 # Lesson \# 1: The Nodes-and-Cables System
 
+*NOTE: this tutorial is still being written and thus currently incomplete...*
+
 In this tutorial, we will focus on working through the very basics of ngc-learn's
 nodes-and-cables system. Specifically, you will learn how various (mini-)circuits
 are built in order to develop an intuition of how these fundamental
@@ -294,9 +296,46 @@ destination node that they wire to (in the case above, the cable `a_b` would
 auto-generate the name `a-to-b_dense`). If you want the cable that wires `a` to
 `b` to be named something specific, you set the extra argument `name` in `wire_to()`
 to the desired string and force that cable to take on the name you wish (make
-sure you choose a unique name).
+sure you choose a unique name). Furthermore, note that a `DCable` has two
+learnable synaptic objects you can trigger depending on how you initialize the
+cable:
+1) a matrix `A` representing the bundle of synaptic connections that will
+be used to transform the source node of the cable and relay this information to
+the destination node of the cable, and
+2) a bias vector `b` representing the shift added to the transformed output signal
+of the cable.
 
-If you want to see what to see that the cable you wired from `a` to `b` appears
+What, then, does the above `a_b` dense cable do mathematically? Let us label
+`z` compartment of node `a` as $\mathbf{z}^a$ and the `dz_td` of node `b`
+as $\mathbf{dz}^b_{td}$. Given this labeling, the dense cable will perform
+the following transformation:
+
+$$
+\mathbf{s}_{out} = \mathbf{z}^a \cdot \mathbf{A}^{a\_b} \\
+\mathbf{dz}^b_{td} = \mathbf{dz}^b_{td} + \mathbf{s}_{out}
+$$
+
+where $\cdot$ denotes a matrix/vector multiplication and $\mathbf{A}^{a\_b}$ is the
+matrix containing the synapses connecting the compartment `z` of node `a` to the
+`dz_td` compartment of node `b`. If we had initalized the `DCable` earlier to have
+a bias, like so:
+
+```python
+init_kernels = {"A_init" : ("gaussian",0.025), "b_init" : ("zeros")}
+```
+
+then the cable `a_b` would perform the following:
+
+$$
+\mathbf{s}_{out} = \mathbf{z}^a \cdot \mathbf{A}^{a\_b} + \mathbf{b}^{a\_b} \\
+\mathbf{dz}^b_{td} = \mathbf{dz}^b_{td} + \mathbf{s}_{out}
+$$
+
+Notice that the last line in the above two equations also shows what each cable
+will ultimately to node `b` -- they add in their transformed signal $\mathbf{s}_{out}$
+to its $\mathbf{dz}^b_{td}$ compartment.
+
+If you want to verify that the cable you wired from `a` to `b` appears
 within node `b`'s `.connected_cables` data member, you can add/write a print
 statement as follows:
 
@@ -539,9 +578,9 @@ at each time step within the `.settle()` function, the `dz_td` compartment of
 node `b` is computed according to the following equation:
 
 $$
-\frac{\partial \mathbf{z}^b}{\partial t} &= \phi(\mathbf{z}^a) \cdot \mathbf{A}^a
-+ \phi(\mathbf{z}^c) \cdot \mathbf{A}^c \\
- &= 1 \cdot \mathbf{A}^a + 1 \cdot \mathbf{A}^c = 1 \cdot \mathbf{I} + 1 \cdot \mathbf{I} \\
+\frac{\partial \mathbf{z}^b}{\partial t} &= \phi(\mathbf{z}^a) \cdot \mathbf{A}^{a\_b}
++ \phi(\mathbf{z}^c) \cdot \mathbf{A}^{c\_b} \\
+ &= 1 \cdot \mathbf{A}^{a\_b} + 1 \cdot \mathbf{A}^{c\_b} = 1 \cdot \mathbf{I} + 1 \cdot \mathbf{I} \\
  & = (1 \cdot 1) + (1 \cdot 1) = 2
 $$
 <!--
@@ -555,17 +594,19 @@ b.dz_td = (a.phi(z) * a_b.A) + (c.phi(z) * c_b.A)
 where $\mathbf{I}$ is the identity matrix (or diagonal matrix) of size `(1,1)` which is the
 same as the scalar `1` (because we set the initialize of the `A` matrix within
 cables `a_b` and `c_b` to be the diagonal matrix). This means that at any time
-step, nodes `a` and `b` are, combined, depositing a scalar value of `2` into
+step, nodes `a` and `b` are combined ultimately depositing a scalar value of `2` into
 node `b`'s `dz_td` compartment, which will then be added according to `b`'s
-state dynamics: `b.z = b.z + (dz_bu + dz_td) * beta = b.z + (0 + dz_td) * beta`.
+state dynamics:
+$\mathbf{z}^b \leftarrow \mathbf{z}^b + \beta (\mathbf{dz}^b_{bu} + \mathbf{dz}^b_{td}) = \mathbf{z}^b + \beta (0 + \mathbf{dz}^b_{td}) $.
+<!--`b.z = b.z + (dz_bu + dz_td) * beta = b.z + (0 + dz_td) * beta`.-->
 If this calculation is repeated five times, as we have set the `NGCGraph` to do
 via the argument `K=5`, then the circuit above is effectively repeatedly adding
 `2` to the `z` compartment of node `b` five times (`2 * 5 = 10`). Note that for node
 `b`, `phi(z)` is identical to the value of `z` because we set the activation function
-of node `b` to be `act_fx = identity` (in fact, we have done this for all three
+of node `b` to be $\phi(\mathbf{z}) = \mathbf{z}$ or `act_fx = identity` (in fact, we have done this for all three
 nodes in this example).
 
-Now, let us slightly modify the above 3-node circuit code going one step below the
+Now, let us slightly modify the above 3-node circuit code to go one step below the
 application programming interface (API) of the `.settle()` and write our own
 explicit step-by-step simulation so that way we can examine the value of the `z` and
 `phi(z)` compartments of node `b` to prove that we are indeed accumulating a value
@@ -611,6 +652,7 @@ the settling process).
 
 ## Evolving a Circuit over Time
 
+<!--
 WRITEME: talk about update rules with Cables and the `.param` argument.
 
 
@@ -619,3 +661,4 @@ TODO:
 talk about `.clear()` in Node
 
 talk about shared path kernels in Cable
+-->
