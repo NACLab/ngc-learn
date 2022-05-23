@@ -282,7 +282,7 @@ print(" to ")
 print("Node {}.{}".format(a_b.dest_node.name, a_b.dest_comp))
 ```
 
-which would (if placed in a python script) print to your terminal the following:
+which would print to your terminal the following:
 
 ```console
 Cable a-to-b_dense of type *dense* transmits from:
@@ -388,7 +388,7 @@ print(" to ")
 print("Node {}.{}".format(a_b.dest_node.name, a_b.dest_comp))
 ```
 
-which would (if placed in a python script) print to your terminal the following:
+which would print to your terminal the following:
 
 ```console
 Cable a-to-b_simple of type *simple* transmits from:
@@ -531,6 +531,7 @@ readouts, _ = circuit.settle(
 b_val = readouts[0][2]
 print(" => Value of b.phi(z) = {}".format(b_val.numpy()))
 print("             Expected = [[10]]")
+circuit.clear()
 ```
 
 The above (fixed) circuit will simply take in the current values within the `phi(z)` compartment
@@ -630,6 +631,7 @@ for k in range(K):
     b_val = circuit.extract("b","z")
     print(" t({}) => Value of b.phi(z) = {}".format(k, b_val.numpy()))
 print("                  Expected = [[10.]]")
+circuit.clear()
 ```
 
 which will now print out to the terminal:
@@ -645,10 +647,30 @@ t(4) => Value of b.phi(z) = [[10.]]
 
 showing us that, indeed, this circuit is incrementing the current value of the
 `z` compartment by `2` each time step. The advantage to the above form of
-simulating the stimulus window for the 3-node over the `.settle()` way is that
-one can now explicitly simulate the NGC system online if needed (this would be
-desirable for very long simulation windows where events might happen during
-the settling process).
+simulating the stimulus window for the 3-node instead of using `.settle()` is that
+one can now explicitly simulate the NGC system online if needed. This lower-level
+way of simulating an NGC system would be desirable for very long simulation windows
+where events might happen that interrupt or alter the settling process.
+
+One final item to notice is that, in all of the code-snippets of this section, after
+the `NGCGraph` has been simulated (either through `.settle()` or online via `.step()`),
+we call the simulation objects `.clear()` routine. This is absolutely critical to
+do after you simulate your NGC system for a fixed window of time *IF* you do not
+want the current values of its internal nodes to carry over to the next time that
+you simulate the system with `.settle()` or `.step()`. Since an NGC system is
+stateful, if you expect its internal neural activities to have gone back to their
+resting states (typically zero vectors) before processing a new pattern or batch
+of data, then you must make sure that you call `.clear()`.
+A typical design pattern for an NGC system would something like:
+
+```python
+# ... initialize the circuit and your optimizer *opt* earlier ...
+
+# after sampling some data, a typical process loop would be:
+readouts, delta = circuit.settle( ... ) # conduct iterative inference
+opt.apply_gradients(zip(delta, circuit.theta)) # update synapses
+circuit.clear() # set all nodes in system back to their resting states
+```
 
 ## Evolving a Circuit over Time
 
