@@ -83,7 +83,7 @@ Notice in the equation above, we sum
 over indices, e.g., $\mathbf{z}^0_i$ retrieves the $i$th scalar element of (vector)
 $\mathbf{z}^0$ while $\mathbf{W}_{ij}$ retrieves the scalar element at position
 $(i,j)$ within matrix $\mathbf{W}$. With this energy function, one can write out
-the probability that a Harmonium assigns to a data point as follows:
+the probability that a Harmonium assigns to a data point:
 
 <!--
 ```
