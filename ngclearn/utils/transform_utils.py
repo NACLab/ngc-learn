@@ -26,7 +26,7 @@ def decide_fun(fun_type):
     |   * "lrelu" - leaky rectified linear unit
     |   * "softplus" - the softplus function
     |   * "relu6" - the relu but upper bounded/capped at 6.0
-    |   * "elu" - exponential linear unit (derivative not generated)
+    |   * "elu" - exponential linear unit
     |   * "erf" - the error function (derivative not generated)
     |   * "binary_flip" - bit-flipping function (derivative not generated)
     |   * "bkwta" - binary K-winners-take-all (derivative not generated)
@@ -70,7 +70,7 @@ def decide_fun(fun_type):
         d_fx = d_ltanh
     elif fun_type == "elu":
         fx = elu
-        d_fx = d_identity
+        d_fx = d_elu
     elif fun_type == "erf":
         fx = erf
         d_fx = d_identity
@@ -403,10 +403,18 @@ def gte(x, val=0.0):
     return tf.cast(tf.greater_equal(x, val),dtype=tf.float32)
 
 def elu(z,alpha=1.0):
-    return z if z >= 0 else (tf.math.exp(z) - 1.0) * alpha
+    switch = tf.cast(tf.greater_equal(z,0.0),dtype=tf.float32)
+    term1 = switch * z
+    term2 = (1. - switch) * ((tf.math.exp(z) - 1.0) * alpha)
+    # z if z >= 0 else (tf.math.exp(z) - 1.0) * alpha
+    return term1 + term2
 
 def d_elu(z,alpha=1.0):
-	return 1 if z > 0 else tf.math.exp(z) * alpha
+    switch = tf.cast(tf.greater(z,0.0),dtype=tf.float32)
+    term1 = switch
+    term2 = (1. - switch) * (tf.math.exp(z) * alpha)
+    # 1 if z > 0 else tf.math.exp(z) * alpha
+    return term1 + term2
 
 def sigmoid(x):
     return tf.nn.sigmoid(x)
