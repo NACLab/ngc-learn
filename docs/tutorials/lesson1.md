@@ -126,52 +126,64 @@ specialized compartments only used in certain situations. The neural dynamics
 of a state node, according to the first four compartments, is mathematically
 depicted by the following partial differential equation:
 
-$$
-\frac{\partial \mathbf{z}}{\partial t}
-$$
-
+<!--
 ```
 d.z/d.t = -z * leak + dz + prior(z), where dz = dz_td + dz_bu * phi'(z)
 ```
+-->
+$$
+\frac{\partial \mathbf{z}}{\partial t} = -\gamma_{leak} \mathbf{z} +
+(\mathbf{dz}_{td} + \mathbf{dz}_{bu} \odot \phi^\prime(\mathbf{z})) + \mbox{prior}(\mathbf{z})
+$$
 
-which means that, if we use Euler integration to update the `SNode`'s compartment
-`z` (the default in ngc-learn), `z` is updated each call to `.step()` as follows:
+where we also formally represent the compartments `dz_bu`, `dz_td`, `z`, and `phi(z)`
+as $\mathbf{dz}_{bu}$, $\mathbf{dz}_{td}$, $\mathbf{z}$, and $\phi(\mathbf{z})$,
+respectively. This means that, if we use Euler integration to update the `SNode`'s compartment
+$\mathbf{z}$ (the default in ngc-learn), $\mathbf{z}$ is updated each call to `.step()` as follows:
 
+<!--
 ```
 z <- z * zeta + d.z/d.t * beta, and
 phi(z) = f(z), where f is activation function such as tanh(z)
 ```
+-->
+$$
+\mathbf{z} &\leftarrow \zeta \mathbf{z} + \beta \frac{\partial \mathbf{z}}{\partial t} \\
+\phi(\mathbf{z}) &= tanh(\mathbf{z}) \quad \mbox{// $\phi(\mathbf{z})$ can be any activation function}
+$$
 
-and finally, after `z` is updated, the state node will apply an element-wise
-nonlinear function `f` to `z` to get `phi(z)` (which is also the name of the
+and finally, after $\mathbf{z}$ is updated, the state node will apply an element-wise
+nonlinear function to $\mathbf{z}$ to get $\phi(\mathbf{z})$ (which is also the name of the
 fourth compartment). Note that, in the above, we see several of the node's
-key constants defined, i.e. `beta` (the strength of
-perturbation applied to the node's `z` compartment), `leak` (the strength
-of the amount of decay applied to the `z` compartment's value), and `zeta` (the
-amount of recurrent carry-over or how "stateful" the node is -- if one sets
-the constant `zeta = 0`, the node becomes "stateless").
-`prior(z)` just refers to a distribution function that can be applied to
-the `z` compartment (see [Walkthrough \#4](../walkthroughs/demo4_sparse_coding.md)
+key constants defined, i.e. $\beta$ or `.beta` (the strength of
+perturbation applied to the node's $\mathbf{z}$ compartment), $\gamma_{leak}$ or
+`.leak` (the strength of the amount of decay applied to the $\mathbf{z}$ compartment's value),
+and $\zeta$ or `.zeta` (the amount of recurrent carry-over or how "stateful" the node is --
+if one sets the constant `.zeta = 0`, the node becomes "stateless").
+$\mbox{prior}(\mathbf{z})$ just refers to a distribution function that can be applied to
+the $\mathbf{z}$ compartment (see [Walkthrough \#4](../walkthroughs/demo4_sparse_coding.md)
 for how this is used/set). We see by observing the above differential equation that a
-state node is primarily defined by the value of its `z` compartment and how
+state node is primarily defined by the value of its $\mathbf{z}$ compartment and how
 this compartment evolves over time is dictated by several factors including the
-other two compartments `dz_td` and `dz_bu` (`phi'(z)` refers to the first
-derivative of the `SNode`'s activation function `phi(z)` which can be turned off
-if desired). Note that multiple cables can feed into `dz_td` and `dz_bu` (multiple  
-deposits would be summed to create a final value for either compartment).
+other two compartments $\mathbf{dz}_{td}$ and $\mathbf{dz}_{bu}$ ($\phi^\prime(\mathbf{z})$
+refers to the first derivative of the `SNode`'s activation function $\phi(\mathbf{z})$
+which can be turned off if desired). Note that multiple cables can feed into
+$\mathbf{dz}_{td}$ and $\mathbf{dz}_{bu}$ (multiple deposits would be summed to
+create a final value for either compartment).
 
 As we can see in the above dynamics equations, a state node is simply a set of
 rate-coded neurons that update their activity values according to a linear
-combination of several "pressures", notably the two key pressures `dz_td` and
-`dz_bu` which are practically identical except that `dz_bu` is a pressure
-(optionally) weighted by the state node's activation function derivative `phi'(z)`.
+combination of several "pressures", notably the two key pressures $\mathbf{dz}_{td}$
+(`dz_td`) and $\mathbf{dz}_{bu}$ (`dz_bu`) which are practically identical except
+that `dz_bu` is a pressure (optionally) weighted by the state node's activation
+function derivative $\phi^\prime(\mathbf{z})$.
 In a state node, when you wire other nodes to it, the `.step()` function will
 specifically assume that signals are only ever being deposited into either `dz_td` or
-`dz_bu` (and NOT into `z` or `phi(z)`, since these are being evolved according
-to the equations presented earlier -- note that if you accidentally "wire" another
-node to the `z` or `phi(z)` compartments, the `SNode` will simply ignore those
-since its `.step()` function only assumes `dz_td` and `dz_bu` receive signals
-externally).
+`dz_bu` and NOT into $\mathbf{z}$ (or `z`) and $\phi(\mathbf{z})$ (or `phi(z)`), since
+these last two compartments being evolved according to the equations presented earlier --
+note that if you accidentally "wire" another node to the `z` or `phi(z)` compartments,
+the `SNode` will simply ignore those since its `.step()` function only assumes
+`dz_td` and `dz_bu` receive signals externally).
 
 With the `SNode` above, you can already build a fully functional NGC system (for
 example, a Harmonium as in [Walkthrough \#6](../walkthroughs/demo6_boltzmann.md)),
@@ -179,7 +191,7 @@ however, there is one special node that we should also describe that will allow
 you to more easily construct arbitrary predictive coding systems. This node is
 known as the error node (`ENode`) and, as seen in its [API](ngclearn.engine.nodes.enode),
 it contains the following key compartments -- `pred_mu`, `pred_targ`, `z`, `phi(z)`,
-and `L`.
+and `L` or, formally, $\mathbf{z}_\mu$, $\mathbf{z}_{targ}$, $\mathbf{z}$, and $\phi(\mathbf{z})$.
 An error node is, in some sense, a convenience node because it is actually
 mathematically a simplification of a state node that is evolved over a period
 of time (it is a derived "fixed-point" of a pool of neurons that compute
@@ -192,14 +204,20 @@ The error node dynamics are considerably simpler than that of a
 state node (and, since they are driven by a derived fixed-point calculation,
 they are stateless) and simply dictated by the following:
 
+<!--
 ```
 z = pred_targ - pred_mu, and
 phi(z) = f(z), where f is activation function such as identity(z)
 ```
+-->
+$$
+\mathbf{z} &= \mathbf{z}_\mu - \mathbf{z}_{targ} \\
+\phi(\mathbf{z}) &= identity(\mathbf{z}) \quad \mbox{// $\phi(\mathbf{z})$ can be any activation function}
+$$
 
-where `pred_targ` is the target signal (which can be accumulated from multiple
+where $\mathbf{z}_{targ}$ (or `pred_targ`) is the target signal (which can be accumulated from multiple
 sources, i.e., if more than cable feeds into it, the set of deposits are summed
-to create the final compartment value of `pred_targ`) and `pred_mu` is the
+to create the final compartment value of `pred_targ`) and $\mathbf{z}_\mu$ or (`pred_mu`) is the
 expectation of the target signal (which can also be the sum of multiple deposits
 from multiple cables/sources, i.e., multiple deposits from multiple cables
 will be summed to calculate the final value of `pred_mu`).

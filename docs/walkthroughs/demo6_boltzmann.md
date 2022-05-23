@@ -60,8 +60,8 @@ $$
 where $\mathbf{b}$ is the visible bias vector, $\mathbf{c}$ is the latent bias vector,
 and $\mathbf{W}$ is the synaptic weight matrix that connects $\mathbf{z}^0$ to $\mathbf{z}^1$
 (and its transpose $\mathbf{W}^T$ is
-used to make predictions of the input itself). Note that $\sim$ denotes that we
-would sample from a probability (vector) and, in the above Harmonium's case,
+used to make predictions of the input itself). Note that $\cdot$ means matrix/vector multiplication and
+$\sim$ denotes that we would sample from a probability (vector) and, in the above Harmonium's case,
 samples will be drawn treating conditionals such as $p(\mathbf{z}^1 | \mathbf{z}^0)$
 as multivariate Bernoulli distributions.
 $\mathbf{z}^0$ would typically be clamped/set to the actual sensory input data $\mathbf{x}$.
