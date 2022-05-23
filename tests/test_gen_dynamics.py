@@ -136,7 +136,7 @@ ngc_model.set_cycle(nodes=[mu1,mu0])
 ngc_model.set_cycle(nodes=[e1,e0])
 ngc_model.set_learning_order([z2_mu1, z1_mu0]) # order: W2, W1
 ngc_model.apply_constraints()
-info = ngc_model.compile(batch_size=x.shape[0], use_graph_optim=False)
+info = ngc_model.compile(batch_size=x.shape[0])
 
 W2 = ngc_model.theta[0] + 0
 W1 = ngc_model.theta[1] + 0

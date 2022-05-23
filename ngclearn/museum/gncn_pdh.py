@@ -175,6 +175,15 @@ class GNCN_PDH:
                 e0_z3 = e0.wire_to(z3, src_comp="phi(z)", dest_comp="dz_bu", cable_kernel=ecable_cfg)
                 e0_z3.set_constraint(constraint_cfg)
 
+        z3_mu1.set_decay(decay_kernel=("l1",0.00005))
+        z2_mu0.set_decay(decay_kernel=("l1",0.00005))
+        z3_mu2.set_decay(decay_kernel=("l1",0.00005))
+        z2_mu1.set_decay(decay_kernel=("l1",0.00005))
+        z1_mu0.set_decay(decay_kernel=("l1",0.00005))
+        e2_z3.set_decay(decay_kernel=("l1",0.00005))
+        e1_z2.set_decay(decay_kernel=("l1",0.00005))
+        e0_z1.set_decay(decay_kernel=("l1",0.00005))
+
         # set up update rules and make relevant edges aware of these
         z3_mu1.set_update_rule(preact=(z3,"phi(z)"), postact=(e1,"phi(z)"), param=["A"])
         z2_mu0.set_update_rule(preact=(z2,"phi(z)"), postact=(e0,"phi(z)"), use_mod_factor=use_mod_factor, param=["A"])

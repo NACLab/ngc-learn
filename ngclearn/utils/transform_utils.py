@@ -54,10 +54,10 @@ def decide_fun(fun_type):
         fx = kwta
         d_fx = bkwta
     elif fun_type == "tanh":
-        fx = tf.nn.tanh
+        fx = tanh #tf.nn.tanh
         d_fx = d_tanh
     elif fun_type == "sign":
-        fx = tf.math.sign
+        fx = sign #tf.math.sign
         d_fx = d_identity
     elif fun_type == "clip_fx":
         fx = clip_fx
@@ -69,25 +69,25 @@ def decide_fun(fun_type):
         fx = ltanh
         d_fx = d_ltanh
     elif fun_type == "elu":
-        fx = tf.nn.elu
+        fx = elu
         d_fx = d_identity
     elif fun_type == "erf":
-        fx = tf.math.erf
+        fx = erf
         d_fx = d_identity
     elif fun_type == "lrelu":
-        fx = tf.nn.leaky_relu
+        fx = lrelu
         d_fx = d_identity
     elif fun_type == "relu":
-        fx = tf.nn.relu
+        fx = relu
         d_fx = d_relu
     elif fun_type == "softplus":
-        fx = tf.math.softplus
+        fx = softplus
         d_fx = d_softplus
     elif fun_type == "relu6":
-        fx = tf.nn.relu6
+        fx = relu6
         d_fx = d_relu6
     elif fun_type == "sigmoid":
-        fx = tf.nn.sigmoid
+        fx = sigmoid
         d_fx = d_sigmoid
     elif fun_type == "softmax":
         fx = softmax
@@ -408,6 +408,9 @@ def elu(z,alpha=1.0):
 def d_elu(z,alpha=1.0):
 	return 1 if z > 0 else tf.math.exp(z) * alpha
 
+def sigmoid(x):
+    return tf.nn.sigmoid(x)
+
 def d_sigmoid(x):
     sigm_x = tf.nn.sigmoid(x)
     return (-sigm_x + 1.0) * sigm_x
@@ -419,19 +422,31 @@ def inverse_logistic(x, clip_bound=0.03): # 0.03
         x_ = tf.clip_by_value(x_, clip_bound, 1.0 - clip_bound)
     return tf.math.log( x_/((1.0 - x_) + 1e-6) )
 
-def inverse_tanh(x):
-    """ Inverse hyperbolic tangent """
-    #m = 0.5 * log ( (ones(size(x)) + x) ./ (ones(size(x)) - x))
-    return tf.math.log((1. + x)/(1. - x))
+def sign(x):
+    return tf.math.sign(x)
+
+def tanh(x):
+    return tf.nn.tanh(x)
 
 def d_tanh(x):
     tanh_x = tf.nn.tanh(x)
     return -(tanh_x * tanh_x) + 1.0
 
+def inverse_tanh(x):
+    """ Inverse hyperbolic tangent """
+    #m = 0.5 * log ( (ones(size(x)) + x) ./ (ones(size(x)) - x))
+    return tf.math.log((1. + x)/(1. - x))
+
+def relu(x):
+    return tf.nn.relu(x)
+
 def d_relu(x):
     # df/dx = 1 if x >= 0 else 0
     val = tf.math.greater_equal(x, 0.0)
     return tf.cast(val,dtype=tf.float32) # sign(max(0,x))
+
+def relu6(x):
+    return tf.nn.relu6(x)
 
 def d_relu6(x):
     # df/dx = 1 if 0<x<6 else 0
@@ -441,8 +456,17 @@ def d_relu6(x):
     Ix = Ix1 * Ix2
     return Ix
 
+def softplus(x):
+    return tf.nn.softplus(x)
+
 def d_softplus(x):
     return tf.nn.sigmoid(x) # d/dx of softplus = logistic sigmoid
+
+def lrelu(x):
+    return tf.nn.leaky_relu(x)
+
+def erf(x):
+    return tf.math.erf(x)
 
 def threshold_soft(x, lmda):
     # soft thresholding fx - S(x) = (|x| - lmbda) *@ sign(x)

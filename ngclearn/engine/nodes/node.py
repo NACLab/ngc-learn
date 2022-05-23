@@ -102,7 +102,8 @@ class Node:
     def set_constraint(self, constraint_kernel):
         pass
 
-    def wire_to(self, dest_node, src_comp, dest_comp, cable_kernel=None, mirror_path_kernel=None):
+    def wire_to(self, dest_node, src_comp, dest_comp, cable_kernel=None,
+                mirror_path_kernel=None, name=None):
         """
         A wiring function that connects this node to another external node via a cable (or synaptic bundle)
 
@@ -138,6 +139,10 @@ class Node:
                     then this cable will be used exactly in the same way it was used in its source cable.
 
                 :Note: either cable_kernel, mirror_path_kernel MUST be set to something that is not None
+
+            name: the string name to be assigned to the generated cable (Default = None)
+
+                :Note: setting this to None will trigger the created cable to auto-name itself
         """
         if cable_kernel is None and mirror_path_kernel is None:
             print("Error: Must either set |cable_kernel| or |mirror_path_kernel| argument! for node({})".format(self.name))

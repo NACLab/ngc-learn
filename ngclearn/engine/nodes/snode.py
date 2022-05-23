@@ -8,21 +8,21 @@ from ngclearn.utils import transform_utils
 class SNode(Node):
     """
     | Implements a (rate-coded) state node that follows NGC settling dynamics according to:
-    |   d.z/d.t = -z * leak + dz * beta + prior(z)
+    |   d.z/d.t = -z * leak + dz + prior(z), where dz = dz_td + dz_bu * phi'(z)
     | where:
     |   dz - aggregated input signals from other nodes/locations
-    |   beta - strength of update to node state z
     |   leak - controls strength of leak variable/decay
     |   prior(z) - distributional prior placed over z (such as a kurtotic prior)
 
     | Note that the above is used to adjust neural activity values via an integator inside a node.
         For example, if the standard/default Euler integrator is used then the neurons inside this
         node are adjusted per step as follows:
-    |   z <- z * zeta + d.z/d.t
+    |   z <- z * zeta + d.z/d.t * beta
     | where:
+    |   beta - strength of update to node state z
     |   zeta - controls the strength of recurrent carry-over, if set to 0 no carry-over is used (stateless)
 
-    | Key Compartments:
+    | Compartments:
     |   * dz_td - the top-down pressure compartment (deposited signals summed)
     |   * dz_bu - the bottom-up pressure compartment, potentially weighted by phi'(x)) (deposited signals summed)
     |   * z - the state neural activities
@@ -135,6 +135,11 @@ class SNode(Node):
         sfx, sdfx = transform_utils.decide_fun(samp_fx)
         self.sfx = sfx
         self.sdfx = sdfx
+
+        self.constants = {}
+        self.constants["beta"] = self.beta
+        self.constants["leak"] = self.leak
+        self.constants["zeta"] = self.zeta
 
         self.compartment_names = ["dz_bu", "dz_td", "z", "phi(z)", "S(z)"]
         self.compartments = {}
