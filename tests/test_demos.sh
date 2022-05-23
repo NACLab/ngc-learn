@@ -13,30 +13,30 @@
 # check the outputs of each demonstration in their respective folder matches
 # what appears in the tutorials themselves)
 
-echo "-> Executing ALL demonstration scripts!"
-cd ../demos/ # enter demo directoy, start running demo scripts
+echo "-> Executing ALL walkthrough scripts!"
+cd ../walkthroughs/ # enter demo directoy, start running demo scripts
 echo "Running Demo 1"
-cd demo1/
+cd walkthrough1/
 ./exec_experiments.sh
 cd ../
 echo "Running Demo 2"
-cd demo2/
+cd walkthrough2/
 ./exec_experiments.sh
 cd ../
 echo "Running Demo 3"
-cd demo3/
+cd walkthrough3/
 ./exec_experiments.sh
 cd ../
 echo "Running Demo 4"
-cd demo4/
+cd walkthrough4/
 ./exec_experiments.sh
 cd ../
 echo "Running Demo 5"
-cd demo5/
+cd walkthrough5/
 ./exec_experiments.sh
 cd ../
 echo "Running Demo 6"
-cd demo6/
+cd walkthrough6/
 ./exec_experiments.sh
 cd ../../ # leave demo directoy, we are done!
-echo "-> Master demo test completed!"
+echo "-> Master walkthrough test completed!"
