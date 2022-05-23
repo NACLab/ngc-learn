@@ -26,22 +26,22 @@ Note that the folders of interest to this demonstration are:
 ## On Single-Wing Harmoniums
 
 A Harmonium is a generative model implemented as a stochastic, two-layer neural system
-that attempts to learn a probability distribution over sensory input `x`, i.e.,
-the goal of a Harmonium is to learn `p(x)`, much like the models we were learning
-in Demonstration \#1. Fundamentally, the approach to estimating `p(x)` that is
-taken by a Harmonium is through optimizing an energy function `E(x)` (a concept motivated
-by statistical mechanics), where the system searches for an internal configuration,
-i.e., the values of its synapses, has low energy (values) for patterns that lie
-come from the true data distribution `p(x)` and high energy (values) for patterns
-that do not (or those that do not come from the training dataset).
+that attempts to learn a probability distribution over sensory input $\mathbf{x}$, i.e.,
+the goal of a Harmonium is to learn $p(\mathbf{x})$, much like the models we were learning
+in Walkthrough \#1. Fundamentally, the approach to estimating $p(\mathbf{x})$ that is
+taken by a Harmonium is through optimizing an energy function $E(\mathbf{x})$ (a
+concept motivated by statistical mechanics), where the system searches for an
+internal configuration, i.e., the values of its synapses, has low energy (values)
+for patterns that lie come from the true data distribution $p(\mathbf{x})$ and high energy
+(values) for patterns that do not (or those that do not come from the training dataset).
 
 The most common, standard Harmonium is one where input nodes (one per dimension
 of the data observation space) are modeled as binary/Boolean sensors, or "visible
-units" `z0` (which are clamped to actual data patterns), connected to a layer of
-(stochastic) binary latent feature detectors, or "hidden units" `z1`. Notably,
+units" $\mathbf{z}^0$ (which are clamped to actual data patterns), connected to a layer of
+(stochastic) binary latent feature detectors, or "hidden units" $\mathbf{z}^1$. Notably,
 the connections between the latent and visible units are symmetric. As a result
 of a key restriction imposed on the Harmonium's network structure, i.e., no
-lateral connections between the neurons in `z0` as well as those in `z1`,
+lateral connections between the neurons in $\mathbf{z}^0$ as well as those in $\mathbf{z}^1$,
 computing the latent and visible states is simple:
 
 <!--
@@ -80,53 +80,72 @@ E(\mathbf{z}^0,\mathbf{z}^1) = -\sum_i \mathbf{b}_i \mathbf{z}^0_i -
 $$
 
 Notice in the equation above, we sum
-over indices, e.g., `z0_i` retrieves the `i`th scalar element of (vector) `z0` while
-`w_ij` retrieves the scalar element at position `(i,j)` within matrix `W`. With this
-energy function, one can write out the probability that a Harmonium assigns to a
-data point as follows:
+over indices, e.g., $\mathbf{z}^0_i$ retrieves the $i$th scalar element of (vector)
+$\mathbf{z}^0$ while $\mathbf{W}_{ij}$ retrieves the scalar element at position
+$(i,j)$ within matrix $\mathbf{W}$. With this energy function, one can write out
+the probability that a Harmonium assigns to a data point as follows:
 
+<!--
 ```
 p(z0 = x) = [ Sum_z1 exp(-E(z0, z1)) ] * 1/Z
 ```
+-->
+$$
+p(\mathbf{z}^0 = \mathbf{x}) = \frac{1}{Z} \exp( -E(\mathbf{z}^0,\mathbf{z}^1) )
+$$
 
-where `Z` is the normalizing constant (or, in statistics mechanics, the partition
+where $Z$ is the normalizing constant (or, in statistics mechanics, the partition
 function) needed to obtain proper probability values (and is, in fact, intractable
 to compute for any reasonably-sized Harmonium -- fortunately, we will not need to
 calculate it in order to learn a Harmonium). When one works through the derivation
-of the gradient of the log probability `log p(x)` with respect to the synapses
-such as `W`, they get a (contrastive) Hebbian-like update rule as follows:
+of the gradient of the log probability $\log p(\mathbf{x})$ with respect to the synapses
+such as $\mathbf{W}$, they get a (contrastive) Hebbian-like update rule as follows:
 
+<!--
 ```
 Delta W = <z0_i * z1_j>_data - <z0_i * z1_j>_model
 ```
+-->
+$$
+\Delta \mathbf{W} = <\mathbf{z}^0_i \mathbf{z}^1_j>_{data} - <\mathbf{z}^0_i \mathbf{z}^1_j>_{model}
+$$
 
-where the angle brackets `< >` tell us that we need to take the expectation of the
+where the angle brackets $< >$ tell us that we need to take the expectation of the
 values within the brackets under a certain distribution (such as the data distribution
-denoted by `_data`).
+denoted by the subscript $data$).
 
 Technically, to compute the update above, obtaining the first term
-`<z0_i * z1_j>_data` is easy since we take the product of a data point and its
-corresponding hidden state under the Harmonium but obtaining `<z0_i * z1_j>_model`
-is very costly, as we would need to initialize the value of `z0` to a random initial
+$<\mathbf{z}^0_i \mathbf{z}^1_j>_{data}$ is easy since we take the product of a
+data point and its corresponding hidden state under the Harmonium but obtaining
+$<\mathbf{z}^0_i \mathbf{z}^1_j>_{model}$ is very costly, as we would need to
+initialize the value of $\mathbf{z}^0$ to a random initial
 sate and then run a Gibbs sampler for many iterations to accurately approximate
 the second term. Fortunately, it was shown in work such as [3], that learning
-a Harmonium is still possible by replacing the term `<z0_i * z1_j>_model` with
-`<z0_i * z1_j>_recon`, which is simply computed by using the first term's latent
-state `z1` to reconstruct the input and then using this reconstruction one
+a Harmonium is still possible by replacing the term $<\mathbf{z}^0_i \mathbf{z}^1_j>_{model}$
+with $<\mathbf{z}^0_i \mathbf{z}^1_j>_{recon}$, which is simply computed by using the
+first term's latent state $\mathbf{z}^1$ to reconstruct the input and then using this reconstruction one
 more to obtain its corresponding binary latent state. This is known as
 "Contrastive Divergence", and, although this approximation has been shown
 to not actual follow the gradient of any known objective function, it works
 well in practice when learning a generative model based on a Harmonium. Finally,
 the vectorized form of the Contrastive Divergence update is:
 
+<!--
 ```
 Delta W = [ (z0)^T * z1 ] - [ (z0)^T * z1 ]
 ```
+-->
+$$
+\Delta \mathbf{W} = \Big[ (\mathbf{z}^0_{pos})^T \cdot \mathbf{z}^1_{pos} \Big]
+- \Big[ (\mathbf{z}^0_{neg})^T \cdot \mathbf{z}^1_{neg} \Big]
+$$
 
 where the first term (in brackets) is labeled as the "positive phase" (or the
-positive, data-dependent statistics) while the
+positive, data-dependent statistics -- where $\mathbf{z}^0_{pos}$ denotes the
+positive phase sample of $\mathbf{z}^0$) while the
 second term is labeled as the "negative phase" (or the negative, data-independent
-statistics). Note that simpler rules of a similar form can be worked out for the
+statistics -- where $\mathbf{z}^0_{neg}$ denotes the negative phase sample of
+$\mathbf{z}^0$). Note that simpler rules of a similar form can be worked out for the
 latent/visible bias vectors as well.
 
 In ngc-learn, to simulate the above Harmonium generative model and its Contrastive
