@@ -10,14 +10,14 @@ patterns in the MNIST database (from Demonstration \# 1), producing results
 comparable to what was reported in (Whittington &amp; Bogacz, 2017).
 
 Note that the folders of interest to this demonstration are:
-+ `demos/demo3/`: this contains the necessary simulation script
-+ `demos/data`: this contains the zipped copy of the MNIST database arrays
++ `walkthroughs/demo3/`: this contains the necessary simulation script
++ `walkthroughs/data`: this contains the zipped copy of the MNIST database arrays
 
 ## Using an Ancestral Projection Graph to Initialize the Settling Process
 
 We will start by first discussing an important use-case of the `ProjectionGraph` --
 to initialize the simulated iterative inference process of an `NGCGraph`. This is
-contrast to the use-case we saw in the last two demonstrations where we used the
+contrast to the use-case we saw in the last two walkthroughs where we used the
 ancestral projection graph as a post-training tool, which allowed us to draw
 samples from the underlying directed generative models we were fitting. This time,
 we will leverage the power of an ancestral projection graph to serve as a
@@ -26,11 +26,11 @@ process.
 
 To illustrate the above use-case, we will focus on crafting an NGC model for
 discriminative learning (as opposed to the generative learning models we built
-Demonstrations \# 1 and \#2). Before working with a concrete application, as we
+Walkthroughs \# 1 and \#2). Before working with a concrete application, as we
 will do in the next section, let us just focus on crafting the NGC architecture
 of the classifier as well as its ancestral projection graph.
 
-Working with nodes and cables (see [the last demonstration for details](../demonstrations/demo2_create_ngc.md)),
+Working with nodes and cables (see [the last demonstration for details](../walkthroughs/demo2_create_ngc.md)),
 we will build a simple hierarchical system that adheres to the following NGC shorthand:
 
 ```
@@ -119,7 +119,7 @@ the above system is still learning, "under the hood", a generative model, specif
 a conditional generative model of the form `p(y|x)`. Given this insight, we can
 take advantage of the fact that ancestral sampling through our model is still possible, just
 with the exception that our input samples do not need to come from a prior distribution
-(as in the case of the models in Demonstrations \# 1 and \# 2) but instead from
+(as in the case of the models in Walkthroughs \# 1 and \# 2) but instead from
 data patterns directly.
 
 To build the corresponding ancestral projection graph for the architecture above,
@@ -352,7 +352,7 @@ agent.ngc_model.apply_constraints()
 agent.clear()
 ```
 
-To train your NGC classifier, run the training script in `/demos/demo3/` as
+To train your NGC classifier, run the training script in `/walkthroughs/demo3/` as
 follows:
 
 ```console
@@ -360,12 +360,12 @@ $ python sim_train.py --config=gncn_t1_ffm/fit.cfg --gpu_id=0 --n_trials=1
 ```
 
 which will execute a training process using the experimental configuration file
-`/demos/demo3/gncn_t1_ffm/fit.cfg` written for you. After your model finishes
+`/walkthroughs/demo3/gncn_t1_ffm/fit.cfg` written for you. After your model finishes
 training you should see a validation score similar to the one below:
 
 <img src="../images/demo3/valid_acc_output.png" width="650" />
 
-You will also notice that in your folder `/demos/demo3/gncn_t1_ffm/` several
+You will also notice that in your folder `/walkthroughs/demo3/gncn_t1_ffm/` several
 arrays as well as your learned NGC classifier have been saved to disk for you.
 To examine the classifier's performance on the MNIST test-set, you can execute
 the evaluation script like so:
@@ -404,7 +404,7 @@ $ python plot_curves.py
 ```
 
 which, internally, has been hard-coded to point to the local directory
-`demos/demo3/gncn_t1_ffm/` containing the relevant measurements/numpy arrays.
+`walkthroughs/demo3/gncn_t1_ffm/` containing the relevant measurements/numpy arrays.
 Doing so should result in a plot that looks similar to the one below:
 
 <img src="../images/demo3/mnist_learning_curves.jpg" width="350" />

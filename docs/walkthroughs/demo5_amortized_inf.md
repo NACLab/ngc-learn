@@ -14,8 +14,8 @@ dataset used in [4] and visualize the acquired filters of the learned representa
 system.
 
 Note that the folders of interest to this demonstration are:
-+ `demos/demo5/`: this contains the necessary simulation scripts
-+ `demos/data`: this contains the zipped copy of the face image arrays
++ `walkthroughs/demo5/`: this contains the necessary simulation scripts
++ `walkthroughs/data`: this contains the zipped copy of the face image arrays
 
 ## Speeding Up the Settling Process with Amortized Inference
 
@@ -61,7 +61,7 @@ for this demonstration, we want to build a model for synthesizing human faces,
 specifically those contained in the Olivetti faces database.
 
 For this part of the demonstration, you will need to unzip the data contained
-in `demos/data/faces.zip` (in the `demos/data/` sub-folder) to create
+in `walkthroughs/data/faces.zip` (in the `walkthroughs/data/` sub-folder) to create
 the necessary sub-folder which contains a single numpy array, `faces/dataX.npy`.
 This data file contains the flattened vectors of `40` images of size `256 x 256`
 pixels (pixel values have been normalized to the range of `[0,1]`), each
@@ -202,7 +202,7 @@ task is emphasized by our shorthand's second line, where we see that the value
 of `s1` will be compared to `z1` via the error node `e1_i` and `s2` will be
 compared to `z2` via `e2_i`.
 
-Unlike the previous projection graphs we have built in earlier demonstrations,
+Unlike the previous projection graphs we have built in earlier walkthroughs,
 our recognition model runs in the "opposite" direction of our generative model --
 it takes in data and predicts initial values for the latent states while
 the generative model predicts a value for the data given the latent states.
@@ -299,7 +299,7 @@ Model Museum, which requires that NGC systems provide an API to their key
 task-specific functions. `gncn_t1_ista.py` specifically implements all of the
 code we developed above for the deep ISTA model and its corresponding
 recognition model while `sim_train.py` is used to fit the model to the
-Olivetti dataset you unzipped into the `demos/data/` directory.
+Olivetti dataset you unzipped into the `walkthroughs/data/` directory.
 
 To train our deep ISTA model, you should execute the following:
 

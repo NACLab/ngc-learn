@@ -20,8 +20,8 @@ in accordance to Contrastive Divergence.
 defined by the negative phase graph.
 
 Note that the folders of interest to this demonstration are:
-+ `demos/demo6/`: this contains the necessary simulation scripts
-+ `demos/data`: this contains the zipped copy of the digit image arrays
++ `walkthroughs/demo6/`: this contains the necessary simulation scripts
++ `walkthroughs/data`: this contains the zipped copy of the digit image arrays
 
 ## On Single-Wing Harmoniums
 
@@ -340,7 +340,7 @@ some MNIST digits (the same dataset we used in Demonstration \#1). Specifically,
 we will leverage the [Harmonium](../museum/harmonium.md), model in the Model Museum
 as it implements the above core components/functions internally. In the  
 script `sim_train.py`, you will find a general simulated training loop similar to
-what we have developed in previous demonstrations that will fit our Harmonium
+what we have developed in previous walkthroughs that will fit our Harmonium
 to the MNIST database by cycling through it several times, saving the final
 (best) resulting to disk within the `rbm/` sub-directory. Go ahead and execute
 the training process as follows:
@@ -376,7 +376,7 @@ Harmonium to learn with persistent Contrastive Divergence or parallel tempering.
 
 Finally, you can also run the `viz_filters.py` script to extract the acquired filters/
 receptive fields of your trained Harmonium, much as we did for the sparse
-coding and hierarchical ISTA models in Demonstrations \#4 and \#5, as follows:
+coding and hierarchical ISTA models in Walkthroughs \#4 and \#5, as follows:
 
 ```console
 $ python viz_filters.py --config=rbm/fit.cfg --gpu_id=0

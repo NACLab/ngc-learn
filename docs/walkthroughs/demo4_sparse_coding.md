@@ -12,8 +12,8 @@ the results of imposing a kurtotic prior as well as a thresholding function
 over latent codes.
 
 Note that the folders of interest to this demonstration are:
-+ `demos/demo4/`: this contains the necessary simulation scripts
-+ `demos/data`: this contains the zipped copy of the natural image arrays
++ `walkthroughs/demo4/`: this contains the necessary simulation scripts
++ `walkthroughs/data`: this contains the zipped copy of the natural image arrays
 
 ## On Dictionary Learning
 
@@ -47,7 +47,7 @@ receptive fields of simple-cells (found in the visual cortex).
 ## Constructing a Sparse Coding System
 
 To build a sparse coding model, we can, as we have in the previous three
-demonstrations, manually craft one using nodes and cables. First, let us specify
+walkthroughs, manually craft one using nodes and cables. First, let us specify
 the underlying generative model we aim to emulate.
 In NGC shorthand, this means that we seek to build:
 
@@ -58,7 +58,7 @@ Note: Cauchy prior applied for p(z1)
 ```
 
 Furthermore, we further specify underlying directed generative model
-(in accordance with the methodology in [Demonstration \#3](../demonstrations/demo3_classify.md)) as follows:
+(in accordance with the methodology in [Demonstration \#3](../walkthroughs/demo3_classify.md)) as follows:
 
 ```
 Node Name Structure:
@@ -212,12 +212,12 @@ layer `z1`.
 
 We will now simulate the learning of the feature detectors using the two
 sparse coding models that we have built above. The code provided in
-`sim_train.py` in `/demos/demo4/` will execute a simulation of the above
-two models on the natural images found in `demos/data/natural_scenes.zip`),
+`sim_train.py` in `/walkthroughs/demo4/` will execute a simulation of the above
+two models on the natural images found in `walkthroughs/data/natural_scenes.zip`),
 which is a dataset composed of several images of the American Northwest.
 
-First, navigate to the `demos/` directory to access the example/demonstration
-code and further enter the `demos/data/` sub-folder. Unzip the file
+First, navigate to the `walkthroughs/` directory to access the example/demonstration
+code and further enter the `walkthroughs/data/` sub-folder. Unzip the file
 `natural_scenes.zip` to create one more sub-folder that contains two numpy arrays,
 the first labeled `natural_scenes/raw_dataX.npy` and another labeled as
 `natural_scenes/dataX.npy`. The first one contains the original, `512 x 512` raw pixel
@@ -290,7 +290,7 @@ for i in range(num_iter): # for each training iteration/epoch
 
 notice that the training code above, which has also been integrated into
 the provided `sim_train.py` demo file, looks very similar to how we trained our
-generative models in [Demonstration \# 1](../demonstrations/demo1_gen_models.md).
+generative models in [Demonstration \# 1](../walkthroughs/demo1_gen_models.md).
 In contrast to our earlier training loops, however, we have now written and
 used patch creation function `generate_patch_set()` to sample image patches
 of `16 x 16` pixels on-the-fly each time an image is sampled from the `DataLoader`.

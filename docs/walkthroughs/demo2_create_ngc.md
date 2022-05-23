@@ -15,7 +15,7 @@ you will learn how to design an ancestral projection graph to aid in fantasizing
 patterns that look like the target data generating process.
 
 Note that the folder of interest to this demonstration is:
-+ `demos/demo2/`: this contains the necessary simulation script
++ `walkthroughs/demo2/`: this contains the necessary simulation script
 
 ## Theoretical Motivation: Nodes, Compartments, and Cables
 At its core, part of ngc-learn's fundamental design is inspired by (neural)
@@ -28,7 +28,7 @@ often highly nonlinear ways through a complex dendritic tree.
 Although modeling a neuronal system through the lens of cable theory is certainly
 complex and intricate in of itself, ngc-learn is built in this direction, starting
 with the idea a neuron (or a cluster of them) can be viewed as a node, or
-[Node](ngclearn.engine.nodes.snode) (also see {ref}`node-model`), and each bundle
+[Node](ngclearn.engine.nodes.node) (also see {ref}`node-model`), and each bundle
 of synapses that connect nodes can be viewed as a cable, or
 [Cable](ngclearn.engine.cables.cable) (also see {ref}`cable-model`).
 Each node has different, multiple "compartments" (which are named), which are regions
@@ -178,7 +178,7 @@ Beyond the `SNode`, we need to study one more important
 type of node -- the `ENode` (see [ENode](ngclearn.engine.nodes.enode)). While,
 in principle, one could build a complete NGC system with just state nodes and
 cables (which will be the subject of future
-demonstrations/tutorials), an important aspect of NGC computation we have not
+walkthroughs/tutorials), an important aspect of NGC computation we have not
 addressed is that of the `error neuron`, represented in ngc-learn by an `ENode`.
 An `ENode` is a special type of node that performs a mismatch calculation (or a
 computation that compares how far off one quantity is from another) and is, in
@@ -371,7 +371,7 @@ Now that we familiarized ourselves with the basic mechanics of nodes and cables
 as well as how they fit within a simulation graph, let us apply our knowledge to build
 a nonlinear NGC generative model that learns to mimic a streaming data generating
 process. Note that this part of the demonstration corresponds to the materials/scripts
-provided within `demos/demo2/`.
+provided within `walkthroughs/demo2/`.
 
 In ngc-learn, within the `generator` module, there are a few data
 generators to facilitate prototyping and simulation studies. Simulated data

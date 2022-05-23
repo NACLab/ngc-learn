@@ -16,20 +16,20 @@ Concretely, after going through this demonstration, you will:
 scheme designed in this demonstration.
 
 Note that the two folders of interest to this demonstration are:
-+ `demos/demo1/`: this contains the necessary scripts and configuration files
-+ `demos/data`: this contains a zipped copy of the MNIST database arrays
++ `walkthroughs/demo1/`: this contains the necessary scripts and configuration files
++ `walkthroughs/data`: this contains a zipped copy of the MNIST database arrays
 
 ## Setting Up and Training a Generative System
 
-To start, navigate to the `demos/` directory to access the example/demonstration
-code and further enter the `demos/data/` sub-folder. Unzip the file
+To start, navigate to the `walkthroughs/` directory to access the example/demonstration
+code and further enter the `walkthroughs/data/` sub-folder. Unzip the file
 `mnist.zip` to create one more sub-folder that contains a set of numpy arrays each house
 a different slice of the MNIST database, i.e., `trainX.npy` and `trainY.npy` compose
 the training set (image patterns and their labels), `validX.npy`and `validY.npy` make
 up the development/validation set, and `testX.npy`and `testY.npy` compose the test set.
 Note that pixels in all image vectors have been normalized for you, to the range of [0,1].
 
-Next, in `demos/demo1/`, observe the provided script `sim_train.py`, which contains the
+Next, in `walkthroughs/demo1/`, observe the provided script `sim_train.py`, which contains the
 code to execute the training process of an NGC model. Inside this file, we can export
 one of three possible GNCNs from ngc-learn's Model Museum, i.e., the
 [GNCN-t1](../museum/gncn_t1.md) (which
@@ -95,7 +95,7 @@ within an NGC model based on its error neurons (since, internally, our imported 
 use the specialized [ENode](ngclearn.engine.nodes.enode) to create error neuron
 nodes, we retrieve each node's specialized compartment known as the scalar local
 loss `L` -- for details on nodes and their compartments, see
-[Demonstration \# 2](../demonstrations/demo2_create_ngc.md) for details -- but you
+[Demonstration \# 2](../walkthroughs/demo2_create_ngc.md) for details -- but you
 could also compute each local loss with distance functions, e.g.,
 `L2 = tf.norm( agent.ngc_model.extract(node_name="e2", node_var_name="phi(z)"), ord=2 )`).
 Measuring ToD allows us to monitor the entire NGC system's optimization
@@ -230,7 +230,7 @@ queryable object that is backed by a dictionary/hash-table.
 
 The above code blocks/snippets can be found in `train_sim.py` which has been written
 for you to study and use/run along with the provided example configuration scripts
-(notice for each model there one subfolder in `/demos/demo1/` for each of the
+(notice for each model there one subfolder in `/walkthroughs/demo1/` for each of the
 three models for you to train, each with their own training script `fit.cfg` and
 `analysis.cfg` script).
 Let us go ahead and train one of each the three models that we imported into our
@@ -246,7 +246,7 @@ $ python sim_train.py --config==gncn_t1_sigma/fit.cfg --gpu_id=0 --n_trials=1
 $ python sim_train.py --config==gncn_pdh/fit.cfg --gpu_id=0 --n_trials=1
 ```
 Alternatively, you can also just run the global bash script `exec_experiments.sh`
-that we have also provided in `/demos/demo1/`, which will just simply execute the above
+that we have also provided in `/walkthroughs/demo1/`, which will just simply execute the above
 three experiments sequentially for you. Run this bash script like so:
 ```console
 $ ./exec_experiments.sh
@@ -255,13 +255,13 @@ $ ./exec_experiments.sh
 As an individual script runs, you will see printed to the terminal, after each epoch,
 an estimate of the ToD and the BCE over the full training sample as well as the
 measured validation ToD and BCE over the full development data subset. Note that our
-training script retrieves from the `demos/data/mnist/` folder (that you unzipped earlier)
+training script retrieves from the `walkthroughs/data/mnist/` folder (that you unzipped earlier)
 only the training arrays, i.e., `trainX.npy` and `trainY.npy`, and the
 validation set arrays, i.e., `validX.npy` and `validY.npy`. We will use the
 test set arrays `testX.npy` and `testY.npy` in a follow-up analysis once we have
 trained each of our models above. After all the processes/scripts terminate, you can
-check inside each of the model folders, i.e., `demos/demo1/gncn_t1/`, `demos/demo1/gncn_t1_sigma/`,
-and `demos/demo1/gncn_pdh/`, and see that your script(s) saved/serialized to disk a
+check inside each of the model folders, i.e., `walkthroughs/demo1/gncn_t1/`, `walkthroughs/demo1/gncn_t1_sigma/`,
+and `walkthroughs/demo1/gncn_pdh/`, and see that your script(s) saved/serialized to disk a
 few useful files:
 
 + `Lx0.npy`: the BCE training loss for the training set over epoch
@@ -351,13 +351,13 @@ Notice we still keep our measurement of the ToD and BCE just as an extra
 sanity check to make sure that any model we de-serialize from disk yields values
 similar to what we measured during our training process.
 Armed with the extraction function above, we can gather the latent codes of
-our NGC model. Notice that in the provided `demos/demo1/extract_latents.py` script,
+our NGC model. Notice that in the provided `walkthroughs/demo1/extract_latents.py` script,
 you will find the above function fully integrated and used.
 Go ahead and run the extraction script for the first of your three models:
 ```console
 $ python extract_latents.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
-and you will now find inside the folder `demos/demo1/gncn_t1/` a new numpy array
+and you will now find inside the folder `walkthroughs/demo1/gncn_t1/` a new numpy array
 file `z3_0.npy`, which contains all of the latent variables for the top-most layer
 of your `GNCN-t1` model (you can examine the configuration file `analyze.cfg` to see
 what arguments we set to achieve this).
@@ -370,12 +370,12 @@ still using the `analyze.cfg` configuration, is execute this script like so:
 $ python fit_gmm.py --config==gncn_t1/analyze.cfg --gpu_id=0
 ```
 and after your fitting process script terminates, you will see inside your model
-directory `demos/demo1/gncn_t1/` that you have a de-serialized learned
+directory `walkthroughs/demo1/gncn_t1/` that you have a de-serialized learned
 prior `prior0.gmm`.
 
 With this prior model `prior0.gmm` and your previously trained NGC system
 `model0.ngc`, you are ready to finally estimate your marginal log likelihood `log p(x)`.
-The final script provided for you, i.e., `demos/demo1/eval_logpx.py`, will
+The final script provided for you, i.e., `walkthroughs/demo1/eval_logpx.py`, will
 do this for you. It simply takes your full system -- the prior and the model -- and
 calculates a Monte Carlo estimate of its log likelihood using the test set.
 Run this script as follows:
@@ -385,7 +385,7 @@ $ python eval_logpx.py --config==gncn_t1/analyze.cfg --gpu_id=0
 and after it completes (this step can take a bit more time than the other steps,
 since we are computing our estimate over quite a few samples), in addition to
 outputting to I/O the calculated `log p(x)`, you will see two more items in your
-model folder `demos/demo1/gncn_t1/`:
+model folder `walkthroughs/demo1/gncn_t1/`:
 
 + `logpx_results.txt`: the recorded marginal log likelihood
 + `samples.png`: some visual samples stored in an image array for you to view/assess
@@ -442,7 +442,7 @@ trials (each set of files/objects will be indexed by its trial number).
 ## References
 [1] Rao, Rajesh PN, and Dana H. Ballard. "Predictive coding in the visual cortex:
 a functional interpretation of some extra-classical receptive-field effects."
-Nature neuroscience 2.1 (1999): 79-87. <br>
+Nature Neuroscience 2.1 (1999): 79-87. <br>
 [2] Friston, Karl. "Hierarchical models in the brain." PLoS Computational
 Biology 4.11 (2008): e1000211. <br>
 [3] Ororbia, A., and Kifer, D. The neural coding framework for learning
