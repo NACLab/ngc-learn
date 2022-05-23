@@ -1,4 +1,4 @@
-# Demo 3: Creating an NGC Classifier
+# Walkthrough 3: Creating an NGC Classifier
 
 In this demonstration, we will learn how to create a classifier based on NGC.
 After going through this demonstration, you will:

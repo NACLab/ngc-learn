@@ -1,4 +1,4 @@
-# Demo 6: Harmoniums and Contrastive Divergence
+# Walkthrough 6: Harmoniums and Contrastive Divergence
 
 Although ngc-learn was originally designed with a focus on predictive
 processing neural systems, it is possible to simulate other kinds of neural

@@ -1,4 +1,4 @@
-# Demo 2: Creating Custom NGC Predictive Coding Systems
+# Walkthrough 2: Creating Custom NGC Predictive Coding Systems
 
 In this demonstration, we will learn how to craft our own custom NGC system
 using ngc-learn's fundamental building blocks -- nodes and cables. After going

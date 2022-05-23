@@ -1,4 +1,4 @@
-# Demo 5: Amortized Inference
+# Walkthrough 5: Amortized Inference
 
 In this demonstration, we will design a simple way to conduct amortized inference
 to speed up the settling process of an NGC model, cutting down the number of

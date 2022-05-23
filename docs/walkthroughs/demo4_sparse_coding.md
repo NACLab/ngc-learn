@@ -1,4 +1,4 @@
-# Demo 4: Sparse Coding
+# Walkthrough 4: Sparse Coding
 
 In this demonstration, we will learn how to create, simulate, and visualize the
 internally acquired filters/atoms of variants of a sparse coding system based
