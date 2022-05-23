@@ -44,24 +44,40 @@ of a key restriction imposed on the Harmonium's network structure, i.e., no
 lateral connections between the neurons in `z0` as well as those in `z1`,
 computing the latent and visible states is simple:
 
+<!--
 ```
 p(z1 | z0) = sigmoid(W * z0 + c), z1 ~ p(z1 | z0)
 p(z0 | z1) = sigmoid(W^T * z1 + b), z0 ~ p(z0 | z1)
 ```
-where `b` is the visible bias vector, `c` is the latent bias vector, and `W` is
-the synaptic weight matrix that connects `z0` to `z1` (and its transpose `W^T` is
-used to make predictions of the input itself). Note that `~` denotes that we
+-->
+$$
+p(\mathbf{z}^1 | \mathbf{z}^0) &= sigmoid(\mathbf{W} \cdot \mathbf{z}^0 + \mathbf{c}),
+\; \mathbf{z}^1 \sim p(\mathbf{z}^1 | \mathbf{z}^0) \\
+p(\mathbf{z}^0 | \mathbf{z}^1) &= sigmoid(\mathbf{W}^T \cdot \mathbf{z}^1 + \mathbf{b}),
+\; \mathbf{z}^0 \sim p(\mathbf{z}^0 | \mathbf{z}^1)
+$$
+
+where $\mathbf{b}$ is the visible bias vector, $\mathbf{c}$ is the latent bias vector,
+and $\mathbf{W}$ is the synaptic weight matrix that connects $\mathbf{z}^0$ to $\mathbf{z}^1$
+(and its transpose $\mathbf{W}^T$ is
+used to make predictions of the input itself). Note that $\sim$ denotes that we
 would sample from a probability (vector) and, in the above Harmonium's case,
-samples will be drawn treating conditionals such `p(z1 | z0)` as multivariate
-Bernoulli distributions.
-`z0` would typically be clamped/set to the actual sensory input data `x`.
+samples will be drawn treating conditionals such as $p(\mathbf{z}^1 | \mathbf{z}^0)$
+as multivariate Bernoulli distributions.
+$\mathbf{z}^0$ would typically be clamped/set to the actual sensory input data $\mathbf{x}$.
 
-The energy function of the Harmonium's joint configuration `(z0, z1)` (similar
-to that of a Hopfield network) is specified as follows:
+The energy function of the Harmonium's joint configuration $(\mathbf{z}^0,\mathbf{z}^1)$
+(similar to that of a Hopfield network) is specified as follows:
 
+<!--
 ```
 E(z0, z1) = -Sum_i b_i * z0_i - Sum_j c_j * z1_j - Sum_i Sum_j z0_i * W_ij * z1_j
 ```
+-->
+$$
+E(\mathbf{z}^0,\mathbf{z}^1) = -\sum_i \mathbf{b}_i \mathbf{z}^0_i -
+\sum_j \mathbf{c}_j \mathbf{z}^1_j - \sum_i \sum_j \mathbf{z}^0_i \mathbf{W}_{ij} \mathbf{z}^1_j
+$$
 
 Notice in the equation above, we sum
 over indices, e.g., `z0_i` retrieves the `i`th scalar element of (vector) `z0` while

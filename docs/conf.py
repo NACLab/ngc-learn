@@ -53,7 +53,7 @@ myst_enable_extensions = [
     "amsmath",
     # "colon_fence",
     # "deflist",
-    # "dollarmath",
+    "dollarmath",
     "fieldlist",
     "html_admonition",
     "html_image",

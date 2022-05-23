@@ -15,14 +15,21 @@ Welcome to ngc-learn's documentation!
 
 .. toctree::
    :maxdepth: 1
-   :caption: Demonstrations:
+   :caption: Tutorials:
 
-   demonstrations/demo1_gen_models
-   demonstrations/demo2_create_ngc
-   demonstrations/demo3_classify
-   demonstrations/demo4_sparse_coding
-   demonstrations/demo5_amortized_inf
-   demonstrations/demo6_boltzmann
+   tutorials/lesson1
+   tutorials/lesson2
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Walkthroughs:
+
+   walkthroughs/demo1_gen_models
+   walkthroughs/demo2_create_ngc
+   walkthroughs/demo3_classify
+   walkthroughs/demo4_sparse_coding
+   walkthroughs/demo5_amortized_inf
+   walkthroughs/demo6_boltzmann
 
 .. toctree::
    :maxdepth: 1
