@@ -499,7 +499,7 @@ some data, which we will demonstrate in the next section.
 In this section, we will illustrate two ways in which one may have an `NGCGraph`
 interact with sensory data patterns.
 Let us start by building a simple 3-node circuit. Create a Python file/script
-named `circuit.py` and write the following to create the header:
+named `circuit1.py` and write the following to create the header:
 
 ```python
 import tensorflow as tf
@@ -574,7 +574,7 @@ wait on the first cycle (`a` then `b`) to be completed before it can then be exe
 (note that the overall simulation needed for both would be the same when finally
 run).
 
-Now go ahead and run your `circuit.py` (i.e., `$ python circuit1.py`) and you
+Now go ahead and run your `circuit1.py` (i.e., `$ python circuit1.py`) and you
 should get the exact following output in your terminal:
 
 ```console
@@ -699,10 +699,19 @@ argument). This argument takes in a 2-tuple where the first argument is the
 literal cable object you want to share parameters with and the second argument
 is a string code/flag that tells ngc-learn which parameters (and how) to share.
 
-In ngc-learn, one can make two cables "share" a bundle of synapses (and even bias
-parameters) as follows:
+In ngc-learn, one can make two cables "share" a bundle of synapses, and even bias
+parameters, as follows (create a file called `circuit2.py` to place the
+following code into):
 
 ```python
+import tensorflow as tf
+import numpy as np
+
+# import building blocks
+from ngclearn.engine.nodes.snode import SNode
+# import simulation object
+from ngclearn.engine.ngc_graph import NGCGraph
+
 # create some nodes
 a = SNode(name="a", dim=1, beta=1, leak=0.0, act_fx="identity")
 b = SNode(name="b", dim=1, beta=1, leak=0.0, act_fx="identity")
@@ -799,10 +808,17 @@ compute the correct synaptic adjustments. In particular, whenever you call
 will actually compute ALL of the synaptic adjustments at the end of the simulation
 window and store them into a list `delta` and return them to you.
 
-For example, you want to compute the Hebbian update for the cable `a_b` above
-given a data point containing the value of one:
+For example, you want to compute the Hebbian update for the cable `a_b` earlier
+(that you wrote for `circuit2.py`) given a data point containing the value of
+one (create a new file and write the code below into `circuit3.py`):
 
 ```python
+import tensorflow as tf
+import numpy as np
+
+from ngclearn.engine.nodes.snode import SNode # import building blocks
+from ngclearn.engine.ngc_graph import NGCGraph # import simulation object
+
 # create the initialization scheme (kernel) of the dense cable
 init_kernels = {"A_init" : ("gaussian",0.1)}
 dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 111}
@@ -865,6 +881,8 @@ To measure the mismatch between these two nodes' predictions, we will introduce
 the fifth and final node as a three-dimensional error node tasked with
 computing how far off the two sources nodes are from each other.
 
+To build this circuit, create a file called `circuit4.py` and write the header:
+
 ```python
 import tensorflow as tf
 import numpy as np
@@ -874,8 +892,11 @@ from ngclearn.engine.nodes.enode import ENode
 from ngclearn.engine.nodes.snode import SNode
 # import simulation object
 from ngclearn.engine.ngc_graph import NGCGraph
+```
 
+and then go ahead and create the 5-node circuit we described as follows:
 
+```python
 # create the initialization scheme (kernel) of the dense cable
 init_kernels = {"A_init" : ("gaussian",0.1)}
 dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 111} # dense cable
@@ -920,6 +941,12 @@ circuit.set_learning_order([b_bmu, a_amu]) # enforces order - b_bmu then a_amu
 circuit.compile(batch_size=1)
 
 opt = tf.keras.optimizers.SGD(0.05)
+```
+
+and then, given the 5-node graph you crafted and compiled above, you can
+now write a simple training loop to simulate as in below:
+
+```python
 
 n_iter = 60 # number of overall optimization steps to take
 
@@ -953,7 +980,8 @@ print("    Target: {}".format(target))
 circuit.clear()
 ```
 
-which should print to your terminal something similar to:
+Once you have written `circuit4.py`, you can execute it from the command line
+as `$ python circuit4.py` which should print to your terminal something similar to:
 
 ```console
 ---- Simulating Circuit Evolution ----
@@ -963,6 +991,19 @@ which should print to your terminal something similar to:
 Prediction: [[-2.2072585  -1.1418786   0.68785524]]
     Target: [[-2.2125444 -1.1444474  0.6895305]]
 ```
+
+As you can see, the loss represented by the error node `e` (specifically, the
+value stored in its loss `L` compartment), starts at greater than `0.03` and
+then decreases over the sixty simulated training iterations to nearly zero
+(`0.00003954`), and, as we can see in the comparison between the prediction
+from node `a` against the target produced by node `b`, the values are quite close.
+This indicates that our small 5-node circuit has converged to an equilibrium point
+where node `a` and node `b` are capable of matching each other (assuming that
+`b`'s `z` compartment will always be clamped to a vector of ones). Furthermore,
+we see that we have crafted a feedback loop via cable `e_a`, which transmits
+the error information contains inside of node `e` back to the `dz_bu` compartment
+of node `a`, which, as we recall from the earlier part of this tutorial, is used
+in node `a`'s state update equation.
 
 
 
