@@ -1031,17 +1031,37 @@ the error information contains inside of node `e` back to the `dz_bu` compartmen
 of node `a`, which, as we recall from the earlier part of this tutorial, is used
 in node `a`'s state update equation.
 
+With the completion of the above example, you have now gone through the process
+of crafting your own custom NGC circuit with ngc-learn's nodes-and-cables system.
+Given this knowledge, you are ready to design and simulate your own predictive
+processing neural systems based on the NGC computational framework. For examples
+of how nodes and cables are used to build various classical and modern-day models,
+check out the [Model Museum](./museum/model_museum.md) (including the
+pre-designed agents in the ngc-learn repo `ngclearn/museum/`) and the walk-throughs.
 
+## Knowing the Utility Functions of an NGCGraph
 
-## Knowing the Useful Utility Functions of an NGCGraph
+Although you have learned of and how to assemble the key elements in ngc-learn
+needed to construct NGC circuits, there are a few useful utility functions that
+are provided once you construct the `NGCGraph` simulation object. In this
+closing section, we will briefly discuss each of these and briefly illustrate
+their use.
 
-<!--
-.clamp()
-.inject()
-.extract()
-.getNode()
-.apply_constraints()
--->
+### Extracting Signals and Properties: Getter Functions
+
+Two of the most important "getter" functions you will want to be familiar with
+when dealing with `NGCGraph`'s are `.extract()` and `.getNode()`.
+
+### Clamping and Injecting Signals: Setter Functions
+
+The two "setter" functions that will you find most useful when working with
+the `NGCGraph` are `.clamp()` and `.inject()`.
+
+### Enforcing Constraints
+
+One final item that you may find important when simulating the evolution of
+an `NGCGraph` is the enforcing of constraints through the `.apply_constraints()`
+routine.
 
 
 ## References
