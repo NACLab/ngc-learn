@@ -958,6 +958,8 @@ bmu_e = b_mu.wire_to(e, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=s
 # wire e back to a
 e_a = e.wire_to(a, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(a_amu,"A^T"))
 
+# wire e back to b
+e_b = e.wire_to(b, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(b_bmu,"A^T"))
 
 circuit = NGCGraph()
 # execute nodes in order: a, c, then b
@@ -1029,14 +1031,16 @@ where node `a` and node `b` are capable of matching each other (assuming that
 we see that we have crafted a feedback loop via cable `e_a`, which transmits
 the error information contains inside of node `e` back to the `dz_bu` compartment
 of node `a`, which, as we recall from the earlier part of this tutorial, is used
-in node `a`'s state update equation.
+in node `a`'s state update equation. (Feedback loop `e_b` does something similar
+to `e_a`, however, since we force the `z` compartment of `b` to always be a
+specific value, this loop ends up being useful in this example).
 
 With the completion of the above example, you have now gone through the process
 of crafting your own custom NGC circuit with ngc-learn's nodes-and-cables system.
 Given this knowledge, you are ready to design and simulate your own predictive
 processing neural systems based on the NGC computational framework. For examples
 of how nodes and cables are used to build various classical and modern-day models,
-check out the [Model Museum](./museum/model_museum.md) (including the
+check out the [Model Museum](../museum/model_museum.md) (including the
 pre-designed agents in the ngc-learn repo `ngclearn/museum/`) and the walk-throughs.
 
 ## Knowing the Utility Functions of an NGCGraph
@@ -1052,17 +1056,168 @@ their use.
 Two of the most important "getter" functions you will want to be familiar with
 when dealing with `NGCGraph`'s are `.extract()` and `.getNode()`.
 
+The `.extract()` function is useful when you want to access particular values of your
+NGC system at a particular instant. For example, let us say that you want to
+retrieve and inspect the value of the `z` compartment of the node `a` in the
+5-node circuit you built in the last section right. You would then utilize the
+`.extract()` methods as follows:
+
+```python
+node_value = circuit.extract("a", "z")
+print(" -> Inspecting value of Node a.z = {}".format(node_value.numpy()))
+```
+
+which would print to your terminal:
+
+```console
+ -> Inspecting value of Node a.z = [[-0.9275531   2.341278    0.2365013   1.2464949   0.76036114]]
+```
+
+NOTE: it is meaningless to call `.extract()` in the following two cases:
+1) after you call `.clear()`, as `.clear()` will completely wipe the state of
+your `NGCGraph`, and
+2) not before you have simulated used your `NGCGraph` for any amount of time
+(if you have never simulated the graph, then your graph has no signals of any
+meaning since it has never interact with data or an environment).
+If you call `.extract()` in cases like those above, it will simply return `None`.
+
+The `.getNode()` is useful if you have already compiled your `NGCGraph` simulation
+object and want to retrieve properties related to a particular node in this graph.
+For example, let us say that you want to determine the dimensionality of the
+`e` node in your 5-node circuit of the last section. To do this, you would
+write the following code:
+
+```python
+node = circuit.getNode("e")
+print(" -> The dimensionality of Node e is {}".format(node.dim))
+```
+
+which would print to your terminal:
+
+```console
+ -> The dimensionality of Node e is 3
+```
+
+The `.getNode()` method will return the full `Node` object of the same exact
+name you input as argument. With this object, you can query and inspect any of
+its internal data members, such as the `.connected_cables` as we did earlier in
+this lesson.
+
 ### Clamping and Injecting Signals: Setter Functions
 
 The two "setter" functions that will you find most useful when working with
-the `NGCGraph` are `.clamp()` and `.inject()`.
+the `NGCGraph` are `.clamp()` and `.inject()`. Clamping and injecting, which
+both work very similarly, allow you to force certain compartments in certain
+nodes of your choosing to take on certain values before you simulate the `NGCGraph`
+for a certain period of time. While both of these initially place values into
+compartments, there is a subtle yet important difference in the effect each has
+on the graph over time. Desirably, both of these functions take in a list of
+arguments, allowing you clamp or inject many items at one time if needed.
+
+In the event that you want a particular node's compartment to take on a specific
+set of values and **remain fixed at** these values throughout the duration of
+a simulation time window, then you want to use `.clamp()`. In our 5-node circuit
+earlier, we in fact did this in our particular call to `.settle()` (which, internally,
+actually makes a call to `.clamp()` for you if you provide anything to the `clamped_vars`
+argument), but you could, alternatively, use the clamping function explicitly if you
+need to as follows:
+
+```python
+b_val = tf.ones([1, circuit.getNode("b").dim])
+circuit.clamp([("b", "z", b_val)])
+readouts, delta = circuit.settle(
+                    readout_vars=[("e", "pred_mu"),("e", "pred_targ")],
+                    calc_delta=False # turn off update computation
+                  )
+
+node_value = circuit.extract("b", "z")
+print(" -> Inspecting value of Node b.z = {}".format(node_value.numpy()))
+````
+
+which will, through each step of simulation conducted within the `.settle()`
+force the `z` compartment of node `b` to ALWAYS remain at the value of `b_val`
+(this vector of ones will persist throughout the simulation time window).
+The result of this code snippet prints to terminal the following:
+
+```console
+ -> Inspecting value of Node b.z = [[1. 1. 1. 1. 1. 1.]]
+```
+
+This is as we would expect -- we literally clamped a vector of six ones to `z` of
+node `b` and would expect to observe that this is still the case at the end of
+simulation.
+
+If, in contrast, you only want to **initialize** a particular node's compartment
+to *start* at a specific value but not necessarily remain at this value, you
+will want to use `.inject()`. Doing so looks like code below:
+
+```python
+b_val = tf.ones([1, circuit.getNode("b").dim])
+circuit.inject([("b", "z", b_val)])
+readouts, delta = circuit.settle(
+                    readout_vars=[("e", "pred_mu"),("e", "pred_targ")],
+                    calc_delta=False # turn off update computation
+                  )
+
+node_value = circuit.extract("b", "z")
+print(" -> Inspecting value of Node b.z = {}".format(node_value.numpy()))
+````
+
+which looks nearly identical to the clamping code we wrote above. However, the
+result of this computation is quite different as seen in the terminal output
+below:
+
+```console
+ -> Inspecting value of Node b.z = [[8.505673  8.249885  8.257135  7.7380524 8.38973   8.267948 ]]
+```
+
+Notice that the values within `z` of node `b` are NOT ones like we saw in our
+previous clamping example. This is because this compartment only started at the
+first time step as a vector of ones but, according to the internal dynamics of
+node `b` which are driven by the originally useless feedback loop/cable
+`e_b` we created earlier -- recall, at the time, that we wrote that this cable
+would do nothing because we *clamped* `z` in node `b` to a vector of ones. If
+we had instead *injected* the vector of ones, this compartment in node `b`
+would indeed have evolved over time.
 
 ### Enforcing Constraints
 
 One final item that you may find important when simulating the evolution of
 an `NGCGraph` is the enforcing of constraints through the `.apply_constraints()`
 routine.
+For example, you want to ensure that the Euclidean norms of the columns of a
+particular matrix `A` in one of your system's cables never exceed a certain value
+(see [Walkthrough \#4](../walkthroughs/demo4_sparse_coding.md) for a case that requires
+this constraint to be true).
 
+To enforce a constraint on a particular cable, all you need to do is first make
+the desired cable aware of this constraint like so:
+
+```python
+a_amu = a.wire_to(a_mu, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":1}
+a_amu.set_constraint(constraint_cfg)
+```
+
+then, whenever you call the `.apply_constraints()` of your `NGCGraph` simulation object,
+this constraint will internally be enforced/applied to the cable `a_amu`. Typically,
+this call looks like the following (using our 5-node circuit as an example):
+
+```python
+readouts, delta = circuit.settle(
+                    clamped_vars=[("b", "z",b_val)],
+                    readout_vars=[("e", "L")]
+                  )
+opt.apply_gradients(zip(delta, circuit.theta))
+circuit.apply_constraints() # generally apply constraints after an optimizer is used...
+circuit.clear()
+```
+
+where we see that we call `.apply_constraints()` AFTER the Tensorflow optimizer
+has been used to actually alter the values of the synapses of the NGC system.
+If, after the `SGD` update had resulted in the norms of any of the columns in
+the matrix `A` of cable `a_amu` to exceed the value of `1.0`, then `.apply_constraints()`
+would further alter this matrix to make sure it no longer violates this constraint.
 
 ## References
 Hebb, Donald Olding. The organization of behavior: A neuropsychological theory.
