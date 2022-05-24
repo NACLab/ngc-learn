@@ -522,8 +522,23 @@ some data, which we will demonstrate in the next section.
 
 In this section, we will illustrate two ways in which one may have an `NGCGraph`
 interact with sensory data patterns.
-Let us start by building a simple 3-node circuit. Create a Python file/script
-named `circuit1.py` and write the following to create the header:
+Let us start by building a simple 3-node circuit, i.e., the one
+depicted in the figure below (only the relevant compartments in each node
+that we will wire together are depicted).
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/3n_circuit.png |
+   |   :scale: 75%                                         |
+   |   :align: center                                      |
+   +-------------------------------------------------------+
+```
+
+Create a Python file/script named `circuit1.py` and write the following to
+create the header:
 
 ```python
 import tensorflow as tf
