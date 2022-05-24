@@ -905,6 +905,21 @@ To measure the mismatch between these two nodes' predictions, we will introduce
 the fifth and final node as a three-dimensional error node tasked with
 computing how far off the two sources nodes are from each other.
 
+We illustrate the 5-node circuit in the figure below. The relevant compartments
+that we will be wiring together are shown as different-colored circles (and the
+legend maps the color to the compartment name).
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/5n_circuit.png |
+   |   :scale: 75%                                         |
+   |   :align: center                                      |
+   +-------------------------------------------------------+
+```
+
 To build this circuit, create a file called `circuit4.py` and write the header:
 
 ```python
