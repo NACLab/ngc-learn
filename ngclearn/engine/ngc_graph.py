@@ -220,8 +220,12 @@ class NGCGraph:
             node_var_name: compartment name w/in Node to extract signal from
 
         Returns:
-            an extracted signal (vector/matrix) OR None if node does not exist
+            an extracted signal (vector/matrix) OR None if either the node does not exist
+            or the entire system has not been simulated (meaning that no node dynamics
+            have been run yet)
         """
+        if len(self.values) == 0:
+            return None
         if self.nodes.get(node_name) is not None:
             return self.values.get(node_name).get(node_var_name)
             #return self.nodes[node_name].extract(node_var_name)
@@ -235,7 +239,7 @@ class NGCGraph:
             node_name: name of the node from the NGC graph to examine
 
         Returns:
-            the desired Node (object)
+            the desired Node (object) or None if the node does not exist
         """
         return self.nodes.get(node_name) #self.nodes[node_name]
 
