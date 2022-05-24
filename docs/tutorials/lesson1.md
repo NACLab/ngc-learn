@@ -219,7 +219,8 @@ $$
 L(\mathbf{z}) &= \sum_j (\mathbf{z} \odot \mathbf{z})^2_j \mbox{// Gaussian error neurons}
 $$
 
-where $\mathbf{z}_{targ}$ (or `pred_targ`) is the target signal (which can be accumulated from multiple
+where $\odot$ denotes elementwise multiplication and $\mathbf{z}_{targ}$ (or
+`pred_targ`) is the target signal (which can be accumulated from multiple
 sources, i.e., if more than cable feeds into it, the set of deposits are summed
 to create the final compartment value of `pred_targ`) and $\mathbf{z}_\mu$ or (`pred_mu`) is the
 expectation of the target signal (which can also be the sum of multiple deposits
