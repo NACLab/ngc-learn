@@ -59,7 +59,19 @@ and each cable transmits the information (vector of numbers) inside one compartm
 within one node and transforms this information (potentially with synapses) and
 finally deposits this transformed information into one single compartment of another node.
 Understanding how nodes and cables relate to each other in ngc-learn is necessary
-if one wants to build and simulate their own custom NGC system.
+if one wants to build and simulate their own custom NGC system (for example, the
+arbitrary 3-node one graphically depicted in the figure below).
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-------------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/nodes_and_cables.png |
+   |   :scale: 42%                                               |
+   |   :align: center                                            |
+   +-------------------------------------------------------------+
+```
 
 ### The Node
 
@@ -313,6 +325,20 @@ Cable a-to-b_dense of type *dense* transmits from:
 Node a.z
  to
 Node b.dz_td
+```
+
+Graphically, the above 2-node circut would look like what is depicted in the
+figure below.
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/2n_circuit.png |
+   |   :scale: 75%                                         |
+   |   :align: center                                      |
+   +-------------------------------------------------------+
 ```
 
 Note that cables can auto-generate their own `.name` based on the source and
