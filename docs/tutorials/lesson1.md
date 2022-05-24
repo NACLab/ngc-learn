@@ -12,7 +12,7 @@ We recommend that you create a directory labeled `tutorials/` and a sub-director
 within labeled as `lesson1/` for you to place the code/Python scripts that you will
 write in throughout this lesson.
 
-## Theoretical Motivation: Cable Theory and Neural Compartments
+## Theory: Cable Theory and Neural Compartments
 
 At its core, part of ngc-learn's core design is inspired by (neural)
 <a href="http://www.scholarpedia.org/article/Neuronal_cable_theory">cable theory </a>,
@@ -193,7 +193,8 @@ however, there is one special node that we should also describe that will allow
 you to more easily construct arbitrary predictive coding systems. This node is
 known as the error node (`ENode`) and, as seen in its [API](ngclearn.engine.nodes.enode),
 it contains the following key compartments -- `pred_mu`, `pred_targ`, `z`, `phi(z)`,
-and `L` or, formally, $\mathbf{z}_\mu$, $\mathbf{z}_{targ}$, $\mathbf{z}$, and $\phi(\mathbf{z})$.
+and `L` or, formally, $\mathbf{z}_\mu$, $\mathbf{z}_{targ}$, $\mathbf{z}$,
+$\phi(\mathbf{z})$, and $L(\mathbf{z})$.
 An error node is, in some sense, a convenience node because it is actually
 mathematically a simplification of a state node that is evolved over a period
 of time (it is a derived "fixed-point" of a pool of neurons that compute
@@ -214,7 +215,8 @@ phi(z) = f(z), where f is activation function such as identity(z)
 -->
 $$
 \mathbf{z} &= \mathbf{z}_\mu - \mathbf{z}_{targ} \\
-\phi(\mathbf{z}) &= identity(\mathbf{z}) \quad \mbox{// $\phi(\mathbf{z})$ can be any activation function}
+\phi(\mathbf{z}) &= identity(\mathbf{z}) \quad \mbox{// $\phi(\mathbf{z})$ can be any activation function} \\
+L(\mathbf{z}) &= \sum_j (\mathbf{z} \odot \mathbf{z})^2_j \mbox{// Gaussian error neurons}
 $$
 
 where $\mathbf{z}_{targ}$ (or `pred_targ`) is the target signal (which can be accumulated from multiple
@@ -222,7 +224,30 @@ sources, i.e., if more than cable feeds into it, the set of deposits are summed
 to create the final compartment value of `pred_targ`) and $\mathbf{z}_\mu$ or (`pred_mu`) is the
 expectation of the target signal (which can also be the sum of multiple deposits
 from multiple cables/sources, i.e., multiple deposits from multiple cables
-will be summed to calculate the final value of `pred_mu`).
+will be summed to calculate the final value of `pred_mu`). Note that for $L(\mathbf{z})$
+(or `L`), we only depict one possible form that this compartment can take -- the
+Gaussian error neuron (which results in a local mean squared error loss) --
+although are forms are possible (such as the Laplacian error neuron).
+
+Below, we graphically depict the `SNode` (Left) and the `ENode` (Right):
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-----------------------------------------------------------+-----------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/ngclearn_snode.png | .. image:: ../images/tutorials/lesson1/ngclearn_enode.png |
+   |   :scale: 40%                                             |   :scale: 40%                                             |
+   |   :align: center                                          |   :align: center                                          |
+   +-----------------------------------------------------------+-----------------------------------------------------------+
+```
+
+notice that both diagrams indicate that multiple incoming signals (each indicated
+by a curved diamond-head arrow) are summed within the cell body compartment they
+are deposited into with the $\Sigma$ symbol. In the `SNode`, the signals
+`dz_td` and `dz_bu` are combined by addition, i.e., $+$ (in the light blue box), whereas
+in the `ENode`, the signals `pred_targ` and `pred_mu` are combined by subtraction,
+i.e., $-$ (in the red box) (they are contrasted to produce a mismatch/difference signal).
 
 While we do not touch on it in this tutorial lesson, a user could write their
 own custom nodes as well, making sure to subclass the `Node` class and then
