@@ -479,6 +479,17 @@ re-compiling (as in the above two cases) provides some flexibility to the
 experimenter/developer although a small setup cost is paid each the `.compile()`
 routine is called.
 
+Also, it is important to be aware that the `NGCGraph` itself internally maintains
+several data structures that help it keep track of the simulated nodes/cables,
+allow it to compute any desired synaptic updates, and ensure that the internal
+dynamics interact properly with Tensorflow's static graph optimization while
+still providing inspectability for the experimenter among other activities.
+One particular object that will be of interest to you, the experimenter, is the
+`.theta` list, which is the implementation of the mathematical construct $\Theta$
+often stated in statistical learning and applied mathematics that houses ALL of
+the learnable parameters (currently it would be empty in our case above because
+we have not set any learning rules as we will later).
+
 Given the above `NGCGraph`, you have now built your first, very own
 custom NGC system. All that remains is to learn how to use an NGC system to process
 some data, which we will demonstrate in the next section.
@@ -674,13 +685,175 @@ circuit.clear() # set all nodes in system back to their resting states
 
 ## Evolving a Circuit over Time
 
-<!--
-WRITEME: talk about update rules with Cables and the `.param` argument.
+### Shared/Linked Cables
+
+While cables are intended to be unique in that they instantiate a particular
+bundle of synapses that relay the information from one node to another, it is
+sometimes desirable to allow two or more cables to reuse the exact same synapse
+(pointing to the same spot in memory -- in other words, they make use of a shallow
+copy of the synapses). This can also be useful if one needs to reduce the memory
+footprint of their NGC system, e.g., for CPUs/GPUs with limited memory.
+To facilitate sharing, you will need to use the `mirror_path_kernel` argument
+of the `wire_to()` function you used earlier (in place of the `cable_kernel`
+argument). This argument takes in a 2-tuple where the first argument is the
+literal cable object you want to share parameters with and the second argument
+is a string code/flag that tells ngc-learn which parameters (and how) to share.
+
+In ngc-learn, one can make two cables "share" a bundle of synapses (and even bias
+parameters) as follows:
+
+```python
+# create some nodes
+a = SNode(name="a", dim=1, beta=1, leak=0.0, act_fx="identity")
+b = SNode(name="b", dim=1, beta=1, leak=0.0, act_fx="identity")
+x = SNode(name="x", dim=1, beta=1, leak=0.0, act_fx="identity")
+y = SNode(name="y", dim=1, beta=1, leak=0.0, act_fx="identity")
+
+init_kernels = {"A_init" : ("gaussian",0.1)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 111}
+
+a_b = a.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+# make cable *x_y* reuse the *A* matrix contained in cable *a_b*
+x_y = x.wire_to(y, src_comp="phi(z)", dest_comp="dz_td", mirror_path_kernel=(a_b,"A"))
+
+print("Cable {} w/ synapse A = {}".format(a_b.name, a_b.params["A"].numpy()))
+print("Cable {} w/ synapse A = {}".format(x_y.name, x_y.params["A"].numpy()))
+```
+
+and you should see printed to your terminal:
+
+```console
+Cable a-to-b_dense w/ synapse A = [[0.1918097]]
+Cable x-to-y_dense w/ synapse A = [[0.1918097]]
+```
+
+where we see that the cables `a_b` and `x_y` do indeed have the exact same
+synaptic matrix of size `1 x 1` even though the cables themselves are completely
+different and even connect completely different nodes (note that you would need
+to make sure the `.dim` of node `x` is identical to node `a` and that the `.dim`
+of node `y` is the same as node `b`, otherwise, you will get a shaping error
+when the cable is later simulated).
+
+There are other ways to share/point to synapses besides the direct way above.
+For example, the code below will force cable `b_a` to reuse the transpose of
+the `A` synaptic matrix of cable `a_b`, as indicated by the second code/flag `A^T`
+input to the `mirror_path_kernel` argument:
 
 
-TODO:
+```python
+a_b = a.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+# make cable *b_a* that reuses the transpose of the *A* matrix contained in cable *a_b*
+b_a = b.wire_to(a, src_comp="phi(z)", dest_comp="dz_td", mirror_path_kernel=(a_b,"A^T"))
+```
 
-talk about `.clear()` in Node
+Other useful codes for the `mirror_path_kernel` argument include:
+`A+b` which shares the `A` matrix and bias `b` of the target cable and
+`-A^T` which shares the negative transpose of matrix `A` of the target cable.
 
-talk about shared path kernels in Cable
--->
+### Synaptic Update Rules
+
+A key element of an NGC system is its ability to evolve with time and learn
+from the data patterns it processes by updating its synaptic weights.
+To update the synaptic bundles (and/or biases) inside the cables you use to
+wire together nodes, you will need to also define corresponding learning rules.
+Currently, ngc-learn assumes that synapses are adjusted through locally-defined
+multi-factor Hebbian rules.
+
+To configure a cable, particularly a dense cable, to utilize an update rule,
+you need to specify the following with the `set_update_rule()` routine:
+
+```python
+a_b = a.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+a_b.set_update_rule(preact=(a,"phi(z)"), postact=(b,"phi(z)"), param=["A"])
+```
+
+where we must define at least three arguments:
+1) the pre-activation term `preact` which must be a 2-tuple containing the
+pre-activation node object and a string stating the compartment that we want
+to extract a vector signal from,
+2) the post-activation term `postact` defined exactly the same as the pre-activation
+term, and
+3) a list of strings `param` stating the synaptic parameters we want the update rule
+to affect.
+The code-snippet above will tell ngc-learn that when cable `a_b` is updated, we
+would like to take the (matrix) product of node `a`'s `phi(z)` compartment and
+node `b`'s `phi(z)` compartment and specifically adjust matrix `A` within the cable.
+
+If cable `a_b` also contained a bias, we would specify the rule as follows:
+
+```python
+a_b = a.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+a_b.set_update_rule(preact=(a,"phi(z)"), postact=(b,"phi(z)"), param=["A", "b"])
+```
+
+and ngc-learn will intelligently realize that synaptic vector `b` of cable `a_b`
+will be updated using only the post-activation term `postact` (since it is a
+vector and not a matrix like `A`).
+
+Using the `.set_update_rule()` function on each cable that you would like to evolve
+or be updated given data is all that you need to do to set up local learning. The
+`NGCGraph` will automatically become aware of the valid cables linking
+nodes that are learnable and, internally, call those cables' update rules to
+compute the correct synaptic adjustments. In particular, whenever you call
+`.settle()` on an `NGCGraph`, the simulation object
+will actually compute ALL of the synaptic adjustments at the end of the simulation
+window and store them into a list `delta` and return them to you.
+
+For example, you want to compute the Hebbian update for the cable `a_b` above
+given a data point containing the value of one:
+
+```python
+# create the initialization scheme (kernel) of the dense cable
+init_kernels = {"A_init" : ("gaussian",0.1)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 111}
+
+a = SNode(name="a", dim=1, beta=1, leak=0.0, act_fx="identity")
+b = SNode(name="b", dim=1, beta=1, leak=0.0, act_fx="identity")
+a_b = a.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+a_b.set_update_rule(preact=(a,"phi(z)"), postact=(b,"phi(z)"), param=["A"])
+
+print("Cable {} w/ synapse A = {}".format(a_b.name, a_b.params["A"].numpy()))
+
+circuit = NGCGraph()
+# execute nodes in order: a, c, then b
+circuit.set_cycle(nodes=[a,b])
+circuit.compile(batch_size=1)
+
+opt = tf.keras.optimizers.SGD(0.01)
+
+# do something with the circuit above
+a_val = tf.ones([1, circuit.getNode("a").dim]) # create sensory data point *a_val*
+readouts, delta = circuit.settle(
+                    clamped_vars=[("a","z",a_val)],
+                    readout_vars=[("b","phi(z)")]
+                  )
+opt.apply_gradients(zip(delta, circuit.theta))
+circuit.clear()
+
+print("Update to cable {} is: {}".format(a_b.name, delta[0].numpy()))
+```
+
+which would print to your terminal:
+
+```console
+Update to cable a-to-b_dense is: [[-0.9590485]]
+```
+
+Notice that we have demonstrated how ngc-learn interacts with Tensorflow 2
+optimizers by simply giving the returned `delta` list and the circuit's internal
+`.theta` list to the optimizer which will then physically adjust the values of
+synaptic bundles themselves for you. NOTE that the order of Hebbian updates will be
+returned in the exact same order as the learnable parameters that `.theta` points to.
+
+The above NGC system is, of course, rather naive as we would effectively be calculating
+and update the single synapses that connects nodes `a` and `b`, and, since this
+use of the update rule is classical Hebbian, the value of the synapse inside of `A`
+of cable `a_b` would grow indefinitely.
+
+## Constructing a Convergent 3-Node Circuit
+<!-- .set_learning_order([n1_n0, n0_n1]) -->
+
+
+## References
+Hebb, Donald Olding. The organization of behavior: A neuropsychological theory.
+Psychology Press, 2005.

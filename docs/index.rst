@@ -18,7 +18,6 @@ Welcome to ngc-learn's documentation!
    :caption: Tutorials:
 
    tutorials/lesson1
-   tutorials/lesson2
 
 .. toctree::
    :maxdepth: 1

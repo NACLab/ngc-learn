@@ -110,6 +110,7 @@ class NGCGraph:
                                 if update_terms is not None and self.unique_learnable_objects.get(key_check) is None:
                                     self.theta.append(param)
                                     self.unique_learnable_objects["{}.{}".format(cable_i.name,pname)] = 1
+                # else, do NOT set learnable cables b/c the user has specified a *param_order*
         for j in range(len(nodes)): # collect any learnable nodes
             n_j = nodes[j]
             if param_order is None:
@@ -120,7 +121,7 @@ class NGCGraph:
                         self.theta.append(n_j.Sigma)
         self.exec_cycles.append(cycle)
 
-        if param_order is not None:
+        if param_order is not None: # set learnable cables according to order desired by the user
             self.set_learning_order(param_order)
 
     def set_theta(self, theta_target):
@@ -420,7 +421,7 @@ class NGCGraph:
         node_values = None
         for k in range(K_):
             if calc_delta == True:
-                if k == self.K-1:
+                if k == K_-1:
                     node_values, delta = self._run_step(calc_delta=True, use_optim=self.use_graph_optim)
                 else: # delta is computed at very last iteration of the simulation
                     node_values, delta = self._run_step(calc_delta=False, use_optim=self.use_graph_optim)
