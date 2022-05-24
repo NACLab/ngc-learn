@@ -1103,7 +1103,90 @@ Although you have learned of and how to assemble the key elements in ngc-learn
 needed to construct NGC circuits, there are a few useful utility functions that
 are provided once you construct the `NGCGraph` simulation object. In this
 closing section, we will briefly discuss each of these and briefly illustrate
-their use.
+their use (and review key ones that we covered earlier).
+
+### Compiling and Re-Compiling Your Simulation Object
+
+As discussed earlier in this tutorial lesson, the `.compile()` is one of the
+most important functions to call after you have constructed your `NGCGraph` as it
+will set up the crucial internal bookkeeping and checks to ensure that your
+simulated NGC system works correctly with static graph optimization and is
+properly analyzable.
+
+Normally, just calling the `.compile()` function after you initialize the
+`NGCGraph` constructor is sufficient so long as you either set its `batch_size`
+argument to the batch size you will be training with (and you must ensure
+that your data is presented to your graph in batch sizes with that exact
+same length each time, otherwise the `NGCGraph` will throw a memory error). Note
+that you can also set the batch size your graph expects in the constructor itself,
+like so `NGCGraph(K=10, batch_size=128)`.
+
+If you do not wish for ngc-learn to use static graph optimization, you can always
+turn this by setting the `use_graph_optim` to `False` in the `.compile()` function,
+which will allow you to use variable-length batch sizes (and not force you to
+specify the `batch_size` in the compile routine or in the `NGCGraph` constructor)
+but this will come at the cost of slower simulation time especially if you will
+be evolving the synapses over time (only in the case of pure online learning might
+turning off the static graph optimization be useful).
+However, you can, as was discussed earlier, always "re-compile" your simulation
+object if, for example, you will be training with mini-batches of one length
+and then testing with mini-batches of another length. Re-compiling is simple and
+not too expensive to do if done sparingly -- all you need to do is call
+`.compile()` again and choose a new `batch_size` to give it as an argument.
+
+One final note about the `.compile()` routine is that it actually returns a
+dictionary of dictionaries that contains/organizes the core specifications
+of your `NGCGraph`. You can print this dictionary out if you like and examine
+that the various nodes and cables state the various key properties you expect them
+to aid in debugging. Future plans for ngc-learn will be to leverage this
+simulation properties dictionary to aid in auto-generated visualization to
+help in creating architecture figures and possibly information-flow diagrams
+(we would also like to mention here that we welcome
+[community contributions](https://github.com/ago109/ngc-learn/blob/main/CONTRIBUTING.md)
+with respect to visualization and system analysis if you are interested in helping
+with this particular effort).
+
+### Clearing the State of Your Simulator
+
+Another core routine that you learned about in this tutorial is the `.clear()`
+function. This is a critical function to call whenever you want to completely
+wipe out the state of your `NGCGraph` simulation object. Wiping graph state is
+something you will likely want to do quite often in your code. For example,
+a typical design pattern for simulating an NGC system after you sample a batch of
+training data points is to: 1) first call its `.settle()` function, 2) do something
+with the readout variables you asked it to return (and maybe extract some other
+items from your graph), 3) update the system's synaptic weights (as housed in
+its `.theta` construct) using an external optimization algorithm like stochastic
+gradient descent, 4) apply/enforce constraints, and 5) clear/wipe the graph state.
+
+There are no arguments to `.clear()` but you should be aware that it does wipe
+the state of your graph thoroughly -- this also means that, after clearing, using
+a getter function `.extract()` (discussed in the next section) becomes meaningless
+the internal bookkeeping structures that your graph maintains get set to their
+default ("empty") states. Note that clearing the graph state is **NOT** the same
+as setting nodes exactly to their resting state -- node resting states are actually
+set with a call to `.set_to_resting_state()` and this is actually done for you
+every time you call `.settle()` (unless you tell your graph not to start at a
+resting state by setting the `cold_start` flag argument to `False`).
+
+Note that a use-case where you might *not* want to use the `.clear()` function
+is if you are simulating an NGC system over one long, single window of time (for
+example, a sensory data stream). In this scenario, using `.clear()` would be
+against the processing task as the neural system should be aware of its previous
+nodal compartment activities after the last call to `.settle()` (you would want
+to also set `cold_start` to `False` in this situation). We remark that a better
+alternative to using `.settle()` for streaming data applications is to, like we
+did early in this tutorial, work with the lower-level API of your `NGCGraph` and
+just use its `.step()` routine which *exactly* simulates one discrete step of
+time of your graph. This would allow you to set up "events" such as when you want
+`.step()` to return updates to synapses (by setting the `calc_delta` argument to `True`
+if you do and `False` otherwise) and when you want node compartments to go to
+their actual resting states with a call to `.set_to_resting_state()`.
+While it is flexible, we caution the user that leveraging the lower-level online
+functionality of an `NGCGraph` does require some degree of comfort with how
+ngc-learn operates and care should be taken to check that your system is evolving
+in the way that you expect (working with the online functionality of an NGC
+system will be the subject of a future advanced lesson).
 
 ### Extracting Signals and Properties: Getter Functions
 
@@ -1273,7 +1356,7 @@ If, after the `SGD` update had resulted in the norms of any of the columns in
 the matrix `A` of cable `a_amu` to exceed the value of `1.0`, then `.apply_constraints()`
 would further alter this matrix to make sure it no longer violates this constraint.
 
-**Note on Synaptic Decay:** Like norm constraints, weight/synapse decay is also
+**A Note on Synaptic Decay:** Like norm constraints, weight/synapse decay is also
 treated as a (soft) constraint in an `NGCGraph`. If you want to apply a small
 decay to a particular synaptic bundle matrix `A` in a particular cable, you can
 easily do so by simply calling the `.set_decay()` function like so:
@@ -1286,6 +1369,16 @@ which would apply a decay factor based on a centered Laplacian distribution (
 or an L1 penalty). If you chose `l2` instead, the decay factor applied would then
 be based on a centered Gaussian distribution (or an L2 penalty) over each element in matrix `A`
 of cable `a_b`.
+
+## Conclusion
+
+You now have successfully gone through the core details and functionality of ngc-learn's
+nodes-and-cables system. The next step is to build your own NGC systems/models
+for your own research projects and play with the pre-designed systems in the Model
+Museum (and go through the walkthroughs). In future upcoming tutorial lessons, we will
+cover topics such designing your own customs nodes or cables that interact with
+the nodes-and-cables system and working with the low-level online functionality of
+simulated NGC systems.
 
 ## References
 Hebb, Donald Olding. The organization of behavior: A neuropsychological theory.
