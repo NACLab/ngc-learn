@@ -1219,6 +1219,20 @@ If, after the `SGD` update had resulted in the norms of any of the columns in
 the matrix `A` of cable `a_amu` to exceed the value of `1.0`, then `.apply_constraints()`
 would further alter this matrix to make sure it no longer violates this constraint.
 
+**Note on Synaptic Decay:** Like norm constraints, weight/synapse decay is also
+treated as a (soft) constraint in an `NGCGraph`. If you want to apply a small
+decay to a particular synaptic bundle matrix `A` in a particular cable, you can
+easily do so by simply calling the `.set_decay()` function like so:
+
+```python
+a_b.set_decay(decay_kernel=("l1",0.00005)) # apply L1 weight decay to *A* in cable *a_b*
+```
+
+which would apply a decay factor based on a centered Laplacian distribution (
+or an L1 penalty). If you chose `l2` instead, the decay factor applied would then
+be based on a centered Gaussian distribution (or an L2 penalty) over each element in matrix `A`
+of cable `a_b`.
+
 ## References
 Hebb, Donald Olding. The organization of behavior: A neuropsychological theory.
 Psychology Press, 2005.
