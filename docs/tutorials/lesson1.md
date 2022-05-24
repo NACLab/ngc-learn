@@ -852,8 +852,117 @@ of cable `a_b` would grow indefinitely.
 In the next section, we will craft a more interesting circuit that uses what you
 learned about with respect cables and nodes, including the error node `ENode`.
 
-## Constructing a Convergent 3-Node Circuit
-<!-- .set_learning_order([n1_n0, n0_n1]) -->
+## Constructing a Convergent 5-Node Circuit
+
+As our final exercise for this tutorial, let us build a 4-node circuit that
+attempts to learn how to converge to a state such that a five-dimensional node `a`
+and a six-dimensional node `b` each generate three-dimensional output values  
+that are nearly identical. In other words, we want node `a` to get good at
+predicting the output of node `b` and node `b` to get good at predicting the
+output of node `a`. Furthermore, node `b`'s `z` compartment will always be clamped
+to a vector of ones.
+To measure the mismatch between these two nodes' predictions, we will introduce
+the fifth and final node as a three-dimensional error node tasked with
+computing how far off the two sources nodes are from each other.
+
+```python
+import tensorflow as tf
+import numpy as np
+
+# import building blocks
+from ngclearn.engine.nodes.enode import ENode
+from ngclearn.engine.nodes.snode import SNode
+# import simulation object
+from ngclearn.engine.ngc_graph import NGCGraph
+
+
+# create the initialization scheme (kernel) of the dense cable
+init_kernels = {"A_init" : ("gaussian",0.1)}
+dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 111} # dense cable
+scable_cfg = {"type": "simple", "coeff": 1.0} # identity cable
+
+a_dim = 5
+e_dim = 3
+b_dim = 6
+
+# Define node a
+a = SNode(name="a", dim=a_dim, beta=1, leak=0.0, act_fx="identity")
+# Define node a_mu
+a_mu = SNode(name="a_mu", dim=e_dim, beta=1, zeta=0, leak=0.0, act_fx="identity")
+# Define error node e
+e = ENode(name="e", dim=e_dim)
+# Define node b
+b = SNode(name="b", dim=b_dim, beta=1, leak=0.0, act_fx="identity")
+# Define node b_mu
+b_mu = SNode(name="b_mu", dim=e_dim, beta=1, zeta=0, leak=0.0, act_fx="identity")
+
+# wire a to a_mu
+a_amu = a.wire_to(a_mu, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+a_amu.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"), param=["A"])
+# wire a_mu to e
+amu_e = a_mu.wire_to(e, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=scable_cfg)
+
+# wire b to b_mu
+b_bmu = b.wire_to(b_mu, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=dcable_cfg)
+b_bmu.set_update_rule(preact=(b,"phi(z)"), postact=(e,"phi(z)"), param=["A"])
+# wire b_mu to e
+bmu_e = b_mu.wire_to(e, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=scable_cfg)
+
+# wire e back to a
+e_a = e.wire_to(a, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(a_amu,"A^T"))
+
+
+circuit = NGCGraph()
+# execute nodes in order: a, c, then b
+circuit.set_cycle(nodes=[a, a_mu, b, b_mu])
+circuit.set_cycle(nodes=[e])
+circuit.set_learning_order([b_bmu, a_amu]) # enforces order - b_bmu then a_amu
+circuit.compile(batch_size=1)
+
+opt = tf.keras.optimizers.SGD(0.05)
+
+n_iter = 60 # number of overall optimization steps to take
+
+b_val = tf.ones([1, circuit.getNode("b").dim]) # create sensory data point *b_val*
+print("---- Simulating Circuit Evolution ----")
+for t in range(n_iter):
+    readouts, delta = circuit.settle(
+                        clamped_vars=[("b", "z",b_val)],
+                        readout_vars=[("e", "L")]
+                      )
+    e_val = readouts[0][2]
+    if t > 0:
+        print("\r{} => Value of e.L = {}".format(t, e_val.numpy()),end="")
+    else:
+        print("{} => Value of e.L = {}".format(t, e_val.numpy()))
+    opt.apply_gradients(zip(delta, circuit.theta))
+    circuit.clear()
+print()
+
+print("---- Final Results ----")
+# get final values
+readouts, delta = circuit.settle(
+                    clamped_vars=[("b", "z",b_val)],
+                    readout_vars=[("e", "pred_mu"),("e", "pred_targ")],
+                    calc_delta=False # turn off update computation
+                  )
+prediction = readouts[0][2].numpy()
+target = readouts[1][2].numpy()
+print("Prediction: {}".format(prediction))
+print("    Target: {}".format(target))
+circuit.clear()
+```
+
+which should print to your terminal something similar to:
+
+```console
+---- Simulating Circuit Evolution ----
+0 => Value of e.L = [[0.03118673]]
+59 => Value of e.L = [[3.9547285e-05]]
+---- Final Results ----
+Prediction: [[-2.2072585  -1.1418786   0.68785524]]
+    Target: [[-2.2125444 -1.1444474  0.6895305]]
+```
 
 
 
