@@ -8,21 +8,21 @@ from ngclearn.utils import transform_utils
 class SNode(Node):
     """
     | Implements a (rate-coded) state node that follows NGC settling dynamics according to:
-    |   d.z/d.t = -z * leak + dz * beta + prior(z)
+    |   d.z/d.t = -z * leak + dz + prior(z), where dz = dz_td + dz_bu * phi'(z)
     | where:
     |   dz - aggregated input signals from other nodes/locations
-    |   beta - strength of update to node state z
     |   leak - controls strength of leak variable/decay
     |   prior(z) - distributional prior placed over z (such as a kurtotic prior)
 
     | Note that the above is used to adjust neural activity values via an integator inside a node.
         For example, if the standard/default Euler integrator is used then the neurons inside this
         node are adjusted per step as follows:
-    |   z <- z * zeta + d.z/d.t
+    |   z <- z * zeta + d.z/d.t * beta
     | where:
+    |   beta - strength of update to node state z
     |   zeta - controls the strength of recurrent carry-over, if set to 0 no carry-over is used (stateless)
 
-    | Key Compartments:
+    | Compartments:
     |   * dz_td - the top-down pressure compartment (deposited signals summed)
     |   * dz_bu - the bottom-up pressure compartment, potentially weighted by phi'(x)) (deposited signals summed)
     |   * z - the state neural activities
@@ -85,9 +85,7 @@ class SNode(Node):
 
             :Note: specifying None will result in no threshold function being applied
 
-        trace_kernel: (Default = None), supporting option for spiking neurons
-
-            :Note: NOT fully tested/integrated in ngc-learn v0.0.1
+        trace_kernel: <unused> (Default = None)
 
         samp_fx: the sampling/stochastic activation function -- S(v) -- to apply
             to neural activities (Default = identity)
@@ -138,6 +136,11 @@ class SNode(Node):
         self.sfx = sfx
         self.sdfx = sdfx
 
+        self.constants = {}
+        self.constants["beta"] = self.beta
+        self.constants["leak"] = self.leak
+        self.constants["zeta"] = self.zeta
+
         self.compartment_names = ["dz_bu", "dz_td", "z", "phi(z)", "S(z)"]
         self.compartments = {}
         for name in self.compartment_names:
@@ -166,6 +169,7 @@ class SNode(Node):
         info["leak"] = self.leak
         info["zeta"] = self.zeta
         info["phi(x)"] = self.act_fx
+        info["S(x)"] = self.samp_fx
         info["integration.form"] = self.integrate_kernel
         if self.prior_kernel is not None:
             info["prior.form"] = self.prior_kernel

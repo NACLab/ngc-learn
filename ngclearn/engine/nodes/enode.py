@@ -11,14 +11,14 @@ class ENode(Node):
     |   e = target - mu // in the case of squared error (Gaussian error units)
     |   e = signum(target - mu) // in the case of absolute error (Laplace error units)
     | where:
-    |   target - a desired target activity value (pred_targ)
-    |   mu - an external prediction signal of the target activity value (pred_mu)
+    |   target - a desired target activity value (target = pred_targ)
+    |   mu - an external prediction signal of the target activity value (mu = pred_mu)
 
     | Compartments:
     |   * pred_mu - prediction signals (deposited signals summed)
     |   * pred_targ - target signals (deposited signals summed)
-    |   * z - the error neural activities, set as z = (pred_targ - pred_mu)
-    |   * phi(z) -  the post-activation of the error activities
+    |   * z - the error neural activities, set as z = e
+    |   * phi(z) -  the post-activation of the error activities in z
     |   * L - the local loss represented by the error activities
     |   * avg_scalar - multiplies L and z by (1/avg_scalar)
 

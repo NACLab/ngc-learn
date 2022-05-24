@@ -110,6 +110,7 @@ class NGCGraph:
                                 if update_terms is not None and self.unique_learnable_objects.get(key_check) is None:
                                     self.theta.append(param)
                                     self.unique_learnable_objects["{}.{}".format(cable_i.name,pname)] = 1
+                # else, do NOT set learnable cables b/c the user has specified a *param_order*
         for j in range(len(nodes)): # collect any learnable nodes
             n_j = nodes[j]
             if param_order is None:
@@ -120,7 +121,7 @@ class NGCGraph:
                         self.theta.append(n_j.Sigma)
         self.exec_cycles.append(cycle)
 
-        if param_order is not None:
+        if param_order is not None: # set learnable cables according to order desired by the user
             self.set_learning_order(param_order)
 
     def set_theta(self, theta_target):
@@ -294,8 +295,8 @@ class NGCGraph:
             node_inj_table[node_comp] = 1 # set node's comp to flag 1
             self.injection_table[node_name] = node_inj_table
 
-    def set_cold_state(self, batch_size=-1):
-        """ Sets the underlying node states to their "cold" resting state. """
+    def set_to_resting_state(self, batch_size=-1):
+        # Initialize the values of every non-clamped node
         for i in range(len(self.exec_cycles)):
             cycle_i = self.exec_cycles[i]
             for j in range(len(cycle_i)):
@@ -303,8 +304,24 @@ class NGCGraph:
                 node_inj_table = self.injection_table.get(node_j.name)
                 if node_inj_table is None:
                     node_inj_table = {}
-                node_j.set_cold_state(node_inj_table, batch_size=batch_size)
-                #node_j.step(skip_core_calc=True)
+                if batch_size > 0:
+                    node_j.set_cold_state(node_inj_table, batch_size=batch_size)
+                node_j.step(node_inj_table, skip_core_calc=True)
+
+    def parse_node_values(self, node_values):
+        for ii in range(len(node_values)):
+            node_name, comp_name, comp_value = node_values[ii]
+            if self.use_graph_optim == True:
+                node_name = node_name.numpy().decode('ascii')
+                comp_name = comp_name.numpy().decode('ascii')
+            vdict = self.values.get(node_name)
+            if vdict is not None:
+                vdict[comp_name] = comp_value
+                self.values[node_name] = vdict
+            else:
+                vdict = {}
+                vdict[comp_name] = comp_value
+                self.values[node_name] = vdict
 
     # TODO: add in early-stopping to settle routine...
     def settle(self, clamped_vars=None, readout_vars=None, init_vars=None, cold_start=True, K=-1,
@@ -339,7 +356,8 @@ class NGCGraph:
                 Note that this list takes the form:
                 [(node1_name, node1_compartment, mask, value), node2_name, node2_compartment, mask, value),...]
 
-            calc_delta: (Default = True)
+            calc_delta: compute the list of synaptic updates for each learnable
+                parameter within .theta? (Default = True)
 
         Returns:
             readouts, delta;
@@ -355,33 +373,38 @@ class NGCGraph:
             init_vars = []
         if masked_vars is None:
             masked_vars = []
+        sim_batch_size = -1
 
         K_ = K
         if K_ < 0:
             K_ = self.K
 
-        if len(clamped_vars) > 0:
-            batch_size = clamped_vars[0][2].shape[0]
-            self.set_cold_state(batch_size)
-        else:
-            self.set_cold_state()
-
         # Case 1: Clamp variables that will persist during settling/inference
         self.clamp(clamped_vars)
+        if len(clamped_vars) > 0:
+            for ii in range(len(clamped_vars)):
+                data = clamped_vars[ii][2]
+                _batch_size = data.shape[0]
+                if sim_batch_size > 0 and _batch_size != sim_batch_size:
+                    print("ERROR: clamped_vars - cannot provide mixed batch lengths: " \
+                          "item {} w/ shape[0] {} != sim_batch_size of {}".format(
+                          ii, _batch_size, sim_batch_size))
+                sim_batch_size = _batch_size
 
         # Case 2: Clamp variables that will NOT persist during settling/inference
         self.inject(init_vars)
+        if len(init_vars) > 0:
+            for ii in range(len(clamped_vars)):
+                data = init_vars[ii][2]
+                _batch_size = data.shape[0]
+                if sim_batch_size > 0 and _batch_size != sim_batch_size:
+                    print("ERROR: inject_vars - cannot provide mixed batch lengths: " \
+                          "item {} w/ shape[0] {} != sim_batch_size of {}".format(
+                          ii, _batch_size, sim_batch_size))
+                sim_batch_size = _batch_size
 
         if cold_start is True:
-            # Initialize the values of every non-clamped node
-            for i in range(len(self.exec_cycles)):
-                cycle_i = self.exec_cycles[i]
-                for j in range(len(cycle_i)):
-                    node_j = cycle_i[j]
-                    node_inj_table = self.injection_table.get(node_j.name)
-                    if node_inj_table is None:
-                        node_inj_table = {}
-                    node_j.step(node_inj_table, skip_core_calc=True)
+            self.set_to_resting_state(batch_size=sim_batch_size)
         # TODO: re-integrate back this block of code
         # apply any desired masking variables
         # for masked_var in masked_vars:
@@ -399,36 +422,16 @@ class NGCGraph:
         node_values = None
         for k in range(K_):
             if calc_delta == True:
-                if k == self.K-1:
-                    node_values, delta = self.step(calc_delta=True, use_optim=self.use_graph_optim)
+                if k == K_-1:
+                    node_values, delta = self._run_step(calc_delta=True, use_optim=self.use_graph_optim)
                 else: # delta is computed at very last iteration of the simulation
-                    node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
+                    node_values, delta = self._run_step(calc_delta=False, use_optim=self.use_graph_optim)
             else: # OR, never compute delta inside the simulation
-                node_values, delta = self.step(calc_delta=False, use_optim=self.use_graph_optim)
+                node_values, delta = self._run_step(calc_delta=False, use_optim=self.use_graph_optim)
             # TODO: move back in masking code here (or inside static graph...)
-            # tf.print("-------------------- {} ---------------------".format(k))
-            # tf.print("z3:  ",self.getNode("z3").extract("z"))
-            # tf.print("mu2:  ",self.getNode("mu2").extract("z"))
-            # tf.print("z2:  ",self.getNode("z2").extract("z"))
-            # tf.print("e2:  ",self.getNode("e2").extract("z"))
-            # tf.print("mu1:  ",self.getNode("mu1").extract("z"))
-            # tf.print("z1:  ",self.getNode("z1").extract("z"))
-            # tf.print("e1:  ",self.getNode("e1").extract("z"))
 
         # parse results from static graph & place correct shallow-copied items in system dictionary
-        for ii in range(len(node_values)):
-            node_name, comp_name, comp_value = node_values[ii]
-            if self.use_graph_optim == True:
-                node_name = node_name.numpy().decode('ascii')
-                comp_name = comp_name.numpy().decode('ascii')
-            vdict = self.values.get(node_name)
-            if vdict is not None:
-                vdict[comp_name] = comp_value
-                self.values[node_name] = vdict
-            else:
-                vdict = {}
-                vdict[comp_name] = comp_value
-                self.values[node_name] = vdict
+        self.parse_node_values(node_values)
         #########################################################################
         # Post-process NGC graph by extracting predictions at indicated output nodes
         #########################################################################
@@ -438,7 +441,27 @@ class NGCGraph:
             readouts.append( (var_name, comp_name, value) )
         return readouts, delta
 
-    def step(self, calc_delta=False, use_optim=True):
+    def step(self, calc_delta=False):
+        """
+        Online function for simulating exactly one discrete time step of this
+        simulated NGC graph given its exact current state.
+
+        Args:
+            calc_delta: compute the list of synaptic updates for each learnable
+                parameter within .theta? (Default = True)
+
+        Returns:
+            readouts, delta;
+                where "readouts" is a 3-tuple list of the form [(node1_name, node1_compartment, value),
+                node2_name, node2_compartment, value),...], and
+                "delta" is a list of synaptic adjustment matrices (in the same order as .theta)
+        """
+        values, delta = self._run_step(calc_delta=calc_delta, use_optim=self.use_graph_optim)
+        self.parse_node_values(values)
+        return delta
+
+    def _run_step(self, calc_delta=False, use_optim=False):
+        """ Internal function to run step (do not call externally!)"""
         # feed in injection table externally to node-system (to avoid getting
         # compiled as part of the static graph)
         if use_optim == True:
@@ -542,7 +565,7 @@ class NGCGraph:
         """
         Evolves this simulation object for one full K-step episode given
         input information through clamped and initialized variables. Note that
-        this is a convenience function written to embody an NGC system's
+        this is a *convenience function* written to embody an NGC system's
         full settling process, its local synaptic update calculations, as well
         as the optimization of and application of constraints to the synaptic
         parameters contained within .theta.
