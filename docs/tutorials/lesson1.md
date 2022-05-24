@@ -1188,6 +1188,31 @@ ngc-learn operates and care should be taken to check that your system is evolvin
 in the way that you expect (working with the online functionality of an NGC
 system will be the subject of a future advanced lesson).
 
+### Setting the Order of Synaptic Adjustments
+
+Normally, when you set update rules for cables that you would like to evolve
+with time, your `NGCGraph` will determine its own order in which the calculated
+adjustments appear in the `delta` object (returned from `.settle()`) as well as
+the order in which learnable parameters appear in the `.theta` data member.
+If you wanted the order of the cables to appear in a certain way in `.theta`
+(which would affect the order of `delta`), you can use the `.set_learning_order()`
+function before you call the `.compile()` routine for your `NGCGraph`.
+
+This was actually done earlier in the last section, where you set the order
+of the cable parameters in `.theta` to be cable `b_bmu` followed by cable `a_amu`
+as in the code snippet reproduced from earlier:
+
+```python
+circuit.set_learning_order([b_bmu, a_amu]) # enforces order - b_bmu then a_amu
+```
+
+Setting the order of learnable cables directly affects what is returned by
+functions such as `.settle()` and `.step()` since, internally, the `NGCGraph` will
+organize itself to ensure that the order of updates in `delta` exactly match
+the order of learnable parameters stored in `.theta`. (Note: if a cable has a
+synaptic matrix `A` and bias `b`, then always the order will be that cable's
+`A` followed by `b` in `.theta`.)
+
 ### Extracting Signals and Properties: Getter Functions
 
 Two of the most important "getter" functions you will want to be familiar with
