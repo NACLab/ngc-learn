@@ -356,7 +356,8 @@ class NGCGraph:
                 Note that this list takes the form:
                 [(node1_name, node1_compartment, mask, value), node2_name, node2_compartment, mask, value),...]
 
-            calc_delta: (Default = True)
+            calc_delta: compute the list of synaptic updates for each learnable
+                parameter within .theta? (Default = True)
 
         Returns:
             readouts, delta;
@@ -428,14 +429,6 @@ class NGCGraph:
             else: # OR, never compute delta inside the simulation
                 node_values, delta = self._run_step(calc_delta=False, use_optim=self.use_graph_optim)
             # TODO: move back in masking code here (or inside static graph...)
-            # tf.print("-------------------- {} ---------------------".format(k))
-            # tf.print("z3:  ",self.getNode("z3").extract("z"))
-            # tf.print("mu2:  ",self.getNode("mu2").extract("z"))
-            # tf.print("z2:  ",self.getNode("z2").extract("z"))
-            # tf.print("e2:  ",self.getNode("e2").extract("z"))
-            # tf.print("mu1:  ",self.getNode("mu1").extract("z"))
-            # tf.print("z1:  ",self.getNode("z1").extract("z"))
-            # tf.print("e1:  ",self.getNode("e1").extract("z"))
 
         # parse results from static graph & place correct shallow-copied items in system dictionary
         self.parse_node_values(node_values)
@@ -449,7 +442,23 @@ class NGCGraph:
         return readouts, delta
 
     def step(self, calc_delta=False):
-        return self._run_step(calc_delta=calc_delta, use_optim=self.use_graph_optim)
+        """
+        Online function for simulating exactly one discrete time step of this
+        simulated NGC graph given its exact current state.
+
+        Args:
+            calc_delta: compute the list of synaptic updates for each learnable
+                parameter within .theta? (Default = True)
+
+        Returns:
+            readouts, delta;
+                where "readouts" is a 3-tuple list of the form [(node1_name, node1_compartment, value),
+                node2_name, node2_compartment, value),...], and
+                "delta" is a list of synaptic adjustment matrices (in the same order as .theta)
+        """
+        values, delta = self._run_step(calc_delta=calc_delta, use_optim=self.use_graph_optim)
+        self.parse_node_values(values)
+        return delta
 
     def _run_step(self, calc_delta=False, use_optim=False):
         """ Internal function to run step (do not call externally!)"""

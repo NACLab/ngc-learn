@@ -849,9 +849,23 @@ The above NGC system is, of course, rather naive as we would effectively be calc
 and update the single synapses that connects nodes `a` and `b`, and, since this
 use of the update rule is classical Hebbian, the value of the synapse inside of `A`
 of cable `a_b` would grow indefinitely.
+In the next section, we will craft a more interesting circuit that uses what you
+learned about with respect cables and nodes, including the error node `ENode`.
 
 ## Constructing a Convergent 3-Node Circuit
 <!-- .set_learning_order([n1_n0, n0_n1]) -->
+
+
+
+## Knowing the Useful Utility Functions of an NGCGraph
+
+<!--
+.clamp()
+.inject()
+.extract()
+.getNode()
+.apply_constraints()
+-->
 
 
 ## References
