@@ -348,7 +348,7 @@ class NGCGraph:
                 [(node1_name, node1_compartment, value), node2_name, node2_compartment, value),...]
 
             cold_start: initialize all non-clamped/initialized Nodes (i.e., their compartments contain None)
-                to zero-vector starting points
+                to zero-vector starting points/resting states
 
             K: number simulation steps to run (Default = -1), if <= 0, then self.K will
                 be used instead
