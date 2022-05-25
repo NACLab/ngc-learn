@@ -277,8 +277,8 @@ taking the information in one compartment of one "source node", doing something
 to this information (such as transforming with a bundle of synapses via linear
 algebra operations), and then depositing this information into the compartment
 of another "destination node".
-To do this, there are two primary types of cables you should be familiar with:  
-the simple cable [SCable](ngclearn.engine.cables.scable) and the dense cable
+To do this, there are two primary types of cables you should be familiar with: 1) the 
+simple cable [SCable](ngclearn.engine.cables.scable), and 2) the dense cable
 [DCable](ngclearn.engine.cables.dcable).
 The simple cable simply transmits information directly from one node's compartment
 to another node's compartment, simply multiplying the information from the source
@@ -935,7 +935,7 @@ learned about with respect cables and nodes, including the error node `ENode`.
 
 ## Constructing a Convergent 5-Node Circuit
 
-As our final exercise for this tutorial, let us build a 4-node circuit that
+As our final exercise for this tutorial, let us build a 5-node circuit that
 attempts to learn how to converge to a state such that a five-dimensional node `a`
 and a six-dimensional node `b` each generate three-dimensional output values  
 that are nearly identical. In other words, we want node `a` to get good at
@@ -1122,7 +1122,7 @@ that you can also set the batch size your graph expects in the constructor itsel
 like so `NGCGraph(K=10, batch_size=128)`.
 
 If you do not wish for ngc-learn to use static graph optimization, you can always
-turn this by setting the `use_graph_optim` to `False` in the `.compile()` function,
+turn this off by setting the `use_graph_optim` to `False` in the `.compile()` function,
 which will allow you to use variable-length batch sizes (and not force you to
 specify the `batch_size` in the compile routine or in the `NGCGraph` constructor)
 but this will come at the cost of slower simulation time especially if you will
