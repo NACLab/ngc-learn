@@ -33,8 +33,6 @@ class GMM:
 
         init_kmeans: if True, first learn use the K-Means algorithm to initialize
             the component Gaussians of this GMM (Default = True)
-
-    @author Alexander Ororbia
     """
     def __init__(self, k, max_iter=5, assume_diag_cov=False, init_kmeans=True):
         self.use_sklearn = True
