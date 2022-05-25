@@ -40,11 +40,13 @@ class NoisySinusoid:
         """
         # increment the internal tracking of x
         x = self.x_prev + self.dt
+        x = x.astype(np.float32)
         # compute the Gaussian/white-noise corrupted sine wave output
         y = np.sin(x) + np.random.normal(size=self.sigma.shape) * self.sigma
+        y = y.astype(np.float32)
         # Store x sample into x_prev state
         self.x_prev = x # this step ensures that the next noise sample is dependent upon current one
-        return x
+        return y
 
     def reset(self):
         """
@@ -53,4 +55,6 @@ class NoisySinusoid:
         if self.x_initial is not None:
             self.x_prev = self.x_initial
         else: # reset the noise process back to zero
-            self.x_prev = np.zeros_like(self.mean)
+            self.x_prev = np.zeros_like(self.sigma)
+        self.x_prev = self.x_prev.astype(np.float32)
+        

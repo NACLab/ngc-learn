@@ -75,15 +75,21 @@ class Node:
                 comp_dim = curr_comp.shape[1]
                 comp_var_name = curr_comp.name
                 comp_var_name = comp_var_name[0:curr_comp.name.index(":"):1]
-                self.compartments[cname] = \
-                    tf.Variable(tf.zeros([self.batch_size,comp_dim]), name=comp_var_name)
+                if self.do_inplace == True:
+                    self.compartments[cname] = \
+                        tf.Variable(tf.zeros([self.batch_size,comp_dim]), name=comp_var_name)
+                else:
+                    self.compartments[cname] = tf.zeros([self.batch_size,comp_dim])
         for mname in self.mask_names:
             curr_mask = self.masks.get(mname)
             if curr_mask is not None:
                 mask_var_name = curr_mask.name
                 mask_var_name = mask_var_name[0:curr_mask.name.index(":"):1]
                 mask_dim = curr_mask.shape[1]
-                self.masks[mname] = tf.Variable(tf.ones([self.batch_size,mask_dim]), name=mask_var_name)
+                if self.do_inplace == True:
+                    self.masks[mname] = tf.Variable(tf.ones([self.batch_size,mask_dim]), name=mask_var_name)
+                else:
+                    self.masks[mname] = tf.ones([self.batch_size,mask_dim])
         info["object_type"] = self.node_type
         info["object_name"] = self.name
         info["n_connected_cables"] = len(self.connected_cables)

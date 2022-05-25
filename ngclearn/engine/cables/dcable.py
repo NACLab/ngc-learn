@@ -130,7 +130,7 @@ class DCable(Cable):
         if self.shared_param_path is not None:
             cable_to_mirror, path_type = shared_param_path
             """
-                path_type = A, A^T, -A^T, A^T+b, -A^T+b
+                path_type = A, A^T, A+b, -A^T, A^T+b, -A^T+b
             """
             self.path_type = path_type
             A = cable_to_mirror.params["A"]

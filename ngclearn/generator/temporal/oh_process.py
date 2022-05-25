@@ -48,6 +48,7 @@ class OUNoise:
             + self.theta * (self.mean - self.x_prev) * self.dt
             + self.std_dev * np.sqrt(self.dt) * np.random.normal(size=self.mean.shape)
         )
+        x = x.astype(np.float32)
         # Store x sample into x_prev state
         self.x_prev = x # this step ensures that the next noise sample is dependent upon current one
         return x
@@ -60,3 +61,4 @@ class OUNoise:
             self.x_prev = self.x_initial
         else: # reset the noise process back to zero
             self.x_prev = np.zeros_like(self.mean)
+        self.x_prev = self.x_prev.astype(np.float32)
