@@ -1,4 +1,4 @@
-# Lesson \# 1: The Nodes-and-Cables System
+# Lesson 1: The Nodes-and-Cables System
 
 In this tutorial, we will focus on working through the very basics of ngc-learn's
 nodes-and-cables system. Specifically, you will learn how various (mini-)circuits
