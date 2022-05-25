@@ -1182,11 +1182,14 @@ time of your graph. This would allow you to set up "events" such as when you wan
 `.step()` to return updates to synapses (by setting the `calc_delta` argument to `True`
 if you do and `False` otherwise) and when you want node compartments to go to
 their actual resting states with a call to `.set_to_resting_state()`.
-While it is flexible, we caution the user that leveraging the lower-level online
+We caution the user that leveraging the lower-level online
 functionality of an `NGCGraph` does require some degree of comfort with how
 ngc-learn operates and care should be taken to check that your system is evolving
 in the way that you expect (working with the online functionality of an NGC
-system will be the subject of a future advanced lesson).
+system will be the subject of a future advanced lesson). While it offers flexibility,
+the `.step()` function also assumes that the experimenter will properly set
+the other functions that `.settle()` normally takes care of automatically, such
+as `.set_to_resting_state()`, clamping, and injecting compartment values.
 
 ### Setting the Order of Synaptic Adjustments
 
