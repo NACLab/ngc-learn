@@ -2,15 +2,18 @@
 
 This experimental data generating process simulates an infinite stream
 of MNIST data patterns (of various transformations) along with their (1-of-C encoded)
-category labels.
+category labels. Given this is an experimental module, you will need to follow
+the directions in this sub-README to properly integrate it into the core ngc-learn
+library. Once you have successfully completed this module's integration into
+core ngc-learn, you can access/use the generator as with any other ngc-learn
+generator under:  `ngclearn.generator.experimental.infimnist.infimnist`.
 
 The scripts contained in this folder, such as `infimnist_py`, have been crafted
-to stably work with python3 and above.
+to stably work with python3 and above. The Python binding for the infinite MNIST
+dataset generator of L. Bottou (see http://leon.bottou.org/projects/infimnist)
+is written in Cython.
 
-The Python binding for the infinite MNIST dataset generator of L. Bottou
-(see http://leon.bottou.org/projects/infimnist), is written in Cython.
-
-**DEV NOTE:** We will be adding a real-time tensorflow generator to work with Keras
+**DEV NOTE:** We will be adding a real-time Tensorflow generator to work with Keras
 and Tensorflow 2 (TF2).
 
 ## Installation and Integration into ngc-learn
@@ -53,9 +56,10 @@ will throw an error as it will not properly recognize the InfiMNIST sampler
 in the `generator.experimental` module sub-directory.
 
 ## Example Usage
-The following code gives the first test example (0), the first training example
-(10000) and its first transformation (70000). The indexing logic follows that
-of the original infimnist binary described [here](http://leon.bottou.org/projects/infimnist).
+<!-- The following code gives the first test example (0), the first training example
+(10000) and its first transformation (70000). -->
+The indexing logic internal to ngc-learn's data generator follows that of the original
+infimnist binary described [here](http://leon.bottou.org/projects/infimnist).
 ngc-learn has built internally a wrapper "generator" to convert the original
 infinite mnist into an on-the-fly (mini-batch) sampler/stochastic data generating
 process.
@@ -81,4 +85,4 @@ for t in range(n_iter):
     plt.savefig("sample{}.jpg".format(t))
 ```
 
-**DEV NOTE:** Future versions of InfiMNIST will offer support for tf.records.
+**DEV NOTE:** Future versions of InfiMNIST in ngc-learn will offer support for tf.records.
