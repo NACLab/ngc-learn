@@ -1,7 +1,5 @@
 """
 Statistical functions/utilities file.
-
-@author: Alexander Ororbia
 """
 import tensorflow as tf
 import numpy as np

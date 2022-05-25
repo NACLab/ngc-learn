@@ -59,8 +59,6 @@ class GNCN_PDH:
         should be divisible by this number)
     | * alpha_scale: the strength of self-excitation
     | * beta_scale: the strength of cross-inhibition
-
-    @author: Alexander Ororbia
     """
     def __init__(self, args):
         self.args = args

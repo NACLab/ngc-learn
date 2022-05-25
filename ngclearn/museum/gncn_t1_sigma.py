@@ -49,7 +49,6 @@ class GNCN_t1_Sigma:
     | * act_fx: activation function for layers z1, z2, and z3
     | * out_fx: activation function for layer mu0 (prediction of z0) (Default: sigmoid)
 
-    @author: Alexander Ororbia
     """
     def __init__(self, args):
         self.args = args

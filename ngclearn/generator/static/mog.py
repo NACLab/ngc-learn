@@ -31,8 +31,6 @@ class MoG:
             covariance (Default = 1.0)
 
         seed: integer seed to control determinism of the underlying data generating process
-
-    @author Alexander Ororbia
     """
     def __init__(self, x_dim=2, num_comp=1, means=None, covar=None, phi=None,
                  assume_diag_cov=False, fscale=1.0, seed=69):

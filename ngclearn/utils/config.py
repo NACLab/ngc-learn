@@ -14,8 +14,6 @@ class Config:
 
     Args:
         fname: source file name to build configuration object from (suffix = .cfg)
-
-    @author: Alex Ororbia
     """
     def __init__(self, fname=None):
         self.fname = fname

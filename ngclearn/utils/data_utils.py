@@ -1,7 +1,5 @@
 """
 Data functions and utilies.
-
-@author Alexander Ororbia
 """
 import random
 #import tensorflow as tf

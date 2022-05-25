@@ -15,8 +15,6 @@ class ProjectionGraph:
 
     Args:
         name: the name of this projection graph
-
-    @author: Alexander G. Ororbia
     """
     def __init__(self, name="sampler"):
         self.name = name

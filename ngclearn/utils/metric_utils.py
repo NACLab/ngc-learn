@@ -1,7 +1,5 @@
 """
 General mathematical measurement/metric functions/utilities file.
-
-@author Alexander Ororbia
 """
 import tensorflow as tf
 import numpy as np

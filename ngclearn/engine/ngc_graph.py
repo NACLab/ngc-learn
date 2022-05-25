@@ -26,8 +26,6 @@ class NGCGraph:
 
             :Note: if "use_graph_optim" is set to False, then this argument is
                 not meaningful as the system will work with variable-length batches
-
-    @author: Alexander G. Ororbia
     """
     def __init__(self, K=5, name="ncn", batch_size=1):
         self.name = name

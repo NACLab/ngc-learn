@@ -21,8 +21,6 @@ class NoisySinusoid:
 
         x_initial: the initial value of the process (Default = None, yielding a
             zero vector starting point)
-
-    @author Alexander Ororbia
     """
     def __init__(self, sigma, dt=0.01, x_initial=None):
         self.sigma = sigma
@@ -57,4 +55,3 @@ class NoisySinusoid:
         else: # reset the noise process back to zero
             self.x_prev = np.zeros_like(self.sigma)
         self.x_prev = self.x_prev.astype(np.float32)
-        

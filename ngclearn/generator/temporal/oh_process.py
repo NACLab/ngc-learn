@@ -23,8 +23,6 @@ class OUNoise:
 
         x_initial: the initial value of the process (Default = None, yielding a
             zero vector starting point)
-
-    @author Alexander Ororbia
     """
     def __init__(self, mean, std_deviation, theta=0.15, dt=1e-2, x_initial=None):
         self.theta = theta

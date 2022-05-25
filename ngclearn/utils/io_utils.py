@@ -1,7 +1,5 @@
 """
 Utility I/O functions.
-
-@author Alexander Ororbia
 """
 import io
 import sys

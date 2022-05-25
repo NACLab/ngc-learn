@@ -1,8 +1,6 @@
 """
 A mathematical transformation utilities function file. This file contains
 activation functions and other relevant data transformation tools/utilities.
-
-@author: Alexander Ororbia
 """
 import tensorflow as tf
 import numpy as np
