@@ -1,3 +1,9 @@
+# The InfiMNIST Data Generating Process (Experimental)
+
+This experimental data generating process simulates an infinite stream
+of MNIST data patterns (of various transformations) along with their (1-of-C encoded)
+category labels.
+
 The scripts contained in this folder, such as `infimnist_py`, have been crafted
 to stably work with python3 and above.
 
@@ -7,7 +13,7 @@ The Python binding for the infinite MNIST dataset generator of L. Bottou
 **DEV NOTE:** We will be adding a real-time tensorflow generator to work with Keras
 and Tensorflow 2 (TF2).
 
-# Installation and Integration into ngc-learn
+## Installation and Integration into ngc-learn
 
 In order for ngc-learn to properly recognize the data generating process
 under `ngclearn.generator.experimental.infimnist.infimnist`, you MUST
@@ -46,7 +52,7 @@ primary library package. If you do not complete the above directions, ngc-learn
 will throw an error as it will not properly recognize the InfiMNIST sampler
 in the `generator.experimental` module sub-directory.
 
-# Example Usage
+## Example Usage
 The following code gives the first test example (0), the first training example
 (10000) and its first transformation (70000). The indexing logic follows that
 of the original infimnist binary described [here](http://leon.bottou.org/projects/infimnist).
