@@ -8,6 +8,13 @@ from networkx.drawing.nx_pydot import write_dot
 
 def visualize_graph(model, output_dir, height='500px', width='500px'):
     """
+    Generates a graphical plot of the argument `NGCGraph` system.
+    Note that a dynamic HTML object will be generated where the user can
+    manipulate the graph to adhere to their own aesthetic constraints. Note
+    that this will require opening up the generated *.html object and
+    then saving the final created graph by right-clicking and saving the
+    final PNG.
+
     Args:
         model: the NGCGraph object to generate a network graph visualization of
 
@@ -76,6 +83,6 @@ def visualize_graph(model, output_dir, height='500px', width='500px'):
     #net = pvnet.Network(directed=True, height=height, width=width)
     #net.from_nx(g)
     G.show_buttons(filter_=['physics'])
-    G.show('nx.html')
+    G.show('{}{}.html'.format(output_dir, model.name))
     # save networkx graph to GraphML format for external use
     nx.write_graphml_lxml(Gx, "{}{}.graphml".format(output_dir, model.name))
