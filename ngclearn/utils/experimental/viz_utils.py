@@ -4,7 +4,6 @@ NGCGraph visualization functions.
 import matplotlib.pyplot as plt
 import networkx as nx
 from pyvis import network as pvnet
-from networkx.drawing.nx_pydot import write_dot
 
 def visualize_graph(model, output_dir, height='500px', width='500px'):
     """
