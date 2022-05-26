@@ -33,9 +33,11 @@ ngc-learn requires:
 1) Python (>=3.7)
 2) Numpy (>=1.20.0)
 3) Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
-4) scikit-learn (>=0.24.2) if using ngclearn.density (needed for the demo/tutorial
+4) scikit-learn (>=0.24.2) if using `ngclearn.density` (needed for the demo/tutorial
     files in `examples/`)
 5) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
+6) networkx  (>=2.8.2) (if using the `ngclearn.utils.experimental.viz_utils`)
+7) pyviz (>=0.2.0) (if using the `ngclearn.utils.experimental.viz_utils`)
 
 (Which you can have setup/installed by running `$ pip3 install -r requirements.txt`.)
 

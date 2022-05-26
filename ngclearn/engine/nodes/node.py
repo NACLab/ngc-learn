@@ -90,6 +90,10 @@ class Node:
                     self.masks[mname] = tf.Variable(tf.ones([self.batch_size,mask_dim]), name=mask_var_name)
                 else:
                     self.masks[mname] = tf.ones([self.batch_size,mask_dim])
+        parents = []
+        for parent_cable in self.connected_cables:
+            parents.append((parent_cable.src_node.name, parent_cable.src_comp))
+        info["parents"] = parents
         info["object_type"] = self.node_type
         info["object_name"] = self.name
         info["n_connected_cables"] = len(self.connected_cables)
@@ -109,7 +113,7 @@ class Node:
         pass
 
     def wire_to(self, dest_node, src_comp, dest_comp, cable_kernel=None,
-                mirror_path_kernel=None, name=None):
+                mirror_path_kernel=None, name=None, short_name=None):
         """
         A wiring function that connects this node to another external node via a cable (or synaptic bundle)
 
@@ -159,7 +163,7 @@ class Node:
         if mirror_path_kernel is not None: # directly share/shallow copy this cable
             #bias_init = cable_kernel.get("bias_init") # <--- for RBMs
             cable = DCable(inp=(self,src_comp),out=(dest_node,dest_comp), shared_param_path=mirror_path_kernel,
-                           init_kernels=init_kernels)
+                           init_kernels=init_kernels, name=name)
         else:
             cable_type = cable_kernel.get("type")
             coeff = cable_kernel.get("coeff")
@@ -168,12 +172,14 @@ class Node:
                 if seed is None:
                     seed = 69
                 cable = DCable(inp=(self, src_comp), out=(dest_node, dest_comp), init_kernels=init_kernels,
-                               seed=seed)
+                               seed=seed, name=name)
                 if coeff is not None:
                     cable.coeff = coeff
             else:
-                cable = SCable(inp=(self,src_comp),out=(dest_node,dest_comp), coeff=coeff)
+                cable = SCable(inp=(self,src_comp),out=(dest_node,dest_comp), coeff=coeff, name=name)
         dest_node.connected_cables.append(cable)
+        if short_name is not None:
+            cable.short_name = short_name
         return cable
 
     def extract(self, comp_name):

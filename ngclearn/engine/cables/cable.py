@@ -51,6 +51,7 @@ class Cable:
 
         if name == None:
             self.name = "{0}-to-{1}_{2}".format(src_node.name, dest_node.name, self.cable_type)
+        self.short_name = self.name
 
         self.params = {} # what internal synaptic/learnable parameters belong to this cable
         self.update_terms = {} # maps param names to their ordered tuples of update terms
