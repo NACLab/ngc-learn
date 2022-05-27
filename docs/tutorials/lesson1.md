@@ -277,7 +277,7 @@ taking the information in one compartment of one "source node", doing something
 to this information (such as transforming with a bundle of synapses via linear
 algebra operations), and then depositing this information into the compartment
 of another "destination node".
-To do this, there are two primary types of cables you should be familiar with: 1) the 
+To do this, there are two primary types of cables you should be familiar with: 1) the
 simple cable [SCable](ngclearn.engine.cables.scable), and 2) the dense cable
 [DCable](ngclearn.engine.cables.dcable).
 The simple cable simply transmits information directly from one node's compartment
@@ -543,6 +543,80 @@ we have not set any learning rules as we will later).
 Given the above `NGCGraph`, you have now built your first, very own
 custom NGC system. All that remains is to learn how to use an NGC system to process
 some data, which we will demonstrate in the next section.
+
+### Generating an NGCGraph Visualization
+
+Currently, ngc-learn offers some basic support for generating a visualization
+of the system architecture that you create with the nodes-and-cables system. This
+functionality is built on top of the two Python packages `networkx` and `pyviz`
+to provide the user/experimenter some interactive flexibility with modifying
+the generated architecture/graph visualizations before saving to disk.
+
+To generate a graphical visualization of your `NGCGraph`, such as one for the
+2-node circuit you built in the last section, you would write the following code:
+
+```python
+import ngclearn.utils.experimental.viz_utils as viz
+
+viz.visualize_graph(circuit) # generate the graph visual of
+```
+
+which will generate a graph/network visualization (after some minor manipulation
+from the user) similar to the one below:
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-----------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/2n_circuit_viz.png |
+   |   :scale: 60%                                             |
+   |   :align: center                                          |
+   +-----------------------------------------------------------+
+```
+
+Notice that the node names we set earlier, e.g., `a` and `b`, are automatically
+extracted by the graph visualizer and the cable names (normally auto-generated)
+by the `NGCGraph` graph object are attached to the edges they correspond to.
+Furthermore, observe that you can directly interact with and manipulate (through
+clicking and dragging) the generated visualization to suit your purposes.
+Note: we recommend experimenting with the physics `solver` option to the
+`forceAtlas2Based` or `repulsion` variants for more complex NGC network graphs.
+
+The visualization scheme according to ngc-learn dictates that non-learnable
+cables are colored blue, dense cables are solid arcs, and that state nodes
+are colored as as grey ellipses. See the end of this tutorial lesson for more
+details on the graph color-coding scheme used by ngc-learn.
+
+One important trick to cleaning up an `NGCGraph`'s visualization is to use the
+`short_name` optional argument to the `.wire_to()` function. Specifically, setting
+a `short_name` for a particular cable that wires together two nodes allows you
+to assign "nicknames" to cables while preserving their original auto-generated
+names (though you can also directly set the names yourself using the `name`
+argument in the `.wire_to()` routine if you like, just ensure your name
+choices are unique). For example, we could have created the cable `a_b` earlier
+with a `short_name` like so:
+
+```python
+a_b = a.wire_to(b, src_comp="z", dest_comp="dz_td", cable_kernel=scable_cfg, short_name="W1")
+```
+
+If you run the visualizer now but with the `short_name` we set above, you will
+get the following output:
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +------------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/2n_circuit_viz2.png |
+   |   :scale: 60%                                              |
+   |   :align: center                                           |
+   +------------------------------------------------------------+
+```
+
+where now `W1` is used in place of the original `a-to-b_dense` auto-generated
+name.
 
 ## Simulating an NGC Circuit with Sensory Data
 
@@ -1397,6 +1471,46 @@ which would apply a decay factor based on a centered Laplacian distribution (
 or an L1 penalty). If you chose `l2` instead, the decay factor applied would then
 be based on a centered Gaussian distribution (or an L2 penalty) over each element in matrix `A`
 of cable `a_b`.
+
+### A Note on Graph Visualization
+
+Earlier, we explored ngc-learn's support for NGC architecture visualization, where
+we learned about the graph visualizer and using the `short_name` argument to
+superimpose desired "nicknames" for particular cables (yielding a less cluttered
+graph plot). As you build more complex graphs that combine different kinds
+of nodes, you will see other aspects of ngc-learn's node and cable coloring/visual
+depiction scheme rendered. In this note, we will briefly define the full scheme:
+1) dense cables (`DCable`) are solid arcs,
+2) simple cables (`SCable`) are dashed arcs,
+3) non-learnable/evolving cables are colored blue,
+4) learnable/evolving cables are colored red,
+5) state nodes are colored `gainsboro` (or a grayish color),
+6) error nodes are colored `mistyrose` (or light reddish color) with slightly larger text,
+7) forward nodes are colored `lavender`, and
+8) spiking nodes are colored `antiquewhite`.
+
+For example, a visualization of a hierarchical NGC generative model containing both
+state and error nodes would be the following:
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-----------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson1/gncn_viz.png       |
+   |   :scale: 75%                                             |
+   |   :align: center                                          |
+   +-----------------------------------------------------------+
+```
+
+Note that the plotted graph produced by the visualizer is always a directed graph.
+Furthermore, notice that the `visualize_graph()` method returns a full `networkx`
+directed graph, amenable to all of the graph operations/network analysis tools
+available to `networkx` graph objects. You can also alter the output path
+of the generated dynamic HTML (`*.html`) object by modifying `output_dir`, which
+will also change the location of a GraphML object saved to disk which is auto-named
+`<name_of_your_ngcgraph>.graphml` (for use with external graph analysis toolkits
+that can read in the GraphML file format).
 
 ## Conclusion
 

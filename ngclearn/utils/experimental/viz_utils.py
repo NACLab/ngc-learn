@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from pyvis import network as pvnet
 
-def visualize_graph(model, output_dir, height='500px', width='500px'):
+def visualize_graph(model, output_dir=None, height='500px', width='500px'):
     """
     Generates a graphical plot of the argument `NGCGraph` system.
     Note that a dynamic HTML object will be generated where the user can
@@ -23,7 +23,10 @@ def visualize_graph(model, output_dir, height='500px', width='500px'):
 
         width: width of pyviz HTML graph (in px) to directly alter
     """
-    Gx = nx.MultiDiGraph()
+    output_dir_ = output_dir
+    if output_dir_ is None:
+        output_dir_ = ""
+    Gx = nx.DiGraph() #MultiDiGraph
     G = pvnet.Network(directed=True, height=height, width=width)
     '''
     # Note: ngc-learn color/symbol coding scheme:
@@ -68,10 +71,10 @@ def visualize_graph(model, output_dir, height='500px', width='500px'):
         if is_learnable == True:
             edge_color = "red"
         if cable_type == "simple":
-            simple_short_name = "{}".format(cable.coeff)
-            G.add_edge(src_node, dest_node, label=simple_short_name, weight=1.5, width=1.5,
+            #simple_short_name = "{}".format(cable.coeff)
+            G.add_edge(src_node, dest_node, label=short_name, weight=1.5, width=1.5,
                        color=edge_color, dashes=True)
-            Gx.add_edge(src_node, dest_node, label=simple_short_name, weight=1.5, width=1.5,
+            Gx.add_edge(src_node, dest_node, label=short_name, weight=1.5, width=1.5,
                        color=edge_color, dashes=True)
         elif cable_type == "dense":
             G.add_edge(src_node, dest_node, label=short_name, weight=3, width=3,
@@ -82,6 +85,7 @@ def visualize_graph(model, output_dir, height='500px', width='500px'):
     #net = pvnet.Network(directed=True, height=height, width=width)
     #net.from_nx(g)
     G.show_buttons(filter_=['physics'])
-    G.show('{}{}.html'.format(output_dir, model.name))
+    G.show('{}{}.html'.format(output_dir_, model.name))
     # save networkx graph to GraphML format for external use
-    nx.write_graphml_lxml(Gx, "{}{}.graphml".format(output_dir, model.name))
+    nx.write_graphml_lxml(Gx, "{}{}.graphml".format(output_dir_, model.name))
+    return Gx
