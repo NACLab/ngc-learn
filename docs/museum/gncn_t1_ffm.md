@@ -7,6 +7,19 @@ beyond settling and update routines, a prediction function by which ancestral
 projection is carried out to efficiently provide label distribution or regression
 vector outputs. Note that "FFM" denotes "feedforward mapping".
 
+The GNCN-t1-FMM is graphically depicted by the following graph:
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +---------------------------------------------------+
+   | .. image:: ../images/museum/gncn_t1_ffm.png       |
+   |   :scale: 75%                                     |
+   |   :align: center                                  |
+   +---------------------------------------------------+
+```
+
 ```{eval-rst}
 .. autoclass:: ngclearn.museum.gncn_t1_ffm.GNCN_t1_FFM
   :noindex:
