@@ -20,10 +20,34 @@ ngclearn.museum.gncn\_t1 module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.museum.gncn\_t1\_ffm module
+------------------------------------
+
+.. automodule:: ngclearn.museum.gncn_t1_ffm
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.museum.gncn\_t1\_sc module
+-----------------------------------
+
+.. automodule:: ngclearn.museum.gncn_t1_sc
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.museum.gncn\_t1\_sigma module
 --------------------------------------
 
 .. automodule:: ngclearn.museum.gncn_t1_sigma
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.museum.harmonium module
+--------------------------------
+
+.. automodule:: ngclearn.museum.harmonium
    :members:
    :undoc-members:
    :show-inheritance:

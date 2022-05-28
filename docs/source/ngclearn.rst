@@ -9,9 +9,9 @@ Subpackages
 
    ngclearn.density
    ngclearn.engine
+   ngclearn.generator
    ngclearn.museum
    ngclearn.utils
-   ngclearn.generator
 
 Module contents
 ---------------

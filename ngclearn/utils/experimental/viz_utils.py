@@ -7,10 +7,10 @@ from pyvis import network as pvnet
 
 def visualize_graph(model, output_dir=None, height='500px', width='500px'):
     """
-    Generates a graphical plot of the argument `NGCGraph` system.
+    Generates a graphical plot of the argument NGCGraph system.
     Note that a dynamic HTML object will be generated where the user can
     manipulate the graph to adhere to their own aesthetic constraints. Note
-    that this will require opening up the generated *.html object and
+    that this will require opening up the generated .html object and
     then saving the final created graph by right-clicking and saving the
     final PNG.
 

@@ -1,6 +1,14 @@
 ngclearn.utils package
 ======================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   ngclearn.utils.experimental
+
 Submodules
 ----------
 

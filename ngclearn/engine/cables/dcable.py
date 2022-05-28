@@ -4,6 +4,7 @@ import numpy as np
 import copy
 from ngclearn.utils import transform_utils
 from ngclearn.engine.cables.cable import Cable
+from ngclearn.engine.cables.rules.hebb_rule import HebbRule
 
 class DCable(Cable):
     """
@@ -201,22 +202,38 @@ class DCable(Cable):
                 print("ERROR: DCable {} self.b col_dim {} != out_dim {}".format(self.name, b.shape[1], out_dim))
         return info
 
+    def get_params(self, only_learnable=False):
+        cable_theta = []
+        for pname in self.params:
+            if only_learnable == True:
+                if self.update_terms.get([pname]) is not None:
+                    cable_theta.append(self.params[pname])
+            else:
+                cable_theta.append(self.params[pname])
+        return cable_theta
 
-    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False,
-                        param=None, decay_kernel=None):
-        if preact is None and postact is None:
-            print("ERROR: Both preact and postact CANNOT be None for {}".format(self.name))
-            sys.exit(1)
-        if preact is not None:
-            preact_node, preact_comp = preact
-        if postact is not None:
-            postact_node, postact_comp = postact
-        if param is not None:
-            for pname in param:
-                self.update_terms[pname] = (preact, postact)
-        else:
-            print("ERROR: *param* target cannot be None for {}".format(self.name))
-            sys.exit(1)
+    def set_update_rule(self, preact=None, postact=None, update_rule=None, gamma=1.0,
+                        use_mod_factor=False, param=None, decay_kernel=None):
+        if update_rule is not None: # set user-specified update rule
+            if param is not None:
+                for pname in param:
+                    self.update_terms[pname] = update_rule
+        else: # create default Hebbian update rule
+            if preact is None and postact is None:
+                print("ERROR: Both preact and postact CANNOT be None for {}".format(self.name))
+                sys.exit(1)
+            # if preact is not None:
+            #     preact_node, preact_comp = preact
+            # if postact is not None:
+            #     postact_node, postact_comp = postact
+            update_rule = HebbRule()
+            update_rule.set_terms(terms=[preact, postact])
+            if param is not None:
+                for pname in param:
+                    self.update_terms[pname] = update_rule
+            else:
+                print("ERROR: *param* target cannot be None for {}".format(self.name))
+                sys.exit(1)
         self.gamma = gamma
         self.use_mod_factor = use_mod_factor
         self.is_learnable = True
@@ -273,18 +290,15 @@ class DCable(Cable):
         db = None
         if self.is_learnable == True:
             if A is not None:
-                A_terms = self.update_terms.get("A")
-                if A_terms is not None:
-                    preact, postact = A_terms
-                    if preact is None and postact is None:
-                        tf.print("ERROR: Both preact and postact for *A* CANNOT be None for {}".format(self.name))
-                        sys.exit(1)
-                    preact_node, preact_comp = preact
-                    postact_node, postact_comp = postact
-                    postact_term = postact_node.extract(postact_comp)
-                    preact_term = preact_node.extract(preact_comp)
-
-                    dA = tf.matmul(preact_term, postact_term, transpose_a=True)
+                A_update_rule = self.update_terms.get("A")
+                if A_update_rule is not None:
+                    # preact_node, preact_comp = preact
+                    # postact_node, postact_comp = postact
+                    # postact_term = postact_node.extract(postact_comp)
+                    # preact_term = preact_node.extract(preact_comp)
+                    #
+                    # dA = tf.matmul(preact_term, postact_term, transpose_a=True)
+                    dA = A_update_rule.calc_update()
                     if clip_type == "norm_clip":
                         dA = tf.clip_by_norm(dA, clip_radius)
                     elif clip_type == "hard_clip":
@@ -293,19 +307,16 @@ class DCable(Cable):
                         A_M = transform_utils.calc_modulatory_factor(A)
                         dA = dA * A_M
                     dA = -dA * self.gamma
-            if b is not None:
-                b_terms = self.update_terms.get("b")
-                if b_terms is not None:
-                    preact, postact = b_terms
-                    if postact is None:
-                        tf.print("ERROR: postact for *b* CANNOT be None for {}".format(self.name))
-                        sys.exit(1)
-                    #preact_node, preact_comp = preact
-                    postact_node, postact_comp = postact
-                    postact_term = postact_node.extract(postact_comp)
 
+            if b is not None:
+                b_update_rule = self.update_terms.get("b")
+                if b_update_rule is not None:
                     if b is not None:
-                        db = tf.reduce_sum(postact_term, axis=0, keepdims=True)
+                        #preact_node, preact_comp = preact
+                        # postact_node, postact_comp = postact
+                        # postact_term = postact_node.extract(postact_comp)
+                        # db = tf.reduce_sum(postact_term, axis=0, keepdims=True)
+                        db = b_update_rule.calc_update(for_bias=True)
                         if clip_type == "hard_clip":
                             db = tf.clip_by_value(db, -clip_radius, clip_radius)
                         db = -db * self.gamma

@@ -82,9 +82,10 @@ class Harmonium:
                      integrate_kernel=integrate_cfg, samp_fx=samp_fx)
         z0 = SNode(name="z0", dim=x_dim, beta=1, act_fx="identity", zeta=0.0,
                      integrate_kernel=integrate_cfg)
-        z0_z1 = z0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", cable_kernel=dcable_cfg)
+        z0_z1 = z0.wire_to(z1, src_comp="phi(z)", dest_comp="dz_bu", cable_kernel=dcable_cfg,
+                           short_name="W1")
         z1_z0 = z1.wire_to(z0, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z0_z1,"A^T"),
-                           cable_kernel=dcable_cfg)
+                           cable_kernel=dcable_cfg, short_name="W1^T")
         z0_z1.set_decay(decay_kernel=("l1",0.00005))
 
         ## set up positive phase update
@@ -110,9 +111,11 @@ class Harmonium:
         z1n = SNode(name="z1n", dim=z_dim, beta=1, act_fx=act_fx, zeta=0.0,
                      integrate_kernel=integrate_cfg, samp_fx=samp_fx)
         n1_n0 = z1n_i.wire_to(z0n, src_comp="S(z)", dest_comp="dz_td", mirror_path_kernel=(z0_z1,"A^T"),
-                            cable_kernel=dcable_cfg) # reuse A but create new b
-        n0_n1 = z0n.wire_to(z1n, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z0_z1,"A+b")) # reuse A  & b
-        n1_n1 = z1n.wire_to(z1n_i, src_comp="z", dest_comp="dz_bu", cable_kernel=pos_scable_cfg) # close the loop!
+                            cable_kernel=dcable_cfg, short_name="W1^T") # reuse A but create new b
+        n0_n1 = z0n.wire_to(z1n, src_comp="phi(z)", dest_comp="dz_bu", mirror_path_kernel=(z0_z1,"A+b"),
+                            short_name="W1") # reuse A  & b
+        n1_n1 = z1n.wire_to(z1n_i, src_comp="z", dest_comp="dz_bu", cable_kernel=pos_scable_cfg,
+                            short_name="1") # close the loop!
 
         # set up negative phaszupdate
         n0_n1.set_update_rule(preact=(z0n,"phi(z)"), postact=(z1n,"phi(z)"), param=["A","b"])

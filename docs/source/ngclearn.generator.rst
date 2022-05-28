@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   ngclearn.generator.experimental
    ngclearn.generator.static
    ngclearn.generator.temporal
 

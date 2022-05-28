@@ -84,14 +84,27 @@ class Cable:
         info["dest_comp"] = self.src_comp
         return info
 
+    def get_params(self, only_learnable=False):
+        """
+        Extract all matrix/vector parameters internal to this cable.
+
+        Args:
+            only_learnable: if True, only extracts the learnable matrix/vector parameters
+                internal to this cable
+
+        Returns:
+            a list of matrix/vector parameters associated with this particular cable
+        """
+        return []
+
     def set_constraint(self, constraint_kernel):
         self.constraint_kernel = constraint_kernel
 
     def set_decay(self, decay_kernel):
         self.decay_kernel = decay_kernel
 
-    def set_update_rule(self, preact=None, postact=None, gamma=1.0, use_mod_factor=False,
-                        param=None, decay_kernel=None):
+    def set_update_rule(self, preact=None, postact=None, update_rule=None, gamma=1.0,
+                        use_mod_factor=False, param=None, decay_kernel=None):
         """
         Sets the synaptic adjustment rule for this cable (currently a 2-factor local synaptic Hebbian update rule).
 
@@ -115,6 +128,8 @@ class Cable:
 
                 :postact_compartment (Tuple[1]): the component in the postact_node to extract the necessary
                     signal to compute the second factor the synaptic/cable update
+
+            update_rule: a specific update rule to use with the parameters of this cable
 
             gamma: scaling factor for the synaptic update
 

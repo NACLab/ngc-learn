@@ -1,6 +1,14 @@
 ngclearn.engine.cables package
 ==============================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   ngclearn.engine.cables.rules
+
 Submodules
 ----------
 

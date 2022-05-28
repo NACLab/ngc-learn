@@ -67,7 +67,7 @@ myst_enable_extensions = [
 
 pygments_style = "sphinx"
 
-#autodoc_mock_imports = ['tensorflow', 'tensorflow_probability']
+autodoc_mock_imports = ['scipy','sklearn','tensorflow','tensorflow_probability']
 
 # sphinx api-doc variables
 #apidoc_module_dir = "../ngclearn"

@@ -1,0 +1,42 @@
+import tensorflow as tf
+import sys
+import numpy as np
+import copy
+from ngclearn.utils import transform_utils
+
+class UpdateRule:
+    """
+    Base update rule (class from which other rule types inherit basic properties from)
+
+    Args:
+        rule_type: the string concretely denoting this rule's type
+
+        name: the string name of this update rule (Default = None which creates an auto-name)
+    """
+    def __init__(self, rule_type, name=None):
+        self.rule_type = rule_type
+        self.name = name
+        if name is None:
+            self.name = "update_rule_{}".format(rule_type)
+
+    def set_terms(self, terms):
+        """
+        Sets the terms that drive this update rule
+
+        Args:
+            terms: list of 2-tuples where each 2-tuple is of the form
+                (Node, string_compartment_name)
+        """
+        pass
+
+    def calc_update(self, for_bias=False):
+        """
+        Calculates the adjustment matrix given this rule's configured internal terms
+
+        Args:
+            for_bias: calculate the adjustment vector (instead of a matrix) for a bias
+
+        Returns:
+            an adjustment matrix/vector
+        """
+        pass

@@ -1,5 +1,3 @@
-.. _modules:
-
 ngclearn
 ========
 
