@@ -18,6 +18,23 @@ class UpdateRule:
         self.name = name
         if name is None:
             self.name = "update_rule_{}".format(rule_type)
+        self.terms = None
+        self.cable = None
+        self.param_name = None
+
+    def point_to_cable(self, cable, param_name):
+        """
+        Gives this update rule direct access to the source cable it will update
+        (useful for extra statistics often required by certain local synaptic
+        adjustment rules).
+
+        Args:
+            cable: the cable to point to
+
+            param_name: synaptic parameters w/in this cable to point to
+        """
+        self.cable = cable
+        self.param_name = param_name
 
     def set_terms(self, terms):
         """
@@ -27,7 +44,7 @@ class UpdateRule:
             terms: list of 2-tuples where each 2-tuple is of the form
                 (Node, string_compartment_name)
         """
-        pass
+        self.terms = terms
 
     def calc_update(self, for_bias=False):
         """
@@ -39,4 +56,7 @@ class UpdateRule:
         Returns:
             an adjustment matrix/vector
         """
+        pass
+
+    def clone(self):
         pass

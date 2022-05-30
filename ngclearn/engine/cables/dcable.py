@@ -217,19 +217,18 @@ class DCable(Cable):
         if update_rule is not None: # set user-specified update rule
             if param is not None:
                 for pname in param:
-                    self.update_terms[pname] = update_rule
+                    _rule = update_rule.clone()
+                    _rule.point_to_cable(self, pname)
+                    self.update_terms[pname] = _rule
         else: # create default Hebbian update rule
             if preact is None and postact is None:
                 print("ERROR: Both preact and postact CANNOT be None for {}".format(self.name))
                 sys.exit(1)
-            # if preact is not None:
-            #     preact_node, preact_comp = preact
-            # if postact is not None:
-            #     postact_node, postact_comp = postact
-            update_rule = HebbRule()
-            update_rule.set_terms(terms=[preact, postact])
             if param is not None:
                 for pname in param:
+                    update_rule = HebbRule()
+                    update_rule.set_terms(terms=[preact, postact])
+                    update_rule.point_to_cable(self, pname)
                     self.update_terms[pname] = update_rule
             else:
                 print("ERROR: *param* target cannot be None for {}".format(self.name))

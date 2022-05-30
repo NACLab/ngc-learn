@@ -136,6 +136,7 @@ class SNode(Node):
         self.sfx = sfx
         self.sdfx = sdfx
 
+        self.constant_names = ["beta", "leak", "zeta"]
         self.constants = {}
         self.constants["beta"] = self.beta
         self.constants["leak"] = self.leak

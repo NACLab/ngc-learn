@@ -114,6 +114,7 @@ def init_weights(kernel, shape, seed):
     |   * "orthogonal"
     |   * "truncated_gaussian" (alternative: "truncated_normal")
     |   * "gaussian" (alternative: "normal")
+    |   * "uniform"
 
     Args:
         kernel: a tuple denoting the pattern by which a matrix is initialized
@@ -179,9 +180,12 @@ def init_weights(kernel, shape, seed):
     elif init_type == "truncated_normal" or init_type == "truncated_gaussian" :
         stddev = kernel[1]
         params = tf.random.truncated_normal(shape, stddev=stddev, seed=seed)
-    elif init_type == "normal" or init_type == "gaussian" :
+    elif init_type == "normal" or init_type == "gaussian":
         stddev = kernel[1]
         params = tf.random.normal(shape, stddev=stddev, seed=seed)
+    elif init_type == "uniform":
+        scale = kernel[1]
+        params = tf.random.uniform(shape, minval=-scale, maxval=scale, seed=seed)
     elif init_type == "alex_uniform": #
         k = 1.0 / (shape[0] * 1.0) # 1/in_features
         bound = np.sqrt(k)
@@ -280,7 +284,10 @@ def to_one_hot(idx, depth):
         if len(idx_.shape) >= 2:
             idx_ = np.squeeze(idx_)
         return tf.cast(tf.one_hot(idx_, depth=depth),dtype=tf.float32)
-    return tf.expand_dims(tf.cast(tf.one_hot(idx, depth=depth),dtype=tf.float32),axis=0)
+    enc = tf.cast(tf.one_hot(idx, depth=depth),dtype=tf.float32)
+    if len(enc.shape) == 1:
+        enc = tf.expand_dims(enc,axis=0)
+    return enc
 
 def scale_feat(x, a=-1.0, b=1.0):
     """
@@ -315,7 +322,8 @@ def binarize(data, threshold=0.5):
     """
     return tf.cast(tf.greater_equal(data, threshold),dtype=tf.float32)
 
-def convert_to_spikes(x_data, max_spike_rate, dt, sp_div=4.0):
+
+def convert_to_spikes_(x_data, max_spike_rate, dt, sp_div=4.0):
     """
     Converts a vector *x_data* to its approximate Poisson spike equivalent.
 
