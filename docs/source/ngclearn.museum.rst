@@ -52,6 +52,14 @@ ngclearn.museum.harmonium module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.museum.snn_ba module
+--------------------------------
+
+.. automodule:: ngclearn.museum.snn_ba
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
 Module contents
 ---------------
 
