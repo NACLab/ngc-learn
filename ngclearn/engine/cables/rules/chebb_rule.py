@@ -36,7 +36,7 @@ class CHebbRule(UpdateRule):
         rule.use_hard_bound = self.use_hard_bound
         return rule
 
-    def set_terms(self, terms):
+    def set_terms(self, terms, weights=None):
         if len(terms) == 4:
             self.terms = terms
         else:
@@ -83,9 +83,10 @@ class CHebbRule(UpdateRule):
             delta_minus = tf.matmul(preact_term2, postact_term2, transpose_a=True) * A_minus
             # calculate the final update matrix
             #update = delta_plus + delta_minus
-            update = delta_plus * self.eta_plus + delta_minus * self.eta_minus
+            #update = delta_plus * self.eta_plus - delta_minus * self.eta_minus
+            #update = delta_plus * self.eta_plus + delta_minus * self.eta_minus
             #update = delta_minus * self.eta_minus
-            #update = delta_plus * self.eta_plus
+            update = delta_plus * self.eta_plus
         else: # vector update
             delta_plus = tf.reduce_sum(postact_term1, axis=0, keepdims=True) * A_plus
             delta_minus = tf.reduce_sum(postact_term2, axis=0, keepdims=True) * A_minus

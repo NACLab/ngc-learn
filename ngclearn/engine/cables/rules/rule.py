@@ -19,6 +19,7 @@ class UpdateRule:
         if name is None:
             self.name = "update_rule_{}".format(rule_type)
         self.terms = None
+        self.weights = None
         self.cable = None
         self.param_name = None
 
@@ -36,7 +37,7 @@ class UpdateRule:
         self.cable = cable
         self.param_name = param_name
 
-    def set_terms(self, terms):
+    def set_terms(self, terms, weights=None):
         """
         Sets the terms that drive this update rule
 
@@ -45,6 +46,7 @@ class UpdateRule:
                 (Node, string_compartment_name)
         """
         self.terms = terms
+        self.weights = weights
 
     def calc_update(self, for_bias=False):
         """

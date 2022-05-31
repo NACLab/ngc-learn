@@ -159,12 +159,6 @@ class SNode(Node):
         self.connected_cables = []
 
     def compile(self):
-        """
-        Executes the "compile()" routine for this cable.
-
-        Returns:
-            a dictionary containing post-compilation check information about this cable
-        """
         info = super().compile()
         info["beta"] = self.beta
         info["leak"] = self.leak

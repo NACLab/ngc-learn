@@ -36,6 +36,30 @@ ngclearn.engine.nodes.snode module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.engine.nodes.spnode_lif module
+---------------------------------------
+
+.. automodule:: ngclearn.engine.nodes.spnode_lif
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+ngclearn.engine.nodes.spnode_enc module
+---------------------------------------
+
+.. automodule:: ngclearn.engine.nodes.spnode_enc
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.engine.nodes.fnode_ba module
+-------------------------------------
+
+.. automodule:: ngclearn.engine.nodes.fnode_ba
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

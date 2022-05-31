@@ -119,12 +119,6 @@ class ENode(Node):
         self.constraint_kernel = constraint_kernel
 
     def compile(self):
-        """
-        Executes the "compile()" routine for this cable.
-
-        Returns:
-            a dictionary containing post-compilation check information about this cable
-        """
         info = super().compile()
         # we have to special re-compile the L compartment to be (1 x 1)
         self.compartments["L"] = tf.Variable(tf.zeros([1,1]), name="{}_L".format(self.name))

@@ -561,6 +561,15 @@ def bkwta(x, K=10): # returns only binary code of K top winner nodes
     topK = tf.cast(tf.greater_equal(x, kth), dtype=tf.float32) # cast booleans to floats
     return topK
 
+def sech(x):
+    # 2e^x / (e^2x + 1)
+    return (tf.math.exp(x) * 2) / (tf.math.exp(x * 2) + 1)
+
+def sech_sqr(x):
+    # sech^2(x) = 1 - tanh^2(x)
+    tanh_x = tanh(x)
+    return -(tanh_x * tanh_x) + 1.0
+
 def mish(x):
     return x * tf.nn.tanh(tf.math.softplus(x))
 
