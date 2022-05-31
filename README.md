@@ -36,8 +36,8 @@ ngc-learn requires:
 4) scikit-learn (>=0.24.2) if using `ngclearn.density` (needed for the demo/tutorial
     files in `examples/`)
 5) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
-6) networkx  (>=2.6.3) (if using the `ngclearn.utils.experimental.viz_utils`)
-7) pyviz (>=0.2.0) (if using the `ngclearn.utils.experimental.viz_utils`)
+6) networkx  (>=2.6.3) (currently optional but required if using the `ngclearn.utils.experimental.viz_utils`)
+7) pyviz (>=0.2.0) (currently optional but required if using the `ngclearn.utils.experimental.viz_utils`)
 
 (Which you can have setup/installed by running `$ pip3 install -r requirements.txt`.)
 
