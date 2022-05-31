@@ -46,6 +46,7 @@ Current models that we have implemented in the Model Museum so far include:
 4. GNCN-t1-FFM - the model developed in (Whittington &amp; Bogacz, 2017) [4]
 5. GNCN-t1-SC - the model proposed in (Olshausen &amp; Field, 1996) [5]
 6. Harmonium - the model developed in (Smolensky, 1986; Hinton 1999) [6] [7]
+7. SNN-BA - a generalization of the spiking model in (Samadi et al., 2017) [8]
 
 (If there is a model you think should be exhibited/integrated into the Model
 Museum, and/or would like to contribute, please write us at ago@cs.rit.edu or
@@ -69,4 +70,7 @@ by learning a sparse code for natural images. Nature 381, 607–609 (1996). <br>
 likelihood." Technical Report, Gatsby computational neuroscience unit (1999). <br>
 [7] Smolensky, P. "Information Processing in Dynamical Systems: Foundations of
 Harmony Theory." Parallel distributed processing: explorations in the
-microstructure of cognition 1 (1986).
+microstructure of cognition 1 (1986). <br>
+[8] Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep learning with
+dynamic spiking neurons and fixed feedback weights." Neural computation 29.3
+(2017): 578-602.
