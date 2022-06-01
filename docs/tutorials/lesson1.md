@@ -556,7 +556,7 @@ To generate a graphical visualization of your `NGCGraph`, such as one for the
 2-node circuit you built in the last section, you would write the following code:
 
 ```python
-import ngclearn.utils.experimental.viz_utils as viz
+import ngclearn.utils.experimental.viz_graph_utils as viz
 
 viz.visualize_graph(circuit) # generate the graph visual of
 ```

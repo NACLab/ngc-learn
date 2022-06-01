@@ -84,12 +84,12 @@ class SNN_BA:
         z2 = SpNode_Enc(name="z2", dim=x_dim, gain=0.25, trace_kernel=trace_kernel)
         #z2 = SNode(name="z2", dim=x_dim, beta=beta, leak=0.0, zeta=0.0)
         mu1 = SNode(name="mu1", dim=z_dim, act_fx="identity", zeta=0.0)
-        z1 = SpNode_LIF(name="z1", dim=z_dim, beta=beta, leak=leak,
-                     integrate_kernel=integrate_cfg, spike_kernel=spike_kernel, trace_kernel=trace_kernel)
+        z1 = SpNode_LIF(name="z1", dim=z_dim, integrate_kernel=integrate_cfg,
+                        spike_kernel=spike_kernel, trace_kernel=trace_kernel)
         #z1.constants["de_scale"] = (1.0/(x_dim * 1.0))
         mu0 = SNode(name="mu0", dim=y_dim, act_fx="identity", zeta=0.0)
-        z0 = SpNode_LIF(name="z0", dim=y_dim, beta=beta, leak=leak,
-                     integrate_kernel=integrate_cfg, spike_kernel=spike_kernel, trace_kernel=trace_kernel)
+        z0 = SpNode_LIF(name="z0", dim=y_dim, integrate_kernel=integrate_cfg,
+                        spike_kernel=spike_kernel, trace_kernel=trace_kernel)
         #z0.constants["de_scale"] = (1.0/(z_dim * 1.0))
         e0 = ENode(name="e0", dim=y_dim)
         t0 = SNode(name="t0", dim=y_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)

@@ -46,8 +46,6 @@ class SpNode_LIF(Node):
 
         dim: number of neurons this node will contain/model
 
-        leak: strength of the conductance leak applied to each neuron's current Jz (Default = 0)
-
         batch_size: batch-size this node should assume (for use with static graph optimization)
 
         integrate_kernel: Dict defining the neural state integration process type. The expected keys and
@@ -83,8 +81,8 @@ class SpNode_LIF(Node):
 
             :Note: specifying None will automatically set this node to not use variable tracing
     """
-    def __init__(self, name, dim, beta=1.0, leak=0.0, batch_size=1,
-                 integrate_kernel=None, spike_kernel=None, trace_kernel=None):
+    def __init__(self, name, dim, batch_size=1, integrate_kernel=None,
+                 spike_kernel=None, trace_kernel=None):
         node_type = "spike_lif_state"
         super().__init__(node_type, name, dim)
         self.dim = dim
@@ -102,15 +100,16 @@ class SpNode_LIF(Node):
                 self.dt = integrate_kernel.get("dt") # trace integration time constant (ms)
 
         self.zeta = 0
-        self.conduct_leak = leak
+        #self.conduct_leak = leak
         # spiking neuron settings
         self.max_spike_rate = 640.0 # 64 Hz is a good default standard value
         self.V_thr = 1.0  # threshold for a neuron's voltage to reach before spiking
-        self.R_m = 5.1
-        self.C_m = 5e-3
+        self.R_m = 5.1 # in mega ohms
+        self.C_m = 5e-3 # in picofarads
 
-        self.tau_m = 20.0
+        self.tau_m = self.R_m * self.C_m #20.0 # should be -> tau_mem = R*C
         self.tau_c = 1.0
+        self.ref_T = 1.0 # ms
 
         self.spike_kernel = spike_kernel
         if self.spike_kernel is not None:
@@ -125,8 +124,12 @@ class SpNode_LIF(Node):
                 self.zeta = self.spike_kernel.get("zeta")
             if self.spike_kernel.get("tau_curr") is not None:
                 self.tau_c = self.spike_kernel.get("tau_curr")
+            if self.spike_kernel.get("ref_T") is not None:
+                self.ref_T = self.spike_kernel.get("ref_T")
             if self.spike_kernel.get("tau_mem") is not None:
                 self.tau_m = self.spike_kernel.get("tau_mem")
+                self.R_m = 1.0
+                self.C_m = self.tau_m # C = tau_m/(R = 1)
 
 
         self.trace_kernel = trace_kernel
@@ -155,6 +158,7 @@ class SpNode_LIF(Node):
         self.constants["trace_alpha"] = self.a
         self.constants["eps"] = 1e-4
         self.constants["zeta"] = self.zeta
+        self.constants["ref_T"] = self.ref_T
 
         # set LIF spiking neuron-specific vector statistics
         self.compartment_names = ["dz_bu", "dz_td", "Jz", "Vz", "Sz", "Trace_z",
@@ -215,11 +219,12 @@ class SpNode_LIF(Node):
             # get constants
             # tau_mem = R*C where R = 5.1, C = 5e-3
             eps = self.constants.get("eps") # <-- simulation constant (for refractory variable)
-            #R = self.constants.get("R")
-            #C = self.constants.get("C")
+            R = self.constants.get("R")
+            C = self.constants.get("C")
             tau_mem = self.constants.get("tau_m") # membrane time constant (R * C)
             V_thr = self.constants.get("V_thr") # get voltage threshold (constant)
             dt = self.constants.get("dt") # integration time constant
+            ref_T = self.constants.get("ref_T")
             # get current compartment values
             Jz = self.compartments.get("Jz") # current I
             Vz = self.compartments.get("Vz") # voltage V
@@ -229,42 +234,43 @@ class SpNode_LIF(Node):
             dz_td = self.compartments["dz_td"]
             dz = dz_td + dz_bu # gather pre-synaptic signals to modify current
 
-            zeta = self.constants["zeta"]
-            if zeta > 0.0:
-                # integrate over current
-                #Jz = Jz * self.zeta + dz * self.kappa - (Jz * self.conduct_leak) * self.kappa
-                tau_curr = self.constants.get("tau_c") #R * C
-                Jz = Jz + (-Jz + dz) * (dt/tau_curr)
-            else:
-                Jz = dz # input current
+            if injection_table.get("Jz") is None:
+                zeta = self.constants["zeta"]
+                if zeta > 0.0:
+                    # integrate over current
+                    #Jz = Jz * self.zeta + dz * self.kappa - (Jz * self.conduct_leak) * self.kappa
+                    tau_curr = self.constants.get("tau_c") #R * C
+                    Jz = Jz + (-Jz + dz) * (dt/tau_curr)
+                else:
+                    Jz = dz # input current
             ####################################################################
             #### Run LIF spike response model ####
             '''
             Apply the leaky integrate-and-fire spike-response model (SRM LIF):
             V(t + dt) = V(t) + ( -V(t) * leak_lvl + I(t) ) * (dt / tau_m), w/ tau_m = R_m * C_m
             '''
-            ref = ref + tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) * dt
-            # if ref > 1, then ref <- 0
-            mask = tf.cast(tf.greater(ref, 1.0),dtype=tf.float32)
-            ref = ref * (1.0 - mask)
-
-            # if ref > 0.0: Vz <- 0, else: update
-            mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) # ref1 > 0.0
-            Vz = (Vz + (Jz - Vz) * (dt/tau_mem)) * (1.0 - mask)
-
-            mask = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32) # h1 > h_thr
-            ref = mask * eps + (1.0 - mask) * ref
-
-            #if ref1 > 0.0: a <- 1, else 0
-            Sz = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32)
-            #Sz = tf.cast(tf.math.greater_equal(Vz, V_thr), dtype=tf.float32)
-            ####################################################################
-
-            # OLD CODE: integrate over voltage
             # update the membrane potential given input current and spike
-            #Vz = Vz + (-Vz + Jz * R) * (dt/tau_mem) - (Sz * V_thr)
-            #Vz = Vz + (-Vz + Jz * R) * (dt/tau_mem)
-            #Vz = Vz * (-Sz + 1.0)
+            if ref_T > 0.0:
+                ref = ref + tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) * dt
+                # if ref > 1, then ref <- 0
+                mask = tf.cast(tf.greater(ref, ref_T),dtype=tf.float32)
+                ref = ref * (1.0 - mask)
+
+                # if ref > 0.0: Vz <- 0, else: update
+                mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) # ref1 > 0.0
+                Vz = (Vz + (-Vz + Jz * R) * (dt/tau_mem)) * (1.0 - mask)
+
+                mask = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32) # h1 > h_thr
+                ref = mask * eps + (1.0 - mask) * ref
+
+                #if ref1 > 0.0: a <- 1, else 0
+                Sz = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32)
+                #Sz = tf.cast(tf.math.greater_equal(Vz, V_thr), dtype=tf.float32)
+            else: # special mode where refractory period is exactly 0, so instantaneous refraction
+                Vz = (Vz + (-Vz + Jz * R) * (dt/tau_mem)) #- (Sz * V_thr)
+                Sz = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32)
+                Vz = Vz * (-Sz + 1.0)
+            ####################################################################
 
             ####################################################################
             if injection_table.get("Jz") is None:

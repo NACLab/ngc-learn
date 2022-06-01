@@ -4,10 +4,10 @@ ngclearn.utils.experimental package
 Submodules
 ----------
 
-ngclearn.utils.experimental.viz\_utils module
----------------------------------------------
+ngclearn.utils.experimental.viz\_graph\_utils module
+----------------------------------------------------
 
-.. automodule:: ngclearn.utils.experimental.viz_utils
+.. automodule:: ngclearn.utils.experimental.viz_graph_utils
    :members:
    :undoc-members:
    :show-inheritance:
