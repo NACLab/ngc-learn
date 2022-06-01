@@ -27,8 +27,8 @@ for Applied Physics and Mathematics), <a href="https://www.nature.com/articles/s
 ## <b>Installation:</b>
 
 <i>Setup:</i> Ensure that you have installed the following base dependencies in
-your system. Note that this library was developed and tested on
-Ubuntu 18.04.
+your system. Note that this library was developed on Ubuntu 18.04 and tested on
+Ubuntu(s) 16.04 and 18.04 (and should also work on Ubuntu 20.04).
 ngc-learn requires:
 1) Python (>=3.7)
 2) Numpy (>=1.20.0)
