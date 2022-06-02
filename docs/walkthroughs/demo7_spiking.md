@@ -496,7 +496,7 @@ also generates and saves to the `/snn/` sub-directory a learning curve plot
 <img src="../images/demo7/mnist_learning_curves.png" width="500" />
 
 where we see that the SNN has decreased its approximate negative log likelihood
-from a starting point of about `2.30` nats to nearly `0.28` nats. This is bearing
+from a starting point of about `2.30` nats to about `0.35` nats. This is bearing
 in mind that we have estimated class probabilities output by our SNN by
 probing and averaging over electrical current values from `100` simulated milliseconds
 per test pattern mini-batch. We remark that this constructed SNN is not particularly
