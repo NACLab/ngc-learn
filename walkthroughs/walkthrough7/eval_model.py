@@ -11,6 +11,7 @@ from ngclearn.utils.config import Config
 import ngclearn.utils.transform_utils as transform
 import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_tools
+import ngclearn.utils.viz_utils as viz
 from ngclearn.utils.data_utils import DataLoader
 
 seed = 69
@@ -20,8 +21,8 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Walkthrough #3 File:
-Evaluates a trained NGC classifier on the MNIST database test-set.
+Walkthrough #7 File:
+Evaluates a trained SNN classifier on the MNIST database test-set.
 
 Usage:
 $ python eval_train.py --config=/path/to/file.cfg --gpu_id=0
@@ -67,7 +68,7 @@ print(" Evaluating model on X.fname = {}".format(xfname))
 print("                     Y.fname = {}".format(yfname))
 X = ( tf.cast(np.load(xfname),dtype=tf.float32) ).numpy()
 Y = ( tf.cast(np.load(yfname),dtype=tf.float32) ).numpy()
-dev_set = DataLoader(design_matrices=[("z3",X),("z0",Y)], batch_size=dev_batch_size, disable_shuffle=True)
+dev_set = DataLoader(design_matrices=[("x",X),("y",Y)], batch_size=dev_batch_size, disable_shuffle=True)
 
 def eval_model(agent, dataset, verbose=False):
     """
@@ -80,15 +81,16 @@ def eval_model(agent, dataset, verbose=False):
         x_name, x = batch[0]
         y_name, y = batch[1]
         N += x.shape[0]
-        #y_hat = agent.settle(x, y) # conduct iterative inference
-        y_hat = agent.predict(x)
+
+        # simulate inference window
+        y_hat, y_count = agent.settle(x, calc_update=False)
 
         # update tracked fixed-point losses
         Ly = tf.reduce_sum( metric.cat_nll(tf.nn.softmax(y_hat), y) ) + Ly
 
         # track raw accuracy
         y_ind = tf.cast(tf.argmax(y,1),dtype=tf.int32)
-        y_pred = tf.cast(tf.argmax(y_hat,1),dtype=tf.int32)
+        y_pred = tf.cast(tf.argmax(y_count,1),dtype=tf.int32)
         comp = tf.cast(tf.equal(y_pred,y_ind),dtype=tf.float32)
         Acc += tf.reduce_sum( comp )
 
@@ -106,7 +108,15 @@ def eval_model(agent, dataset, verbose=False):
 ################################################################################
 with tf.device(gpu_tag):
 
+    # load in learning curves
+    train_curve = np.load("snn/Ly0.npy")
+    dev_curve = np.load("snn/vLy0.npy")
+    print(" > Generating learning curves...")
+    viz.plot_learning_curves(train_curve, dev_curve, plot_fname="snn/mnist_learning_curves.png")
+
     agent = io_tools.deserialize(model_fname)
+    # re-compile to new batch size
+    agent.ngc_model.compile(batch_size=dev_batch_size, use_graph_optim=True)
     print(" > Loading model: ",model_fname)
 
     ############################################################################

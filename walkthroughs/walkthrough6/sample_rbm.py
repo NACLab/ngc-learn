@@ -23,7 +23,7 @@ import ngclearn.utils.transform_utils as transform
 
 """
 ################################################################################
-Demo/Tutorial #6 File:
+Walkthrough #6 File:
 Visualizes the filters of a trained harmonium (RBM) model.
 Loads in NGC from filename "model_fname" and saves a set of samples from the
 model's underlying block Gibbs sampler.

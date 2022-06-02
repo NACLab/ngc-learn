@@ -23,7 +23,7 @@ import ngclearn.utils.transform_utils as transform
 
 """
 ################################################################################
-Demo/Tutorial #5 File:
+Walkthrough #5 File:
 Visualizes the filters of a trained deep ISTA model.
 Loads in NGC from filename "model_fname" and saves a filter plot visualization
 to "output_dir".

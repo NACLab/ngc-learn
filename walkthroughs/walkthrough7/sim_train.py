@@ -13,8 +13,8 @@ import ngclearn.utils.metric_utils as metric
 import ngclearn.utils.io_utils as io_tools
 from ngclearn.utils.data_utils import DataLoader
 
-# import model from museum to train
-from ngclearn.museum.gncn_t1_ffm import GNCN_t1_FFM
+# import model to train
+from ngclearn.museum.snn_ba import SNN_BA as SNN
 
 seed = 69
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -23,11 +23,11 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Walkthrough #3 File:
-Fits an NGC classifier to the MNIST database.
+Walkthrough #7 File:
+Fits an SNN (with synapses adjusted via BA) to the MNIST database.
 
 Usage:
-$ python sim_train.py --config=gncn_t1_ffm/fit.cfg --gpu_id=0
+$ python sim_train.py --config=/path/to/fit.cfg --gpu_id=0 --n_trials=1
 
 @author Alexander Ororbia
 ################################################################################
@@ -63,10 +63,10 @@ save_marker = 1
 args = Config(cfg_fname)
 
 out_dir = args.getArg("out_dir")
-batch_size = int(args.getArg("batch_size")) #128 #32
-dev_batch_size = int(args.getArg("dev_batch_size")) #128 #32
+batch_size = int(args.getArg("batch_size"))
+dev_batch_size = batch_size
 
-eta = float(args.getArg("eta")) # learning rate/step size (optimzation)
+#eta = float(args.getArg("eta")) # learning rate/step size (optimzation)
 num_iter = int(args.getArg("num_iter")) # num training iterations
 
 # create training sample
@@ -79,16 +79,28 @@ args.setArg("x_dim",x_dim)
 Y = ( tf.cast(np.load(yfname),dtype=tf.float32) ).numpy()
 y_dim = Y.shape[1]
 args.setArg("y_dim",y_dim)
-train_set = DataLoader(design_matrices=[("z3",X),("z0",Y)], batch_size=batch_size)
+train_set = DataLoader(design_matrices=[("x",X),("y",Y)], batch_size=batch_size)
+
+if X.shape[0] > 1000:
+    # to speed up simulation, we only eval training scores on a small subset
+    ptrs = np.random.permutation(X.shape[0])[0:1000]
+    Xsub = X[ptrs,:]
+    Ysub = Y[ptrs,:]
+    eval_train_set = DataLoader(design_matrices=[("x",Xsub),("y",Ysub)],
+                                batch_size=batch_size, disable_shuffle=True)
+else:
+    eval_train_set = DataLoader(design_matrices=[("x",Xsub),("y",Ysub)],
+                                batch_size=batch_size, disable_shuffle=True)
 
 # create development/validation sample
 xfname = args.getArg("dev_xfname")
 yfname = args.getArg("dev_yfname")
 X = ( tf.cast(np.load(xfname),dtype=tf.float32) ).numpy()
 Y = ( tf.cast(np.load(yfname),dtype=tf.float32) ).numpy()
-dev_set = DataLoader(design_matrices=[("z3",X),("z0",Y)], batch_size=dev_batch_size, disable_shuffle=True)
+dev_set = DataLoader(design_matrices=[("x",X),("y",Y)],
+                     batch_size=dev_batch_size, disable_shuffle=True)
 
-def eval_model(agent, dataset, calc_ToD, verbose=False):
+def eval_model(agent, dataset, verbose=False):
     """
         Evaluates performance of agent on this fixed-point data sample
     """
@@ -101,19 +113,17 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
         y_name, y = batch[1]
         N += x.shape[0]
 
-        # run (fast) classifier or p(y|x)
-        y_hat = agent.predict(x)
+        y_hat, y_count = agent.settle(x, calc_update=False)
 
         # update tracked fixed-point losses
         Ly = tf.reduce_sum( metric.cat_nll(y_hat, y) ) + Ly
 
         # track raw accuracy
         y_ind = tf.cast(tf.argmax(y,1),dtype=tf.int32)
-        y_pred = tf.cast(tf.argmax(y_hat,1),dtype=tf.int32)
+        y_pred = tf.cast(tf.argmax(y_count,1),dtype=tf.int32)
         comp = tf.cast(tf.equal(y_pred,y_ind),dtype=tf.float32)
         Acc += tf.reduce_sum( comp )
 
-        agent.clear()
         if verbose == True:
             print("\r Acc {}  Ly {} over {} samples...".format((Acc/(N * 1.0)), (Ly/(N * 1.0)), N),end="")
     if verbose == True:
@@ -126,21 +136,10 @@ def eval_model(agent, dataset, calc_ToD, verbose=False):
 # Start simulation
 ################################################################################
 with tf.device(gpu_tag):
-    def calc_ToD(agent):
-        """Measures the total discrepancy (ToD) of a given NGC model"""
-        ToD = 0.0
-        L2 = agent.ngc_model.extract(node_name="e2", node_var_name="L")
-        L1 = agent.ngc_model.extract(node_name="e1", node_var_name="L")
-        L0 = agent.ngc_model.extract(node_name="e0", node_var_name="L")
-        ToD = -(L0 + L1 + L2)
-        return float(ToD)
 
     for trial in range(n_trials): # for each trial
+        agent = SNN(args)
 
-        agent = GNCN_t1_FFM(args) # set up NGC model
-
-        eta_v  = tf.Variable( eta ) # set up optimization process
-        opt = tf.keras.optimizers.Adam(eta_v)#, beta_1=0.9, beta_2=0.999, epsilon=1e-6)
         print(" >> Built model = {}".format(agent.ngc_model.name))
 
         Ly_series = []
@@ -150,8 +149,8 @@ with tf.device(gpu_tag):
 
         ############################################################################
         # create a  training loop
-        ToD, Ly, Acc = eval_model(agent, train_set, calc_ToD, verbose=True)
-        vToD, vLy, vAcc = eval_model(agent, dev_set, calc_ToD, verbose=True)
+        ToD, Ly, Acc = eval_model(agent, eval_train_set, verbose=True)
+        vToD, vLy, vAcc = eval_model(agent, dev_set, verbose=True)
         print("{} | Acc = {}  Ly = {} ; vAcc = {}  vLy = {}".format(-1, Acc, Ly, vAcc, vLy))
 
         Ly_series.append(Ly)
@@ -178,30 +177,14 @@ with tf.device(gpu_tag):
                 y_name, y = batch[1]
                 mark += 1
 
-                # run ancestral projection to get initial conditions
-                y_hat_ = agent.predict(x) # run p(y|x)
-                mu2 = agent.ngc_sampler.extract("s2","z") # extract value of s2
-                mu1 = agent.ngc_sampler.extract("s1","z") # extract value of s1
-                mu0 = agent.ngc_sampler.extract("s0","z") # extract value of s0
-
-                agent.ngc_model.inject([("mu2", "z", mu2), ("z2", "z", mu2),
-                                        ("mu1", "z", mu1), ("z1", "z", mu1),
-                                        ("mu0", "z", mu0)])
-
                 # conduct iterative inference
                 inf_t = time.time()
-                y_hat = agent.settle(x, y)
+                y_hat, y_count = agent.settle(x, y, calc_update=True)
                 inf_t = time.time() - inf_t
                 inf_time += inf_t
 
-                ToD_t = calc_ToD(agent) # calc ToD
+                ToD_t = 0.0 #calc_ToD(agent) # calc ToD
                 Ly = tf.reduce_sum( metric.cat_nll(y_hat, y) ) + Ly
-
-                # update synaptic parameters given current model internal state
-                delta = agent.calc_updates(avg_update=False)
-                opt.apply_gradients(zip(delta, agent.ngc_model.theta))
-                agent.ngc_model.apply_constraints()
-                agent.clear()
 
                 ToD = ToD_t + ToD
                 print("\r train.ToD {}  Ly {}  with {} samples seen (time = {} s)".format(
@@ -213,9 +196,9 @@ with tf.device(gpu_tag):
             ToD = ToD / (n_s * 1.0)
             Ly = Ly / (n_s * 1.0)
 
-            ToD, Ly, Acc = eval_model(agent, train_set, calc_ToD, verbose=True)
+            ToD, Ly, Acc = eval_model(agent, eval_train_set, verbose=True)
             # evaluate generalization ability on dev set
-            vToD, vLy, vAcc = eval_model(agent, dev_set, calc_ToD, verbose=True)
+            vToD, vLy, vAcc = eval_model(agent, dev_set, verbose=True)
             print("-------------------------------------------------")
             print("{} | Acc = {}  Ly = {} ; vAcc = {}  vLy = {}".format(i, Acc, Ly, vAcc, vLy))
 

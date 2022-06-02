@@ -2,8 +2,48 @@
 Visualization functions/utilities.
 """
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
 import tensorflow as tf
+
+def plot_learning_curves(acc_curve, dev_acc_curve, plot_fname=None, scale=1.0):
+    """
+
+    Args:
+        acc_curve: a numpy array of shape (T x 1), where T is number of
+            epochs/iterations (array of training scalar measurements)
+
+        dev_acc_curve: a numpy array of shape (T x 1), where T is number of
+            epochs/iterations (array of validation/test scalar measurements)
+
+        fname: the filename to save this plot as, i.e., /path/to/name.png
+            (Default: lif_analysis.png)
+
+        scale: multiplier to scale curves by (e.g., scale = 100 for
+            accuracy/error measurements)
+    """
+    colors = ["red", "blue"]
+    # plot loss learning curves
+    y = acc_curve
+    vy = dev_acc_curve
+    y = y * scale
+    vy = vy * scale
+    x_iter = np.asarray(list(range(0, y.shape[0])))
+    fontSize = 20
+    plt.plot(x_iter, y, '-', color=colors[0])
+    plt.plot(x_iter, vy, '-', color=colors[1])
+    plt.xlabel("Epoch", fontsize=fontSize)
+    plt.ylabel("Classification Error", fontsize=fontSize)
+    plt.grid()
+    acc = mpatches.Patch(color=colors[0], label='Train')
+    vacc = mpatches.Patch(color=colors[1], label='Dev')
+    plt.legend(handles=[acc, vacc], fontsize=13, ncol=2,borderaxespad=0, frameon=False,
+               loc='upper center', bbox_to_anchor=(0.5, -0.175))#, prop=fontP)
+    plt.tight_layout()
+    if plot_fname is None:
+        plot_fname = "learning_curves.jpg"
+    plt.savefig(plot_fname)
+    plt.clf()
 
 def create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
                        plot_fname=None):
@@ -46,6 +86,7 @@ def create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
         plt.xlabel("Time Step")
         plt.ylabel("Neuron Index")
         plt.savefig(plot_fname)
+        plt.clf()
 
 def plot_lif_neuron(curr, mem, spike, ref, dt, thr_line=False,
                     title=False, max_mem_val=1.25, fname=None):
@@ -102,3 +143,4 @@ def plot_lif_neuron(curr, mem, spike, ref, dt, thr_line=False,
     if fname is None:
         fname = "lif_analysis.png"
     plt.savefig(fname)
+    plt.clf()

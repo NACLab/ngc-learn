@@ -33,7 +33,7 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Demo/Tutorial #4 File:
+Walkthrough #4 File:
 Trains/fits an sparse coding model to the "natural scenes" dataset.
 Note that this script will sequentially run multiple trials/seeds if an
 experimental multi-trial setup is required (the tutorial only requires 1 trial).

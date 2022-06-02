@@ -33,7 +33,7 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Demo/Tutorial #5 File:
+Walkthrough #5 File:
 Trains/fits a deep ISTA model to the Olivetti faces dataset.
 Note that this script will sequentially run multiple trials/seeds if an
 experimental multi-trial setup is required (the tutorial only requires 1 trial).

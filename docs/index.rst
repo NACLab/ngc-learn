@@ -29,6 +29,7 @@ Welcome to ngc-learn's documentation!
    walkthroughs/demo4_sparse_coding
    walkthroughs/demo5_amortized_inf
    walkthroughs/demo6_boltzmann
+   walkthroughs/demo7_spiking
 
 .. toctree::
    :maxdepth: 1
@@ -41,6 +42,7 @@ Welcome to ngc-learn's documentation!
    museum/gncn_t1_ffm
    museum/gncn_t1_sc
    museum/harmonium
+   museum/snn_ba
 
 .. toctree::
    :maxdepth: 1

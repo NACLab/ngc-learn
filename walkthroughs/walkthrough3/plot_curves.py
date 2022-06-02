@@ -17,7 +17,7 @@ import matplotlib.patches as mpatches
 
 """
 ################################################################################
-Demo/Tutorial #3 File:
+Walkthrough #3 File:
 Plots learning curves for an NGC model trained on the MNIST database.
 
 Usage:

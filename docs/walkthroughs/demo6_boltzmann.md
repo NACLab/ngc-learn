@@ -7,11 +7,11 @@ learning and inference systems that adapt through a process known as
 contrastive Hebbian learning (CHL) can be constructed and simulated with
 ngc-learn.
 
-In this demonstration, we will design a simple (single-wing) Harmonium, also
+In this walkthrough, we will design a simple (single-wing) Harmonium, also
 known as the restricted Boltzmann machine (RBM). We will specifically
 focus on learning its synaptic connections with an algorithmic recipe known
 as Contrastive Divergence (CD).
-After going through this demonstration, you will:
+After going through this walkthrough, you will:
 
 1.  Learn how to construct an `NGCGraph` that emulates the structure of an RBM and
 adapt the NGC settling process to calculate approximate synaptic weight gradients
@@ -19,7 +19,7 @@ in accordance to Contrastive Divergence.
 2.  Simulate fantasized image samples using the block Gibbs sampler implicitly
 defined by the negative phase graph.
 
-Note that the folders of interest to this demonstration are:
+Note that the folders of interest to this walkthrough are:
 + `walkthroughs/demo6/`: this contains the necessary simulation scripts
 + `walkthroughs/data`: this contains the zipped copy of the digit image arrays
 
@@ -371,12 +371,13 @@ in which they were produced by the Markov chain constructed above.
 ## Using the Harmonium to Dream Up Handwritten Digits
 
 We finally take the Harmonium that we have constructed above and fit it to
-some MNIST digits (the same dataset we used in Demonstration \#1). Specifically,
+some MNIST digits (the same dataset we used in Walkthrough \#1). Specifically,
 we will leverage the [Harmonium](../museum/harmonium.md), model in the Model Museum
 as it implements the above core components/functions internally. In the  
 script `sim_train.py`, you will find a general simulated training loop similar to
 what we have developed in previous walkthroughs that will fit our Harmonium
-to the MNIST database by cycling through it several times, saving the final
+to the MNIST database (unzip the file `mnist.zip` in the `/walkthroughs/data/`
+directory if you have not already) by cycling through it several times, saving the final
 (best) resulting to disk within the `rbm/` sub-directory. Go ahead and execute
 the training process as follows:
 
@@ -430,7 +431,7 @@ has acquired are a bit more prominent due to the weight decay we applied earlier
 via `z0_z1.set_decay(decay_kernel=("l1",0.00005))` (which tells the `NGCGraph`
 simulation object to apply Laplacian/L1 decay to the `W` matrix of our RBM).
 
-On a final note, the Harmonium we have built in this demonstration is a classical
+On a final note, the Harmonium we have built in this walkthrough is a classical
 Bernoulli Harmonium and thus assumes that the input data features are binary in
 nature. If one wants to model data that is continuous/real-valued, then the
 Harmonium model above would need to be adapted to utilize visible units that

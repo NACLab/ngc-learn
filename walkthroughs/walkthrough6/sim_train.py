@@ -31,7 +31,7 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Demo/Tutorial #6 File:
+Walkthrough #6 File:
 Trains/fits a harmonium (RBM) to a dataset of sensory patterns, e.g., the MNIST
 database.
 

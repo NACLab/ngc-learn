@@ -33,7 +33,7 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Demo/Tutorial #1 File:
+Walkthrough #1 File:
 Trains/fits an NGC model to a dataset of sensory patterns, e.g., the MNIST
 database. Note that this script will sequentially run multiple trials/seeds if an
 experimental multi-trial setup is required (the tutorial only requires 1 trial).

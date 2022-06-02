@@ -40,7 +40,7 @@ np.random.seed(seed)
 
 """
 ################################################################################
-Demo/Tutorial #2 File:
+Walkthrough #2 File:
 Fits an NGC model to a synthetic dataset of sensory patterns sampled
 from a stochastic data generating process based on a mixture of Gaussians (MoG).
 With respect to ToD and MSE, we track the prequential estimate (with a fading
@@ -255,7 +255,7 @@ print()
 ToD_vals = np.asarray(ToD_list)
 x_iter = np.asarray(x_iter)
 fontSize = 20
-plt.plot(x_iter, ToD_list, '-', color="purple")
+plt.plot(x_iter, ToD_vals, '-', color="purple")
 plt.xlabel("Iterations", fontsize=fontSize)
 plt.ylabel("ToD", fontsize=fontSize)
 plt.grid()

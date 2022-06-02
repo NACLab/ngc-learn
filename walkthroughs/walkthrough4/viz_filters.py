@@ -23,7 +23,7 @@ import ngclearn.utils.transform_utils as transform
 
 """
 ################################################################################
-Demo/Tutorial #4 File:
+Walkthrough #4 File:
 Visualizes the filters of a trained dictionary/sparse coding model.
 Loads in NGC from filename "model_fname" and saves a filter plot visualization
 to "output_dir".
