@@ -38,10 +38,13 @@ class HebbRule(UpdateRule):
             sys.exit(1)
 
     def calc_update(self, for_bias=False):
+        w0 = 1
+        w1 = 1
+        if self.weights is not None:
+            w0 = self.weights[0]
+            w1 = self.weights[1]
         preact = self.terms[0]
-        w0 = self.weights[0]
         postact = self.terms[1]
-        w1 = self.weights[1]
         postact_node, postact_comp = postact
         postact_term = postact_node.extract(postact_comp)
         if preact is not None and for_bias == False: # update matrix
