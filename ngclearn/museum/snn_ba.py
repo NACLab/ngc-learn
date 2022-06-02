@@ -123,7 +123,7 @@ class SNN_BA:
         from ngclearn.engine.cables.rules.hebb_rule import HebbRule
 
         rule1 = HebbRule() # create a local weighted Hebbian rule for internal layer
-        rule1.set_terms(terms=[(z2,"z"), (d1,"phi(z)")], weights=[1.0, (1.0/(x_dim * 1.0))])
+        rule1.set_terms(terms=[(z2,"Sz"), (d1,"phi(z)")], weights=[1.0, (1.0/(x_dim * 1.0))])
         z2_mu1.set_update_rule(update_rule=rule1, param=["A", "b"])
 
         rule2 = HebbRule() # create a local weighted Hebbian rule for output layer
