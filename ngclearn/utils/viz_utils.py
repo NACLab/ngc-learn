@@ -46,3 +46,59 @@ def create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
         plt.xlabel("Time Step")
         plt.ylabel("Neuron Index")
         plt.savefig(plot_fname)
+
+def plot_lif_neuron(curr, mem, spike, ref, dt, thr_line=False,
+                    title=False, max_mem_val=1.25, fname=None):
+    """
+    Simple plotting function for visualizing the trajectory of a single neuron
+    (where its input electrical current, membrane potential value, output
+    spike readings, and refractory variable states have been recorded into arrays).
+
+    Args:
+        curr: the recorded electrical current (over T steps)
+
+        mem: the recorded membrane potential (over T steps)
+
+        spike: the recorded spike train (over T steps)
+
+        ref: the recorded refractory state value (over T steps)
+
+        dt: the integration time constant
+
+        thr_line: optional vertical threshold line to plot for voltage
+
+        title: the title of the plot
+
+        max_mem_val: maximum value bound on membrane potential subplot (max-value of y-axis)
+
+        fname: the filename to save this plot as, i.e., /path/to/name.png (Default: lif_analysis.png)
+    """
+    fig, ax = plt.subplots(3, figsize=(8,6), sharex=True,
+                        gridspec_kw = {'height_ratios': [1, 1, 0.4]})
+    # plot input current
+    ax[0].plot(curr, c="tab:blue")
+    ax[0].set_ylim([0, 0.4])
+    ax[0].set_xlim([0, 200])
+    ax[0].set_ylabel("Input Current ($J_t$)")
+    if title:
+        ax[0].set_title(title)
+
+    # plot membrane potential
+    ax[1].plot(mem, c="tab:red")
+    ax[1].set_ylim([0, max_mem_val])
+    ax[1].set_ylabel("Membrane Potential ($V_t$)")
+    if thr_line:
+        ax[1].axhline(y=thr_line, alpha=0.25, linestyle="dashed", c="black", linewidth=2)
+    plt.xlabel("Time Step $t$")
+
+    spk_ = spike + 0
+    mask = np.greater_equal(ref,dt).astype(np.float32)
+    spk_ = spk_ * (1.0 - mask)
+
+    # Plot output spike using spikeplot
+    create_raster_plot(spk_, ax[2], s=100, c="black")
+    plt.ylabel("Output Spikes")
+    plt.yticks([])
+    if fname is None:
+        fname = "lif_analysis.png"
+    plt.savefig(fname)

@@ -49,10 +49,10 @@ def visualize_graph(model, output_dir=None, height='500px', width='500px'):
         elif node_type == "state":
             G.add_node(node_id, label=node_name, color="gainsboro", shape='ellipse', font='14px arial')
             Gx.add_node(node_id, label=node_name, color="gainsboro", shape='ellipse', font='14px arial')
-        elif node_type == "spiking":
+        elif "spike" in node_type:
             G.add_node(node_id, label=node_name, color="antiquewhite", shape='ellipse', font='14px arial')
             Gx.add_node(node_id, label=node_name, color="gainsboro", shape='ellipse', font='14px arial')
-        elif node_type == "feedforward":
+        elif "forward" in node_type:
             G.add_node(node_id, label=node_name, color="lavender", shape='ellipse', font='14px arial')
             Gx.add_node(node_id, label=node_name, color="gainsboro", shape='ellipse', font='14px arial')
         node_id += 1

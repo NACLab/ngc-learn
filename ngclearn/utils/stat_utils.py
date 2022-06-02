@@ -63,10 +63,10 @@ def sample_bernoulli(p):
     #samples = tf.math.less(p, eps)
     return tf.cast(samples,dtype=tf.float32)
 
-def convert_to_spikes(x_data, gain=1.0, offset=0.0, n_steps=1):
+def convert_to_spikes(x_data, gain=1.0, offset=0.0, n_trials=1):
     p = tf.clip_by_value(x_data, 0., 1.) * gain + offset
     samples = sample_bernoulli(p)
-    for _ in range(n_steps-1):
+    for _ in range(n_trials-1):
         samples = sample_bernoulli(p)
     return samples
 

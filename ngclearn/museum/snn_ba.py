@@ -70,14 +70,14 @@ class SNN_BA:
             wght_sd = float(self.args.getArg("wght_sd"))
 
         dt = 0.25 # this is used #1e-3
-        tau = 20 # this is used
+        tau_mem = 20 # this is used
         leak = 0 # unused/not relevant
         beta = 0.1 # unused/not relevant
         V_thr = 0.4 # this is used #1
         R = 5.1 # unused # 1
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True, "dt" : dt}
         #spike_kernel = {"V_thr" : V_thr, "R" : R, "C" : 5e-3, "tau_curr" : 2e-3}
-        spike_kernel = {"V_thr" : V_thr, "tau_mem" : 20}
+        spike_kernel = {"V_thr" : V_thr, "tau_mem" : tau_mem}
         trace_kernel = {"dt" : dt, "tau" : 5.0}
 
         # set up system nodes
@@ -86,47 +86,48 @@ class SNN_BA:
         mu1 = SNode(name="mu1", dim=z_dim, act_fx="identity", zeta=0.0)
         z1 = SpNode_LIF(name="z1", dim=z_dim, integrate_kernel=integrate_cfg,
                         spike_kernel=spike_kernel, trace_kernel=trace_kernel)
-        #z1.constants["de_scale"] = (1.0/(x_dim * 1.0))
         mu0 = SNode(name="mu0", dim=y_dim, act_fx="identity", zeta=0.0)
         z0 = SpNode_LIF(name="z0", dim=y_dim, integrate_kernel=integrate_cfg,
                         spike_kernel=spike_kernel, trace_kernel=trace_kernel)
-        #z0.constants["de_scale"] = (1.0/(z_dim * 1.0))
         e0 = ENode(name="e0", dim=y_dim)
         t0 = SNode(name="t0", dim=y_dim, beta=beta, integrate_kernel=integrate_cfg, leak=0.0)
         d1 = FNode_BA(name="d1", dim=z_dim, act_fx="identity")
 
         # create cable wiring scheme relating nodes to one another
         init_kernels = {"A_init" : ("gaussian", wght_sd), "b_init" : ("zeros",)}
-        #init_kernels = {"A_init" : ("gaussian",wght_sd)}
         dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : seed}
         pos_scable_cfg = {"type": "simple", "coeff": 1.0}
         neg_scable_cfg = {"type": "simple", "coeff": -1.0}
 
-        z2_mu1 = z2.wire_to(mu1, src_comp="Sz", dest_comp="dz_td", cable_kernel=dcable_cfg)
-        mu1.wire_to(z1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=pos_scable_cfg)
-        z1_mu0 = z1.wire_to(mu0, src_comp="Sz", dest_comp="dz_td", cable_kernel=dcable_cfg)
-        mu0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=pos_scable_cfg)
-        z0.wire_to(e0, src_comp="Sz", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
-        #z0.wire_to(e0, src_comp="Sz", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
-        t0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg)
-        #t0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_mu", cable_kernel=pos_scable_cfg)
-        e0.wire_to(t0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg)
+        z2_mu1 = z2.wire_to(mu1, src_comp="Sz", dest_comp="dz_td", cable_kernel=dcable_cfg,
+                            short_name="W2")
+        mu1.wire_to(z1, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=pos_scable_cfg,
+                    short_name="1")
+        z1_mu0 = z1.wire_to(mu0, src_comp="Sz", dest_comp="dz_td", cable_kernel=dcable_cfg,
+                            short_name="W1")
+        mu0.wire_to(z0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=pos_scable_cfg,
+                    short_name="1")
+        z0.wire_to(e0, src_comp="Sz", dest_comp="pred_mu", cable_kernel=pos_scable_cfg,
+                   short_name="1")
+        t0.wire_to(e0, src_comp="phi(z)", dest_comp="pred_targ", cable_kernel=pos_scable_cfg,
+                   short_name="1")
+        e0.wire_to(t0, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_scable_cfg,
+                   short_name="-1")
 
-        #e0_z2 = e0.wire_to(z2, src_comp="phi(z)", dest_comp="de", cable_kernel=dcable_cfg)
-        z1.wire_to(d1, src_comp="Jz", dest_comp="Jz", cable_kernel=pos_scable_cfg)
-        e0_z1 = e0.wire_to(d1, src_comp="phi(z)", dest_comp="dz", cable_kernel=dcable_cfg)
+        z1.wire_to(d1, src_comp="Jz", dest_comp="Jz", cable_kernel=pos_scable_cfg,
+                   short_name="1")
+        e0_z1 = e0.wire_to(d1, src_comp="phi(z)", dest_comp="dz", cable_kernel=dcable_cfg,
+                           short_name="B1")
 
         # set up update rules and make relevant edges aware of these
-        #from ngclearn.engine.cables.rules.chebb_rule import CHebbRule
         from ngclearn.engine.cables.rules.hebb_rule import HebbRule
 
-        rule1 = HebbRule()
-        rule1.set_terms(terms=[(z2,"z"), (d1,"phi(z)")], weights=[1.0,(1.0/(x_dim * 1.0))])
+        rule1 = HebbRule() # create a local weighted Hebbian rule for internal layer
+        rule1.set_terms(terms=[(z2,"z"), (d1,"phi(z)")], weights=[1.0, (1.0/(x_dim * 1.0))])
         z2_mu1.set_update_rule(update_rule=rule1, param=["A", "b"])
 
-        rule2 = HebbRule()
-        rule2.set_terms(terms=[(z1,"Sz"), (e0,"phi(z)")], weights=[1.0,(1.0/(z_dim * 1.0))])
-
+        rule2 = HebbRule() # create a local weighted Hebbian rule for output layer
+        rule2.set_terms(terms=[(z1,"Sz"), (e0,"phi(z)")], weights=[1.0, (1.0/(z_dim * 1.0))])
         z1_mu0.set_update_rule(update_rule=rule2, param=["A", "b"])
 
         # Set up graph - execution cycle/order
@@ -184,7 +185,7 @@ class SNN_BA:
         self.ngc_model.set_to_resting_state()
         y_count = y_ * 0
         learn_synapses = False
-        for t in range(self.T): # sum loss over time
+        for t in range(self.T): # sum statistics over time
             if t >= self.T_prime:
                 if y is not None: # if no label provided, then no learning...
                     learn_synapses = calc_update

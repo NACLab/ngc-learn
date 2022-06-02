@@ -10,19 +10,20 @@ class SpNode_LIF(Node):
     | Implements a leaky-integrate and fire (LIF) spiking state node that follows NGC settling dynamics
     | according to:
     |   Jz = dz  OR  d.Jz/d.t = (-Jz + dz) * (dt/tau_curr) IF zeta > 0 // current
-    |   d.Vz/d.t = (-Vz + Jz) * (dt/tau_mem) // voltage
+    |   d.Vz/d.t = (-Vz + Jz * R) * (dt/tau_mem) // voltage
     |   spike(t) = spike_response_model(Jz(t), Vz(t), ref(t)...) // spikes computed according to SRM
     |   trace(t) = (trace(t-1) * alpha) * (1 - Sz(t)) + Sz(t)  // variable trace filter
     | where:
     |   Jz - current value of the electrical current input to the spiking neurons w/in this node
-    |   Vz - current value of the voltage of the spiking neurons w/in this node
+    |   Vz - current value of the membrane potential of the spiking neurons w/in this node
     |   Sz - the spike signal reading(s) of the spiking neurons w/in this node
     |   dz - aggregated input signals from other nodes/locations to drive current Jz
     |   ref - the current value of the refractory variables (accumulates with time and forces neurons to rest)
     |   alpha - variable trace's interpolation constant (dt/tau <-- input by user)
-    |   tau_mem - membrane/voltage time constant (R_m * C_m  - resistance times capacitance)
+    |   tau_mem - membrane potential time constant (R_m * C_m  - resistance times capacitance)
     |   tau_curr - electrical current time constant strength
     |   dt - the integration time constant d.t
+    |   R - neural membrane resistance
 
     | Note that the above is used to adjust neural electrical current values via an integator inside a node.
         For example, if the standard/default Euler integrator is used then the neurons inside this
@@ -35,11 +36,21 @@ class SpNode_LIF(Node):
     |   * dz_td - the top-down pressure compartment (deposited signals summed)
     |   * dz_bu - the bottom-up pressure compartment, potentially weighted by phi'(x)) (deposited signals summed)
     |   * Jz - the neural electrical current values
-    |   * Vz - the neural voltage values
+    |   * Vz - the neural membrane potential values
     |   * Sz - the current spike values (binary vector signal) at time t
     |   * Trace_z - filtered trace values of the spike values (real-valued vector)
     |   * ref - the refractory variables (an accumulator)
     |   * mask - a binary mask to be applied to the neural activities
+
+    | Constants:
+    |   * V_thr -
+    |   * dt - the integration time constant (milliseconds)
+    |   * R - the neural membrane resistance (mega Ohms)
+    |   * C - the neural membrane capacitance (microfarads)
+    |   * tau_m - the membrane potential time constant (tau_m = R * C)
+    |   * tau_c - the electrial current time constant (if zeta > 0)
+    |   * trace_alpha - the trace variable's interpolation constant
+    |   * ref_T - the length of the absolute refractory period (milliseconds)
 
     Args:
         name: the name/label of this node
@@ -68,7 +79,7 @@ class SpNode_LIF(Node):
 
              :`'zeta'`: a trigger variable - if > 0, electrical current will be integrated over as well
 
-             :`'tau_mem'`: the membrane/voltage time constant
+             :`'tau_mem'`: the membrane potential time constant
 
              :`'tau_curr'`: the electrical current time constant (only used if zeta > 0, otherwise ignored)
 
