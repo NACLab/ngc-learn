@@ -6,7 +6,8 @@ import matplotlib.patches as mpatches
 import numpy as np
 import tensorflow as tf
 
-def plot_learning_curves(acc_curve, dev_acc_curve, plot_fname=None, scale=1.0):
+def plot_learning_curves(acc_curve, dev_acc_curve, plot_fname=None, scale=1.0, 
+                         y_lab="Loss", x_lab="Iteration"):
     """
 
     Args:
@@ -29,11 +30,11 @@ def plot_learning_curves(acc_curve, dev_acc_curve, plot_fname=None, scale=1.0):
     y = y * scale
     vy = vy * scale
     x_iter = np.asarray(list(range(0, y.shape[0])))
-    fontSize = 20
+    fontSize = 18 #20
     plt.plot(x_iter, y, '-', color=colors[0])
     plt.plot(x_iter, vy, '-', color=colors[1])
-    plt.xlabel("Epoch", fontsize=fontSize)
-    plt.ylabel("Classification Error", fontsize=fontSize)
+    plt.xlabel(x_lab, fontsize=fontSize)
+    plt.ylabel(y_lab, fontsize=fontSize)
     plt.grid()
     acc = mpatches.Patch(color=colors[0], label='Train')
     vacc = mpatches.Patch(color=colors[1], label='Dev')

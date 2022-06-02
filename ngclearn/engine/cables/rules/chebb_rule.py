@@ -39,6 +39,7 @@ class CHebbRule(UpdateRule):
     def set_terms(self, terms, weights=None):
         if len(terms) == 4:
             self.terms = terms
+            self.weights = weights
         else:
             print("ERROR: {} must contain 4 terms "
                   "(input.len = {}) (rule.name = {})".format(self.rule_type,
@@ -46,6 +47,12 @@ class CHebbRule(UpdateRule):
             sys.exit(1)
 
     def calc_update(self, for_bias=False):
+        w0 = 1
+        w1 = 1
+        if self.weights is not None:
+            w0 = self.weights[0]
+            w1 = self.weights[1]
+
         preact1 = self.terms[0]
         postact1 = self.terms[1]
         preact2 = self.terms[2]
@@ -79,16 +86,16 @@ class CHebbRule(UpdateRule):
                 A_minus = transform.gte(params - self.w_min) #* self.eta_minus
 
         if for_bias == False: # update matrix
-            delta_plus = (tf.matmul(preact_term1, postact_term1, transpose_a=True)) * A_plus
-            delta_minus = tf.matmul(preact_term2, postact_term2, transpose_a=True) * A_minus
+            delta_plus = (tf.matmul(preact_term1 * w0, postact_term1 * w1, transpose_a=True)) * A_plus
+            delta_minus = tf.matmul(preact_term2 * w0, postact_term2 * w1, transpose_a=True) * A_minus
             # calculate the final update matrix
             #update = delta_plus + delta_minus
-            #update = delta_plus * self.eta_plus - delta_minus * self.eta_minus
+            update = delta_plus * self.eta_plus - delta_minus * self.eta_minus
             #update = delta_plus * self.eta_plus + delta_minus * self.eta_minus
             #update = delta_minus * self.eta_minus
-            update = delta_plus * self.eta_plus
+            #update = delta_plus * self.eta_plus
         else: # vector update
-            delta_plus = tf.reduce_sum(postact_term1, axis=0, keepdims=True) * A_plus
-            delta_minus = tf.reduce_sum(postact_term2, axis=0, keepdims=True) * A_minus
-            update = delta_plus - delta_minus
+            delta_plus = tf.reduce_sum(postact_term1 * w1, axis=0, keepdims=True) * A_plus
+            delta_minus = tf.reduce_sum(postact_term2 * w1, axis=0, keepdims=True) * A_minus
+            update = delta_plus * self.eta_plus - delta_minus * self.eta_minus
         return update

@@ -74,6 +74,7 @@ def eval_model(agent, dataset, verbose=False):
     """
         Evaluates performance of agent on this fixed-point data sample
     """
+    ToD = 0.0 # total disrepancy over entire data pool
     Ly = 0.0 # metric/loss over entire data pool
     Acc = 0.0
     N = 0.0 # number samples seen so far
@@ -82,11 +83,10 @@ def eval_model(agent, dataset, verbose=False):
         y_name, y = batch[1]
         N += x.shape[0]
 
-        # simulate inference window
         y_hat, y_count = agent.settle(x, calc_update=False)
 
         # update tracked fixed-point losses
-        Ly = tf.reduce_sum( metric.cat_nll(tf.nn.softmax(y_hat), y) ) + Ly
+        Ly = tf.reduce_sum( metric.cat_nll(y_hat, y) ) + Ly
 
         # track raw accuracy
         y_ind = tf.cast(tf.argmax(y,1),dtype=tf.int32)
@@ -94,7 +94,6 @@ def eval_model(agent, dataset, verbose=False):
         comp = tf.cast(tf.equal(y_pred,y_ind),dtype=tf.float32)
         Acc += tf.reduce_sum( comp )
 
-        agent.clear()
         if verbose == True:
             print("\r Acc {}  Ly {} over {} samples...".format((Acc/(N * 1.0)), (Ly/(N * 1.0)), N),end="")
     if verbose == True:

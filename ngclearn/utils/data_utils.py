@@ -75,6 +75,10 @@ class DataLoader(object):
             sys.exit(1)
         self.data_len = len( self.design_matrices[0][1] )
         self.ptrs = np.arange(0, self.data_len, 1)
+        if self.data_len < self.batch_size:
+            print("ERROR: batch size {} is > total number data samples {}".format(
+                  self.batch_size, self.data_len))
+            sys.exit(1)
 
     def __iter__(self):
         """

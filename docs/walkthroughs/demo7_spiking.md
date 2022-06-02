@@ -483,10 +483,10 @@ trained SNN on the MNIST test set but with the synaptic adjustment turned off).
 You should get an output similar to the one below:
 
 ```console
-Ly = 1.4924614429473877  Acc = 0.9684000015258789
+Ly = 0.32633236050605774  Acc = 0.963699996471405
 ```
 
-meaning that our three-layer SNN has nearly reached `97`\% test classification
+meaning that our three-layer SNN has greater than `96`\% test classification
 accuracy (recall that we are counting spikes and, for each row in an evaluated
 test mini-batch matrix, the output LIF node with highest spike count at the end
 of `100` ms  is chosen as the SNN's predicted label). This evaluation script
