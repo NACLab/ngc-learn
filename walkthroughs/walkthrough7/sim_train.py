@@ -89,7 +89,7 @@ if X.shape[0] > 1000:
     eval_train_set = DataLoader(design_matrices=[("x",Xsub),("y",Ysub)],
                                 batch_size=batch_size, disable_shuffle=True)
 else:
-    eval_train_set = DataLoader(design_matrices=[("x",Xsub),("y",Ysub)],
+    eval_train_set = DataLoader(design_matrices=[("x",X),("y",Y)],
                                 batch_size=batch_size, disable_shuffle=True)
 
 # create development/validation sample
