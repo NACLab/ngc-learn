@@ -17,7 +17,7 @@ algorithm known as broadcast feedback alignment.
 
 Note that the folders of interest to this demonstration are:
 + `walkthroughs/demo7/`: this contains the necessary simulation scripts
-+ `walkthroughs/data`: this contains the zipped copy of the digit image arrays
++ `walkthroughs/data/`: this contains the zipped copy of the digit image arrays
 
 ## Encoding Data Patterns as Poisson Spike Trains
 

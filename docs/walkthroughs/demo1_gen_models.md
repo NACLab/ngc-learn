@@ -17,7 +17,7 @@ scheme designed in this demonstration.
 
 Note that the two folders of interest to this demonstration are:
 + `walkthroughs/demo1/`: this contains the necessary scripts and configuration files
-+ `walkthroughs/data`: this contains a zipped copy of the MNIST database arrays
++ `walkthroughs/data/`: this contains a zipped copy of the MNIST database arrays
 
 ## Setting Up and Training a Generative System
 

@@ -21,7 +21,7 @@ defined by the negative phase graph.
 
 Note that the folders of interest to this walkthrough are:
 + `walkthroughs/demo6/`: this contains the necessary simulation scripts
-+ `walkthroughs/data`: this contains the zipped copy of the digit image arrays
++ `walkthroughs/data/`: this contains the zipped copy of the digit image arrays
 
 ## On Single-Wing Harmoniums
 

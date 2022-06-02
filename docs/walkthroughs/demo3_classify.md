@@ -11,7 +11,7 @@ comparable to what was reported in (Whittington &amp; Bogacz, 2017).
 
 Note that the folders of interest to this demonstration are:
 + `walkthroughs/demo3/`: this contains the necessary simulation script
-+ `walkthroughs/data`: this contains the zipped copy of the MNIST database arrays
++ `walkthroughs/data/`: this contains the zipped copy of the MNIST database arrays
 
 ## Using an Ancestral Projection Graph to Initialize the Settling Process
 

@@ -13,7 +13,7 @@ over latent codes.
 
 Note that the folders of interest to this demonstration are:
 + `walkthroughs/demo4/`: this contains the necessary simulation scripts
-+ `walkthroughs/data`: this contains the zipped copy of the natural image arrays
++ `walkthroughs/data/`: this contains the zipped copy of the natural image arrays
 
 ## On Dictionary Learning
 

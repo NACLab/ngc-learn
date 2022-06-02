@@ -15,7 +15,7 @@ system.
 
 Note that the folders of interest to this demonstration are:
 + `walkthroughs/demo5/`: this contains the necessary simulation scripts
-+ `walkthroughs/data`: this contains the zipped copy of the face image arrays
++ `walkthroughs/data/`: this contains the zipped copy of the face image arrays
 
 ## Speeding Up the Settling Process with Amortized Inference
 
