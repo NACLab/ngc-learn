@@ -491,10 +491,9 @@ accuracy (recall that we are counting spikes and, for each row in an evaluated
 test mini-batch matrix, the output LIF node with highest spike count at the end
 of `100` ms  is chosen as the SNN's predicted label). This evaluation script
 also generates and saves to the `/snn/` sub-directory a learning curve plot
-(recorded during the simulated training for both the training and development
-data subsets) shown below:
+(recorded during the simulated training process) shown below:
 
-<img src="../images/demo7/mnist_learning_curves.png" width="600" />
+<img src="../images/demo7/mnist_learning_curves.png" width="500" />
 
 where we see that the SNN has decreased its approximate negative log likelihood
 from a starting point of about `2.30` nats to nearly `0.28` nats. This is bearing
