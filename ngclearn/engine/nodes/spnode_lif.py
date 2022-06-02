@@ -203,6 +203,20 @@ class SpNode_LIF(Node):
         bmask = self.masks.get("mask")
         ########################################################################
         if skip_core_calc == False:
+            ##########################################################################
+            #### update trace variable ####
+            trace_alpha = self.constants.get("trace_alpha")
+            Sz = self.compartments.get("Sz")
+            trace_z_tm1 = self.compartments.get("Trace_z")
+            # apply variable trace filters z_l(t) = (alpha * z_l(t))*(1−s(t)) + s_l(t)
+            #trace_z = tf.add((trace_z_tm1 * trace_alpha) * (-Sz + 1.0), Sz)
+            trace_z = (trace_z_tm1 * trace_alpha) * (-Sz + 1.0) + Sz
+            if injection_table.get("Trace_z") is None:
+                if self.do_inplace == True:
+                    self.compartments["Trace_z"].assign(trace_z)
+                else:
+                    self.compartments["Trace_z"] = trace_z
+
             # clear any relevant compartments that are NOT stateful before accruing
             # new deposits (this is crucial to ensure any desired stateless properties)
             if self.do_inplace == True:
@@ -304,18 +318,18 @@ class SpNode_LIF(Node):
                     self.compartments["Sz"].assign(Sz)
                 else:
                     self.compartments["Sz"] = Sz
-            ##########################################################################
-            #### update trace variable ####
-            trace_alpha = self.constants.get("trace_alpha")
-            trace_z_tm1 = self.compartments.get("Trace_z")
-            # apply variable trace filters z_l(t) = (alpha * z_l(t))*(1−s(t)) + s_l(t)
-            #trace_z = tf.add((trace_z_tm1 * trace_alpha) * (-Sz + 1.0), Sz)
-            trace_z = (trace_z_tm1 * trace_alpha) * (-Sz + 1.0) + Sz
-            if injection_table.get("Trace_z") is None:
-                if self.do_inplace == True:
-                    self.compartments["Trace_z"].assign(trace_z)
-                else:
-                    self.compartments["Trace_z"] = trace_z
+            # ##########################################################################
+            # #### update trace variable ####
+            # trace_alpha = self.constants.get("trace_alpha")
+            # trace_z_tm1 = self.compartments.get("Trace_z")
+            # # apply variable trace filters z_l(t) = (alpha * z_l(t))*(1−s(t)) + s_l(t)
+            # #trace_z = tf.add((trace_z_tm1 * trace_alpha) * (-Sz + 1.0), Sz)
+            # trace_z = (trace_z_tm1 * trace_alpha) * (-Sz + 1.0) + Sz
+            # if injection_table.get("Trace_z") is None:
+            #     if self.do_inplace == True:
+            #         self.compartments["Trace_z"].assign(trace_z)
+            #     else:
+            #         self.compartments["Trace_z"] = trace_z
             # currently un-used (below) target trace variable code
             # Ns = self.compartments.get("Ns")
             # x_tar = self.compartments.get("x_tar")

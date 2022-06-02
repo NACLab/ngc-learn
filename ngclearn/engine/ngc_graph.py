@@ -169,7 +169,7 @@ class NGCGraph:
 
         if self.use_graph_optim == True:
             # run a resting state settle() to compile the static graph
-            for k in range(3):
+            for k in range(2): # 3
                 self.settle()
             self.clear()
         return sim_info
