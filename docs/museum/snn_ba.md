@@ -7,7 +7,7 @@ beyond settling and update routines, a prediction function by which ancestral
 projection is carried out to efficiently provide label distribution or regression
 vector outputs. Note that "SNN" denotes "spiking neural network" and "BA"
 stands for "broadcast alignment". This class model it does not feature a separate
-`calc_updates()` method like other models given that its `settle()` routine
+`calc_updates()` method like other models since its `settle()` routine
 adjusts synaptic efficacies dynamically (if configured to do so).
 
 The SNN-BA is graphically depicted by the following graph:
