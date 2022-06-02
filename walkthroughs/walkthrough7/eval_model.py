@@ -112,7 +112,9 @@ with tf.device(gpu_tag):
     train_curve = np.load("snn/Ly0.npy")
     dev_curve = np.load("snn/vLy0.npy")
     print(" > Generating learning curves...")
-    viz.plot_learning_curves(train_curve, dev_curve, plot_fname="snn/mnist_learning_curves.png")
+    viz.plot_learning_curves(train_curve, dev_curve,
+                             plot_fname="snn/mnist_learning_curves.png",
+                             y_lab="$-\log p(x)$", x_lab="Epoch")
 
     agent = io_tools.deserialize(model_fname)
     # re-compile to new batch size
