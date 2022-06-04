@@ -426,11 +426,11 @@ The last item we would like to cover is how specifically the SNN system we have
 created above will be simulated. Normally, after building an `NGCGraph`, you
 would generally use its `.settle()` function to simulate the processing of
 data over a window of time (of length `K`). Although you could technically do
-this with the SNN too, since the SNN is meant to learn online across a spike
-train, it is simpler and more appropriate to use ngc-learn's lower-level online
+this with the SNN too, since the SNN is meant to learn online across spike
+trains, it is simpler and more appropriate to use ngc-learn's lower-level online
 simulation API (which was discussed in [Tutorial \#1](../tutorials/lesson1.md)).
 This will specifically allow us to integrate our SGD optimization rule directly into
-and extract some special statistic from the step-by-step evolution process of our
+and extract some special statistics from the step-by-step evolution process of our
 SNN as it processes data-driven Poisson spike trains. The code we would need to
 do this is below:
 
@@ -488,7 +488,7 @@ Ly = 0.32633236050605774  Acc = 0.963699996471405
 
 meaning that our three-layer SNN has greater than `96`\% test classification
 accuracy (recall that we are counting spikes and, for each row in an evaluated
-test mini-batch matrix, the output LIF node with highest spike count at the end
+test mini-batch matrix, the output LIF node with the highest spike count at the end
 of `100` ms  is chosen as the SNN's predicted label). This evaluation script
 also generates and saves to the `/snn/` sub-directory a learning curve plot
 (recorded during the simulated training process) shown below:
