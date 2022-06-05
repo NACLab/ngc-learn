@@ -22,7 +22,7 @@ class Node:
         self.name = name
         self.dim = dim
         self.batch_size = 1
-        self.t = 0 # tracks this node's current notion of discrete time
+        self.t = 0.0 # tracks this node's current notion of time
 
         self.is_learnable = False
         self.is_clamped = False
@@ -261,7 +261,7 @@ class Node:
         """ Wipes/clears values of each compartment in this node (and sets .is_clamped = False). """
         #print("CLEAR for {} w/ ip = {}".format(self.name, self.do_inplace))
         #tf.print("=============== CLEAR ===============")
-        self.t = 0
+        self.t = 0.0
 
         for comp_name in self.compartment_names:
             comp_value = self.compartments.get(comp_name)

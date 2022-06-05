@@ -41,9 +41,10 @@ class SpNode_LIF(Node):
     |   * Trace_z - filtered trace values of the spike values (real-valued vector)
     |   * ref - the refractory variables (an accumulator)
     |   * mask - a binary mask to be applied to the neural activities
+    |   * t_spike - tracks time of last spike (1 slot per neuron in this node)
 
     | Constants:
-    |   * V_thr -
+    |   * V_thr - voltage threshold (to generate a spike)
     |   * dt - the integration time constant (milliseconds)
     |   * R - the neural membrane resistance (mega Ohms)
     |   * C - the neural membrane capacitance (microfarads)
@@ -173,7 +174,7 @@ class SpNode_LIF(Node):
 
         # set LIF spiking neuron-specific vector statistics
         self.compartment_names = ["dz_bu", "dz_td", "Jz", "Vz", "Sz", "Trace_z",
-                                  "ref"] #, "x_tar", "Ns"]
+                                  "ref", "t_spike"] #, "x_tar", "Ns"]
         self.compartments = {}
         for name in self.compartment_names:
             self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]),
@@ -255,6 +256,8 @@ class SpNode_LIF(Node):
             Vz = self.compartments.get("Vz") # voltage V
             ref = self.compartments.get("ref") # refractory variable
 
+            self.t = self.t + dt # advance time forward by dt (t <- t + dt)
+
             dz_bu = self.compartments["dz_bu"]
             dz_td = self.compartments["dz_td"]
             dz = dz_td + dz_bu # gather pre-synaptic signals to modify current
@@ -315,9 +318,15 @@ class SpNode_LIF(Node):
                     self.compartments["Vz"] = Vz
             if injection_table.get("Sz") is None:
                 if self.do_inplace == True:
+                    t_spike = self.compartments.get("t_spike")
+                    t_spike = t_spike * (1.0 - Sz) + (Sz * self.t)
                     self.compartments["Sz"].assign(Sz)
+                    self.compartments["t_spike"].assign(t_spike)
                 else:
+                    t_spike = self.compartments.get("t_spike")
+                    t_spike = t_spike * (1.0 - Sz) + (Sz * self.t)
                     self.compartments["Sz"] = Sz
+                    self.compartments["t_spike"] = t_spike
             # ##########################################################################
             # #### update trace variable ####
             # trace_alpha = self.constants.get("trace_alpha")
@@ -355,8 +364,9 @@ class SpNode_LIF(Node):
                         self.compartments[key] = ( self.compartments.get(key) * bmask )
 
         ########################################################################
-        if skip_core_calc == False:
-            self.t = self.t + 1
+        # if skip_core_calc == False:
+        #     dt = self.constants.get("dt") # integration time constant
+        #     self.t = self.t + dt
 
         # a node returns a list of its named component values
         values = []
