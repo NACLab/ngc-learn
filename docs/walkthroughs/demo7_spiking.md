@@ -38,7 +38,7 @@ as the probability that a spike will occur, thus yielding (for each dimension) a
 with a value of $\mathbf{s}_i$. In other words, each feature drives a Bernoulli
 distribution of the form where $\mathbf{s}_i \sim \mathcal{B}(n, p)$ where $n = 1$
 and $p = \mathbf{x}_i$. This, over time, results in a Poisson process where the
-rate of firing is dictated by solely in proportion to a feature's value.
+rate of firing is dictated to be solely in proportion to a feature's value.
 
 To rate code your data, let's start by using a simple function in ngc-learn's
 `ngclearn.utils.stat_utils` module. Assuming we have a simple $10$-dimensional
