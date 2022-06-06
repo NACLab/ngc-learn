@@ -6,7 +6,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 import tensorflow as tf
 
-def plot_learning_curves(acc_curve, dev_acc_curve, plot_fname=None, scale=1.0, 
+def plot_learning_curves(acc_curve, dev_acc_curve, plot_fname=None, scale=1.0,
                          y_lab="Loss", x_lab="Iteration"):
     """
 
@@ -89,8 +89,8 @@ def create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
         plt.savefig(plot_fname)
         plt.clf()
 
-def plot_lif_neuron(curr, mem, spike, ref, dt, thr_line=False,
-                    title=False, max_mem_val=1.25, fname=None):
+def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
+                    title=False, min_mem_val=0.0, max_mem_val=1.25, fname=None):
     """
     Simple plotting function for visualizing the trajectory of a single neuron
     (where its input electrical current, membrane potential value, output
@@ -111,7 +111,9 @@ def plot_lif_neuron(curr, mem, spike, ref, dt, thr_line=False,
 
         title: the title of the plot
 
-        max_mem_val: maximum value bound on membrane potential subplot (max-value of y-axis)
+        min_mem_val: minimum value bound on membrane potential subplot (min of y-axis)
+
+        max_mem_val: maximum value bound on membrane potential subplot (max of y-axis)
 
         fname: the filename to save this plot as, i.e., /path/to/name.png (Default: lif_analysis.png)
     """
@@ -127,7 +129,7 @@ def plot_lif_neuron(curr, mem, spike, ref, dt, thr_line=False,
 
     # plot membrane potential
     ax[1].plot(mem, c="tab:red")
-    ax[1].set_ylim([0, max_mem_val])
+    ax[1].set_ylim([min_mem_val, max_mem_val])
     ax[1].set_ylabel("Membrane Potential ($V_t$)")
     if thr_line:
         ax[1].axhline(y=thr_line, alpha=0.25, linestyle="dashed", c="black", linewidth=2)
@@ -142,6 +144,6 @@ def plot_lif_neuron(curr, mem, spike, ref, dt, thr_line=False,
     plt.ylabel("Output Spikes")
     plt.yticks([])
     if fname is None:
-        fname = "lif_analysis.png"
+        fname = "lif_plot.png"
     plt.savefig(fname)
     plt.clf()

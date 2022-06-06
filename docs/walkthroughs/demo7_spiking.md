@@ -282,8 +282,8 @@ for t in range(current.shape[1]):
 cur_in = np.asarray(curr_rec)
 mem_rec = np.asarray(voltage)
 spk_rec = np.asarray(spike_train)
-viz.plot_lif_neuron(cur_in, mem_rec, spk_rec, refract, dt, thr_line=V_thr, max_mem_val=1.3,
-                    title="LIF Node: Stepped Electrical Input")
+viz.plot_spiking_neuron(cur_in, mem_rec, spk_rec, refract, dt, thr_line=1, min_mem_val=0,
+                        max_mem_val=1.3, title="LIF Node: Stepped Electrical Input", fname="lif_plot.png")
 ```
 
 which produces the following plot (saved as `lif_plot.png` locally to disk):

@@ -10,7 +10,7 @@ class SpNode_ELIF(Node):
     | Implements the exponential leaky-integrate and fire (ELIF) spiking state node that follows NGC settling dynamics
     | according to:
     |   Jz = dz  OR  d.Jz/d.t = (-Jz + dz) * (dt/tau_curr) IF zeta > 0 // current
-    |   d.Vz/d.t = (-Vz + Jz * R + exp((Vz - V_rh)/Delta_T ) * Delta_T) * (dt/tau_mem) // voltage
+    |   d.Vz/d.t = (V_rest - Vz + Jz * R + exp((Vz - V_rh)/Delta_T ) * Delta_T) * (dt/tau_mem) // voltage
     |   spike(t) = spike_response_model(Jz(t), Vz(t), ref(t)...) // spikes computed according to SRM
     |   trace(t) = (trace(t-1) * alpha) * (1 - Sz(t)) + Sz(t)  // variable trace filter
     | where:
@@ -24,13 +24,14 @@ class SpNode_ELIF(Node):
     |   tau_curr - electrical current time constant strength
     |   dt - the integration time constant d.t
     |   R - neural membrane resistance
+    |   V_rest - resting membrane potential
 
     | Note that the above is used to adjust neural electrical current values via an integator inside a node.
         For example, if the standard/default Euler integrator is used then the neurons inside this
         node are adjusted per step as follows:
     |   Jz <- Jz + d.Jz/d.t // <-- only if zeta > 0
     |   Vz <- Vz + d.Vz/d.t
-    |   ref <- ref + d.t (resets to 0 after 1 millisecond)
+    |   ref <- ref + d.t (resets to 0 after default 1 millisecond)
 
     | Compartments:
     |   * dz_td - the top-down pressure compartment (deposited signals summed)
@@ -44,8 +45,9 @@ class SpNode_ELIF(Node):
 
     | Constants:
     |   * V_thr - voltage threshold (for a spike to be generated)
-    |   * V_rh - internal voltage threshold (for exponential term)
-    |   * V_r - voltage reset value
+    |   * V_rh - rheobase threshold or ("internal voltage" threshold for exponential term)
+    |   * V_reset - voltage/membrane potential reset value
+    |   * V_rest - resting membrane potential
     |   * Delta_T - sharpness parameter
     |   * dt - the integration time constant (milliseconds)
     |   * R - the neural membrane resistance (mega Ohms)
@@ -174,7 +176,8 @@ class SpNode_ELIF(Node):
         self.constants["zeta"] = self.zeta
         self.constants["ref_T"] = self.ref_T
         self.constants["V_rh"] = self.V_thr - 0.2 # 0.8
-        self.constants["V_r"] = -0.1 # voltage reset value
+        self.constants["V_reset"] = -0.1 # voltage reset value
+        self.constants["V_rest"] = 0.0
         self.constants["Delta_T"] = 1.0
 
         # set LIF spiking neuron-specific vector statistics
@@ -255,7 +258,8 @@ class SpNode_ELIF(Node):
             tau_mem = self.constants.get("tau_m") # membrane time constant (R * C)
             V_thr = self.constants.get("V_thr") # get voltage threshold (constant)
             V_rh = self.constants.get("V_rh")
-            V_r = self.constants.get("V_r")
+            V_reset = self.constants.get("V_reset")
+            V_rest = self.constants.get("V_rest")
             Delta_T = self.constants.get("Delta_T")
             dt = self.constants.get("dt") # integration time constant
             ref_T = self.constants.get("ref_T")
@@ -286,17 +290,17 @@ class SpNode_ELIF(Node):
                 mask = tf.cast(tf.greater(ref, ref_T),dtype=tf.float32)
                 ref = ref * (1.0 - mask)
 
-                # if ref > 0.0: Vz <- V_r, else: update
-                mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) # ref1 > 0.0
-                Vz = (Vz + (-Vz + Jz * R + tf.math.exp((Vz - V_rh)/Delta_T) * Delta_T) \
-                     * (dt/tau_mem)) * (1.0 - mask) + (mask * V_r)
+                # if ref > 0.0: Vz <- 0, else: update
+                mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) # ref > 0.0
+                exp_term = tf.math.exp((Vz - V_rh)/Delta_T) * Delta_T
+                Vz = (Vz + (V_rest - Vz + exp_term + Jz * R) * (dt/tau_mem)) * (1.0 - mask)
+                Vz = Vz + mask * V_reset
 
-                mask = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32) # h1 > h_thr
+                mask = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32) # Vz > V_thr
                 ref = mask * eps + (1.0 - mask) * ref
 
-                #if ref1 > 0.0: a <- 1, else 0
+                #if ref > 0.0: Sz <- 1, else 0
                 Sz = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32)
-                #Sz = tf.cast(tf.math.greater_equal(Vz, V_thr), dtype=tf.float32)
             else: # special mode where refractory period is exactly 0, so instantaneous refraction
                 Vz = (Vz + (-Vz + Jz * R  + tf.math.exp((Vz - V_rh)/Delta_T) * Delta_T) * (dt/tau_mem)) #- (Sz * V_thr)
                 Sz = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32)

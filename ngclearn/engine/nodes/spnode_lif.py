@@ -10,7 +10,7 @@ class SpNode_LIF(Node):
     | Implements a leaky-integrate and fire (LIF) spiking state node that follows NGC settling dynamics
     | according to:
     |   Jz = dz  OR  d.Jz/d.t = (-Jz + dz) * (dt/tau_curr) IF zeta > 0 // current
-    |   d.Vz/d.t = (-Vz + Jz * R) * (dt/tau_mem) // voltage
+    |   d.Vz/d.t = (V_rest - Vz + Jz * R) * (dt/tau_mem) // voltage
     |   spike(t) = spike_response_model(Jz(t), Vz(t), ref(t)...) // spikes computed according to SRM
     |   trace(t) = (trace(t-1) * alpha) * (1 - Sz(t)) + Sz(t)  // variable trace filter
     | where:
@@ -24,6 +24,7 @@ class SpNode_LIF(Node):
     |   tau_curr - electrical current time constant strength
     |   dt - the integration time constant d.t
     |   R - neural membrane resistance
+    |   V_rest - resting membrane potential
 
     | Note that the above is used to adjust neural electrical current values via an integator inside a node.
         For example, if the standard/default Euler integrator is used then the neurons inside this
@@ -45,6 +46,8 @@ class SpNode_LIF(Node):
 
     | Constants:
     |   * V_thr - voltage threshold (to generate a spike)
+    |   * V_reset - voltage/membrane potential reset value
+    |   * V_rest - resting membrane potential
     |   * dt - the integration time constant (milliseconds)
     |   * R - the neural membrane resistance (mega Ohms)
     |   * C - the neural membrane capacitance (microfarads)
@@ -171,6 +174,8 @@ class SpNode_LIF(Node):
         self.constants["eps"] = 1e-4
         self.constants["zeta"] = self.zeta
         self.constants["ref_T"] = self.ref_T
+        self.constants["V_reset"] = 0.0 # voltage reset value
+        self.constants["V_rest"] = 0.0
 
         # set LIF spiking neuron-specific vector statistics
         self.compartment_names = ["dz_bu", "dz_td", "Jz", "Vz", "Sz", "Trace_z",
@@ -249,6 +254,8 @@ class SpNode_LIF(Node):
             C = self.constants.get("C")
             tau_mem = self.constants.get("tau_m") # membrane time constant (R * C)
             V_thr = self.constants.get("V_thr") # get voltage threshold (constant)
+            V_reset = self.constants.get("V_reset")
+            V_rest = self.constants.get("V_rest")
             dt = self.constants.get("dt") # integration time constant
             ref_T = self.constants.get("ref_T")
             # get current compartment values
@@ -285,15 +292,15 @@ class SpNode_LIF(Node):
                 ref = ref * (1.0 - mask)
 
                 # if ref > 0.0: Vz <- 0, else: update
-                mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) # ref1 > 0.0
-                Vz = (Vz + (-Vz + Jz * R) * (dt/tau_mem)) * (1.0 - mask)
+                mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) # ref > 0.0
+                Vz = (Vz + (V_rest - Vz + Jz * R) * (dt/tau_mem)) * (1.0 - mask)
+                Vz = Vz + mask * V_reset
 
-                mask = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32) # h1 > h_thr
+                mask = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32) # Vz > V_thr
                 ref = mask * eps + (1.0 - mask) * ref
 
-                #if ref1 > 0.0: a <- 1, else 0
+                #if ref > 0.0: Sz <- 1, else 0
                 Sz = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32)
-                #Sz = tf.cast(tf.math.greater_equal(Vz, V_thr), dtype=tf.float32)
             else: # special mode where refractory period is exactly 0, so instantaneous refraction
                 Vz = (Vz + (-Vz + Jz * R) * (dt/tau_mem)) #- (Sz * V_thr)
                 Sz = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32)
