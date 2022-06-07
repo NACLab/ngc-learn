@@ -22,6 +22,7 @@ class SpNode_Enc(Node):
     |   * Sz - the current spike values (binary vector signal) at time t
     |   * Trace_z - filtered trace values of the spike values (real-valued vector)
     |   * mask - a binary mask to be applied to the neural activities
+    |   * t_spike - time of last spike (per neuron inside this node)
 
     Args:
         name: the name/label of this node
@@ -32,16 +33,26 @@ class SpNode_Enc(Node):
 
         batch_size: batch-size this node should assume (for use with static graph optimization)
 
+        integrate_kernel: Dict defining the neural state integration process type. The expected keys and
+            corresponding value types are specified below:
+
+            :`'integrate_type'`: <UNUSED>
+
+            :`'dt'`: type integration time constant for the spiking neurons
+
+        spike_kernel: <UNUSED>
+
         trace_kernel: Dict defining the signal tracing process type. The expected keys and
             corresponding value types are specified below:
 
             :`'dt'`: type integration time constant for the trace
 
-            :`'tau'`: the filter time constant for the trace
+            :`'tau_trace'`: the filter time constant for the trace
 
             :Note: specifying None will automatically set this node to not use variable tracing
     """
-    def __init__(self, name, dim, gain=1.0, batch_size=1, trace_kernel=None):
+    def __init__(self, name, dim, gain=1.0, batch_size=1, integrate_cfg=None,
+                 spike_kernel=None, trace_kernel=None):
         node_type = "spike_enc_state"
         super().__init__(node_type, name, dim)
         self.dim = dim
@@ -50,28 +61,29 @@ class SpNode_Enc(Node):
 
         self.gain = gain
         self.dt = 1.0 # integration time constant (ms)
+        self.tau_m = 1.0
+        self.integrate_cfg = integrate_cfg
+        if self.integrate_cfg is not None:
+            self.dt = self.integrate_cfg.get("dt")
 
         self.trace_kernel = trace_kernel
         self.trace_dt = 1.0
+        self.tau_trace = 20.0
         if self.trace_kernel is not None:
-            # trace integration time constant (ms)
-            self.trace_dt = self.trace_kernel.get("dt")
-            # filter time constant
-            self.tau = self.trace_kernel.get("tau")
-
-        # derived settings that are a function of other spiking neuron settings
-        self.a = np.exp(-self.trace_dt/self.tau)
-        self.tau_j = 1.0
+            if self.trace_kernel.get("dt") is not None:
+                self.trace_dt = self.trace_kernel.get("dt") # trace integration time constant (ms)
+            #5.0 # filter time constant -- where dt (or T) = 0.001 (to model ms)
+            self.tau_trace = self.trace_kernel.get("tau_trace")
 
         # set LIF spiking neuron-specific (vector/scalar) constants
-        self.constant_name = ["gain", "dt", "trace_alpha"]
+        self.constant_name = ["gain", "dt", "tau_trace"]
         self.constants = {}
         self.constants["dt"] = self.dt
         self.constants["gain"] = self.gain
-        self.constants["trace_alpha"] = self.a
+        self.constants["tau_trace"] = self.tau_trace
 
         # set LIF spiking neuron-specific vector statistics
-        self.compartment_names = ["z", "Sz", "Trace_z"] #, "x_tar", "Ns"]
+        self.compartment_names = ["z", "Sz", "Trace_z", "t_spike", "ref"]
         self.compartments = {}
         for name in self.compartment_names:
             self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]),
@@ -81,8 +93,6 @@ class SpNode_Enc(Node):
         for name in self.mask_names:
             self.masks[name] = tf.Variable(tf.ones([batch_size,dim]),
                                            name="{}_{}".format(self.name, name))
-
-        self.connected_cables = []
 
     def compile(self):
         info = super().compile()
@@ -98,41 +108,48 @@ class SpNode_Enc(Node):
         bmask = self.masks.get("mask")
         ########################################################################
         if skip_core_calc == False:
+            # compute spike response model
+            dt = self.constants.get("dt") # integration time constant
             z = self.compartments.get("z")
+            self.t = self.t + dt # advance time forward by dt (t <- t + dt)
             #Sz = transform.convert_to_spikes(z, self.max_spike_rate, self.dt)
             Sz = stat.convert_to_spikes(z, gain=self.gain)
 
             if injection_table.get("Sz") is None:
                 if self.do_inplace == True:
+                    t_spike = self.compartments.get("t_spike")
+                    t_spike = t_spike * (1.0 - Sz) + (Sz * self.t)
                     self.compartments["Sz"].assign(Sz)
+                    self.compartments["t_spike"].assign(t_spike)
                 else:
+                    t_spike = self.compartments.get("t_spike")
+                    t_spike = t_spike * (1.0 - Sz) + (Sz * self.t)
                     self.compartments["Sz"] = Sz
+                    self.compartments["t_spike"] = t_spike
+
+            #### update trace variable ####
+            tau_tr = self.constants.get("tau_trace")
+            #Sz = self.compartments.get("Sz")
+            tr_z = self.compartments.get("Trace_z")
+            d_tr = -tr_z/tau_tr + Sz
+            tr_z = tr_z + d_tr
+            if injection_table.get("Trace_z") is None:
+                if self.do_inplace == True:
+                    self.compartments["Trace_z"].assign(tr_z)
+                else:
+                    self.compartments["Trace_z"] = tr_z
             ##########################################################################
 
             ##########################################################################
-            trace_alpha = self.constants.get("trace_alpha")
-            trace_z_tm1 = self.compartments.get("Trace_z")
-            # apply variable trace filters z_l(t) = (alpha * z_l(t))*(1−s`(t)) +s_l(t)
-            trace_z = tf.add((trace_z_tm1 * trace_alpha) * (-Sz + 1.0), Sz)
-            if injection_table.get("Trace_z") is None:
-                if self.do_inplace == True:
-                    self.compartments["Trace_z"].assign(trace_z)
-                else:
-                    self.compartments["Trace_z"] = trace_z
-            # Ns = self.compartments.get("Ns")
-            # x_tar = self.compartments.get("x_tar")
-            # x_tar = x_tar + (trace_z - x_tar)/Ns
-            # if injection_table.get("x_tar") is None:
+            # trace_alpha = self.constants.get("trace_alpha")
+            # trace_z_tm1 = self.compartments.get("Trace_z")
+            # # apply variable trace filters z_l(t) = (alpha * z_l(t))*(1−s`(t)) +s_l(t)
+            # trace_z = tf.add((trace_z_tm1 * trace_alpha) * (-Sz + 1.0), Sz)
+            # if injection_table.get("Trace_z") is None:
             #     if self.do_inplace == True:
-            #         self.compartments["x_tar"].assign(x_tar)
+            #         self.compartments["Trace_z"].assign(trace_z)
             #     else:
-            #         self.compartments["x_tar"] = x_tar
-            # Ns = Ns + 1
-            # if injection_table.get("Ns") is None:
-            #     if self.do_inplace == True:
-            #         self.compartments["Ns"].assign(Ns)
-            #     else:
-            #         self.compartments["Ns"] = Ns
+            #         self.compartments["Trace_z"] = trace_z
 
         if bmask is not None: # applies mask to all component variables of this node
             for key in self.compartments:
@@ -143,8 +160,6 @@ class SpNode_Enc(Node):
                         self.compartments[key] = ( self.compartments.get(key) * bmask )
 
         ########################################################################
-        if skip_core_calc == False:
-            self.t = self.t + 1
 
         # a node returns a list of its named component values
         values = []

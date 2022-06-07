@@ -77,8 +77,8 @@ class SNN_BA:
         R = 5.1 # unused # 1
         integrate_cfg = {"integrate_type" : "euler", "use_dfx" : True, "dt" : dt}
         #spike_kernel = {"V_thr" : V_thr, "R" : R, "C" : 5e-3, "tau_curr" : 2e-3}
-        spike_kernel = {"V_thr" : V_thr, "tau_mem" : tau_mem}
-        trace_kernel = {"dt" : dt, "tau" : 5.0}
+        spike_kernel = {"V_thr" : V_thr, "tau_m" : tau_mem, "ref_T" : 1.0}#, "A_theta" : 0.25, "tau_A" : 20.0}
+        trace_kernel = {"dt" : dt, "tau_trace" : 5.0}
 
         # set up system nodes
         z2 = SpNode_Enc(name="z2", dim=x_dim, gain=0.25, trace_kernel=trace_kernel)
@@ -152,7 +152,7 @@ class SNN_BA:
         Returns:
             y_sample (spike counts from the underlying predictive model)
         """
-        y_hat, y_count = self.settle(x)
+        y_hat, y_count = self.settle(x, calc_update=False)
         return y_count
 
     def settle(self, x, y=None, calc_update=True):

@@ -142,10 +142,17 @@ def init_weights(kernel, shape, seed):
         I = tf.eye(n_cols) # create diagonal I
         AI = (1.0 - I) * factor # create anti-diagonal AI
         params = AI
+    elif init_type == "lat_inhibit": # special matrix for current inhibition
+        pos = kernel[1]
+        neg = kernel[2]
+        n_cols = shape[1]
+        I = tf.eye(n_cols) # create diagonal I
+        M = I * pos + (1.0 - I) * neg
+        params = M
     elif init_type == "inhibit_matrix": # special matrix for current inhibition
         #M = (I - (1.0 - I)) * (f/2.0)
         factor = kernel[1]
-        n_cols = shape[2]
+        n_cols = shape[1]
         I = tf.eye(n_cols) # create diagonal I
         M = (I - (1.0 - I)) * (factor/2.0)
         params = M

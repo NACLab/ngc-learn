@@ -257,7 +257,7 @@ class Node:
         """
         return []
 
-    def clear(self):
+    def clear(self, batch_size=-1):
         """ Wipes/clears values of each compartment in this node (and sets .is_clamped = False). """
         #print("CLEAR for {} w/ ip = {}".format(self.name, self.do_inplace))
         #tf.print("=============== CLEAR ===============")
@@ -269,14 +269,20 @@ class Node:
                 if self.do_inplace == True:
                     self.compartments[comp_name].assign(comp_value * 0)
                 else:
-                    self.compartments[comp_name] = (comp_value * 0)
+                    if batch_size > 0:
+                        self.compartments[comp_name] = tf.zeros([batch_size, comp_value.shape[1]])
+                    else:
+                        self.compartments[comp_name] = (comp_value * 0)
         for mask_name in self.mask_names:
             mask_value = self.masks.get(mask_name)
             if mask_value is not None:
                 if self.do_inplace == True:
                     self.masks[mask_name].assign(mask_value * 0 + 1)
                 else:
-                    self.masks[mask_name] = (mask_value * 0 + 1)
+                    if batch_size > 0:
+                        self.masks[mask_name] = tf.ones([batch_size, mask_value.shape[1]])
+                    else:
+                        self.masks[mask_name] = (mask_value * 0 + 1)
 
     def set_cold_state(self, injection_table=None, batch_size=-1):
         """

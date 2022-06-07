@@ -320,7 +320,7 @@ tau_mem = 20 # membrane potential time constant
 V_thr = 0.4 # spiking threshold
 # Default for rec_T of 1 ms will be used - this is the default for SpNode_LIF(s)
 integrate_cfg = {"integrate_type" : "euler", "dt" : dt}
-spike_kernel = {"V_thr" : V_thr, "tau_mem" : tau_mem}
+spike_kernel = {"V_thr" : V_thr, "tau_m" : tau_mem}
 trace_kernel = {"dt" : dt, "tau" : 5.0}
 
 # set up system -- notice for z2, a gain of 0.25 yields spike frequency of 63.75 Hz
@@ -354,7 +354,7 @@ this sets up an SNN structure with three layers -- an input layer `z2` containin
 the Poisson spike train nodes (which will be driven by input data `x`), an internal
 layer of LIF nodes, and an output layer of LIF nodes. We have also opted to
 simplify the choice of meta-parameters and directly set the membrane potential
-constant `tau_mem` directly (instead of messing with membrane resistance and capacitance).
+constant `tau_m` directly (instead of messing with membrane resistance and capacitance).
 Nothing else is out of the ordinary in creating an `NGCGraph` except that we have
 also included a simple specialized convenience node `d1`, which will serve as a special part
 of our SNN structure that will naturally give us an easy way to adapt this SNN's

@@ -609,7 +609,7 @@ class NGCGraph:
                       )
         return readouts
 
-    def clear(self):
+    def clear(self, batch_size=-1):
         """
         Clears/deletes any persistent signals currently embedded w/in this graph's Nodes
         """
@@ -618,4 +618,4 @@ class NGCGraph:
         self.injection_table = {}
         for node_name in self.nodes:
             node = self.nodes.get(node_name)
-            node.clear()
+            node.clear(batch_size=batch_size)
