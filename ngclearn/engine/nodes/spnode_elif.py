@@ -2,36 +2,42 @@ import tensorflow as tf
 import sys
 import numpy as np
 import copy
-from ngclearn.engine.nodes.node import Node
+from ngclearn.engine.nodes.spnode_lif import SpNode_LIF
 from ngclearn.utils import transform_utils as transform
 
-class SpNode_ELIF(Node):
+class SpNode_ELIF(SpNode_LIF):
     """
-    | Implements the exponential leaky-integrate and fire (ELIF) spiking state node that follows NGC settling dynamics
-    | according to:
+    | Implements the exponential leaky-integrate and fire (ELIF) spiking state
+    | node that follows NGC settling dynamics according to:
     |   Jz = dz  OR  d.Jz/d.t = (-Jz + dz) * (dt/tau_curr) IF zeta > 0 // current
     |   d.Vz/d.t = (V_rest - Vz + Jz * R + exp((Vz - V_rh)/Delta_T ) * Delta_T) * (dt/tau_mem) // voltage
-    |   spike(t) = spike_response_model(Jz(t), Vz(t), ref(t)...) // spikes computed according to SRM
-    |   trace(t) = (trace(t-1) * alpha) * (1 - Sz(t)) + Sz(t)  // variable trace filter
+    |   Sz = spike(t) = spike_response_model(Jz(t), Vz(t), ref(t)...) // spikes computed according to SRM
+    |   d.Trace_z/d.t = -Trace_z/tau_trace + (Sz * (ref <= eps))  // variable trace filter
+    |   d.V_delta/d.t = -(V - 0.0)/tau_A + (Sz * (ref <= eps)) * A_theta // voltage delta
     | where:
     |   Jz - current value of the electrical current input to the spiking neurons w/in this node
     |   Vz - current value of the membrane potential of the spiking neurons w/in this node
     |   Sz - the spike signal reading(s) of the spiking neurons w/in this node
     |   dz - aggregated input signals from other nodes/locations to drive current Jz
     |   ref - the current value of the refractory variables (accumulates with time and forces neurons to rest)
+    |   V_delta - the current value of the voltage threshold adaptation delta
     |   alpha - variable trace's interpolation constant (dt/tau <-- input by user)
     |   tau_mem - membrane potential time constant (R_m * C_m  - resistance times capacitance)
     |   tau_curr - electrical current time constant strength
     |   dt - the integration time constant d.t
     |   R - neural membrane resistance
     |   V_rest - resting membrane potential
+    |   V_rh - rheobase threshold
+    |   Delta_T - sharpness control meta-parameter
 
     | Note that the above is used to adjust neural electrical current values via an integator inside a node.
-        For example, if the standard/default Euler integrator is used then the neurons inside this
+        For example, the standard/default Euler integrator is used and the neurons inside this
         node are adjusted per step as follows:
     |   Jz <- Jz + d.Jz/d.t // <-- only if zeta > 0
     |   Vz <- Vz + d.Vz/d.t
-    |   ref <- ref + d.t (resets to 0 after default 1 millisecond)
+    |   ref <- ref + d.t (resets to 0 after 1 millisecond)
+    |   Trace_z <- Trace_z + d.Trace_z/d.t
+    |   V_delta <- V_delta + d.V_delta/d.t. // leads to V_thr(t) = V_thr + V_delta(t)
 
     | Compartments:
     |   * dz_td - the top-down pressure compartment (deposited signals summed)
@@ -42,20 +48,24 @@ class SpNode_ELIF(Node):
     |   * Trace_z - filtered trace values of the spike values (real-valued vector)
     |   * ref - the refractory variables (an accumulator)
     |   * mask - a binary mask to be applied to the neural activities
+    |   * t_spike - tracks time of last spike (1 slot per neuron in this node)
+    |   * V_delta - the adaptation of the voltage threshold over time
 
     | Constants:
-    |   * V_thr - voltage threshold (for a spike to be generated)
+    |   * V_thr - voltage threshold (to generate a spike)
+    |   * Delta_T - sharpness parameter
     |   * V_rh - rheobase threshold or ("internal voltage" threshold for exponential term)
     |   * V_reset - voltage/membrane potential reset value
     |   * V_rest - resting membrane potential
-    |   * Delta_T - sharpness parameter
     |   * dt - the integration time constant (milliseconds)
     |   * R - the neural membrane resistance (mega Ohms)
     |   * C - the neural membrane capacitance (microfarads)
     |   * tau_m - the membrane potential time constant (tau_m = R * C)
     |   * tau_c - the electrial current time constant (if zeta > 0)
-    |   * trace_alpha - the trace variable's interpolation constant
+    |   * trace_tau - the trace variable's interpolation time constant
     |   * ref_T - the length of the absolute refractory period (milliseconds)
+    |   * tau_A - the voltage adaptation time constant
+    |   * A_theta - the voltage adaptation increment
 
     Args:
         name: the name/label of this node
@@ -88,112 +98,31 @@ class SpNode_ELIF(Node):
 
              :`'tau_curr'`: the electrical current time constant (only used if zeta > 0, otherwise ignored)
 
+             :Note: more constants can be set through this kernel (see above "Constants" for values to set)
+
         trace_kernel: Dict defining the signal tracing process type. The expected keys and
             corresponding value types are specified below:
 
             :`'dt'`: type integration time constant for the trace
 
-            :`'tau'`: the filter time constant for the trace
+            :`'tau_trace'`: the filter time constant for the trace
 
             :Note: specifying None will automatically set this node to not use variable tracing
     """
     def __init__(self, name, dim, batch_size=1, integrate_kernel=None,
                  spike_kernel=None, trace_kernel=None):
-        node_type = "spike_lif_state"
-        super().__init__(node_type, name, dim)
-        self.dim = dim
-        self.batch_size = batch_size
-        self.is_clamped = False
+        node_type = "spike_elif_state"
+        super().__init__(name, dim, batch_size, integrate_kernel,
+                         spike_kernel, trace_kernel)
 
-        self.integrate_kernel = integrate_kernel
-        self.use_dfx = False
-        self.integrate_type = "euler" # Default = euler
-        self.dt = 0.25 # integration time constant (ms)
-        if integrate_kernel is not None:
-            self.use_dfx = integrate_kernel.get("use_dfx")
-            self.integrate_type = integrate_kernel.get("integrate_type")
-            if integrate_kernel.get("dt") is not None:
-                self.dt = integrate_kernel.get("dt") # trace integration time constant (ms)
-
-        self.zeta = 0
-        #self.conduct_leak = leak
-        # spiking neuron settings
-        self.max_spike_rate = 640.0 # 64 Hz is a good default standard value
-        self.V_thr = 1.0  # threshold for a neuron's voltage to reach before spiking
-        self.R_m = 5.1 # in mega ohms
-        self.C_m = 5e-3 # in picofarads
-
-        self.tau_m = self.R_m * self.C_m #20.0 # should be -> tau_mem = R*C
-        self.tau_c = 1.0
-        self.ref_T = 1.0 # ms
-
-        self.spike_kernel = spike_kernel
+        # additional constants to set up for Exp-LIF model
+        if self.constants.get("V_rh") is None:
+            self.constants["V_rh"] = self.constants["V_thr"] - 0.2
+        if self.constants.get("Delta_T") is None:
+            self.constants["Delta_T"] = 1.0
         if self.spike_kernel is not None:
-            #self.max_spike_rate = self.spike_kernel.get("max_spike_rate")
-            if self.spike_kernel.get("V_thr") is not None:
-                self.V_thr = self.spike_kernel.get("V_thr")
-            if self.spike_kernel.get("R") is not None:
-                self.R_m = self.spike_kernel.get("R")
-            if self.spike_kernel.get("C") is not None:
-                self.C_m = self.spike_kernel.get("C")
-            if self.spike_kernel.get("zeta") is not None:
-                self.zeta = self.spike_kernel.get("zeta")
-            if self.spike_kernel.get("tau_curr") is not None:
-                self.tau_c = self.spike_kernel.get("tau_curr")
-            if self.spike_kernel.get("ref_T") is not None:
-                self.ref_T = self.spike_kernel.get("ref_T")
-            if self.spike_kernel.get("tau_mem") is not None:
-                self.tau_m = self.spike_kernel.get("tau_mem")
-                self.R_m = 1.0
-                self.C_m = self.tau_m # C = tau_m/(R = 1)
-
-
-        self.trace_kernel = trace_kernel
-        self.trace_dt = 1.0
-        if self.trace_kernel is not None:
-            if self.trace_kernel.get("dt") is not None:
-                self.trace_dt = self.trace_kernel.get("dt") # trace integration time constant (ms)
-            #5.0 # filter time constant -- where dt (or T) = 0.001 (to model ms)
-            self.tau = self.trace_kernel.get("tau")
-
-        # derived settings that are a function of other spiking neuron settings
-        self.a = np.exp(-self.trace_dt/self.tau)
-        #self.tau_m = self.R_m * self.C_m
-        #self.kappa = 1.0 #np.exp(-self.dt/self.tau_j)
-        #self.kappa = 0.2
-
-        # set LIF spiking neuron-specific (vector/scalar) constants
-        self.constant_name = ["V_thr", "dt", "R", "C", "tau_m", "tau_c", "trace_alpha"]
-        self.constants = {}
-        self.constants["V_thr"] = tf.ones([1,self.dim]) * self.V_thr
-        self.constants["dt"] = self.dt
-        self.constants["R"] = self.R_m
-        self.constants["C"] = self.C_m
-        self.constants["tau_m"] = self.tau_m
-        self.constants["tau_c"] = self.tau_c
-        self.constants["trace_alpha"] = self.a
-        self.constants["eps"] = 1e-4
-        self.constants["zeta"] = self.zeta
-        self.constants["ref_T"] = self.ref_T
-        self.constants["V_rh"] = self.V_thr - 0.2 # 0.8
-        self.constants["V_reset"] = -0.1 # voltage reset value
-        self.constants["V_rest"] = 0.0
-        self.constants["Delta_T"] = 1.0
-
-        # set LIF spiking neuron-specific vector statistics
-        self.compartment_names = ["dz_bu", "dz_td", "Jz", "Vz", "Sz", "Trace_z",
-                                  "ref"] #, "x_tar", "Ns"]
-        self.compartments = {}
-        for name in self.compartment_names:
-            self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]),
-                                                  name="{}_{}".format(self.name, name))
-        self.mask_names = ["mask"]
-        self.masks = {}
-        for name in self.mask_names:
-            self.masks[name] = tf.Variable(tf.ones([batch_size,dim]),
-                                           name="{}_{}".format(self.name, name))
-
-        self.connected_cables = []
+            if self.spike_kernel.get("V_reset") is None:
+                self.constants["V_reset"] = -0.1 # voltage reset value
 
     def compile(self):
         info = super().compile()
@@ -213,18 +142,6 @@ class SpNode_ELIF(Node):
         ########################################################################
         if skip_core_calc == False:
             ##########################################################################
-            #### update trace variable ####
-            trace_alpha = self.constants.get("trace_alpha")
-            Sz = self.compartments.get("Sz")
-            trace_z_tm1 = self.compartments.get("Trace_z")
-            # apply variable trace filters z_l(t) = (alpha * z_l(t))*(1−s(t)) + s_l(t)
-            #trace_z = tf.add((trace_z_tm1 * trace_alpha) * (-Sz + 1.0), Sz)
-            trace_z = (trace_z_tm1 * trace_alpha) * (-Sz + 1.0) + Sz
-            if injection_table.get("Trace_z") is None:
-                if self.do_inplace == True:
-                    self.compartments["Trace_z"].assign(trace_z)
-                else:
-                    self.compartments["Trace_z"] = trace_z
 
             # clear any relevant compartments that are NOT stateful before accruing
             # new deposits (this is crucial to ensure any desired stateless properties)
@@ -257,16 +174,25 @@ class SpNode_ELIF(Node):
             C = self.constants.get("C")
             tau_mem = self.constants.get("tau_m") # membrane time constant (R * C)
             V_thr = self.constants.get("V_thr") # get voltage threshold (constant)
-            V_rh = self.constants.get("V_rh")
-            V_reset = self.constants.get("V_reset")
-            V_rest = self.constants.get("V_rest")
-            Delta_T = self.constants.get("Delta_T")
+            V_reset = self.constants.get("V_reset") # reset voltage
+            V_rest = self.constants.get("V_rest") # resting voltage
             dt = self.constants.get("dt") # integration time constant
-            ref_T = self.constants.get("ref_T")
-            # get current compartment values
+            ref_T = self.constants.get("ref_T") # refrectory time
+            tau_A = self.constants.get("tau_A") # voltage delta time constant
+            A_theta = self.constants.get("A_theta") # voltage delta increment
+            Delta_T = self.constants.get("Delta_T")
+            V_rh = self.constants.get("V_rh") # get rheobase threshold
+
+            # get relevant compartment values
+            t_spike = self.compartments.get("t_spike")
+            V_delta = self.compartments.get("V_delta") # get voltage threshold delta
             Jz = self.compartments.get("Jz") # current I
             Vz = self.compartments.get("Vz") # voltage V
             ref = self.compartments.get("ref") # refractory variable
+
+            V_thr = V_thr + V_delta # update adaptive voltage threshold
+
+            self.t = self.t + dt # advance time forward by dt (t <- t + dt)
 
             dz_bu = self.compartments["dz_bu"]
             dz_td = self.compartments["dz_td"]
@@ -283,29 +209,42 @@ class SpNode_ELIF(Node):
                     Jz = dz # input current
             ####################################################################
             #### Run ELIF spike response model ####
-            # update the membrane potential given input current and spike
-            if ref_T > 0.0:
+            '''
+            Apply exponential leaky integrate-and-fire spike-response model (SRM ELIF):
+            '''
+            smask = 1.0
+            mask = 0.0
+            if ref_T > 0.0: # calculate refractory state variables
                 ref = ref + tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) * dt
-                # if ref > 1, then ref <- 0
                 mask = tf.cast(tf.greater(ref, ref_T),dtype=tf.float32)
                 ref = ref * (1.0 - mask)
+                mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32)
 
-                # if ref > 0.0: Vz <- 0, else: update
-                mask = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32) # ref > 0.0
-                exp_term = tf.math.exp((Vz - V_rh)/Delta_T) * Delta_T
-                Vz = (Vz + (V_rest - Vz + exp_term + Jz * R) * (dt/tau_mem)) * (1.0 - mask)
-                Vz = Vz + mask * V_reset
+            exp_term = tf.math.exp((Vz - V_rh)/Delta_T) * Delta_T # calc exponential term
+            Vz = (Vz + (V_rest - Vz + exp_term + Jz * R) * (dt/tau_mem)) #- (Sz * V_thr)
+            Vz = Vz * (1.0 - mask) + (mask * V_reset) # refraction keeps voltage at rest if > T_ref
 
-                mask = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32) # Vz > V_thr
-                ref = mask * eps + (1.0 - mask) * ref
+            Sz = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32)
+            if ref_T > 0.0:
+                ref = ref * mask + (Sz * eps) * (1.0 - mask)
 
-                #if ref > 0.0: Sz <- 1, else 0
+            t_spike = t_spike * (1.0 - Sz) + (Sz * self.t) # record spike time
+            Vz = Vz * (1.0 - Sz) + Vz * (Sz * V_reset)
+
+            d_Vdelta_d_t = (0.0 - V_delta)/tau_A + Sz * A_theta
+            V_delta = V_delta + d_Vdelta_d_t # update voltage threshold
+
+            #### update trace variable ####
+            tau_tr = self.constants.get("tau_trace")
+            tr_z = self.compartments.get("Trace_z")
+            d_tr = -tr_z/tau_tr + Sz
+            tr_z = tr_z + d_tr
+
+            if ref_T > 0.0:
+                ## persistent spike signals - helps with learning stability
+                # we register a spike as 1 also if refractory period has begun
+                # since a spike signal/trace could persist after its initial emission
                 Sz = tf.cast(tf.greater(ref, 0.0),dtype=tf.float32)
-            else: # special mode where refractory period is exactly 0, so instantaneous refraction
-                Vz = (Vz + (-Vz + Jz * R  + tf.math.exp((Vz - V_rh)/Delta_T) * Delta_T) * (dt/tau_mem)) #- (Sz * V_thr)
-                Sz = tf.cast(tf.greater(Vz, V_thr),dtype=tf.float32)
-                Vz = Vz * (-Sz + 1.0) + Sz * V_r
-            ####################################################################
 
             ####################################################################
             if injection_table.get("Jz") is None:
@@ -318,6 +257,11 @@ class SpNode_ELIF(Node):
                     self.compartments["ref"].assign(ref)
                 else:
                     self.compartments["ref"] = ref
+            if injection_table.get("V_delta") is None:
+                if self.do_inplace == True:
+                    self.compartments["V_delta"].assign(V_delta)
+                else:
+                    self.compartments["V_delta"] = V_delta
             if injection_table.get("Vz") is None:
                 if self.do_inplace == True:
                     self.compartments["Vz"].assign(Vz)
@@ -326,8 +270,16 @@ class SpNode_ELIF(Node):
             if injection_table.get("Sz") is None:
                 if self.do_inplace == True:
                     self.compartments["Sz"].assign(Sz)
+                    self.compartments["t_spike"].assign(t_spike)
                 else:
                     self.compartments["Sz"] = Sz
+                    self.compartments["t_spike"] = t_spike
+            if injection_table.get("Trace_z") is None:
+                if self.do_inplace == True:
+                    self.compartments["Trace_z"].assign(tr_z)
+                else:
+                    self.compartments["Trace_z"] = tr_z
+            # ##########################################################################
 
         if bmask is not None: # applies mask to all component variables of this node
             for key in self.compartments:
@@ -338,8 +290,6 @@ class SpNode_ELIF(Node):
                         self.compartments[key] = ( self.compartments.get(key) * bmask )
 
         ########################################################################
-        if skip_core_calc == False:
-            self.t = self.t + 1
 
         # a node returns a list of its named component values
         values = []

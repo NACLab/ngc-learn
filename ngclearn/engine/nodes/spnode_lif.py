@@ -94,6 +94,8 @@ class SpNode_LIF(Node):
 
              :`'tau_curr'`: the electrical current time constant (only used if zeta > 0, otherwise ignored)
 
+             :Note: more constants can be set through this kernel (see above "Constants" for values to set)
+
         trace_kernel: Dict defining the signal tracing process type. The expected keys and
             corresponding value types are specified below:
 
