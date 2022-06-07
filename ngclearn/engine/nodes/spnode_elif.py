@@ -5,7 +5,7 @@ import copy
 from ngclearn.engine.nodes.spnode_lif import SpNode_LIF
 from ngclearn.utils import transform_utils as transform
 
-class SpNode_ELIF(SpNode_LIF):
+class SpNode_ELIF(SpNode_LIF): # inherits from SpNode_LIF class
     """
     | Implements the exponential leaky-integrate and fire (ELIF) spiking state
     | node that follows NGC settling dynamics according to:
