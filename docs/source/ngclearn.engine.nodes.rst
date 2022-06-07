@@ -44,6 +44,14 @@ ngclearn.engine.nodes.spnode_lif module
   :undoc-members:
   :show-inheritance:
 
+ngclearn.engine.nodes.spnode_elif module
+----------------------------------------
+
+.. automodule:: ngclearn.engine.nodes.spnode_elif
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
 ngclearn.engine.nodes.spnode_enc module
 ---------------------------------------
 
