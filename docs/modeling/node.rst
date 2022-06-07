@@ -95,6 +95,23 @@ used in simulation.
   .. automethod:: step
     :noindex:
 
+SpNode_Enc Model
+----------------
+The ``SpNode_Enc`` class extends from the base ``Node`` class, and represents
+a spiking state node that follows settling dynamics according a rate-code
+probabilistic spike process (a Poisson process).
+In conjunction with the corresponding the other node classes,
+this serves as the core modeling component of a higher-level ``NGCGraph`` class
+used in simulation.
+
+.. autoclass:: ngclearn.engine.nodes.spiking.spnode_enc.SpNode_Enc
+  :noindex:
+
+  .. automethod:: step
+    :noindex:
+  .. automethod:: clear
+    :noindex:
+
 SpNode_LIF Model
 ----------------
 The ``SpNode_LIF`` class extends from the base ``Node`` class, and represents
@@ -104,7 +121,7 @@ In conjunction with the corresponding the other node classes,
 this serves as the core modeling component of a higher-level ``NGCGraph`` class
 used in simulation.
 
-.. autoclass:: ngclearn.engine.nodes.spnode_lif.SpNode_LIF
+.. autoclass:: ngclearn.engine.nodes.spiking.spnode_lif.SpNode_LIF
   :noindex:
 
   .. automethod:: step
@@ -114,14 +131,14 @@ used in simulation.
 
 SpNode_ELIF Model
 -----------------
-The ``SpNode_ELIF`` class extends from the base ``Node`` class, and represents
+The ``SpNode_ELIF`` class extends from the ``SpNode_LIF`` class, and represents
 a spiking state node that follows settling dynamics according the mathematical
 model of the exponential leaky integrate and fire (ELIF) neuron.
 In conjunction with the corresponding the other node classes,
 this serves as the core modeling component of a higher-level ``NGCGraph`` class
 used in simulation.
 
-.. autoclass:: ngclearn.engine.nodes.spnode_elif.SpNode_ELIF
+.. autoclass:: ngclearn.engine.nodes.spiking.spnode_elif.SpNode_ELIF
   :noindex:
 
   .. automethod:: step

@@ -1,6 +1,14 @@
 ngclearn.engine.nodes package
 =============================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   ngclearn.engine.nodes.spiking
+
 Submodules
 ----------
 
@@ -20,6 +28,14 @@ ngclearn.engine.nodes.fnode module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.engine.nodes.fnode\_ba module
+--------------------------------------
+
+.. automodule:: ngclearn.engine.nodes.fnode_ba
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.engine.nodes.node module
 ---------------------------------
 
@@ -32,38 +48,6 @@ ngclearn.engine.nodes.snode module
 ----------------------------------
 
 .. automodule:: ngclearn.engine.nodes.snode
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.engine.nodes.spnode_lif module
----------------------------------------
-
-.. automodule:: ngclearn.engine.nodes.spnode_lif
-  :members:
-  :undoc-members:
-  :show-inheritance:
-
-ngclearn.engine.nodes.spnode_elif module
-----------------------------------------
-
-.. automodule:: ngclearn.engine.nodes.spnode_elif
-  :members:
-  :undoc-members:
-  :show-inheritance:
-
-ngclearn.engine.nodes.spnode_enc module
----------------------------------------
-
-.. automodule:: ngclearn.engine.nodes.spnode_enc
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.engine.nodes.fnode_ba module
--------------------------------------
-
-.. automodule:: ngclearn.engine.nodes.fnode_ba
    :members:
    :undoc-members:
    :show-inheritance:

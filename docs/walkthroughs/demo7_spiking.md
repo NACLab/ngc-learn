@@ -102,7 +102,7 @@ for the model we will build later).
 
 Note that another method offered by ngc-learn for converting your real-valued
 data vectors to Poisson spike trains is through the
-[SpNode_Enc](ngclearn.engine.nodes.spnode_enc). This node is a convenience node
+[SpNode_Enc](ngclearn.engine.nodes.spiking.spnode_enc). This node is a convenience node
 that effectively allows us to do the same thing as the code snippet above
 (for example, upon inspecting its API, you will see an argument to its constructor
 is the `gain` that you can set yourself). However, the `SpNode_Enc` conveniently allows
@@ -116,7 +116,7 @@ compartments that are calculated during simulation such as variable traces/filte
 Now that we have considered how to transform our data into Poisson spike trains
 for use with an SNN we can move on to building the SNN itself. One of the core
 nodes offered by ngc-learn to do this is the
-[SpNode_LIF](ngclearn.engine.nodes.spnode_lif), or the leaky integrate-and-fire (LIF)
+[SpNode_LIF](ngclearn.engine.nodes.spiking.spnode_lif), or the leaky integrate-and-fire (LIF)
 node (also referred to as the leaky integrator in some papers). This node
 has quite a few compartments and constants but only a handful are important
 for understanding how this model governs spiking/firing rates during
@@ -227,7 +227,7 @@ import matplotlib.pyplot as plt
 
 # import general simulation utilities
 import ngclearn.utils.viz_utils as viz
-from ngclearn.engine.nodes.spnode_lif import SpNode_LIF
+from ngclearn.engine.nodes.spiking.spnode_lif import SpNode_LIF
 from ngclearn.engine.ngc_graph import NGCGraph
 
 seed = 1990 # 69

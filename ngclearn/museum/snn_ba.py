@@ -13,8 +13,8 @@ from ngclearn.utils.data_utils import DataLoader
 
 # import model from museum to train
 from ngclearn.engine.nodes.snode import SNode
-from ngclearn.engine.nodes.spnode_lif import SpNode_LIF
-from ngclearn.engine.nodes.spnode_enc import SpNode_Enc
+from ngclearn.engine.nodes.spiking.spnode_lif import SpNode_LIF
+from ngclearn.engine.nodes.spiking.spnode_enc import SpNode_Enc
 from ngclearn.engine.nodes.enode import ENode
 from ngclearn.engine.nodes.fnode_ba import FNode_BA
 from ngclearn.engine.ngc_graph import NGCGraph
