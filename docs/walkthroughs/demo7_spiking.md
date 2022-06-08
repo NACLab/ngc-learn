@@ -444,7 +444,7 @@ model.set_to_resting_state() # set all neurons to their resting potentials
 y_count = y * 0
 y_hat = 0.0
 for t in range(T):
-    model.clamp([("z2", "z", x), ("t0", "z", y_)])
+    model.clamp([("z2", "z", x), ("t0", "z", y)])
     delta = model.step(calc_delta=True)
     y_hat = model.extract("z0", "Jz") + y_hat
     y_count += model.extract("z0", "Sz")
