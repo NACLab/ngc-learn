@@ -25,7 +25,7 @@ Walkthrough #7 File:
 Evaluates a trained SNN classifier on the MNIST database test-set.
 
 Usage:
-$ python eval_train.py --config=/path/to/file.cfg --gpu_id=0
+$ python eval_model.py --config=/path/to/file.cfg --gpu_id=0
 
 @author Alexander Ororbia
 ################################################################################
