@@ -4,6 +4,26 @@ General mathematical measurement/metric functions/utilities file.
 import tensorflow as tf
 import numpy as np
 
+def calc_firing_stats(frate_batch):
+    """
+    Calculate 1st and 2nd moment firing statistics from a batch of spike counts,
+    i.e., mean firing rate and Fano factor.
+
+    Args:
+        frate_batch: a count batch matrix of shape (Q x D) where Q is number
+            of trials and D is number of spiking neurons measured
+
+    Returns:
+        a (1 x D) mean firing rate vector and a (1 x D) Fano factor vector
+    """
+    # calc mean firing rate
+    mu = tf.reduce_mean(frate_batch, axis=0, keepdims=True)
+    # calc Fano factor
+    dev = frate_batch - mu # deviation
+    sig_sqr = tf.reduce_mean(dev * dev, axis=0, keepdims=True) # variance
+    fano = sig_sqr / (mu + 1e-6)
+    return mu, fano
+
 def cat_nll(p, x, epsilon=0.0000001): #1e-7):
     """
     Measures the negative Categorical log likelihood
