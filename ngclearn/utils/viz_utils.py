@@ -47,7 +47,7 @@ def plot_learning_curves(acc_curve, dev_acc_curve, plot_fname=None, scale=1.0,
     plt.clf()
 
 def create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
-                       plot_fname=None):
+                       plot_fname=None, indices=None):
     """
     Generates a raster plot of a given (binary) spike train (row dimension
     corresponds to the discrete time dimension).
@@ -67,22 +67,40 @@ def create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
         plot_fname: if ax is None, then this is the file name of the raster plot
             saved to disk (if plot_fname and ax are both None, then default
             plot_fname will be "raster_plot.png" and saved locally)
+
+        indices: optional indices of neurons (row integer indices) to focus on plotting
     """
     spk_ = spike_train
     # Process spikes and create the binary coordinate grid
     if len(spk_.shape) == 1:
         spk_ = np.expand_dims(spk_,axis=1)
+    n_units = spk_.shape[1]
+    if indices is not None and indices.shape[0] < spk_.shape[1]:
+        spk_ = spk_[:,indices] # access specific neurons if requested
+        if len(spk_.shape) > 1:
+            n_units = spk_.shape[1]
+        else:
+            n_units = spk_.shape[0]
     coords = tf.where(spk_).numpy()
     spk_x = coords[:,0]
     spk_y = coords[:,1]
     if ax is not None:
-        return ax.scatter(spk_x, spk_y, s=s, c=c, marker=marker)
+        ax.scatter(spk_x, spk_y, s=s, c=c, marker=marker,linewidths=4)
+        yint = range(0, n_units)
+        ax.set_yticks(yint)
+        ax.set_yticklabels(yint, fontsize=12)
+        #ax.set_ylim([-((s*1.0)/2.0), ((s*1.0)/2.0)])
+        #ax.set_ylim([-20, 20])
+        return ax
     else:
         if plot_fname is None:
             plot_fname = "raster_plot.png"
         fig = plt.figure(facecolor="w", figsize=(10, 5))
         ax = fig.add_subplot(111)
         ax.scatter(spk_x, spk_y, s=s, c=c, marker=marker)
+        yint = range(0, n_units)
+        ax.set_yticks(yint)
+        ax.set_yticklabels(yint, fontsize=12)
         plt.title("Spike Train Raster Plot")
         plt.xlabel("Time Step")
         plt.ylabel("Neuron Index")
@@ -117,12 +135,14 @@ def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
 
         fname: the filename to save this plot as, i.e., /path/to/name.png (Default: lif_analysis.png)
     """
+    x_lim = curr.shape[0]
+    y_curr_lim = float(np.amax(curr)) + 0.2
     fig, ax = plt.subplots(3, figsize=(8,6), sharex=True,
                         gridspec_kw = {'height_ratios': [1, 1, 0.4]})
     # plot input current
     ax[0].plot(curr, c="tab:blue")
-    ax[0].set_ylim([0, 0.4])
-    ax[0].set_xlim([0, 200])
+    ax[0].set_ylim([0, y_curr_lim])
+    ax[0].set_xlim([0, x_lim])
     ax[0].set_ylabel("Input Current ($J_t$)")
     if title:
         ax[0].set_title(title)
