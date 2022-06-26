@@ -231,7 +231,7 @@ remain fixed at the value you embed/insert, then you would use the `clamp()` fun
 instead (which is what is being used internally to clamp variables in the `clamped_vars`
 argument of the `settle()` function above).
 
-In the figure below, we graphically what the above simulated NGC system and its
+In the figure below, we graphically depict what the above simulated NGC system and its
 corresponding conditional generative model (ancestral projection graph) look like
 (the blue dashed arrow just point outs that the layer `s1` of the generative model
 is the same thing as the mean prediction `mu1` of the original NGC model).
