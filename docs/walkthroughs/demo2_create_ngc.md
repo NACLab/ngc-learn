@@ -204,6 +204,8 @@ init_kernels = {"A_init" : ("gaussian",0.025)}
 dcable_cfg = {"type": "dense", "init_kernels" : init_kernels, "seed" : 69}
 pos_carryover = {"type": "simple", "coeff": 1.0}
 neg_carryover = {"type": "simple", "coeff": -1.0}
+# set up constraint for Euclidean norm of rows of a matrix 
+constraint_cfg = {"clip_type":"norm_clip","clip_mag":1.0,"clip_axis":1}
 
 # Notice that we make b and e have the same dimension (10) given that we
 # want to wire their information exchange paths with SCable(s)
@@ -222,6 +224,7 @@ e.wire_to(b, src_comp="phi(z)", dest_comp="dz_td", cable_kernel=neg_carryover)
 
 # set up local Hebbian updates for a_e
 a_e.set_update_rule(preact=(a,"phi(z)"), postact=(e,"phi(z)"), param=["A"])
+a_e.set_constraint(constraint_cfg)
 ```
 
 where we see that node `a` deposits a prediction signal into the `pred_mu`
@@ -274,8 +277,6 @@ Let us take the five node circuit we built earlier and place them in a system si
 
 ```python
 model = NGCGraph(K=5)
-model.proj_update_mag = -1.0 # bound the calculated synaptic updates (<= 0 turns this off)
-model.proj_weight_mag = 1.0 # constrain the Euclidean norm of the rows of each synaptic matrix
 model.set_cycle(nodes=[a,b,c,d]) # execute nodes a through d (in order left to right)
 model.set_cycle(nodes=[e]) # execute node e
 model.apply_constraints() # immediately applies constraints to synapses after initialization
