@@ -224,7 +224,7 @@ phi(z) = f(z), where f is activation function such as identity(z)
 ```
 -->
 $$
-\mathbf{z} &= \mathbf{z}_\mu - \mathbf{z}_{targ} \\
+\mathbf{z} &= \mathbf{z}_{targ} - \mathbf{z}_\mu \\
 \phi(\mathbf{z}) &= identity(\mathbf{z}) \quad \mbox{// $\phi(\mathbf{z})$ can be any activation function} \\
 L(\mathbf{z}) &= \sum_j (\mathbf{z} \odot \mathbf{z})^2_j \mbox{// Gaussian error neurons}
 $$
