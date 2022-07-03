@@ -11,8 +11,9 @@ Specifically, ngc-learn requires:
 * Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
 * scikit-learn (>=0.24.2) (needed for the demonstrations in `examples/` as well as
      ngclearn.density)
-* matplotlib (>=3.4.3) (needed for the demonstrations in `examples/`)
-
+* matplotlib (>=3.4.3) (needed for the walkthroughs in `walkthroughs/`)
+* networkx  (>=2.6.3) (needed for model graph visualization)
+* pyviz (>=0.2.0) (needed for model graph visualization)
 
 ## Install from Source
 
