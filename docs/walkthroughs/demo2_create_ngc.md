@@ -277,7 +277,7 @@ Let us take the five node circuit we built earlier and place them in a system si
 
 ```python
 model = NGCGraph(K=5)
-model.set_cycle(nodes=[a,b,c,d]) # execute nodes a through d (in order left to right)
+model.set_cycle(nodes=[a,b]) # execute nodes a through d (in order left to right)
 model.set_cycle(nodes=[e]) # execute node e
 model.apply_constraints() # immediately applies constraints to synapses after initialization
 model.compile(batch_size=1)
@@ -291,7 +291,7 @@ to `set_cycle()` will add in addition execution cycles to an NGC system's step.
 Note that one simulation step of an `NGCGraph` consists of multiple cycles, executed
 in the order of their calls when the simulation object was initialized. For example,
 one step of our "model" object above would first execute the internal `.step()`
-functions of `a`, `b`, `c`, then `d` in the first cycle and then execute the
+functions of `a`, and `b` in the first cycle and then execute the
 `.step()` of `e` in the second cycle. Also observe that in our `NGCGraph` constructor,
 we have told ngc-learn that simulations are only ever to be `K=5` discrete time steps long.
 Finally note that, when you set execution cycles for an `NGCGraph`, ngc-learn
@@ -321,8 +321,8 @@ process and learn from a single data pattern, we would then write the following:
 opt = # ... set some TF optimization algorithm, such as SGD, here ...
 x = tf.ones([1,10])
 readouts = model.settle(
-                clamped_vars=[("c","z",x)],
-                readout_vars=[("a","phi(z)"),("b","phi(z)"),("d","phi(z)"),("e","phi(z)")]
+                clamped_vars=[("b","z",x)],
+                readout_vars=[("a","phi(z)"),("e","phi(z)")]
             )
 print("The value of {} w/in Node {} is {}".format(readouts[0][0], readouts[0][1], readouts[0][2].numpy()))
 # update synaptic parameters given current model internal state
@@ -333,10 +333,10 @@ model.clear() # reset the underlying node states back to resting values
 ```
 
 where we have crafted a trivial example of processing a vector of ones (`x`),
-clamping this value to node `c`'s compartment `z` (note that clamping means we
+clamping this value to node `b`'s compartment `z` (note that clamping means we
 fix the node's compartment to a specific value and never let it evolve throughout
 simulation), and then read out the value of the `phi(v)` compartment of nodes
-`a`, `b`, `c`, and `e`. The `readout_vars` argument to `settle()` allows us to
+`a`, and `e`. The `readout_vars` argument to `settle()` allows us to
 tell an `NGCGraph` which nodes and which compartments we want to observe after it
 run its simulated settling process over `K=5` steps. An `NGCGraph` saves the
 output of `settle()` into the `readouts` variable which is a list of triplets
