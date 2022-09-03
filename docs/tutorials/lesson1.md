@@ -12,7 +12,7 @@ write in throughout this lesson.
 
 ## Theory: Cable Theory and Neural Compartments
 
-At its core, part of ngc-learn's core design is inspired by (neural)
+At its core, part of ngc-learn's internal design is inspired by (neural)
 <a href="http://www.scholarpedia.org/article/Neuronal_cable_theory">cable theory </a>,
 where neuronal units, which are arranged in complex connectivity structures,
 are viewed as performing dendritic calculations (of varying complexity).
@@ -22,9 +22,9 @@ ways through a complex dendritic tree.
 
 Although modeling a complete neuronal system through the lens of cable theory is
 complex and intricate in of itself, ngc-learn is built with this direction in mind.
-ngc-learn starts with with the idea a neuron (or a cluster of them) can be viewed
+ngc-learn starts with with the idea that a neuron (or a cluster of them) can be viewed
 as a node, or [Node](ngclearn.engine.nodes.node) (also see {ref}`node-model`),
-and each bundle of synapses that connect pairs of nodes can be viewed as a cable,
+and each bundle of synapses that connects pairs of nodes can be viewed as a cable,
 or [Cable](ngclearn.engine.cables.cable) (also see {ref}`cable-model`).
 
 Each node has multiple, different (named) "compartments", which are regions
