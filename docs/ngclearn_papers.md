@@ -17,10 +17,11 @@ from data streams." arXiv preprint arXiv:1908.08655 (2019).
 a hyperdimensional predictive processing cognitive architecture."
 Proceedings of the Annual Meeting of the Cognitive Science Society (CogSci), Volume 44 (2022).
 
-5. Ororbia, A, and Kelly, M. Alex. "“Learning using a Hyperdimensional Predictive Processing Cognitive
+5. Ororbia, A., and Kelly, M. Alex. "“Learning using a Hyperdimensional Predictive Processing Cognitive
 Architecture." 15th International Conference on Artificial General Intelligence (AGI) (2022).
 
-
+6. Ororbia, A., Mali, A., Kifer, D., & Giles, C. L. "Lifelong neural predictive coding: Learning cumulatively online without 
+forgetting." Thirty-sixth Conference on Neural Information Processing Systems (NeurIPS) (2022).
 
 <b>Note:</b> Please let us know if your work uses ngc-learn so we can update this page to accurately track 
 ngc-learn's use and include your work in the accumulating body of work in predictive processing 
