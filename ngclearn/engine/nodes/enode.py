@@ -77,7 +77,7 @@ class ENode(Node):
         self.dfx = None
         self.is_clamped = False
 
-        self.compartment_names = ["pred_mu", "pred_targ", "z", "phi(z)", "L"]# "weights", "avg_scalar"]
+        self.compartment_names = ["pred_mu", "pred_targ", "z", "phi(z)", "L", "e"]# "weights", "avg_scalar"]
         self.compartments = {}
         for name in self.compartment_names:
             name_v = None
@@ -137,6 +137,7 @@ class ENode(Node):
         bmask = self.masks.get("mask")
         Ws = self.compartments.get("weights")
         Ns = self.compartments.get("avg_scalar")
+
         ########################################################################
         if skip_core_calc == False:
             if self.is_clamped == False:
@@ -163,6 +164,11 @@ class ENode(Node):
                 # error neurons are a fixed-point result/calculation as below:
                 pred_targ = self.compartments["pred_targ"]
                 pred_mu = self.compartments["pred_mu"]
+
+                # if self.name == "e0y":
+                #     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                #     print("pred_targ:\n",pred_targ.numpy())
+                #     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
                 if bmask is not None:
                     pred_targ = pred_targ * bmask
                     pred_mu = pred_mu * bmask
@@ -194,6 +200,11 @@ class ENode(Node):
                 if Ns is not None: # optionally scale units and local loss by 1/Ns
                     L = L * (1.0/Ns)
                     z = z * (1.0/Ns)
+                if self.do_inplace == True:
+                    self.compartments["e"].assign( z )
+                else:
+                    self.compartments["e"] = z
+
                 if self.do_inplace == True:
                     self.compartments["L"].assign( [[L]] )
                 else:
@@ -269,6 +280,18 @@ class ENode(Node):
     def calc_update(self, update_radius=-1.0):
         delta = []
         # compute update to lateral correlation synapses
+
+        # new rule for precision updates
+        # if self.Sigma is not None:
+        #     Prec_l = self.Prec
+        #     e = self.compartments.get("z")
+        #     weighted_e = self.compartments.get("z") # get weight prediction errors
+        #     pr_val = 0.0002 #0.001
+        #     dSigma = tf.eye(Prec_l.shape[0]) - tf.matmul(weighted_e, e, transpose_a=True)
+        #     #Sigma = Sigma + dSigma * pr_val
+        #     dW = -dSigma
+        #     delta.append(dW)
+
         if self.Sigma is not None:
             Prec_l = self.Prec
             #e_noprec = self.stat.get("pre_z")

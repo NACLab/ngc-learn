@@ -262,6 +262,7 @@ class Node:
         #print("CLEAR for {} w/ ip = {}".format(self.name, self.do_inplace))
         #tf.print("=============== CLEAR ===============")
         self.t = 0.0
+        self.is_clamped = False
 
         for comp_name in self.compartment_names:
             comp_value = self.compartments.get(comp_name)
@@ -297,7 +298,6 @@ class Node:
         """
         if injection_table is None:
             injection_table = {}
-
         batch_size_ = batch_size
         if batch_size_ <= 0:
             batch_size_ = self.batch_size

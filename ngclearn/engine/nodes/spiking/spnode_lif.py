@@ -112,6 +112,7 @@ class SpNode_LIF(Node):
         self.dim = dim
         self.batch_size = batch_size
         self.is_clamped = False
+        self.use_dfx = False
 
         # set LIF spiking neuron-specific (vector/scalar) constants
         self.constant_name = ["V_thr", "dt", "R", "C", "tau_m", "tau_c",
@@ -132,6 +133,7 @@ class SpNode_LIF(Node):
         self.constants["tau_trace"] = 20.0 # ms
         self.constants["A_theta"] = 0.0
         self.constants["tau_A"] = 10.0
+        self.constants["kappa_j"] = 1.0 # 0.25
 
         ## numerical integration settings
         self.integrate_kernel = integrate_kernel
@@ -139,9 +141,12 @@ class SpNode_LIF(Node):
         self.integrate_type = "euler" # Default = euler
         if integrate_kernel is not None:
             self.use_dfx = integrate_kernel.get("use_dfx")
+            if self.use_dfx is None:
+                self.use_dfx = False
             self.integrate_type = integrate_kernel.get("integrate_type")
             if integrate_kernel.get("dt") is not None: # integration time constant (ms)
                 self.constants["dt"] = integrate_kernel.get("dt")
+
         ## spiking neuron settings/properties
         self.spike_kernel = spike_kernel
         if self.spike_kernel is not None:
@@ -164,7 +169,7 @@ class SpNode_LIF(Node):
 
         # Set up LIF spiking neuron-specific vector statistics
         self.compartment_names = ["dz_bu", "dz_td", "Jz", "Vz", "Sz", "Trace_z",
-                                  "ref", "t_spike", "V_delta"]
+                                  "ref", "t_spike", "V_delta", "V"]
         self.compartments = {}
         for name in self.compartment_names:
             self.compartments[name] = tf.Variable(tf.zeros([batch_size,dim]),
@@ -244,6 +249,16 @@ class SpNode_LIF(Node):
             self.t = self.t + dt # advance time forward by dt (t <- t + dt)
 
             dz_bu = self.compartments["dz_bu"]
+            # if self.use_dfx == True:
+            #     #dx = self.compartments["dx"]
+            #     c2 = 0.08
+            #     Jz = self.compartments["Jz"]
+            #     # let modification happen for non-negative currents
+            #     # otherwise, nix them according to the approximate derivative
+            #     Jmask = tf.cast(tf.equal(Jz, 0.0),dtype=tf.float32)
+            #     mask = tf.cast(tf.greater(Jz, 0.0),dtype=tf.float32)
+            #     dS_dJ = transform.sech_sqr(Jz * c2) * mask
+            #     dz_bu = dz_bu * Jmask + dz_bu * dS_dJ * (1.0 - Jmask)
             dz_td = self.compartments["dz_td"]
             dz = dz_td + dz_bu # gather pre-synaptic signals to modify current
 
@@ -253,7 +268,8 @@ class SpNode_LIF(Node):
                     # integrate over current
                     #Jz = Jz * self.zeta + dz * self.kappa - (Jz * self.conduct_leak) * self.kappa
                     tau_curr = self.constants.get("tau_c") #R * C
-                    Jz = Jz + (-Jz + dz) * (dt/tau_curr)
+                    kappa_j = self.constants.get("kappa_j")
+                    Jz = Jz + (-Jz * kappa_j + dz) * (dt/tau_curr)
                 else:
                     Jz = dz # input current
             ####################################################################
@@ -278,6 +294,7 @@ class SpNode_LIF(Node):
                 ref = ref * mask + (Sz * eps) * (1.0 - mask)
 
             t_spike = t_spike * (1.0 - Sz) + (Sz * self.t) # record spike time
+            V = Vz + 0 # store membrane potential before it is potentially reset
             Vz = Vz * (1.0 - Sz) + Vz * (Sz * V_reset)
 
             d_Vdelta_d_t = (0.0 - V_delta)/tau_A + Sz * A_theta
@@ -286,8 +303,10 @@ class SpNode_LIF(Node):
             #### update trace variable ####
             tau_tr = self.constants.get("tau_trace")
             tr_z = self.compartments.get("Trace_z")
-            d_tr = -tr_z/tau_tr + Sz
-            tr_z = tr_z + d_tr
+            #d_tr = (-tr_z/tau_tr) + Sz
+            #tr_z = tr_z + d_tr
+            tr_z = (tr_z + -tr_z/tau_tr) * (1.0 - Sz) + Sz
+            #tr_z = tf.clip_by_value(tr_z, 0.0, 1.0)
 
             if ref_T > 0.0:
                 ## persistent spike signals - helps with learning stability
@@ -311,6 +330,11 @@ class SpNode_LIF(Node):
                     self.compartments["V_delta"].assign(V_delta)
                 else:
                     self.compartments["V_delta"] = V_delta
+            if injection_table.get("V") is None:
+                if self.do_inplace == True:
+                    self.compartments["V"].assign(V)
+                else:
+                    self.compartments["V"] = V
             if injection_table.get("Vz") is None:
                 if self.do_inplace == True:
                     self.compartments["Vz"].assign(Vz)

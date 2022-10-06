@@ -229,6 +229,7 @@ class SpNode_ELIF(SpNode_LIF): # inherits from SpNode_LIF class
                 ref = ref * mask + (Sz * eps) * (1.0 - mask)
 
             t_spike = t_spike * (1.0 - Sz) + (Sz * self.t) # record spike time
+            V = Vz + 0 # store membrane potential before it is potentially reset
             Vz = Vz * (1.0 - Sz) + Vz * (Sz * V_reset)
 
             d_Vdelta_d_t = (0.0 - V_delta)/tau_A + Sz * A_theta
@@ -262,6 +263,11 @@ class SpNode_ELIF(SpNode_LIF): # inherits from SpNode_LIF class
                     self.compartments["V_delta"].assign(V_delta)
                 else:
                     self.compartments["V_delta"] = V_delta
+            if injection_table.get("V") is None:
+                if self.do_inplace == True:
+                    self.compartments["V"].assign(V)
+                else:
+                    self.compartments["V"] = V
             if injection_table.get("Vz") is None:
                 if self.do_inplace == True:
                     self.compartments["Vz"].assign(Vz)
