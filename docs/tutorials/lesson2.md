@@ -1,4 +1,4 @@
-# Lesson 2: Custom Cables
+# Lesson 2: Custom Cables and Learning Rules
 
 In this (advanced) tutorial, we will focus on the process for writing your own
 custom cables. Specifically, you will learn how to sub-class the
