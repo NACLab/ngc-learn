@@ -96,18 +96,18 @@ class NGCGraph:
                 cable_i = node.connected_cables[i]
                 self.cables[cable_i.name] = cable_i
                 if param_order is None:
-                    if cable_i.cable_type == "dense":
-                        #if cable_i.shared_param_path is None and cable_i.is_learnable is True:
-                        if cable_i.is_learnable is True:
-                            # if cable is learnable (locally), store in theta
-                            self.learnable_cables.append(cable_i)
-                            for pname in cable_i.params:
-                                param = cable_i.params.get(pname)
-                                update_terms = cable_i.update_terms.get(pname)
-                                key_check = "{}.{}".format(cable_i.name,pname)
-                                if update_terms is not None and self.unique_learnable_objects.get(key_check) is None:
-                                    self.theta.append(param)
-                                    self.unique_learnable_objects["{}.{}".format(cable_i.name,pname)] = 1
+                    #if cable_i.cable_type == "dense":
+                    #if cable_i.shared_param_path is None and cable_i.is_learnable is True:
+                    if cable_i.is_learnable is True:
+                        # if cable is learnable (locally), store in theta
+                        self.learnable_cables.append(cable_i)
+                        for pname in cable_i.params:
+                            param = cable_i.params.get(pname)
+                            update_terms = cable_i.update_terms.get(pname)
+                            key_check = "{}.{}".format(cable_i.name,pname)
+                            if update_terms is not None and self.unique_learnable_objects.get(key_check) is None:
+                                self.theta.append(param)
+                                self.unique_learnable_objects["{}.{}".format(cable_i.name,pname)] = 1
                 # else, do NOT set learnable cables b/c the user has specified a *param_order*
         for j in range(len(nodes)): # collect any learnable nodes
             n_j = nodes[j]

@@ -84,6 +84,25 @@ class Cable:
         info["dest_comp"] = self.src_comp
         return info
 
+    def hard_wire_nodes(self, short_name=None):
+        """
+        A cable-driven wiring function that connects/hard-wires the nodes that this cable is made
+        aware of to each other (note that this object will make the source and destination
+        nodes that it is responsible for aware of each other)
+
+        Args:
+            short_name: the string alternative "nick-name" to be assigned to the generated cable (Default = None)
+
+                :Note: setting this to None will mean this node does not have an alternative short-name
+        """
+        src_node = self.src_node # get source node as known by this cable
+        dest_node = self.dest_node # get destination node as known by this cable
+        ## integrate cable into nodes-and-cables system
+        dest_node.connected_cables.append(self)
+        if short_name is not None:
+            self.short_name = short_name
+        return self
+
     def get_params(self, only_learnable=False):
         """
         Extract all matrix/vector parameters internal to this cable.
