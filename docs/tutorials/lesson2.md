@@ -198,7 +198,7 @@ shape of matrix `A` and `M` are shaped correctly given the `self.src_node` and
 The final, and arguably most important, function that you need to implement is
 `propagate()` which will tell our new cable what to do with information from its
 source `self.src_node` and how to get it to its destination `self.dest_node`.
-We will restrict ourselves to a vary simple linear transformation for sake of clarity
+We will restrict ourselves to a very simple linear transformation for sake of clarity
 (as well as for ease of writing/using a local Hebbian update rule as we will
 discuss later in this section), like so:
 
@@ -241,9 +241,9 @@ snippet:
 where the above function simply returns a list of the physical matrices
 that define our `SparseCable`. Of course, we have included some extra bits of code
 in the above routine which will become clearer later when we talk about
-synaptic update rules, but for now, the function in its default state (with
-`only_learnable=False`) will simply just return this cable's parameters `A` and
-`M` in list-form.
+synaptic update rules, but for now, the function in returns either all of its 
+parameters, i.e., `A` and `M`, if `only_learnable=False` and only those that 
+evolve (such as `A`) if `only_learnable=True`.
 Another good optional routine to implement from the list earlier is `apply_constraints()`,
 which would tell the `NGCGraph` simulation object what constraints or clipping
 is to be applied to your cable after every update (Note: we will cover synaptic
@@ -257,7 +257,7 @@ do this using an extremely simple two node circuit, i.e., two `SNodes` which
 we will name `a` and `b`. Leave the `ngclearn/engine/cables/` directory
 (i.e., `$ cd ../../../`) and
 create a new file `test_custom_cable.py`. Next, go ahead and re-compile ngc-learn
-so that way it is aware of your new additional calbe in `ngclearn/engine/cables/`:
+so that way it is aware of your new additional cable in `ngclearn/engine/cables/`:
 
 ```console
 $ python setup.py install
@@ -787,7 +787,7 @@ While this lesson went through the basic process/pipeline of designing a custom
 cable and its (learning) update, crafting one's own cables and rules is not
 a simple task and generally depends on the user/designer to understand
 their problem context, their neural circuit(s), and the learning dynamics
-they wish to model. There are many possible ways to engineer learning rules
+that they wish to model. There are many possible ways to engineer learning rules
 within the context of the design framework presented above and despite the progress
 that has made over the decades, biologically-motivated
 learning is still in its infancy (with respect to both statistical learning
@@ -799,14 +799,14 @@ their ideas with respect to stateful neural circuits (such as those that
 characterize predictive coding or spiking neural systems). However, there is
 no guarantee that any new rule or cable structure that is implemented will be stable
 and work well in the context of any given problem. It is important that the user
-conducts many experimental trials/tests and making comparisons to known
+conducts many experimental trials/tests and makes comparisons to known
 stable rules (such as error-driven Hebbian learning) in order to determine the validity
 of their idea(s) -- when designing learning rules, it is important to "fail fast"
 so you can fruitfully iterate over your idea/formulation.
 
 <i><b>A Parting Remark</b></i>: while this lesson has demonstrated how the user can
-implement their own custom cable and learning rule in ngc-learn, if the user desires the
-learning rule that they created (using ngc-learn) to be officially implemented
+implement their own cable and its update rule in ngc-learn, if the user desires the
+cable and/or learning rule that they created (using ngc-learn) to be officially implemented
 into the library itself (which we enthusiastically welcome!), please see the [contributing guidelines](https://github.com/ago109/ngc-learn/blob/main/CONTRIBUTING.md) and
 reach out to the Neural Adaptive Computing (NAC) Laboratory (contact:
 `ago@cs.rit.edu`) to discuss its integration.
