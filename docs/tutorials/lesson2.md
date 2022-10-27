@@ -241,8 +241,8 @@ snippet:
 where the above function simply returns a list of the physical matrices
 that define our `SparseCable`. Of course, we have included some extra bits of code
 in the above routine which will become clearer later when we talk about
-synaptic update rules, but for now, the function in returns either all of its 
-parameters, i.e., `A` and `M`, if `only_learnable=False` and only those that 
+synaptic update rules, but for now, the function in returns either all of its
+parameters, i.e., `A` and `M`, if `only_learnable=False` and only those that
 evolve (such as `A`) if `only_learnable=True`.
 Another good optional routine to implement from the list earlier is `apply_constraints()`,
 which would tell the `NGCGraph` simulation object what constraints or clipping
@@ -254,7 +254,22 @@ can be found in the standard `DCable` source code within ngc-learn's engine fold
 With the above three routines written into your new cable class, you have
 everything you need to test out how this basic transformation will work. We will
 do this using an extremely simple two node circuit, i.e., two `SNodes` which
-we will name `a` and `b`. Leave the `ngclearn/engine/cables/` directory
+we will name `a` and `b`. Graphically, the 2-node circuit is depicted below
+(it is nearly identical to one of the 2-node circuits you would have built
+in [Lesson 1](../tutorials/lesson1.md)):
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-------------------------------------------------------+
+   | .. image:: ../images/tutorials/lesson2/2n_circuit.png |
+   |   :scale: 75%                                         |
+   |   :align: center                                      |
+   +-------------------------------------------------------+
+```
+
+Leave the `ngclearn/engine/cables/` directory
 (i.e., `$ cd ../../../`) and
 create a new file `test_custom_cable.py`. Next, go ahead and re-compile ngc-learn
 so that way it is aware of your new additional cable in `ngclearn/engine/cables/`:

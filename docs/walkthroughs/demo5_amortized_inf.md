@@ -333,7 +333,7 @@ to those presented below:
 
 As we see, our NGC system has desirably learned low-level feature detectors
 corresponding to "pieces" of human faces, such as lips, noses, eyes, and other
-facial components. This was all learned only a few steps of simulated settling
+facial components. This was all learned with only a few steps of simulated settling
 (`K = 10`) utilizing our learned recognition model. Notice that the low-level
 filters of the recognition model (the plot to the left) look similar to those
 acquired by the generative model but are "simpler" or less distinguished/sharp.
