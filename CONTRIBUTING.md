@@ -8,7 +8,8 @@ conduct research in neurobiologically-motivated neural systems and algorithms. H
 
 - Read the ngc-learn [documentation](https://ngc-learn.readthedocs.io/en/latest/#) and its [source paper](https://www.nature.com/articles/s41467-022-29632-7#:~:text=Neural%20generative%20models%20can%20be,predictive%20processing%20in%20the%20brain.)
 - Check our latest status from existing [issues](https://github.com/ago109/ngc-learn/issues), [pull requests](https://github.com/ago109/ngc-learn/pulls), and [branches](https://github.com/ago109/ngc-learn/branches) and avoid duplicate efforts
-- <!--Join our [NGC-LEARN Slack](https://ngc-learn.slack.com) workspace for technical discussions.--> Please [email us](mailto:ago@cs.rit.edu) to be added to our Slack workspace for technical discussions.
+- Please [email us](mailto:ago@cs.rit.edu) to be added to our Slack workspace for technical discussions.
+<!--Join our [NGC-LEARN Slack](https://ngc-learn.slack.com) workspace for technical discussions.--> 
 
 We encourage the community to make major types of contributions including:
 
