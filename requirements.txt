@@ -5,3 +5,4 @@ scipy>=1.7.0
 matplotlib>=3.4.3
 networkx>=2.6.3
 pyvis>=0.2.0
+
