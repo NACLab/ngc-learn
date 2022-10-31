@@ -144,7 +144,7 @@ class SparseCable(Cable):
         cable_type = "sparse" ## label this cable type
         super().__init__(cable_type, inp, out, name, seed)
 
-        # b/c we sub-class the Cable class, we can retrieve dimensions of input/output nodes
+        # because we sub-class the Cable class, we can retrieve dimensions of input/output nodes
         in_dim = self.src_node.dim # in Cable, "inp" is set to be "self.src_node" (source node)
         out_dim = self.dest_node.dim # in Cable, "out" is set to be "self.dest_node" (destination node)
 
@@ -270,7 +270,7 @@ in [Lesson 1](../tutorials/lesson1.md)):
 ```
 
 Leave the `ngclearn/engine/cables/` directory
-(i.e., `$ cd ../../../`) and
+(and go back to your `/tutorials/lesson2/` folder) and
 create a new file `test_custom_cable.py`. Next, go ahead and re-compile ngc-learn
 so that way it is aware of your new additional cable in `ngclearn/engine/cables/`:
 
@@ -358,7 +358,11 @@ same circuit but with a cable connecting `a` to `b` that is NOT sparse). Write
 the following code in your second file (`test_dense_cable.py`):
 
 ```python
+import tensorflow as tf
+import numpy as np
+from ngclearn.engine.nodes.snode import SNode
 from ngclearn.engine.cables.dcable import DCable
+from ngclearn.engine.ngc_graph import NGCGraph
 
 a = SNode(name="a", dim=4, beta=1, leak=0.0, act_fx="identity")
 b = SNode(name="b", dim=6, beta=1, leak=0.0, act_fx="identity")
@@ -601,7 +605,7 @@ for our `SparseCable` that we have developed throughout this lesson.
 
 Concretely, we will call our new learning rule a `MaskedHebbRule` and simply
 design it to utilize the binary mask `M` that should come within the cable it
-modifies (b/c our sparse cable does have such a matrix) -- in other words, we will
+modifies (because our sparse cable does have such a matrix) -- in other words, we will
 be designing a very specialized update
 rule that would only work with a `SparseCable` or a cable that has internally
 implemented some masking matrix `M` (which would be sufficient for our
@@ -676,7 +680,7 @@ and [SCable](ngclearn.engine.cables.scable), its varous nodes
 as well as its standard learning rules [HebbRule](ngclearn.engine.cables.rules.hebb_rule).
 
 To try out our new learning rule, move out of the current directory again
-(i.e., `cd ../../../../`) and
+(and go back to your `/tutorials/lesson2/` folder) and
 re-compile ngc-learn so it is aware of your custom-designed rule (`$ python setup.py install`).
 Then create a file called `test_custom_rule.py` and write the following:
 
