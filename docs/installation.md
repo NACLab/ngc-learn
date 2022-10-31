@@ -38,13 +38,16 @@ it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="images/test_ngclearn_install.png" width="512">
 
-After installation, you can also the tests in the directory `/tests/`, specifically
+After installation, you can also run the tests in the directory `/tests/`, specifically
 ```console
-$ python test_fun_dynamics.py
+$ python test_identity.py
 ```
 and should see that all the basic assertion tests yield pass as follows:
 
 <img src="images/test_run_output.png" width="512">
+
+(Note: Running the others, e.g., `test_gen_dynamics.py` and `test_harmonium.py`,
+should also result in passing conditions as well.)
 
 
 ## A Note on Simulating with the GPU or CPU
