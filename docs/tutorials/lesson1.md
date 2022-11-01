@@ -148,7 +148,7 @@ $$
 (\mathbf{dz}_{td} + \mathbf{dz}_{bu} \odot \phi^\prime(\mathbf{z})) + \mbox{prior}(\mathbf{z})
 $$
 
-where we also formally represent the compartments `dz_bu`, `dz_td`, `z`, and `phi(z)`
+where we also formally represent the compartments `dz_bu` (bottom-up input), `dz_td` (top-down input), `z`, and `phi(z)`
 as $\mathbf{dz}_{bu}$, $\mathbf{dz}_{td}$, $\mathbf{z}$, and $\phi(\mathbf{z})$,
 respectively. This means that, if we use Euler integration to update the `SNode`'s compartment
 $\mathbf{z}$ (the default in ngc-learn), $\mathbf{z}$ is updated each call to `.step()` as follows:
