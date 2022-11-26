@@ -174,7 +174,7 @@ The `SpNode_LIF` allows you to control the value of $\tau_m$ either directly (an
 will tell the node to set $R=1$ and $C=\tau_m$ and the node will ignore any
 argument values provided for $R$ and $C$) or via $R$ and $C$.
 (Notice that this default state of the `SpNode_LIF` assumes that the input spike
-signals from external nodes that feed into $\mathbf{dz}_{bu}$ and $\mathbf{dz}_{td}$)
+signals from external nodes that feed into $\mathbf{dz}_{bu}$ and $\mathbf{dz}_{td}$ 
 result in an instantaneous jump in each neuron's synaptic current $\mathbf{J}_t$ but
 this assumption/simplification can be removed by setting `SpNode_LIF`'s argument
 `zeta` to any non-zero value in order to tell the node that it needs to integrate
@@ -198,8 +198,8 @@ $$
 
 where we see that if the $i$th neuron's membrane potential exceeds the threshold
 $V_{thr}$, then a voltage spike is emitted. After a spike is emitted, the $i$th
-neuron within the node needs to be reset to its resting potential and this done
-with the final compartment we mentioned, i.e., the refractory variable $\mathbf{r}_t$.
+neuron within the node needs to be reset to its resting potential and this is done
+with the final compartment that we mentioned, i.e., the refractory variable $\mathbf{r}_t$.
 The refractory variable $\mathbf{r}_t$ is important for hyperpolarizing the
 $i$th neuron back to its resting potential (establishing a critical reset mechanism
 -- otherwise, the neuron would fire out of control after overcoming its
