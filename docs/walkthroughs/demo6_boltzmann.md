@@ -94,7 +94,7 @@ $$
 p(\mathbf{z}^0 = \mathbf{x}) = \frac{1}{Z} \exp( -E(\mathbf{z}^0,\mathbf{z}^1) )
 $$
 
-where $Z$ is the normalizing constant (or, in statistics mechanics, the partition
+where $Z$ is the normalizing constant (or, in statistical mechanics, the partition
 function) needed to obtain proper probability values (and is, in fact, intractable
 to compute for any reasonably-sized Harmonium -- fortunately, we will not need to
 calculate it in order to learn a Harmonium). When one works through the derivation
