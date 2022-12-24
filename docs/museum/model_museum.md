@@ -12,6 +12,21 @@ one or a few particular modeling purposes, have been (and still are being) propo
 Given this, one of ngc-learn's aims is to capture an approximate snapshot of as many
 of these architectures/ideas as possible.
 
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-------------------------------------------------------+
+   | .. image:: ../images/museum/deep_blue.jpg |
+   |   :scale: 75%                                         |
+   |   :align: center                                      |
+   |   IBM's Deep Blue supercomputer -- one of its two     |
+   |   racks is displayed at the National Museum of        |
+   |   American History and the other at the Computer      |
+   |   History Museum.                                     |
+   +-------------------------------------------------------+
+```
+
 Given the generality of the NGC computational framework [1], many
 flavors of predictive processing can be recovered/derived and it is within
 ngc-learn's Model Museum that we intend to model and preserve variant
