@@ -28,7 +28,8 @@ ngc-learn's Model Museum that we intend to model and preserve variant
 models (as they historically have been and currently are being created). This
 allows current and future scientists, engineers, and enthusiasts to examine
 these models, much as one would curiously examine exhibits. such as paintings
-or preserved mechanical inventions and technological artifacts, at a museum.
+or preserved mechanical inventions and technological artifacts, at a museum (such
+as the Deep Blue computer shown in the image above). 
 The Model Museum also provides an opportunity for those working in the domain
 of predictive processing to publish their successful structures/ideas that are
 presented in publications and/or tested applications (contact us if you have a
