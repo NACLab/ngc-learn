@@ -17,7 +17,9 @@ of these architectures/ideas as possible.
    :alt: The Deep Blue Supercomputer.
    :class: with-shadow
    :align: center
-   :width: 100px
+   :width: 250px
+
+   IBM's Deep Blue supercomputer -- one of its two racks is displayed at the National Museum of American History and the other at the Computer History Museum.
 ```
 
 Given the generality of the NGC computational framework [1], many
