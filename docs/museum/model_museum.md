@@ -13,13 +13,11 @@ Given this, one of ngc-learn's aims is to capture an approximate snapshot of as 
 of these architectures/ideas as possible.
 
 ```{eval-rst}
-..  figure:: /Images/a4.jpg
-   :alt: some image
-   :target: https://typo3.org
+..  figure:: ../images/museum/deep_blue.jpg
+   :alt: The Deep Blue Supercomputer.
    :class: with-shadow
+   :align: center
    :width: 100px
-
-   IBM's Deep Blue supercomputer -- one of its two racks is displayed at the National Museum of American History and the other at the Computer History Museum.
 ```
 
 Given the generality of the NGC computational framework [1], many
