@@ -22,7 +22,7 @@ class GNCN_PDH:
     generative models. Nature Communications 13, 2064 (2022).
 
     This model, under the NGC computational framework, is referred to as
-    the GNCN-t1-Sigma/Friston, according to the naming convention in
+    the GNCN-PDH, according to the naming convention in
     (Ororbia & Kifer 2022).
 
     | Historical Note:
