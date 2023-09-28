@@ -17,9 +17,9 @@ Official documentation, including tutorials, can be found
 The official blog-post related to the source paper behind this software library
 can be found
 <a href="https://go.nature.com/3rgl1K8">here</a>.<br>
-You can find the related paper <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>,  
-which was selected to appear in the Nature Neuromorphic Hardware and Computing Collection in 2023 and was 
-chosen as one of the Editors' Highlights for Applied Physics and Mathematics in 2022.
+You can find the related paper <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>, which 
+was selected to appear in the Nature <i>Neuromorphic Hardware and Computing Collection</i> in 2023 and was 
+chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics</i> in 2022.
 
 <!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
