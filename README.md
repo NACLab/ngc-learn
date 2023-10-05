@@ -2,10 +2,9 @@
 
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
-<b>ngc-learn</b> is a Python library for building, simulating, and analyzing arbitrary
-predictive processing (or predictive coding) models based on the neural generative
-coding (NGC) computational framework as well as other neurobiologically-motivated/grounded
-systems. This toolkit is built on top of Tensorflow 2 and is distributed under the 3-Clause BSD license.
+<b>ngc-learn</b> is a Python library for building, simulating, and analyzing biomimetic systems, neurobiological
+agents, and predictive coding models (predictive processing theory) based on the neural generative
+coding (NGC) computational framework. This toolkit is built on top of Tensorflow 2 and is distributed under the 3-Clause BSD license.
 
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
@@ -18,8 +17,9 @@ Official documentation, including tutorials, can be found
 The official blog-post related to the source paper behind this software library
 can be found
 <a href="https://go.nature.com/3rgl1K8">here</a>.<br>
-You can find the related paper (which also appears under the Editors' Highlights page
-for Applied Physics and Mathematics), <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>.
+You can find the related paper <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>, which 
+was selected to appear in the Nature <i>Neuromorphic Hardware and Computing Collection</i> in 2023 and was 
+chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics</i> in 2022.
 
 <!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
