@@ -6,6 +6,8 @@
 agents, and predictive coding models (predictive processing theory) based on the neural generative
 coding (NGC) computational framework. This toolkit is built on top of Tensorflow 2 and is distributed under the 3-Clause BSD license.
 
+<b>NOTICE:</b> This is a dev branch of ngc-learn and <i>no guarantees</i> are offered as to whether or not this particular branch works (until is finally merged back into main).
+
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
