@@ -38,9 +38,10 @@ History
   * networkx support provided in experimental auxiliary folder for op-graph visualization
   * Walkthrough 7 written to demonstrate how to train a spiking network with error-Hebbian feedback
 
-1.0.0 (2023-10-15)
+0.9.9 (2023-10-15; unofficial dev branch)
 — — — — — — — — -
   * ngc-learn backend re-engineered to be pure Jax
   * LIF, quad-LIF, WTAS cell nodes integrated
   * exponential STDP synaptic plasticity integrated
   * power-law STDP synaptic plasticity integrated
+  * docs rebuilts/revised to adhere to new ngc-learn nodes-and-cables simulator backend
