@@ -38,7 +38,7 @@ History
   * networkx support provided in experimental auxiliary folder for op-graph visualization
   * Walkthrough 7 written to demonstrate how to train a spiking network with error-Hebbian feedback
 
-0.9.9 (2023-10-15; unofficial dev branch)
+0.9.9 (2023-10-15; pre-release dev branch)
 — — — — — — — — -
   * ngc-learn backend re-engineered to be pure Jax
   * LIF, quad-LIF, WTAS cell nodes integrated
