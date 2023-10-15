@@ -14,9 +14,11 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
+#sys.path.insert(0, os.path.abspath('_build/html/'))
 
 import sphinx_rtd_theme
-
+#import jax
+#import imageio
 import ngclearn
 
 # -- Project information -----------------------------------------------------
@@ -67,7 +69,9 @@ myst_enable_extensions = [
 
 pygments_style = "sphinx"
 
-autodoc_mock_imports = ['scipy','sklearn','tensorflow','tensorflow_probability']
+autodoc_mock_imports = ['jax', 'imageio', 'patchify']
+#autodoc_mock_imports = ['scipy','sklearn','tensorflow','tensorflow_probability']
+#autodoc_mock_imports = ['patchify', 'imageio', 'jax', 'scipy','sklearn','tensorflow','tensorflow_probability']
 
 # sphinx api-doc variables
 #apidoc_module_dir = "../ngclearn"
@@ -86,7 +90,7 @@ master_doc = "index"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-#exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+#exclude_patterns = ['Thumbs.db', '.DS_Store']
 
 
 # -- Options for HTML output -------------------------------------------------

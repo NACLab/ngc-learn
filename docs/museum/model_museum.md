@@ -1,9 +1,10 @@
 # The Model Museum
 
-Predictive processing has undergone many important developments over the decades,
-dating back to Hermann von Helmholtz's theory of  “unconscious inference”
-in perception which itself operationalized the ideas of the 18th century philosopher
-Immanuel Kant. It has risen as a promising theoretical and mathematical model
+Predictive processing and biomimetic modeling has undergone many important
+developments over the decades, dating back to Hermann von Helmholtz's
+theory of  “unconscious inference” in perception which itself operationalized
+the ideas of the 18th century philosopher Immanuel Kant.
+It has risen as a promising theoretical and mathematical model
 of various aspects of neural circuitry in computational neuroscience, serving
 as one embodiment of the Bayesian brain hypothesis, and has been shown to be a
 powerful computational modeling tool for cognitive science and

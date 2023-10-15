@@ -4,61 +4,13 @@ ngclearn.museum package
 Submodules
 ----------
 
-ngclearn.museum.gncn\_pdh module
---------------------------------
+ngclearn.museum.model module
+----------------------------
 
-.. automodule:: ngclearn.museum.gncn_pdh
+.. automodule:: ngclearn.museum.model
    :members:
    :undoc-members:
    :show-inheritance:
-
-ngclearn.museum.gncn\_t1 module
--------------------------------
-
-.. automodule:: ngclearn.museum.gncn_t1
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.museum.gncn\_t1\_ffm module
-------------------------------------
-
-.. automodule:: ngclearn.museum.gncn_t1_ffm
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.museum.gncn\_t1\_sc module
------------------------------------
-
-.. automodule:: ngclearn.museum.gncn_t1_sc
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.museum.gncn\_t1\_sigma module
---------------------------------------
-
-.. automodule:: ngclearn.museum.gncn_t1_sigma
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.museum.harmonium module
---------------------------------
-
-.. automodule:: ngclearn.museum.harmonium
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.museum.snn_ba module
---------------------------------
-
-.. automodule:: ngclearn.museum.snn_ba
-  :members:
-  :undoc-members:
-  :show-inheritance:
 
 Module contents
 ---------------

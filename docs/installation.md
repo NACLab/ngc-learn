@@ -6,14 +6,11 @@ without a GPU.
 <i>Setup:</i> Ensure that you have installed the following base dependencies in
 your system. Note that this library was developed and tested on Ubuntu 18.04.
 Specifically, ngc-learn requires:
-* Python (>=3.7)
-* Numpy (>=1.20.0)
-* Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
-* scikit-learn (>=0.24.2) (needed for the demonstrations in `examples/` as well as
-     ngclearn.density)
-* matplotlib (>=3.4.3) (needed for the walkthroughs in `walkthroughs/`)
-* networkx  (>=2.6.3) (needed for model graph visualization)
-* pyviz (>=0.2.0) (needed for model graph visualization)
+* Python (>=3.9)
+* Numpy (>=1.26.0)
+* JAX (>= 0.4.16)
+* scikit-learn (>=1.3.1) (needed for `walkthroughs/` as well as `ngclearn.density`)
+* matplotlib (>=3.4.3) (needed for `walkthroughs/`)
 
 ## Install from Source
 
@@ -38,6 +35,7 @@ it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="images/test_ngclearn_install.png" width="512">
 
+<!--
 After installation, you can also run the tests in the directory `/tests/`, specifically
 ```console
 $ python test_identity.py
@@ -84,3 +82,4 @@ initializing NGC graphs or simulating the NGC systems (learning, inference, etc.
 it is recommended to place a with-statement before the relevant code (which
 forces the execution of the following code indented underneath the with-statement
 to reside on the GPU with the identifier you provided.)
+-->

@@ -1,10 +1,10 @@
 # Overview
 
-<b>ngc-learn</b> is a Python library for building, simulating, and analyzing arbitrary
+<b>ngc-learn</b> is a Python library for building, simulating, and analyzing
+biomimetic computational models and arbitrary
 predictive processing/coding models based on the neural generative
-coding (NGC) computational framework as well as other neurobiologically-motivated/grounded
-systems. This toolkit is built on top of Tensorflow 2 and is
-distributed under the 3-Clause BSD license.
+coding (NGC) computational framework. This toolkit is built on top of JAX and
+is distributed under the 3-Clause BSD license.
 
 Advances made in research on artificial neural networks (ANNs) have led to many
 breakthroughs in machine learning and beyond, resulting in the design of powerful
@@ -39,32 +39,30 @@ this system adjust their internal activity values (as well the strengths of the
 synapses that wire to them) based on how different their predictions were from
 observed signals.
 Concretely, ngc-learn implements a general predictive processing framework known
-as neural generative coding (NGC).
+as neural generative coding (NGC). On top of this, ngc-learn implements a general
+simulation framework for simulating biomimetic systems characterized by
+differential equations, notably ones based on biophysical <i>spiking neuronal
+cells</i>.
 
 The overarching goal of ngc-learn is to provide researchers and engineers with:
 * a modular design that allows for the flexible creation, simulation, and analysis of
-  neural systems fundamentally built and driven by predictive processing;
+  neural systems and circuits under the framework of predictive processing;
 * a powerful, approachable tool, written by and maintained by researchers and
-experimenters directly studying and working to advance predictive processing,
-meant to lower the barriers to entry to this field of research;
-* a ["model museum"](museum/model_museum) that captures the essence of fundamental and interesting
-predictive processing models and algorithms throughout history, allowing for the
-study of and experimentation with classical and modern ideas.
+experimenters directly studying and working to advance predictive processing and
+biomimetic systems, meant to lower the barriers to entry to this field of research;
+* a ["model museum"](museum/model_museum) that captures the essence of fundamental
+and interesting predictive processing and other biomimetic models throughout
+history, allowing for the study of and experimentation with classical and modern ideas.
 
 The ngc-learn software framework was originally developed in 2019 by the Neural Adaptive
-Computing (NAC) laboratory in Rochester Institute of Technology meant as an internal
-tool for predictive processing research (with earlier incarnations in the Scala
-programming language, dating back to early 2017). It remains actively maintained
-and used for predictive processing research in NAC (see ngc-learn's mention/announcement
-in this <a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">engineering blog post</a>).
+Computing (NAC) laboratory in Rochester Institute of Technology meant to serve as
+an internal tool for predictive processing research (with earlier incarnations in the Scala
+programming language, dating back to early 2017). It remains actively maintained by
+and used for predictive processing and biomimetics research in the NAC lab
+(see ngc-learn's mention/announcement in this
+<a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">engineering blog post</a>).
 We warmly welcome community contributions to this project. For details please check out our
 [contributing guidelines](https://github.com/ago109/ngc-learn/blob/main/CONTRIBUTING.md).
-
-<!--
-This release of ngc-learn contains three predictive processing models, X types of
-nodes, Y types of cables, and Z density estimators. It also offers a modular design of NGC systems
-for building new/novel and general architectures and models. We highlight these primary features below:
--->
 
 ## Citation
 Please cite ngc-learn's source/core paper if you use this framework in your publications:

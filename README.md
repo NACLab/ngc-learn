@@ -1,10 +1,10 @@
-[![Python Version](https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue.svg)](https://www.python.org/downloads)[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)[![Documentation Status](https://readthedocs.org/projects/ngc-learn/badge/?version=latest)](http://ngc-learn.readthedocs.io/en/latest/?badge=latest)[![DOI](https://zenodo.org/badge/483413212.svg)](https://zenodo.org/badge/latestdoi/483413212)
+[![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10-blue.svg)](https://www.python.org/downloads)[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)[![Documentation Status](https://readthedocs.org/projects/ngc-learn/badge/?version=latest)](http://ngc-learn.readthedocs.io/en/latest/?badge=latest)[![DOI](https://zenodo.org/badge/483413212.svg)](https://zenodo.org/badge/latestdoi/483413212)
 
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing biomimetic systems, neurobiological
 agents, and predictive coding models (predictive processing theory) based on the neural generative
-coding (NGC) computational framework. This toolkit is built on top of Tensorflow 2 and is distributed under the 3-Clause BSD license.
+coding (NGC) computational framework. This toolkit is built on top of JAX and is distributed under the 3-Clause BSD license.
 
 <b>NOTICE:</b> This is a dev branch of ngc-learn and <i>no guarantees</i> are offered as to whether or not this particular branch works (until is finally merged back into main).
 
@@ -19,8 +19,8 @@ Official documentation, including tutorials, can be found
 The official blog-post related to the source paper behind this software library
 can be found
 <a href="https://go.nature.com/3rgl1K8">here</a>.<br>
-You can find the related paper <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>, which 
-was selected to appear in the Nature <i>Neuromorphic Hardware and Computing Collection</i> in 2023 and was 
+You can find the related paper <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>, which
+was selected to appear in the Nature <i>Neuromorphic Hardware and Computing Collection</i> in 2023 and was
 chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics</i> in 2022.
 
 <!--The technical report going over the theoretical underpinnings of the
@@ -32,14 +32,16 @@ chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics<
 your system. Note that this library was developed on Ubuntu 18.04 and tested on
 Ubuntu(s) 16.04 and 18.04 (and should also work on Ubuntu 20.04).
 ngc-learn requires:
-1) Python (>=3.7)
-2) Numpy (>=1.20.0)
-3) Tensorflow 2.0.0, specifically, tensorflow-gpu>=2.0.0
-4) scikit-learn (>=0.24.2) if using `ngclearn.density` (needed for the demo/tutorial
+1) Python (>=3.9)
+2) Numpy (>=1.26.0)
+3) JAX (>= 0.4.16)
+4) scikit-learn (>=1.3.1) if using `ngclearn.density` (needed for the demo/tutorial
     files in `examples/`)
 5) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
+<!--
 6) networkx  (>=2.6.3) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
 7) pyviz (>=0.2.0) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
+-->
 
 (Which you can have setup/installed by running `$ pip3 install -r requirements.txt`.)
 
@@ -91,7 +93,7 @@ $ git clone https://github.com/ngc-learn/ngc-learn.git
 
 
 **Version:**<br>
-0.5.0 <!-- -Alpha -->
+0.9.9 <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>

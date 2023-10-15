@@ -23,3 +23,24 @@ History
     tests modified to reflect updated API)
   * Demonstration 6 released showcasing how to use ngc-learn to construct/fit a
     restricted Boltzmann machine
+
+0.4.0-alpha (2022–05–25)
+— — — — — — — — -
+ * Harmonium written into model museum
+ * "demonstrations" have been renamed to "walkthroughs" 
+ * tutorial 1 written/provided
+ * nodes-and-cables system upgraded/polished; incremental simulation centrally supported
+ * infinite-mnist data generating process integrated into experimental
+
+0.5.0-alpha (2022-07-02)
+— — — — — — — — -
+  * Spiking nodes (LIF and ELIF) support implemented as core nodes
+  * networkx support provided in experimental auxiliary folder for op-graph visualization
+  * Walkthrough 7 written to demonstrate how to train a spiking network with error-Hebbian feedback
+
+1.0.0 (2023-10-15)
+— — — — — — — — -
+  * ngc-learn backend re-engineered to be pure Jax
+  * LIF, quad-LIF, WTAS cell nodes integrated
+  * exponential STDP synaptic plasticity integrated
+  * power-law STDP synaptic plasticity integrated

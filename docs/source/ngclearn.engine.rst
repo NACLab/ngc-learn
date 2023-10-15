@@ -7,24 +7,16 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   ngclearn.engine.cables
    ngclearn.engine.nodes
+   ngclearn.engine.utils
 
 Submodules
 ----------
 
-ngclearn.engine.ngc\_graph module
----------------------------------
+ngclearn.engine.opgraph module
+------------------------------
 
-.. automodule:: ngclearn.engine.ngc_graph
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.engine.proj\_graph module
-----------------------------------
-
-.. automodule:: ngclearn.engine.proj_graph
+.. automodule:: ngclearn.engine.opgraph
    :members:
    :undoc-members:
    :show-inheritance:

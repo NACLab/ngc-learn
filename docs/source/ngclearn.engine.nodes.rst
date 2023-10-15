@@ -7,34 +7,12 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   ngclearn.engine.nodes.spiking
+   ngclearn.engine.nodes.cells
+   ngclearn.engine.nodes.ops
+   ngclearn.engine.nodes.synapses
 
 Submodules
 ----------
-
-ngclearn.engine.nodes.enode module
-----------------------------------
-
-.. automodule:: ngclearn.engine.nodes.enode
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.engine.nodes.fnode module
-----------------------------------
-
-.. automodule:: ngclearn.engine.nodes.fnode
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.engine.nodes.fnode\_ba module
---------------------------------------
-
-.. automodule:: ngclearn.engine.nodes.fnode_ba
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 ngclearn.engine.nodes.node module
 ---------------------------------
@@ -44,10 +22,10 @@ ngclearn.engine.nodes.node module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.engine.nodes.snode module
-----------------------------------
+ngclearn.engine.nodes.node\_factory module
+------------------------------------------
 
-.. automodule:: ngclearn.engine.nodes.snode
+.. automodule:: ngclearn.engine.nodes.node_factory
    :members:
    :undoc-members:
    :show-inheritance:
