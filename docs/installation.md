@@ -8,9 +8,10 @@ your system. Note that this library was developed and tested on Ubuntu 18.04.
 Specifically, ngc-learn requires:
 * Python (>=3.9)
 * Numpy (>=1.26.0)
-* JAX (>= 0.4.16)
+* JAX (>= 0.4.16) (tested for cuda 11.8)
 * scikit-learn (>=1.3.1) (needed for `walkthroughs/` as well as `ngclearn.density`)
 * matplotlib (>=3.4.3) (needed for `walkthroughs/`)
+* patchify
 
 ## Install from Source
 
@@ -22,7 +23,7 @@ $ cd ngc-learn
 
 2. Install the base requirements (and a few extras for building the docs) with:
 ```console
-$ pip3 install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 3. Install the ngc-learn package via:
