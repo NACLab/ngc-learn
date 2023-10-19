@@ -12,11 +12,11 @@ class PassCell(Cell):  # inherits from Node class
 
         dt: integration time constant
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG key to control determinism of any underlying synapses
             associated with this cell
     """
-    def __init__(self, name, n_units, dt, seed=69):
-        super().__init__(name, n_units, dt, seed)
+    def __init__(self, name, n_units, dt, key=None):
+        super().__init__(name, n_units, dt, key)
         # cell compartments
         self.comp["in"] = None
 

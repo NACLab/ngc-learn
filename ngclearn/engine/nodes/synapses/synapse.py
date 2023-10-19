@@ -15,11 +15,11 @@ class Synapse(Node, ABC):
 
         dt: integration time constant
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this cable
     """
-    def __init__(self, name, shape, dt, seed=69):
-        super().__init__(name=name, dt=dt, seed=seed)
+    def __init__(self, name, shape, dt, key=None):
+        super().__init__(name=name, dt=dt, key=key)
         self.shape = shape
 
     def evolve(self):

@@ -18,11 +18,11 @@ class PoissCell(Cell):  # inherits from Node class
         max_lag: lag coefficent; maximum time allowed to pass before first spike emitted
             (DEFAULT: 0)
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG key to control determinism of any underlying synapses
             associated with this cell
     """
-    def __init__(self, name, n_units, dt, max_lag=0., seed=69):
-        super().__init__(name, n_units, dt, seed)
+    def __init__(self, name, n_units, dt, max_lag=0., key=None):
+        super().__init__(name, n_units, dt, key)
         self.max_lag = max_lag ## max time allowed to pass before first spike emitted
 
         if max_lag > 0.: ## compute lags if max_lag is > 0

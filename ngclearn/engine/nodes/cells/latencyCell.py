@@ -17,11 +17,11 @@ class LatencyCell(Cell):  # inherits from Node class
 
         thr:
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this cell
     """
-    def __init__(self, name, n_units, dt, tau=5., thr=0.01, seed=69):
-        super().__init__(name, n_units, dt, seed)
+    def __init__(self, name, n_units, dt, tau=5., thr=0.01, key=None):
+        super().__init__(name, n_units, dt, key)
         self.tau = tau
         self.thr = thr
         self.linearize = False

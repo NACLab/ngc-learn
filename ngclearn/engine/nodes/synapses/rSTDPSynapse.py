@@ -105,14 +105,14 @@ class RSTDPSynapse(Synapse):  # inherits from Node class
 
         sign: scalar sign to multiply output signal by (DEFAULT: 1)
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this cable
     """
     def __init__(self, name, dt, shape, eta, tau_e=100., tau_w=1000.,
                  x_tar=0.0, use_td_error=True, reset_Elg_on_reward=True,
                  Aplus=1., Aminus=0., exp_beta=None, w_norm=None, push_rate=-1,
-                 push_amount=0., sign=None, seed=69):
-        super().__init__(name=name, shape=shape, dt=dt, seed=seed)
+                 push_amount=0., sign=None, key=None):
+        super().__init__(name=name, shape=shape, dt=dt, key=key)
         self.eta = eta
         # STDP meta-parameters
         self.x_tar = x_tar
@@ -145,7 +145,6 @@ class RSTDPSynapse(Synapse):  # inherits from Node class
         self.comp['EgMask'] = None
 
         # preprocessing - set up synaptic efficacy matrix
-        self.key = random.PRNGKey(seed)
         self.key, *subkeys = random.split(self.key, 2)
         lb = 0.025 # 0.25
         ub = 0.55 #0.8

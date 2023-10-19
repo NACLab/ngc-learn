@@ -52,12 +52,12 @@ class VarTrace(Op):  # inherits from Node class
                 "exp" = exponential trace filter
                 "step" = step trace filter
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
     def __init__(self, name, n_units, dt, tau_tr=50., incr_pos=False,
-                 a_delta=1., decay_type="lin", seed=69):
-        super().__init__(name, n_units, dt, seed)
+                 a_delta=1., decay_type="lin", key=None):
+        super().__init__(name, n_units, dt, key)
         self.tau_tr = tau_tr  ## trace time constant
         self.incr_pos = incr_pos ## increment trace +1 instead of set to 1 if spike
         self.a_delta = a_delta ## if incr_pos == True, increase ODE by this value

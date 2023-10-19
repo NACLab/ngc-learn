@@ -22,11 +22,11 @@ class ProjectionSynapse(Synapse):  # inherits from Cell class
 
         sign: scalar sign to multiply output signal by (DEFAULT: 1)
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this cable
     """
-    def __init__(self, name, dt, shape, sign=None, seed=69):
-        super().__init__(name=name, shape=shape, dt=dt, seed=seed)
+    def __init__(self, name, dt, shape, sign=None, key=None):
+        super().__init__(name=name, shape=shape, dt=dt, key=key)
         self.shape = shape  # shape of synaptic matrix W
         self.sign = 1 if sign is None else sign
 
@@ -34,7 +34,6 @@ class ProjectionSynapse(Synapse):  # inherits from Cell class
         self.comp["in"] = None
 
         #Preprocessing
-        self.key = random.PRNGKey(seed)
         self.key, *subkeys = random.split(self.key, 2)
         sigma = 0.025
         self.W = random.normal(subkeys[0], self.shape, dtype=jnp.float32) * sigma

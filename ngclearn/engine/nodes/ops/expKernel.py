@@ -33,11 +33,11 @@ class ExpKernel(Op):  # inherits from Node class
 
         nu: spike time interval for window (window time bound)
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
-    def __init__(self, name, n_units, dt, tau_w=500., nu=4., seed=69):
-        super().__init__(name, n_units, dt, seed)
+    def __init__(self, name, n_units, dt, tau_w=500., nu=4., key=None):
+        super().__init__(name, n_units, dt, key)
         self.tau_w = tau_w  # kernel time constant; (micro-sec, spike window time constant)
         self.nu = nu  # window time bound (in ms?)
         self.win_len = int(nu/dt) + 1 # window length

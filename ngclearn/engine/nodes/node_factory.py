@@ -1,28 +1,16 @@
-import warnings, json, sys
+import warnings, json
 from os.path import join
 import glob
 import importlib
 import sys
-
-from ngclearn.engine.nodes.ops import VarTrace
-from ngclearn.engine.nodes.cells import LIFCell, PoissCell
-from ngclearn.engine.nodes.synapses import RSTDPSynapse #, RTISynapse
+import jax
 
 class Node_Factory:
-    """
-    Internal nexus class for generating the elements of the nodes-and-cables system.
-    """
     def __init__(self):
         self.node_types = {}
-        # self.add_node_type(VarTrace)
-        # self.add_node_type(LIFCell)
-        # self.add_node_type(PoissCell)
-        # self.add_node_type(RTISynapse)
-        #self.add_node_type(RSTDPSynapse)
         self.load_from_dir('ngclearn/engine/nodes/cells')
         self.load_from_dir('ngclearn/engine/nodes/ops')
         self.load_from_dir('ngclearn/engine/nodes/synapses')
-        #print(self.node_types.keys())
 
     def load_from_dir(self, path):
         modules = glob.glob(join(sys.path[1] + '/' + path, "*.py"))
@@ -43,14 +31,15 @@ class Node_Factory:
         else:
             self.node_types[identifier] = nodeClass
 
-    def make_node(self, directory, seed=None):
+    def make_node(self, directory):
         with open(directory + "/data.json", 'r') as f:
             data = json.load(f)
 
         node_class = self.node_types[data['type']]
         del data['type']
-        if seed is not None:
-            data['seed'] = seed
+        if data['key'] is not None:
+            key = jax.numpy.array(data['key'], dtype=jax.numpy.uint32)
+            data['key'] = key
 
         node = node_class(**data)
         node.custom_load(directory)
