@@ -46,12 +46,12 @@ class EvSTDPSynapse(Synapse):  # inherits from Node class
 
         sign: scalar sign to multiply output signal by (DEFAULT: 1)
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this cable
     """
     def __init__(self, name, dt, shape, lamb, eta, w_norm=None,
-                 sign=None, seed=69):
-        super().__init__(name=name, shape=shape, dt=dt, seed=seed)
+                 sign=None, key=None):
+        super().__init__(name=name, shape=shape, dt=dt, key=key)
         self.eta = eta
         self.lamb = lamb
         self.sign = 1 if sign is None else sign
@@ -64,7 +64,6 @@ class EvSTDPSynapse(Synapse):  # inherits from Node class
         self.comp["post"] = None
 
         # preprocessing - set up synaptic efficacy matrix
-        self.key = random.PRNGKey(seed)
         self.key, *subkeys = random.split(self.key, 2)
         lb = 0.025 # 0.25
         ub = 0.8 #1. #0.5 # 0.75

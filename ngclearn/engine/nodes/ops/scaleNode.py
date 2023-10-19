@@ -14,11 +14,11 @@ class ScaleNode(Op):  # inherits from Node class
 
         scale: scaling factor to apply to this node's output (compartment)
 
-        seed: integer seed to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
-    def __init__(self, name, n_units, dt, scale, seed=69):
-        super().__init__(name, n_units, dt, seed)
+    def __init__(self, name, n_units, dt, scale, key=None):
+        super().__init__(name, n_units, dt, key)
         self.scale = scale
 
     def step(self):

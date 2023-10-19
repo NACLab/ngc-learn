@@ -4,6 +4,7 @@ import os, json
 import warnings
 from abc import ABC, abstractmethod
 from ngclearn.engine.utils.bundle_rules import overwrite
+import time
 
 ## base cell
 class Node(ABC):
@@ -16,18 +17,16 @@ class Node(ABC):
         dt: integration time constant, i.e., strength of update to adjust values
             within this node at each simulation step
 
-        seed: integer key to control/set RNG that drives this node
+        key: PRNG key to control/set RNG that drives this node
     """
-    def __init__(self, name, dt, seed=69):
+    def __init__(self, name, dt, key=None):
         self.name = name
-        self.seed = seed
-        self.key = random.PRNGKey(seed)
-        self.dt = dt  # 3. # integration time
+        self.key = random.PRNGKey(time.time_ns()) if key is None else key
 
-        self.config = None
-        self.comp = {"in":None, "out": None}
+        self.comp = {"in": None, "out": None}
         self.incoming = []  # list of tuples - (callback_function,  dest_comp)
-        self.t = 0.  ## node clock
+        self.dt = dt
+        self.t = 0.  ## cell clock
         self.bundle_rules = {None: overwrite(self)}
 
     def custom_load(self, node_directory):
@@ -58,7 +57,8 @@ class Node(ABC):
 
         additional_dict = self.custom_dump(node_directory, template=template)
 
-        all_data = {k: self.__dict__.get(k, None) for k in ['name', 'dt', 'seed']} | additional_dict | {'type': self.__class__.__name__}
+        all_data = {k: self.__dict__.get(k, None) for k in ['name', 'dt']} | additional_dict | {'type': self.__class__.__name__}
+        all_data['key'] = self.key.tolist()
         with open(node_directory + "/data.json", 'w') as f:
             json.dump(all_data, f)
 
