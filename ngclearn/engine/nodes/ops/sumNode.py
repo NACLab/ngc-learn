@@ -17,8 +17,8 @@ class SumNode(Op):  # inherits from Op class
         key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
-    def __init__(self, name, n_units, dt, key=None):
-        super().__init__(name, n_units, dt, key)
+    def __init__(self, name, n_units, dt, key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         self.add_bundle_rule('input', additive(self))
 
     def pre_gather(self):

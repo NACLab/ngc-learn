@@ -111,8 +111,8 @@ class RSTDPSynapse(Synapse):  # inherits from Node class
     def __init__(self, name, dt, shape, eta, tau_e=100., tau_w=1000.,
                  x_tar=0.0, use_td_error=True, reset_Elg_on_reward=True,
                  Aplus=1., Aminus=0., exp_beta=None, w_norm=None, push_rate=-1,
-                 push_amount=0., sign=None, key=None):
-        super().__init__(name=name, shape=shape, dt=dt, key=key)
+                 push_amount=0., sign=None, key=None, debugging=False):
+        super().__init__(name=name, shape=shape, dt=dt, key=key, debugging=debugging)
         self.eta = eta
         # STDP meta-parameters
         self.x_tar = x_tar

@@ -15,8 +15,8 @@ class PassCell(Cell):  # inherits from Node class
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
     """
-    def __init__(self, name, n_units, dt, key=None):
-        super().__init__(name, n_units, dt, key)
+    def __init__(self, name, n_units, dt, key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         # cell compartments
         self.comp["in"] = None
 
