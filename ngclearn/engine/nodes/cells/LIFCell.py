@@ -221,4 +221,13 @@ class LIFCell(Cell):  # inherits from Node class
         """
         return 's'
 
+    comp_j_inh = "j_inh"
+    comp_j = "j"
+    comp_v = "v"
+    comp_s_prev = "s_prev"
+    comp_s = "s"
+    comp_thr = "thr"
+    comp_fs = "fs"
+    comp_tols = "tols"
+
 class_name = LIFCell.__name__

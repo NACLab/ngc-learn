@@ -95,5 +95,9 @@ class HebbianSynapse(Synapse):  # inherits from Cell class
         if os.path.isfile(node_directory + "/W.npy"):
             self.W = jnp.load(node_directory + "/W.npy")
 
+    comp_pre_gate = "pre_gate"
+    comp_post_gate = "post_gate"
+    comp_pre = "pre"
+    comp_post = "post" #Teaching signal
 
 class_name = HebbianSynapse.__name__

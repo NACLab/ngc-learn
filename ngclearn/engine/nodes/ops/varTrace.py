@@ -94,4 +94,7 @@ class VarTrace(Op):  # inherits from Node class
         """
         return 'z'
 
+    comp_z = "z"
+    comp_s_prev = "s_prev"
+
 class_name = VarTrace.__name__

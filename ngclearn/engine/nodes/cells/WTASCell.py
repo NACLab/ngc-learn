@@ -134,4 +134,12 @@ class WTASCell(Cell):  # inherits from Node class
         """
         return 's'
 
+    comp_j = "j"
+    comp_v = "v"
+    comp_s_prev = "s_prev"
+    comp_s = "s"
+    comp_thr = "thr"
+    comp_fs = "fs"
+    comp_tols = "tols"
+
 class_name = WTASCell.__name__

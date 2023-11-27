@@ -61,4 +61,7 @@ class PoissCell(Cell):  # inherits from Node class
         """
         return 's'
 
+    comp_s = 's'
+    comp_tols = 'tols'
+
 class_name = PoissCell.__name__

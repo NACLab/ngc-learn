@@ -74,4 +74,6 @@ class ExpKernel(Op):  # inherits from Node class
         """
         return 'epsp'
 
+    comp_tf = "tf"
+
 class_name = ExpKernel.__name__

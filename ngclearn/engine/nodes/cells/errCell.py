@@ -43,4 +43,8 @@ class ErrCell(Cell):  # inherits from Node class
         """
         return 'err'
 
+    comp_err = "err"
+    comp_targ = "targ"
+    comp_pred = "pred"
+
 class_name = ErrCell.__name__

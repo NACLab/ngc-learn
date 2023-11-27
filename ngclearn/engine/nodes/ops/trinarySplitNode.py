@@ -49,5 +49,6 @@ class TrinarySplitNode(Op):
         else:
             self.comp['tols'] = jnp.zeros([batch_size, self.n_units])
 
+    comp_tols = "tols"
 
 class_name = TrinarySplitNode.__name__
