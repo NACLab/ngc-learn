@@ -36,8 +36,8 @@ class ExpKernel(Op):  # inherits from Node class
         key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
-    def __init__(self, name, n_units, dt, tau_w=500., nu=4., key=None):
-        super().__init__(name, n_units, dt, key)
+    def __init__(self, name, n_units, dt, tau_w=500., nu=4., key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         self.tau_w = tau_w  # kernel time constant; (micro-sec, spike window time constant)
         self.nu = nu  # window time bound (in ms?)
         self.win_len = int(nu/dt) + 1 # window length
@@ -73,5 +73,7 @@ class ExpKernel(Op):  # inherits from Node class
         Returns the value within compartment ``epsp``
         """
         return 'epsp'
+
+    comp_tf = "tf"
 
 class_name = ExpKernel.__name__

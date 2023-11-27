@@ -92,8 +92,8 @@ class LIFCell(Cell):  # inherits from Node class
     """
     def __init__(self, name, n_units, dt, tau_m, v_thr_base, R_m=1., thr_jitter=0.1,
                  lat_Rinh=0., thr_mode='dthr', thr_gain=None, thr_decay=None,
-                 spk_mode='bool', sign=None, key=None):
-        super().__init__(name, n_units, dt, key)
+                 spk_mode='bool', sign=None, key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         self.v_reset = -2. ## voltage value to set after action potential/spike
         self.v_min = -15. ## minimum voltage potential
 
@@ -220,5 +220,14 @@ class LIFCell(Cell):  # inherits from Node class
         Returns the value within output compartment ``s``
         """
         return 's'
+
+    comp_j_inh = "j_inh"
+    comp_j = "j"
+    comp_v = "v"
+    comp_s_prev = "s_prev"
+    comp_s = "s"
+    comp_thr = "thr"
+    comp_fs = "fs"
+    comp_tols = "tols"
 
 class_name = LIFCell.__name__

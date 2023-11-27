@@ -16,8 +16,8 @@ class Op(Node, ABC):
         key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
-    def __init__(self, name, n_units, dt, key=None):
-        super().__init__(name=name, dt=dt, key=key)
+    def __init__(self, name, n_units, dt, key=None, debugging=False):
+        super().__init__(name=name, dt=dt, key=key, debugging=debugging)
         self.n_units = n_units
 
     def set_to_rest(self, batch_size=1, hard=True):

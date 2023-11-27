@@ -18,8 +18,8 @@ class Synapse(Node, ABC):
         key: PRNG Key to control determinism of any underlying synapses
             associated with this cable
     """
-    def __init__(self, name, shape, dt, key=None):
-        super().__init__(name=name, dt=dt, key=key)
+    def __init__(self, name, shape, dt, key=None, debugging=False):
+        super().__init__(name=name, dt=dt, key=key, debugging=debugging)
         self.shape = shape
 
     def evolve(self):

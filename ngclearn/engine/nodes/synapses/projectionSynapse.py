@@ -25,8 +25,8 @@ class ProjectionSynapse(Synapse):  # inherits from Cell class
         key: PRNG Key to control determinism of any underlying synapses
             associated with this cable
     """
-    def __init__(self, name, dt, shape, sign=None, key=None):
-        super().__init__(name=name, shape=shape, dt=dt, key=key)
+    def __init__(self, name, dt, shape, sign=None, key=None, debugging=False):
+        super().__init__(name=name, shape=shape, dt=dt, key=key, debugging=debugging)
         self.shape = shape  # shape of synaptic matrix W
         self.sign = 1 if sign is None else sign
 

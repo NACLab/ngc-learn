@@ -15,8 +15,8 @@ class ErrCell(Cell):  # inherits from Node class
         key: PRNG Key to control determinism of any underlying synapses
             associated with this cell
     """
-    def __init__(self, name, n_units, dt, key=None):
-        super().__init__(name, n_units, dt, key)
+    def __init__(self, name, n_units, dt, key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         # cell compartments
         self.comp["err"] = None
         self.comp["targ"] = None
@@ -42,5 +42,9 @@ class ErrCell(Cell):  # inherits from Node class
         Returns the value within output compartment ``err``
         """
         return 'err'
+
+    comp_err = "err"
+    comp_targ = "targ"
+    comp_pred = "pred"
 
 class_name = ErrCell.__name__

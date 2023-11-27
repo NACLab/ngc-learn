@@ -4,6 +4,7 @@ import os, json
 import warnings
 from abc import ABC, abstractmethod
 from ngclearn.engine.utils.bundle_rules import overwrite
+from ngclearn.engine.utils.general_utils import VerboseDict
 import time
 
 ## base cell
@@ -19,11 +20,14 @@ class Node(ABC):
 
         key: PRNG key to control/set RNG that drives this node
     """
-    def __init__(self, name, dt, key=None):
+    def __init__(self, name, dt, key=None, debugging=False):
         self.name = name
         self.key = random.PRNGKey(time.time_ns()) if key is None else key
 
-        self.comp = {"in": None, "out": None}
+        if debugging:
+            self.comp = VerboseDict(name=self.name, seq={"in": None, "out": None})
+        else:
+            self.comp = {"in": None, "out": None}
         self.incoming = []  # list of tuples - (callback_function,  dest_comp)
         self.dt = dt
         self.t = 0.  ## cell clock

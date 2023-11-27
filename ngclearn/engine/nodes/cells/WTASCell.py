@@ -57,8 +57,8 @@ class WTASCell(Cell):  # inherits from Node class
             associated with this cell
     """
     def __init__(self, name, n_units, dt, v_thr_base, R_m=1., thr_gain=None,
-                 thr_jitter=0., sign=None, key=None):
-        super().__init__(name, n_units, dt, key)
+                 thr_jitter=0., sign=None, key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         self.sign = 1. if sign is None else sign
         self.v_thr_base = v_thr_base
         self.thr_gain = 0. if thr_gain is None else thr_gain
@@ -133,5 +133,13 @@ class WTASCell(Cell):  # inherits from Node class
         Returns the value within output compartment ``s``
         """
         return 's'
+
+    comp_j = "j"
+    comp_v = "v"
+    comp_s_prev = "s_prev"
+    comp_s = "s"
+    comp_thr = "thr"
+    comp_fs = "fs"
+    comp_tols = "tols"
 
 class_name = WTASCell.__name__

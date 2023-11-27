@@ -26,8 +26,8 @@ class TrinarySplitNode(Op):
         key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
-    def __init__(self, name, n_units, dt, key=None):
-        super().__init__(name, n_units, dt, key)
+    def __init__(self, name, n_units, dt, key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
 
         # cell compartments
         self.comp["in"] = None
@@ -49,5 +49,6 @@ class TrinarySplitNode(Op):
         else:
             self.comp['tols'] = jnp.zeros([batch_size, self.n_units])
 
+    comp_tols = "tols"
 
 class_name = TrinarySplitNode.__name__

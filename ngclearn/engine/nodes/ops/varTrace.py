@@ -56,8 +56,8 @@ class VarTrace(Op):  # inherits from Node class
             associated with this operator
     """
     def __init__(self, name, n_units, dt, tau_tr=50., incr_pos=False,
-                 a_delta=1., decay_type="lin", key=None):
-        super().__init__(name, n_units, dt, key)
+                 a_delta=1., decay_type="lin", key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         self.tau_tr = tau_tr  ## trace time constant
         self.incr_pos = incr_pos ## increment trace +1 instead of set to 1 if spike
         self.a_delta = a_delta ## if incr_pos == True, increase ODE by this value
@@ -93,5 +93,8 @@ class VarTrace(Op):  # inherits from Node class
         Returns the value within compartment ``z``
         """
         return 'z'
+
+    comp_z = "z"
+    comp_s_prev = "s_prev"
 
 class_name = VarTrace.__name__
