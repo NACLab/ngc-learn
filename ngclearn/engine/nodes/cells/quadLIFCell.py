@@ -105,10 +105,10 @@ class QuadLIFCell(LIFCell):  # inherits from LIFCell class
     """
     def __init__(self, name, n_units, dt, tau_m, v_thr_base, R_m=1., thr_jitter=0.1,
                  a0=1., v_c=0.2, lat_Rinh=0., thr_mode='dthr', thr_gain=None,
-                 thr_decay=None, spk_mode='bool', sign=None, key=None):
+                 thr_decay=None, spk_mode='bool', sign=None, key=None, debugging=False):
         super().__init__(name, n_units, dt, tau_m, v_thr_base, R_m, thr_jitter,
                          lat_Rinh, thr_mode, thr_gain, thr_decay, spk_mode, sign,
-                         key)
+                         key, debugging=debugging)
         self.a0 = a0 #1. # scaling factor
         self.v_c = v_c # 0.2 or 0.8 # critical voltage
         #self.v_reset = -0.5

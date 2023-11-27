@@ -17,8 +17,8 @@ class ScaleNode(Op):  # inherits from Node class
         key: PRNG Key to control determinism of any underlying synapses
             associated with this operator
     """
-    def __init__(self, name, n_units, dt, scale, key=None):
-        super().__init__(name, n_units, dt, key)
+    def __init__(self, name, n_units, dt, scale, key=None, debugging=False):
+        super().__init__(name, n_units, dt, key, debugging=debugging)
         self.scale = scale
 
     def step(self):

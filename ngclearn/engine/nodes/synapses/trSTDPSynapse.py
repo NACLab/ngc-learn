@@ -104,8 +104,8 @@ class TrSTDPSynapse(Synapse):  # inherits from Node class
             associated with this cable
     """
     def __init__(self, name, dt, shape, eta, mu=1., exp_beta=None,
-                 x_tar=0.7, Aplus=1., Aminus=0., w_norm=None, sign=None, key=None):
-        super().__init__(name=name, shape=shape, dt=dt, key=key)
+                 x_tar=0.7, Aplus=1., Aminus=0., w_norm=None, sign=None, key=None, debugging=False):
+        super().__init__(name=name, shape=shape, dt=dt, key=key, debugging=debugging)
         self.eta = eta
         self.mu = mu ## power to raise STDP adjustment by
         self.exp_beta = exp_beta ## if not None, will trigger exp-depend STPD rule

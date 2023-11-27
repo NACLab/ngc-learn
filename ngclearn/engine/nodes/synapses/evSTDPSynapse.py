@@ -50,8 +50,8 @@ class EvSTDPSynapse(Synapse):  # inherits from Node class
             associated with this cable
     """
     def __init__(self, name, dt, shape, lamb, eta, w_norm=None,
-                 sign=None, key=None):
-        super().__init__(name=name, shape=shape, dt=dt, key=key)
+                 sign=None, key=None, debugging=False):
+        super().__init__(name=name, shape=shape, dt=dt, key=key, debugging=debugging)
         self.eta = eta
         self.lamb = lamb
         self.sign = 1 if sign is None else sign

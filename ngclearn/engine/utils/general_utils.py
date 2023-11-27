@@ -1,6 +1,8 @@
 """
 General/arbitrary utilities.
 """
+import warnings
+from ngclearn.engine.flags import DEBUGGING
 
 class ParamSeq:
     def __init__(self, params: dict, constant_keys: list | None =None):
@@ -43,3 +45,25 @@ class ParamSeq:
 
     def reset(self):
         self.idx = 0
+
+class VerboseDict(dict):
+  def __init__(self, seq=None, name=None, **kwargs):
+    seq = {} if seq is None else seq
+    name = 'unnamed' if name is None else str(name)
+
+    super().__init__(seq, **kwargs)
+
+    self.name = name
+    self.check_set = DEBUGGING.check_set
+    self.check_get = DEBUGGING.check_get
+
+  def __setitem__(self, key, value):
+    if self.check_set and key not in self.keys():
+      warnings.warn("Adding key \"" + str(key) + "\" to " + self.name, stacklevel=DEBUGGING.stack_level_warning)
+    super().__setitem__(key, value)
+
+  def __getitem__(self, item):
+    if self.check_get and item not in self.keys():
+      raise RuntimeError("Failed to find compartment \"" + str(item) + "\" in " + self.name +
+                         "\nAvailable compartments " + str(self.keys()))
+    return super().__getitem__(item)

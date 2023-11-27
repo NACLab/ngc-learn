@@ -47,8 +47,8 @@ class HebbianSynapse(Synapse):  # inherits from Cell class
         seed: integer seed to control determinism of any underlying synapses
             associated with this cable
     """
-    def __init__(self, name, dt, shape, eta, sign=None, key=None):
-        super().__init__(name=name, shape=shape, dt=dt, key=key)
+    def __init__(self, name, dt, shape, eta, sign=None, key=None, debugging=False):
+        super().__init__(name=name, shape=shape, dt=dt, key=key, debugging=debugging)
         self.shape = shape  # shape of synaptic matrix W
         self.sign = 1 if sign is None else sign
         self.eta = eta ## step size
