@@ -225,4 +225,14 @@ class RSTDPSynapse(Synapse):  # inherits from Node class
         if os.path.isfile(node_directory + "/W.npy"):
             self.W = jnp.load(node_directory + "/W.npy")
 
+    comp_pre = "pre"
+    comp_x_pre = "x_pre"
+    comp_post = "post"
+    comp_x_post = "x_post"
+    comp_r = "r"
+    comp_Eg_trace = "Eg_trace"
+    comp_rSum = "rSum"
+    comp_rN = "rN"
+    comp_EgMask = "EgMask"
+
 class_name = RSTDPSynapse.__name__

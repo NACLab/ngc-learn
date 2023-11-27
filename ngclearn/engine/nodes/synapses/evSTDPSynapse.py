@@ -94,4 +94,7 @@ class EvSTDPSynapse(Synapse):  # inherits from Node class
         if os.path.isfile(node_directory + "/W.npy"):
             self.W = jnp.load(node_directory + "/W.npy")
 
+    comp_pre = "pre"
+    comp_post = "post"
+
 class_name = EvSTDPSynapse.__name__

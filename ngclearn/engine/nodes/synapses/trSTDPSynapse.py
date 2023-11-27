@@ -167,4 +167,9 @@ class TrSTDPSynapse(Synapse):  # inherits from Node class
         if os.path.isfile(node_directory + "/W.npy"):
             self.W = jnp.load(node_directory + "/W.npy")
 
+    comp_pre = "pre"
+    comp_x_pre = "x_pre"
+    comp_post = "post"
+    comp_x_post = "x_post"
+
 class_name = TrSTDPSynapse.__name__
