@@ -7,9 +7,24 @@ from sklearn.feature_extraction.image import extract_patches_2d
 import patchify as ptch
 
 def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True):
+
     """
-    Uses the patchify library to create a of non-random non-overlapping or
-    overlapping (w/ controllable stride) patches.
+    Generates a set of patches from an array/list of image arrays (via
+    random sampling with replacement). This uses the patchify library to create
+    a of non-random non-overlapping or overlapping (w/ controllable stride) patches.
+    Note: this routine also subtracts each patch's mean from itself.
+
+    Args:
+        imgs: the array of image arrays to sample from
+
+        patch_size: a 2-tuple of the form (pH = patch height, pW = patch width)
+
+        max_patches: UNUSED
+
+        center: centers each patch by subtracting the patch mean (per-patch)
+
+    Returns:
+        an array (D x (pH * pW)), where each row is a flattened patch sample
     """
     x_batch = np.array(x_batch_)
     px = py = int(np.sqrt(x_batch.shape[1])) # get image shape of the data
@@ -30,8 +45,22 @@ def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True)
 
 def generate_patch_set(x_batch_, patch_size=(8,8), max_patches=50, center=True):
     """
-    Uses scikit-learn's patch creation function to generate a set of (px x py) patches.
+    Generates a set of patches from an array/list of image arrays (via
+    random sampling with replacement). This uses scikit-learn's patch creation
+    function to generate a set of (px x py) patches.
     Note: this routine also subtracts each patch's mean from itself.
+
+    Args:
+        imgs: the array of image arrays to sample from
+
+        patch_size: a 2-tuple of the form (pH = patch height, pW = patch width)
+
+        max_patches: maximum number of patches to extract/generate from source images
+
+        center: centers each patch by subtracting the patch mean (per-patch)
+
+    Returns:
+        an array (D x (pH * pW)), where each row is a flattened patch sample
     """
     x_batch = np.array(x_batch_)
     px = py = int(np.sqrt(x_batch.shape[1])) # get image shape of the data
