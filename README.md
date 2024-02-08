@@ -3,7 +3,7 @@
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing biomimetic systems, neurobiological
-agents, and predictive coding models (predictive processing theory) based on the neural generative
+agents, spiking neuronal systems, and predictive coding models (predictive processing theory) based on the neural generative
 coding (NGC) computational framework. This toolkit is built on top of JAX and is distributed under the 3-Clause BSD license.
 
 <b>NOTICE:</b> This is currently the JAX branch of ngc-learn; we offer <i>no guarantees</i> as to whether or not this particular branch works at the moment (until we finish the ngc-learn update to officially release version 1.0.0). For access to the previous working Tensorflow-2 version, please visit the repo for <a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
