@@ -8,7 +8,9 @@ coding (NGC) computational framework. This toolkit is built on top of JAX and is
 
 <b>NOTICE:</b> This is currently the JAX branch of ngc-learn; we offer <i>no guarantees</i> as to whether or not this particular branch works at the moment (until we finish the ngc-learn update to officially release version 1.0.0). For access to the previous working Tensorflow-2 version, please visit the repo for <a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
 
-It is currently maintained by the
+**Note:** This is a legacy branch, containing the state of ngc-learn when it was a tensorflow-centric library. This means this branch contains a legacy copy of what could be informally be called ngc-learn-tensorflow. Be aware that NAC will no longer support ngc-learn-tensorflow.
+
+It was created by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
 
 ## <b>Documentation</b>
