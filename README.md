@@ -6,8 +6,8 @@
 agents, and predictive coding models (predictive processing theory) based on the neural generative
 coding (NGC) computational framework. This toolkit is built on top of JAX and is distributed under the 3-Clause BSD license.
 
-<b>WARNING:</b> The main branch is under active construction/updating -- it will not likely work for you at the moment
-if you pull from the main branch. Please pull from/use either the <i>ngc-learn-dev</i> branch or
+<b>WARNING:</b> The development branch is under active construction/updating -- it will not likely work for you at the moment
+if you pull from the dev branch. Please pull from/use either the <i>ngc-learn</i> branch or
 the Tensorflow-2 <i>ngc-learn-legacy<i> repo: https://github.com/NACLab/ngc-learn-legacy. The main
 version update will be soon.
 
