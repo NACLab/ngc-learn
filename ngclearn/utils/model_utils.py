@@ -5,12 +5,33 @@ from functools import partial
 
 @jit
 def calc_acc(mu, y): ## calculates accuracy
+    """
+    Calculates the accuracy (ACC) given a matrix of predictions and matrix of targets.
+
+    Args:
+        mu: prediction (design) matrix
+
+        y: target / ground-truth (design) matrix
+
+    Returns
+        scalar accuracy score
+    """
     guess = jnp.argmax(mu, axis=1)
     lab = jnp.argmax(y, axis=1)
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
 def create_function(fun_name):
+    """
+    Activation function creation routine.
+
+    Args:
+        fun_name: string name of activation function to produce
+            (Currently supports: "tanh", "relu", "lrelu", "identity")
+
+    Returns:
+        function fx, first derivative of function (w.r.t. input) dfx
+    """
     fx = None
     dfx = None
     if fun_name == "tanh":
@@ -33,6 +54,20 @@ def create_function(fun_name):
 
 
 def initialize_params(dkey, initKernel, shape):
+    """
+    Creates the intiial condition values for a parameter tensor.
+
+    Args:
+        dkey: PRNG key to control determinism of this routine
+
+        initKernel: tuple with 1st element as a string calling the name of
+            initialization to use (Currently supported: "hollow", "eye", "uniform")
+
+        shape: tuple containing the dimensions/shape of the tensor to initialize
+
+    Returns:
+        output (tensor) value
+    """
     initType, *args = initKernel # get out arguments of initialization kernel
     params = None
     if initType == "hollow":
@@ -43,15 +78,19 @@ def initialize_params(dkey, initKernel, shape):
         eyeScale, _ = args
         dim = shape[1]
         params = jnp.eye(dim) * eyeScale
-    else: # uniform
+    elif initType == "uniform": # uniform
         lb, ub = args
         params = random.uniform(dkey, shape, minval=lb, maxval=ub)
+    else:
+        raise RuntimeError(
+            "Initialization scheme (" + initType + ") is not recognized/supported!"
+            )
     return params
 
 @partial(jit, static_argnums=[2, 3])
 def normalize_matrix(M, wnorm, ord=1, axis=0):
-    '''
-    Normalizes the synapses to have a particular norm across each vector span.
+    """
+    Normalizes the values in matrix to have a particular norm across each vector span.
 
     Args:
         M: (2D) matrix to normalize
@@ -61,14 +100,16 @@ def normalize_matrix(M, wnorm, ord=1, axis=0):
         ord: order of norm to use in normalization
 
         axis: 0 (apply to column vectors), 1 (apply to row vectors)
-    '''
+
+    Returns:
+        a normalized value matrix
+    """
     wAbsSum = jnp.sum(jnp.abs(M), axis=axis, keepdims=True)
     m = (wAbsSum == 0.).astype(dtype=jnp.float32)
     wAbsSum = wAbsSum * (1. - m) + m
     #wAbsSum[wAbsSum == 0.] = 1.
     _M = M * (wnorm/wAbsSum)
     return _M
-
 
 @jit
 def one_hot(P):
@@ -79,42 +120,154 @@ def one_hot(P):
     Args:
         P: a probability matrix where each row corresponds to a particular
             data probability vector
+
+    Returns:
+        the one-hot encoding (matrix) of probabilities in P
     '''
     nC = P.shape[1] # compute number of dimensions/classes
     p_t = jnp.argmax(P, axis=1)
     return nn.one_hot(p_t, num_classes=nC, dtype=jnp.float32)
 
+def binarize(data, threshold=0.5):
+    """
+    Converts the vector *data* to its binary equivalent
+
+    Args:
+        data: the data to binarize (real-valued)
+
+        threshold: the cut-off point for 0, i.e., if threshold = 0.5, then any
+            number/value inside of data < 0.5 is set to 0, otherwise, it is set
+            to 1.0
+
+    Returns:
+        the binarized equivalent of "data"
+    """
+    return (data > threshold).astype(jnp.float32)
+
 @jit
 def identity(x):
+    """
+    The identity function: x = f(x).
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return x + 0
 
 @jit
 def d_identity(x):
+    """
+    Derivative of the identity function.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
     return x * 0 + 1.
 
 @jit
 def relu(x):
+    """
+    The linear rectifier: max(0, x) = f(x).
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return nn.relu(x)
 
 @jit
 def d_relu(x):
+    """
+    Derivative of the linear rectifier.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
     return (x >= 0.).astype(jnp.float32)
 
 @jit
 def tanh(x):
+    """
+    The hyperbolic tangent function.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return nn.tanh(x)
 
 @jit
 def d_tanh(x):
+    """
+    Derivative of the hyperbolic tangent function.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
     tanh_x = nn.tanh(x)
     return -(tanh_x * tanh_x) + 1.0
 
 @jit
 def lrelu(x): ## activation fx
+    """
+    The leaky linear rectifier: max(0, x) if x >= 0, 0.01 * x if x < 0 = f(x).
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return nn.leaky_relu(x)
 
 @jit
 def d_lrelu(x): ## deriv of fx (dampening function)
+    """
+    Derivative of the leaky linear rectifier.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
     m = (x >= 0.).astype(jnp.float32)
     dx = m + (1. - m) * 0.01
     return dx
+
+@jit
+def softmax(x, tau=0.0):
+    """
+    Softmax function with overflow control built in directly. Contains optional
+    temperature parameter to control sharpness
+    (tau > 1 softens probs, < 1 sharpens --> 0 yields point-mass).
+
+    Args:
+        x: a (N x D) input argument (pre-activity) to the softmax operator
+
+        tau: probability sharpening/softening factor
+
+    Returns:
+        a (N x D) probability distribution output block
+    """
+    if tau > 0.0:
+        x = x / tau
+    max_x = jnp.max(x, axis=1, keepdims=True)
+    exp_x = jnp.exp(x - max_x)
+    return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
