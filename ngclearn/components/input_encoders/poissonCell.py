@@ -5,13 +5,34 @@ import time
 
 @jit
 def update_times(t, s, tols):
+    """
+    Updates time-of-last-spike (tols) variable.
+
+    Args:
+        t: current time (a scalar/int value)
+
+        s: binary spike vector
+
+    Returns:
+        updated tols variable
+    """
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
 @partial(jit, static_argnums=[3])
 def sample_poisson(dkey, data, dt, fmax=63.75):
     """
-    Samples a Poisson spike train on-the-fly
+    Samples a Poisson spike train on-the-fly.
+
+    Args:
+        data: sensory data (vector/matrix)
+
+        dt: integration time constant
+
+        fmax: maximum frequency (Hz)
+
+    Returns:
+        binary spikes
     """
     pspike = data * (dt/1000.) * fmax
     eps = random.uniform(dkey, data.shape, minval=0., maxval=1., dtype=jnp.float32)
@@ -70,6 +91,23 @@ class PoissonCell(Component):
     self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
   # Define Functions
+  """
+  A Poisson cell that produces approximately Poisson-distributed spikes on-the-fly.
+
+  Args:
+      name: the string name of this cell
+
+      n_units: number of cellular entities (neural population size)
+
+      dt: integration time constant
+
+      max_freq: maximum frequency (in Hertz) of this Poisson spike train (must be > 0.)
+
+      key: PRNG key to control determinism of any underlying synapses
+          associated with this cell
+
+      useVerboseDict:
+  """
   def __init__(self, name, n_units, max_freq=63.75, key=None, useVerboseDict=False, **kwargs):
     super().__init__(name, useVerboseDict, **kwargs)
 
