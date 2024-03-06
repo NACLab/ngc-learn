@@ -1,5 +1,5 @@
 import jax
-from jax import numpy as jnp, grad, jit, vmap, random, lax
+from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 import os, sys
 from functools import partial
 
