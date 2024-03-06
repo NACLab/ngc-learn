@@ -8,8 +8,8 @@ coding (NGC) computational framework. This toolkit is built on top of JAX and is
 
 <b>WARNING:</b> The development branch is under active construction/updating -- it will not likely work for you at the moment
 if you pull from the dev branch. Please pull from/use either the <i>ngc-learn</i> branch or
-the Tensorflow-2 <i>ngc-learn-legacy<i> repo: https://github.com/NACLab/ngc-learn-legacy. The main
-version update will be soon.
+the Tensorflow-2 <i>ngc-learn-legacy</i> repo: https://github.com/NACLab/ngc-learn-legacy. The main
+version update will be completed soon.
 
 <!--
 <b>NOTICE:</b> This is a dev branch of ngc-learn and <i>no guarantees</i> are offered as to whether or not this particular branch works (until is finally merged back into main).
