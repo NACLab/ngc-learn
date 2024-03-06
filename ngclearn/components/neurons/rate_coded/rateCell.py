@@ -6,12 +6,41 @@ import time, sys
 
 @jit
 def modulate(j, dfx_val):
+    """
+    Apply a signal modulator to j (typically of the form of a derivative/dampening function)
+
+    Args:
+        j: current/stimulus value to modulate
+
+        dfx_val: modulator signal
+
+    Returns:
+        modulated j value
+    """
     return j * dfx_val
 
 @partial(jit, static_argnums=[4,5,6])
 def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):
     """
-    Runs leaky rate-coded state dynamics.
+    Runs leaky rate-coded state dynamics one step in time.
+
+    Args:
+        dt: integration time constant
+
+        j: input (bottom-up) electrical/stimulus current
+
+        j_td: modulatory (top-down) electrical/stimulus pressure
+
+        z: current value of membrane/state
+
+        tau_m: membrane/state time constant
+
+        leak_gamma: strength of leak to apply to membrane/state
+
+        beta: dampening coefficient (Default: 1.)
+
+    Returns:
+        New value of membrane/state for next time step
     """
     dz_dt = (-z * leak_gamma + (j + j_td))
     _z = z * beta + dz_dt * (dt/tau_m)
@@ -19,9 +48,40 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):
 
 @jit
 def run_cell_stateless(j):
+    """
+    A simplification of running a stateless set of dynamics over j (an identity
+    functional form of dynamics).
+
+    Args:
+        j: stimulus to do nothing to
+
+    Returns:
+        the stimulus
+    """
     return j + 0
 
 class RateCell(Component): ## Rate-coded/real-valued cell
+    """
+    A non-spiking cell based on the gradient dynamics of neural generative coding
+    (NGC) based predictive processing.
+
+    Args:
+        name: the string name of this cell
+
+        n_units: number of cellular entities (neural population size)
+
+        tau_m: membrane/state time constant (milliseconds)
+
+        leakRate: membrane/state leak value (Default: 0.)
+
+        act_fx: string name of activation function/nonlinearity to use
+
+        key: PRNG Key to control determinism of any underlying synapses
+            associated with this cell
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+    """
+
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -46,11 +106,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
     @current.setter
     def current(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Input current compartment size does not match provided input size " + str(inp.shape) + "for "
-                    + str(self.name))
         self.compartments[self.inputCompartmentName()] = inp
 
     @property
@@ -59,11 +114,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
     @pressure.setter
     def pressure(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Pressure compartment size does not match provided input size " + str(inp.shape) + "for "
-                    + str(self.name))
         self.compartments[self.pressureName()] = inp
 
     @property
@@ -72,11 +122,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
     @rateActivity.setter
     def rateActivity(self, out):
-        if out is not None:
-            if out.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Rate activity compartment size (n, " + str(self.n_units) + ") does not match provided output size "
-                    + str(out.shape) + " for " + str(self.name))
         self.compartments[self.rateActivityName()] = out
 
     @property
@@ -85,11 +130,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
     @activity.setter
     def activity(self, out):
-        if out is not None:
-            if out.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Activity compartment size (n, " + str(self.n_units) + ") does not match provided output size "
-                    + str(out.shape) + " for " + str(self.name))
         self.compartments[self.outputCompartmentName()] = out
 
     # Define Functions
