@@ -40,102 +40,103 @@ def sample_poisson(dkey, data, dt, fmax=63.75):
     return s_t
 
 class PoissonCell(Component):
-  ## Class Methods for Compartment Names
-  @classmethod
-  def inputCompartmentName(cls):
-    return 'in'
+    """
+    A Poisson cell that produces approximately Poisson-distributed spikes on-the-fly.
 
-  @classmethod
-  def outputCompartmentName(cls):
-    return 'out'
+    Args:
+        name: the string name of this cell
 
-  @classmethod
-  def timeOfLastSpikeCompartmentName(cls):
-    return 'tols'
+        n_units: number of cellular entities (neural population size)
 
-  ## Bind Properties to Compartments for ease of use
-  @property
-  def inputCompartment(self):
-    return self.compartments.get(self.inputCompartmentName(), None)
+        dt: integration time constant
 
-  @inputCompartment.setter
-  def inputCompartment(self, inp):
-    if inp is not None:
-      if inp.shape[1] != self.n_units:
-        raise RuntimeError("Input Compartment size does not match provided input size " + str(inp.shape) + "for "
-                           + str(self.name))
-    self.compartments[self.inputCompartmentName()] = inp
+        max_freq: maximum frequency (in Hertz) of this Poisson spike train (must be > 0.)
 
-  @property
-  def outputCompartment(self):
-    return self.compartments.get(self.outputCompartmentName(), None)
+        key: PRNG key to control determinism of any underlying synapses
+            associated with this cell
 
-  @outputCompartment.setter
-  def outputCompartment(self, out):
-    if out is not None:
-      if out.shape[1] != self.n_units:
-        raise RuntimeError("Output compartment size (n, " + str(self.n_units) + ") does not match provided output size "
-                           + str(out.shape) + " for " + str(self.name))
-    self.compartments[self.outputCompartmentName()] = out
+        useVerboseDict:
+    """
 
-  @property
-  def timeOfLastSpike(self):
-    return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
+    ## Class Methods for Compartment Names
+    @classmethod
+    def inputCompartmentName(cls):
+        return 'in'
 
-  @timeOfLastSpike.setter
-  def timeOfLastSpike(self, t):
-    if t is not None:
-      if t.shape[1] != self.n_units:
-        raise RuntimeError("Time of last spike compartment size (n, " + str(self.n_units) +
-                           ") does not match provided size " + str(t.shape) + " for " + str(self.name))
-    self.compartments[self.timeOfLastSpikeCompartmentName()] = t
+    @classmethod
+    def outputCompartmentName(cls):
+        return 'out'
 
-  # Define Functions
-  """
-  A Poisson cell that produces approximately Poisson-distributed spikes on-the-fly.
+    @classmethod
+    def timeOfLastSpikeCompartmentName(cls):
+        return 'tols'
 
-  Args:
-      name: the string name of this cell
+    ## Bind Properties to Compartments for ease of use
+    @property
+    def inputCompartment(self):
+        return self.compartments.get(self.inputCompartmentName(), None)
 
-      n_units: number of cellular entities (neural population size)
+    @inputCompartment.setter
+    def inputCompartment(self, inp):
+        if inp is not None:
+            if inp.shape[1] != self.n_units:
+                raise RuntimeError("Input Compartment size does not match provided input size " + str(inp.shape) + "for "
+                                   + str(self.name))
+        self.compartments[self.inputCompartmentName()] = inp
 
-      dt: integration time constant
+    @property
+    def outputCompartment(self):
+        return self.compartments.get(self.outputCompartmentName(), None)
 
-      max_freq: maximum frequency (in Hertz) of this Poisson spike train (must be > 0.)
+    @outputCompartment.setter
+    def outputCompartment(self, out):
+        if out is not None:
+            if out.shape[1] != self.n_units:
+                raise RuntimeError("Output compartment size (n, " + str(self.n_units) + ") does not match provided output size "
+                                   + str(out.shape) + " for " + str(self.name))
+        self.compartments[self.outputCompartmentName()] = out
 
-      key: PRNG key to control determinism of any underlying synapses
-          associated with this cell
+    @property
+    def timeOfLastSpike(self):
+        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
 
-      useVerboseDict:
-  """
-  def __init__(self, name, n_units, max_freq=63.75, key=None, useVerboseDict=False, **kwargs):
-    super().__init__(name, useVerboseDict, **kwargs)
+    @timeOfLastSpike.setter
+    def timeOfLastSpike(self, t):
+        if t is not None:
+            if t.shape[1] != self.n_units:
+                raise RuntimeError("Time of last spike compartment size (n, " + str(self.n_units) +
+                                   ") does not match provided size " + str(t.shape) + " for " + str(self.name))
+        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
-    ##Random Number Set up
-    self.key = key
-    if self.key is None:
-      self.key = random.PRNGKey(time.time_ns())
+    # Define Functions
+    def __init__(self, name, n_units, max_freq=63.75, key=None, useVerboseDict=False, **kwargs):
+        super().__init__(name, useVerboseDict, **kwargs)
 
-    ## Poisson parameters
-    self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
+        ##Random Number Set up
+        self.key = key
+        if self.key is None:
+            self.key = random.PRNGKey(time.time_ns())
 
-    ##Layer Size Setup
-    self.n_units = n_units
-    self.reset()
+        ## Poisson parameters
+        self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
 
-  def verify_connections(self):
-    pass
+        ##Layer Size Setup
+        self.n_units = n_units
+        self.reset()
 
-  def advance_state(self, t, dt, **kwargs):
-    self.key, *subkeys = random.split(self.key, 2)
-    self.outputCompartment = sample_poisson(subkeys[0], data=self.inputCompartment, dt=dt, fmax=self.max_freq)
-    #self.timeOfLastSpike = (1 - self.outputCompartment) * self.timeOfLastSpike + (self.outputCompartment * t)
-    self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
+    def verify_connections(self):
+        pass
 
-  def reset(self, **kwargs):
-    self.inputCompartment = None
-    self.outputCompartment = jnp.zeros((1, self.n_units)) #None
-    self.timeOfLastSpike = jnp.zeros((1, self.n_units))
+    def advance_state(self, t, dt, **kwargs):
+        self.key, *subkeys = random.split(self.key, 2)
+        self.outputCompartment = sample_poisson(subkeys[0], data=self.inputCompartment, dt=dt, fmax=self.max_freq)
+        #self.timeOfLastSpike = (1 - self.outputCompartment) * self.timeOfLastSpike + (self.outputCompartment * t)
+        self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
 
-  def save(self, **kwargs):
-      pass
+    def reset(self, **kwargs):
+        self.inputCompartment = None
+        self.outputCompartment = jnp.zeros((1, self.n_units)) #None
+        self.timeOfLastSpike = jnp.zeros((1, self.n_units))
+
+    def save(self, **kwargs):
+        pass
