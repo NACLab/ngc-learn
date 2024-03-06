@@ -1,42 +1,8 @@
 from ngclib.component import Component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
+from ngclearn.utils.model_utils import create_function
 import time, sys
-
-@jit
-def identity(x):
-    return x + 0
-
-@jit
-def d_identity(x):
-    return x * 0 + 1.
-
-@jit
-def relu(x):
-    return nn.relu(x)
-
-@jit
-def d_relu(x):
-    return (x >= 0.).astype(jnp.float32)
-
-@jit
-def tanh(x):
-    return nn.tanh(x)
-
-@jit
-def d_tanh(x):
-    tanh_x = nn.tanh(x)
-    return -(tanh_x * tanh_x) + 1.0
-
-@jit
-def lrelu(x): ## activation fx
-    return nn.leaky_relu(x)
-
-@jit
-def d_lrelu(x): ## deriv of fx (dampening function)
-    m = (x >= 0.).astype(jnp.float32)
-    dx = m + (1. - m) * 0.01
-    return dx
 
 @jit
 def modulate(j, dfx_val):
@@ -144,11 +110,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.n_units = n_units
         self.batch_size = 1
 
-        self.fx = identity
-        self.dfx = d_identity
-        if act_fx == "tanh":
-            self.fx = tanh #lrelu
-            self.dfx = d_tanh #d_lrelu
+        self.fx, self.dfx = create_function(fun_name=act_fx)
 
         ## Set up bundle for multiple inputs of current
         self.create_bundle('multi_input', 'additive')

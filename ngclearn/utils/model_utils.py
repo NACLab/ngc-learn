@@ -9,7 +9,29 @@ def calc_acc(mu, y): ## calculates accuracy
     lab = jnp.argmax(y, axis=1)
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
-    
+
+def create_function(fun_name):
+    fx = None
+    dfx = None
+    if fun_name == "tanh":
+        fx = tanh
+        dfx = d_tanh
+    elif fun_name == "relu":
+        fx = relu
+        dfx = d_relu
+    elif fun_name == "lrelu":
+        fx = lrelu
+        dfx = d_lrelu
+    elif fun_name == "identity":
+        fx = identity
+        dfx = d_identity
+    else:
+        raise RuntimeError(
+            "Activition function (" + fun_name + ") is not recognized/supported!"
+            )
+    return fx, dfx
+
+
 def initialize_params(dkey, initKernel, shape):
     initType, *args = initKernel # get out arguments of initialization kernel
     params = None
@@ -61,3 +83,38 @@ def one_hot(P):
     nC = P.shape[1] # compute number of dimensions/classes
     p_t = jnp.argmax(P, axis=1)
     return nn.one_hot(p_t, num_classes=nC, dtype=jnp.float32)
+
+@jit
+def identity(x):
+    return x + 0
+
+@jit
+def d_identity(x):
+    return x * 0 + 1.
+
+@jit
+def relu(x):
+    return nn.relu(x)
+
+@jit
+def d_relu(x):
+    return (x >= 0.).astype(jnp.float32)
+
+@jit
+def tanh(x):
+    return nn.tanh(x)
+
+@jit
+def d_tanh(x):
+    tanh_x = nn.tanh(x)
+    return -(tanh_x * tanh_x) + 1.0
+
+@jit
+def lrelu(x): ## activation fx
+    return nn.leaky_relu(x)
+
+@jit
+def d_lrelu(x): ## deriv of fx (dampening function)
+    m = (x >= 0.).astype(jnp.float32)
+    dx = m + (1. - m) * 0.01
+    return dx
