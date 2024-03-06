@@ -48,14 +48,12 @@ class PoissonCell(Component):
 
         n_units: number of cellular entities (neural population size)
 
-        dt: integration time constant
-
         max_freq: maximum frequency (in Hertz) of this Poisson spike train (must be > 0.)
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
 
-        useVerboseDict:
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
     ## Class Methods for Compartment Names
@@ -78,10 +76,6 @@ class PoissonCell(Component):
 
     @inputCompartment.setter
     def inputCompartment(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError("Input Compartment size does not match provided input size " + str(inp.shape) + "for "
-                                   + str(self.name))
         self.compartments[self.inputCompartmentName()] = inp
 
     @property
@@ -90,10 +84,6 @@ class PoissonCell(Component):
 
     @outputCompartment.setter
     def outputCompartment(self, out):
-        if out is not None:
-            if out.shape[1] != self.n_units:
-                raise RuntimeError("Output compartment size (n, " + str(self.n_units) + ") does not match provided output size "
-                                   + str(out.shape) + " for " + str(self.name))
         self.compartments[self.outputCompartmentName()] = out
 
     @property
@@ -102,14 +92,11 @@ class PoissonCell(Component):
 
     @timeOfLastSpike.setter
     def timeOfLastSpike(self, t):
-        if t is not None:
-            if t.shape[1] != self.n_units:
-                raise RuntimeError("Time of last spike compartment size (n, " + str(self.n_units) +
-                                   ") does not match provided size " + str(t.shape) + " for " + str(self.name))
         self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     # Define Functions
-    def __init__(self, name, n_units, max_freq=63.75, key=None, useVerboseDict=False, **kwargs):
+    def __init__(self, name, n_units, max_freq=63.75, key=None,
+                 useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up

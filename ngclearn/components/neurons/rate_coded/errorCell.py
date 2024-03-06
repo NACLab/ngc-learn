@@ -5,6 +5,21 @@ import time, sys
 
 #@partial(jit, static_argnums=[3])
 def run_cell(dt, targ, mu, eType="gaussian"):
+    """
+    Moves cell dynamics one step forward.
+
+    Args:
+        dt: integration time constant
+
+        targ: target pattern value
+
+        mu: prediction value
+
+        eType: distribution type to use (Currently supported: "gaussian")
+
+    Returns:
+        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
+    """
     dmu = None
     dtarg = None
     if eType == "gaussian":
@@ -13,11 +28,43 @@ def run_cell(dt, targ, mu, eType="gaussian"):
 
 @jit
 def run_gaussian_cell(dt, targ, mu):
+    """
+    Moves gaussian cell dynamics one step forward.
+
+    Args:
+        dt: integration time constant
+
+        targ: target pattern value
+
+        mu: prediction value
+
+    Returns:
+        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
+    """
     dmu = (targ - mu) # e (error unit)
     dtarg = -dmu # reverse of e
     return dmu, dtarg
 
 class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
+    """
+    A simple (non-spiking) Gaussian error cell - this is a rate-coded
+    approximation of a mismatch signal.
+
+    Args:
+        name: the string name of this cell
+
+        n_units: number of cellular entities (neural population size)
+
+        tau_m: (Unused -- currently cell is a fixed-point model)
+
+        leakRate: (Unused -- currently cell is a fixed-point model)
+
+        key: PRNG Key to control determinism of any underlying synapses
+            associated with this cell
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+    """
+
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -54,10 +101,6 @@ class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     @mean.setter
     def mean(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError("Mean compartment size does not match provided input size " + str(inp.shape) + "for "
-                                   + str(self.name))
         self.compartments[self.meanName()] = inp
 
     @property
@@ -66,10 +109,6 @@ class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     @derivMean.setter
     def derivMean(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError("Mean.derivative compartment size does not match provided input size " + str(inp.shape) + "for "
-                                   + str(self.name))
         self.compartments[self.derivMeanName()] = inp
 
     @property
@@ -78,10 +117,6 @@ class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     @target.setter
     def target(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError("Target compartment size does not match provided input size " + str(inp.shape) + "for "
-                                   + str(self.name))
         self.compartments[self.targetName()] = inp
 
     @property
@@ -90,10 +125,6 @@ class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     @derivTarget.setter
     def derivTarget(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError("Target.derivative compartment size does not match provided input size " + str(inp.shape) + "for "
-                                   + str(self.name))
         self.compartments[self.derivTargetName()] = inp
 
     @property
@@ -102,15 +133,11 @@ class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     @modulator.setter
     def modulator(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError("Modulator compartment size does not match provided input size " + str(inp.shape) + "for "
-                                   + str(self.name))
         self.compartments[self.modulatorName()] = inp
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None, useVerboseDict=False,
-                 directory=None, **kwargs):
+    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None,
+                 useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up

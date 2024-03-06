@@ -44,12 +44,10 @@ class BernoulliCell(Component):
 
         n_units: number of cellular entities (neural population size)
 
-        dt: integration time constant
-
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
 
-        useVerboseDict:
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
     ## Class Methods for Compartment Names
