@@ -3,22 +3,24 @@ from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
 
-@partial(jit, static_argnums=[3,4,5])
-def run_varfilter(dt, x, x_tr, tau_tr, a_delta=0., decay_type="lin"):
+@partial(jit, static_argnums=[3,4])
+def run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
     """
-    Variable trace filter (low-pass filter) dynamics
+    Run variable trace filter (low-pass filter) dynamics one step forward.
+
+    Args:
+        dt: integration time constant (ms)
+
+        x: variable value / stimulus input (at t)
+
+        x_tr: currenet value of trace/filter
+
+        decayFactor: coefficient to decay trace by before application of new value
+
+        a_delta: increment to made to filter (multiplied w/ stimulus x)
     """
-    _x_tr = None
-    if "exp" in decay_type: ## apply exponential decay
-        gamma = jnp.exp(-dt/tau_tr)
-        _x_tr = x_tr * gamma
-    elif "lin" in decay_type: ## default => apply linear "lin" decay
-        _x_tr = x_tr + (-x_tr) * (dt / tau_tr)
-    elif "step" in decay_type:
-        _x_tr = x_tr * 0
-    else:
-        print("ERROR: decay.type = {} unrecognized".format(decay_type))
-        sys.exit(1)
+    _x_tr = x_tr * decayFactor
+    #x_tr + (-x_tr) * (dt / tau_tr) = (1 - dt/tau_tr) * x_tr
     if a_delta > 0.: ## perform additive form of trace ODE
         _x_tr = _x_tr + x * a_delta
         #_x_tr = x_tr + (-x_tr) * (dt / tau_tr) + x * a_delta
@@ -27,8 +29,38 @@ def run_varfilter(dt, x, x_tr, tau_tr, a_delta=0., decay_type="lin"):
         #_x_tr = ( x_tr + (-x_tr) * (dt / tau_tr) ) * (1. - x) + x
     return _x_tr
 
-
 class VarTrace(Component): ## low-pass filter
+    """
+    A variable trace (filter) functional node.
+
+    Args:
+        name: the string name of this operator
+
+        n_units: number of calculating entities or units
+
+        tau_tr: trace time constant (in milliseconds, or ms)
+
+        a_delta: value to increment a trace by in presence of a spike; note if set
+            to a value <= 0, then a piecewise gated trace will be used instead
+
+        decay_type: string indicating the decay type to be applied to ODE
+            integration; low-pass filter configuration
+
+            :Note: string values that this can be (Default: "exp") are:
+                1) `'lin'` = linear trace filter, i.e., decay = x_tr + (-x_tr) * (dt/tau_tr);
+                2) `'exp'` = exponential trace filter, i.e., decay = exp(-dt/tau_tr) * x_tr; 
+                3) `'step'` = step trace, i.e., decay = 0 (a pulse applied upon input value)
+
+        key: PRNG key to control determinism of any underlying random values
+            associated with this cell
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+
+        directory: string indicating directory on disk to save sLIF parameter
+            values to (i.e., initial threshold values and any persistent adaptive
+            threshold values)
+    """
+
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -49,10 +81,6 @@ class VarTrace(Component): ## low-pass filter
 
     @inputCompartment.setter
     def inputCompartment(self, inp):
-      if inp is not None:
-        if inp.shape[1] != self.n_units:
-          raise RuntimeError("Input Compartment size does not match provided input size " + str(inp.shape) + "for "
-                             + str(self.name))
       self.compartments[self.inputCompartmentName()] = inp
 
     @property
@@ -61,15 +89,10 @@ class VarTrace(Component): ## low-pass filter
 
     @trace.setter
     def trace(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Input Compartment size does not match provided input size " + str(inp.shape) + "for "
-                    + str(self.name))
         self.compartments[self.traceName()] = inp
 
     # Define Functions
-    def __init__(self, name, n_units, tau_tr, a_delta, decay_type, key=None,
+    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", key=None,
                  useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -85,6 +108,7 @@ class VarTrace(Component): ## low-pass filter
         self.tau_tr = tau_tr ## trace time constant
         self.a_delta = a_delta ## trace increment (if spike occurred)
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
+        self.decayFactor = None
 
         ##Layer Size Setup
         self.n_units = n_units
@@ -94,23 +118,31 @@ class VarTrace(Component): ## low-pass filter
         else:
             self.load(directory)
 
-        ## Set up bundle for multiple inputs of current
-        self.create_bundle('multi_input', 'additive')
         self.reset()
 
     def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        self.metadata.check_incoming_connections(self.inputCompartmentName(),
+                                                 min_connections=1)
 
     def advance_state(self, t, dt, **kwargs):
+        if self.decayFactor is None: ## compute only once the decay factor
+            self.decayFactor = 0. ## <-- pulse filter decay
+            if "exp" in decay_type:
+                self.decayFactor = jnp.exp(-dt/self.tau_tr)
+            elif "lin" in decay_type:
+                self.decayFactor = (1. - dt/self.tau_tr)
+            ## else "step", yielding a step/pulse-like filter
         if self.trace is None:
             self.trace = jnp.zeros((1, self.n_units))
         s = self.inputCompartment
-        self.trace = run_varfilter(dt, s, self.trace, self.tau_tr, self.a_delta, decay_type=self.decay_type)
+        self.trace = run_varfilter(dt, s, self.trace, self.tau_tr, self.a_delta,
+                                   decay_type=self.decay_type)
         self.outputCompartment = self.trace
         #self.inputCompartment = None
 
     def reset(self, **kwargs):
         self.trace = jnp.zeros((1, self.n_units))
+        self.outputCompartment = self.trace
         self.inputCompartment = None
 
     def save(self, **kwargs):

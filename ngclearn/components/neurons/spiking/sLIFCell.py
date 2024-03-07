@@ -5,11 +5,41 @@ import time, sys
 
 @jit
 def update_times(t, s, tols):
+    """
+    Updates time-of-last-spike (tols) variable.
+
+    Args:
+        t: current time (a scalar/int value)
+
+        s: binary spike vector
+
+        tols: current time-of-last-spike variable
+
+    Returns:
+        updated tols variable
+    """
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
 @jit
-def apply_surrogate_fx(j, c1=0.82, c2=0.08):
+def apply_surrogate_dfx(j, c1=0.82, c2=0.08):
+    """
+    Applies a surrogate (derivative) function -- often used to approximate the
+    derivative through an action potential/spike's output value.
+
+    Args:
+        j: electrical current value
+
+        c1: control coefficient 1 (unnamed factor from paper - scales current
+            input; Default: 0.82 as in source paper)
+
+        c2: control coefficient 2 (unnamed factor from paper - scales, multiplicatively
+            with c1, the output the derivative surrogate; Default: 0.08 as in
+            source paper)
+
+    Returns:
+        surrogate output values (same shape as j)
+    """
     # sech(x) = 1/cosh(x), cosh(x) = (e^x + e^(-x))/2
     # c1 c2 sech^2(c2 j) for j > 0 and 0 for j <= 0
     mask = (j > 0.).astype(jnp.float32)
@@ -21,6 +51,32 @@ def apply_surrogate_fx(j, c1=0.82, c2=0.08):
 
 @partial(jit, static_argnums=[3,4])
 def modify_current(j, spikes, inh_weights, R_m, inh_R):
+    """
+    A simple function that modifies electrical current j via application of a
+    scalar membrane resistance value and an approximate form of lateral inhibition.
+    Note that if no inhibitory resistance is set (i.e., inh_R = 0), then no
+    lateral inhibition is applied. Functionally, this routine carries out the
+    following piecewise equation:
+
+    | j * R_m - [Wi * s(t-dt)] * inh_R, if inh_R > 0
+    | j * R_m, otherwise
+
+    Args:
+        j: electrical current value
+
+        spikes: previous binary spike vector (for t-dt)
+
+        inh_weights: lateral recurrent inhibitory synapses (typically should be
+            chosen to be a scaled hollow matrix)
+
+        R_m: membrane resistance (to multiply/scale j by)
+
+        inh_R: inhibitory resistance to scale lateral inhibitory current by; if
+            inh_R = 0, NO lateral inhibitory pressure will be applied
+
+    Returns:
+        modified electrical current value
+    """
     _j = j * R_m
     if inh_R > 0.:
         _j = _j - (jnp.matmul(spikes, inh_weights) * inh_R)
@@ -31,6 +87,33 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
              thrLeak=0.0005, sticky_spikes=False):
     """
     Runs leaky integrator neuronal dynamics
+
+    Args:
+        dt: integration time constant (milliseconds, or ms)
+
+        j: electrical current value
+
+        v: membrane potential (voltage) value (at t)
+
+        v_thr: voltage threshold value (at t)
+
+        tau_m: cell membrane time constant
+
+        rfr: refractory variable vector (one per neuronal cell)
+
+        refract_T: (relative) refractory time period (in ms; Default
+            value is 1 ms)
+
+        thrGain: the amount of threshold incremented per time step (if spike present)
+
+        thrLeak: the amount of threshold value leaked per time step
+
+        sticky_spikes: if True, then spikes are pinned at value of action potential
+            (i.e., 1) for as long as the relative refractory occurs (this recovers
+            the source paper's core spiking process)
+
+    Returns:
+        voltage(t+dt), spikes, threshold(t+dt), updated refactory variables
     """
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     new_voltage = (v + (-v + j) * (dt / tau_m)) * mask
@@ -48,6 +131,60 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
     return new_voltage, spikes, new_thr, _rfr
 
 class SLIFCell(Component): ## leaky integrate-and-fire cell
+    """
+    A spiking cell based on a simplified leaky integrate-and-fire (sLIF) model.
+    This neuronal cell notably contains functionality required by the computational
+    model employed by (Samadi et al., 2017, i.e., a surrogate derivative function
+    and "sticky spikes") as well as the additional incorporation of an adaptive
+    threshold (per unit) scheme.
+
+    | Reference:
+    | Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep learning with
+    | dynamic spiking neurons and fixed feedback weights." Neural computation 29.3
+    | (2017): 578-602.
+
+    Args:
+        name: the string name of this cell
+
+        n_units: number of cellular entities (neural population size)
+
+        tau_m: membrane time constant
+
+        R_m: membrane resistance value
+
+        thr: base value for adaptive thresholds (initial condition for
+            per-cell thresholds) that govern short-term plasticity
+
+        inhibit_R: lateral modulation factor (DEFAULT: 6.); if >0, this will trigger
+            a heuristic form of lateral inhibition via an internally integrated
+            hollow matrix multiplication
+
+        thr_persist: are adaptive thresholds persistent? (Default: False)
+
+            :Note: depending on the value of this boolean variable:
+                True = adaptive thresholds are NEVER reset upon call to reset
+                False = adaptive thresholds are reset to "thr" upon call to reset
+
+        thrGain: how much adaptive thresholds increment by
+
+        thrLeak: how much adaptive thresholds are decremented/decayed by
+
+        refract_T: relative refractory period time (ms; Default: 1 ms)
+
+        sticky_spikes: if True, spike variables will be pinned to action potential
+            value (i.e, 1) throughout duration of the refractory period; this recovers
+            a key setting used by Samadi et al., 2017
+
+        key: PRNG key to control determinism of any underlying random values
+            associated with this cell
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+
+        directory: string indicating directory on disk to save sLIF parameter
+            values to (i.e., initial threshold values and any persistent adaptive
+            threshold values)
+    """
+
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -84,11 +221,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     @current.setter
     def current(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Input Compartment size does not match provided input size " + str(inp.shape) + "for "
-                    + str(self.name))
         self.compartments[self.inputCompartmentName()] = inp
 
     @property
@@ -97,11 +229,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     @surrogate.setter
     def surrogate(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Surrogate function Compartment size does not match provided input size " + str(inp.shape) + "for "
-                    + str(self.name))
         self.compartments[self.surrogateCompartmentName()] = inp
 
     @property
@@ -110,11 +237,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     @spikes.setter
     def spikes(self, out):
-        if out is not None:
-            if out.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Output compartment size (n, " + str(self.n_units) + ") does not match provided output size "
-                    + str(out.shape) + " for " + str(self.name))
         self.compartments[self.outputCompartmentName()] = out
 
     @property
@@ -123,10 +245,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     @timeOfLastSpike.setter
     def timeOfLastSpike(self, t):
-        if t is not None:
-            if t.shape[1] != self.n_units:
-                raise RuntimeError("Time of last spike compartment size (n, " + str(self.n_units) +
-                                   ") does not match provided size " + str(t.shape) + " for " + str(self.name))
         self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     @property
@@ -135,10 +253,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     @voltage.setter
     def voltage(self, v):
-        if v is not None:
-            if v.shape[1] != self.n_units:
-                raise RuntimeError("Time of last spike compartment size (n, " + str(self.n_units) +
-                                   ") does not match provided size " + str(v.shape) + " for " + str(self.name))
         self.compartments[self.voltageCompartmentName()] = v
 
     @property
@@ -147,10 +261,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     @refract.setter
     def refract(self, rfr):
-        if rfr is not None:
-            if rfr.shape[1] != self.n_units:
-                raise RuntimeError("Refractory variable compartment size (n, " + str(self.n_units) +
-                                   ") does not match provided size " + str(rfr.shape) + " for " + str(self.name))
         self.compartments[self.refractCompartmentName()] = rfr
 
     @property
@@ -163,8 +273,8 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=6., thr_persist=False,
-                 thrGain=0.001, thrLeak=0.00005, refract_T=1., key=None, useVerboseDict=False,
-                 directory=None, **kwargs):
+                 thrGain=0.001, thrLeak=0.00005, refract_T=1., sticky_spikes=True,
+                 key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -176,6 +286,8 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.tau_m = tau_m ## membrane time constant
         self.R_m = R_m ## resistance value
         self.refract_T = refract_T #5. # 2. ## refractory period  # ms
+        ## variable below determines if spikes pinned at 1 during refractory period?
+        self.sticky_spikes = sticky_spikes
 
         ## create simple recurrent inhibitory pressure
         self.inh_R = inhibit_R ## lateral inhibitory magnitude
@@ -219,11 +331,11 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         ## apply simplified inhibitory pressure
         j_curr = modify_current(j_curr, self.spikes, self.inh_weights, self.R_m, self.inh_R)
         self.current = j_curr # None ## store electrical current
-        self.surrogate = apply_surrogate_fx(j_curr, c1=0.82, c2=0.08)
+        self.surrogate = apply_surrogate_dfx(j_curr, c1=0.82, c2=0.08)
         self.voltage, self.spikes, self.threshold, self.refract = \
             run_cell(dt, j_curr, self.voltage, self.threshold, self.tau_m,
                      self.refract, self.refract_T, self.thrGain, self.thrLeak,
-                     sticky_spikes=True)
+                     sticky_spikes=self.sticky_spikes)
         ## update tols
         self.timeOfLastSpike = update_times(t, self.spikes, self.timeOfLastSpike)
         #self.timeOfLastSpike = (1 - self.spikes) * self.timeOfLastSpike + (self.spikes * t)

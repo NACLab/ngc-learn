@@ -62,8 +62,8 @@ def run_cell_stateless(j):
 
 class RateCell(Component): ## Rate-coded/real-valued cell
     """
-    A non-spiking cell based on the gradient dynamics of neural generative coding
-    (NGC) based predictive processing.
+    A non-spiking cell driven by the gradient dynamics of neural generative
+    coding-driven predictive processing.
 
     Args:
         name: the string name of this cell
@@ -76,7 +76,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         act_fx: string name of activation function/nonlinearity to use
 
-        key: PRNG Key to control determinism of any underlying synapses
+        key: PRNG Key to control determinism of any underlying random values
             associated with this cell
 
         useVerboseDict: triggers slower, verbose dictionary mode (Default: False)

@@ -5,6 +5,19 @@ import time, sys
 
 @jit
 def update_times(t, s, tols):
+    """
+    Updates time-of-last-spike (tols) variable.
+
+    Args:
+        t: current time (a scalar/int value)
+
+        s: binary spike vector
+
+        tols: current time-of-last-spike variable
+
+    Returns:
+        updated tols variable
+    """
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
@@ -12,6 +25,39 @@ def update_times(t, s, tols):
 def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset, refract_T):
     """
     Runs leaky integrator neuronal dynamics
+
+    Args:
+        dt: integration time constant (milliseconds, or ms)
+
+        j: electrical current value
+
+        v: membrane potential (voltage, in milliVolts or mV) value (at t)
+
+        v_thr: base voltage threshold value (in mV)
+
+        v_theta: threshold shift (homeostatic) variable (at t)
+
+        rfr: refractory variable vector (one per neuronal cell)
+
+        skey: PRNG key which, if not None, will trigger a single-spike constraint
+            (i.e., only one spike permitted to emit per single step of time);
+            specifically used to randomly sample one of the possible action
+            potentials to be an emitted spike
+
+        tau_m: cell membrane time constant
+
+        R_m: membrane resistance value
+
+        v_rest: membrane resting potential (in mV)
+
+        v_reset: membrane reset potential (in mV) -- upon occurrence of a spike,
+            a neuronal cell's membrane potential will be set to this value
+
+        refract_T: (relative) refractory time period (in ms; Default
+            value is 1 ms)
+
+    Returns:
+        voltage(t+dt), spikes, raw spikes, updated refactory variables
     """
     _v_thr = v_theta + v_thr ## calc present voltage threshold
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
@@ -38,7 +84,22 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset, r
 @partial(jit, static_argnums=[3,4])
 def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     """
-    Runs homeostatic threshold update dynamics
+    Runs homeostatic threshold update dynamics one step.
+
+    Args:
+        dt: integration time constant (milliseconds, or ms)
+
+        v_theta: current value of homeostatic threshold variable
+
+        s: current spikes (at t)
+
+        tau_theta: homeostatic threshold time constant
+
+        theta_plus: physical increment to be applied to any threshold value if
+            a spike was emitted
+
+    Returns:
+        updated homeostatic threshold variable
     """
     #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
     #theta_plus = 0.05
@@ -49,6 +110,49 @@ def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     return _v_theta
 
 class LIFCell(Component): ## leaky integrate-and-fire cell
+    """
+    A spiking cell based on leaky integrate-and-fire (LIF) neuronal dynamics.
+
+    Args:
+        name: the string name of this cell
+
+        n_units: number of cellular entities (neural population size)
+
+        tau_m: membrane time constant
+
+        R_m: membrane resistance value
+
+        thr: base value for adaptive thresholds that govern short-term
+            plasticity (in milliVolts, or mV)
+
+        v_rest: membrane resting potential (in mV)
+
+        v_reset: membrane reset potential (in mV) -- upon occurrence of a spike,
+            a neuronal cell's membrane potential will be set to this value
+
+        tau_theta: homeostatic threshold time constant
+
+        theta_plus: physical increment to be applied to any threshold value if
+            a spike was emitted
+
+        refract_T: relative refractory period time (ms; Default: 1 ms)
+
+        one_spike: if True, a single-spike constraint will be enforced for
+            every time step of neuronal dynamics simulated, i.e., at most, only
+            a single spike will be permitted to emit per step -- this means that
+            if > 1 spikes emitted, a single action potential will be randomly
+            sampled from the non-zero spikes detected
+
+        key: PRNG key to control determinism of any underlying random values
+            associated with this cell
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+
+        directory: string indicating directory on disk to save sLIF parameter
+            values to (i.e., initial threshold values and any persistent adaptive
+            threshold values)
+    """
+
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -81,11 +185,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     @current.setter
     def current(self, inp):
-        if inp is not None:
-            if inp.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Input Compartment size does not match provided input size " + str(inp.shape) + "for "
-                    + str(self.name))
         self.compartments[self.inputCompartmentName()] = inp
 
     @property
@@ -94,11 +193,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     @spikes.setter
     def spikes(self, out):
-        if out is not None:
-            if out.shape[1] != self.n_units:
-                raise RuntimeError(
-                    "Output compartment size (n, " + str(self.n_units) + ") does not match provided output size "
-                    + str(out.shape) + " for " + str(self.name))
         self.compartments[self.outputCompartmentName()] = out
 
     @property
@@ -107,10 +201,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     @timeOfLastSpike.setter
     def timeOfLastSpike(self, t):
-        if t is not None:
-            if t.shape[1] != self.n_units:
-                raise RuntimeError("Time of last spike compartment size (n, " + str(self.n_units) +
-                                   ") does not match provided size " + str(t.shape) + " for " + str(self.name))
         self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     @property
@@ -119,10 +209,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     @voltage.setter
     def voltage(self, v):
-        if v is not None:
-            if v.shape[1] != self.n_units:
-                raise RuntimeError("Time of last spike compartment size (n, " + str(self.n_units) +
-                                   ") does not match provided size " + str(v.shape) + " for " + str(self.name))
         self.compartments[self.voltageCompartmentName()] = v
 
     @property
@@ -131,10 +217,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     @refract.setter
     def refract(self, rfr):
-        if rfr is not None:
-            if rfr.shape[1] != self.n_units:
-                raise RuntimeError("Refractory variable compartment size (n, " + str(self.n_units) +
-                                   ") does not match provided size " + str(rfr.shape) + " for " + str(self.name))
         self.compartments[self.refractCompartmentName()] = rfr
 
     @property
