@@ -7,8 +7,8 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   ngclearn.engine
-   ngclearn.museum
+   ngclearn.components
+   ngclearn.utils
 
 Module contents
 ---------------

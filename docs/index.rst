@@ -18,20 +18,9 @@ Welcome to ngc-learn's documentation!
   :caption: Model Museum
 
   museum/model_museum
-  museum/model
 
 .. toctree::
-  :maxdepth: 1
-  :caption: Modeling API
-
-  modeling/opgraph
-  modeling/node
-  modeling/op
-  modeling/cell
-  modeling/synapse
-
-.. toctree::
-   :maxdepth: 5
+   :maxdepth: 6
    :caption: Source API
 
    source/modules
