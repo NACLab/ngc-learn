@@ -6,11 +6,46 @@ import time
 
 @partial(jit, static_argnums=[3])
 def update_eligibility(dt, Eg, dW, elg_tau):
+    """
+    Apply a signal modulator to j (typically of the form of a derivative/dampening function)
+
+    Args:
+        dt: integration time constant
+
+        Eg: current value of the eligibility trace
+
+        dW: synaptic update (at t) to update eligibility trace with
+
+        elg_tau: eligibility trace time constant
+
+    Returns:
+        updated eligibility trace tensor Eg
+    """
     _Eg = Eg + (-Eg + dW) * (dt/elg_tau)
     return _Eg
 
 @partial(jit, static_argnums=[3,4,5])
 def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.):
+    """
+    Compute a tensor of adjustments to be applied to a synaptic value matrix.
+
+    Args:
+        pre: pre-synaptic statistic to drive Hebbian update
+
+        post: post-synaptic statistic to drive Hebbian update
+
+        W: synaptic weight values (at time t)
+
+        w_bound: maximum value to enforce over newly computed efficacies
+
+        is_nonnegative: (Unused)
+
+        signVal: multiplicative factor to modulate final update by (good for
+            flipping the signs of a computed synaptic change matrix)
+
+    Returns:
+        an update/adjustment matrix
+    """
     dW = jnp.matmul(pre.T, post)
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
@@ -18,6 +53,24 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.):
 
 @partial(jit, static_argnums=[2,3,4])
 def _adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
+    """
+    Evolves/changes the synpatic value matrix underlying this synaptic cable,
+    given a computed synaptic update.
+
+    Args:
+        dW: synaptic adjustment matrix to be applied/used
+
+        W: synaptic weight values (at time t)
+
+        w_bound: maximum value to enforce over newly computed efficacies
+
+        eta: global learning rate to apply to the Hebbian update
+
+        is_nonnegative: ensure updated value matrix is strictly non-negative
+
+    Returns:
+        the newly evolved synaptic weight value matrix
+    """
     _W = W + dW * eta
     if w_bound > 0.:
         if is_nonnegative == True:
@@ -28,15 +81,91 @@ def _adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
 
 @partial(jit, static_argnums=[4,5])
 def _evolve(pre, post, W, w_bound, eta, is_nonnegative=True):
+    """
+    Evolves/changes the synpatic value matrix underlying this synaptic cable,
+    given relevant statistics.
+
+    Args:
+        pre: pre-synaptic statistic to drive Hebbian update
+
+        post: post-synaptic statistic to drive Hebbian update
+
+        W: synaptic weight values (at time t)
+
+        w_bound: maximum value to enforce over newly computed efficacies
+
+        eta: global learning rate to apply to the Hebbian update
+
+        is_nonnegative: ensure updated value matrix is strictly non-negative
+
+    Returns:
+        the newly evolved synaptic weight value matrix
+    """
     dW = _calc_update(pre, post, W, w_bound, is_nonnegative)
     _W = _adjust_synapses(dW, W, w_bound, eta, is_nonnegative)
     return _W
 
 @jit
 def _compute_layer(inp, weight):
+    """
+    Applies the transformation/projection induced by the synaptic efficacie
+    associated with this synaptic cable
+
+    Args:
+        inp: signal input to run through this synaptic cable
+
+        weight: this cable's synaptic value matrix
+
+    Returns:
+        a projection/transformation of input "inp"
+    """
     return jnp.matmul(inp, weight)
 
+name, shape, eta, wInit=("uniform", 0., 0.3), w_bound=1.,
+             elg_tau=0., is_nonnegative=False, signVal=1., key=None,
+             useVerboseDict=False, directory=None
 class HebbianSynapse(Component):
+    """
+    A synaptic cable that adjusts its efficacies via a two-factor Hebbian
+    adjustment rule.
+
+    Args:
+        name: the string name of this cell
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
+
+        eta: global learning rate
+
+        wInit: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
+            for each dimension/value of this cable's underlying value matrix
+
+        w_bound: maximum weight to softly bound this cable's value matrix to; if
+            set to 0, then no synaptic value bounding will be applied
+
+        elg_tau: if > 0., triggers the use of an eligibility trace where this value
+            serves as its time constant
+
+        is_nonnegative: enforce that synaptic efficacies are always non-negative
+            after each synaptic update (if False, no constraint will be applied)
+
+        signVal: multiplicative factor to apply to final synaptic update before
+            it is applied to synapses; this is useful if gradient descent schemes
+            are to be applied (as Hebbian rules typically yield adjustments for
+            ascent)
+
+        key: PRNG key to control determinism of any underlying random values
+            associated with this synaptic cable
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+
+        directory: string indicating directory on disk to save synaptic parameter
+            values to (i.e., initial threshold values and any persistent adaptive
+            threshold values)
+    """
+
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -65,11 +194,6 @@ class HebbianSynapse(Component):
 
     @trigger.setter
     def trigger(self, x):
-        # if x is not None:
-        #     if type(x) == float:
-        #         raise RuntimeError(
-        #             "Trigger compartment must be a single float and provided " +
-        #             "argument type " + type(x) + " does not match this type.")
         self.compartments[self.triggerName()] = x
 
     @property
@@ -78,11 +202,6 @@ class HebbianSynapse(Component):
 
     @inputCompartment.setter
     def inputCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[0]:
-                raise RuntimeError(
-                    "Input compartment size (n, " + str(self.shape[0]) + ") does not match provided input size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.inputCompartmentName()] = x
 
     @property
@@ -91,11 +210,6 @@ class HebbianSynapse(Component):
 
     @outputCompartment.setter
     def outputCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[1]:
-                raise RuntimeError(
-                    "Output compartment size (n, " + str(self.shape[1]) + ") does not match provided output size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.outputCompartmentName()] = x
 
     @property
@@ -104,12 +218,6 @@ class HebbianSynapse(Component):
 
     @presynapticCompartment.setter
     def presynapticCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[0]:
-                raise RuntimeError(
-                    "Presynaptic compartment size (n, " + str(
-                        self.shape[0]) + ") does not match provided presynaptic size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.presynapticCompartmentName()] = x
 
     @property
@@ -118,12 +226,6 @@ class HebbianSynapse(Component):
 
     @postsynapticCompartment.setter
     def postsynapticCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[1]:
-                raise RuntimeError(
-                    "Postsynaptic compartment size (n, " + str(
-                        self.shape[1]) + ") does not match provided postsynaptic size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.postsynapticCompartmentName()] = x
 
     # Define Functions
