@@ -121,9 +121,6 @@ def _compute_layer(inp, weight):
     """
     return jnp.matmul(inp, weight)
 
-name, shape, eta, wInit=("uniform", 0., 0.3), w_bound=1.,
-             elg_tau=0., is_nonnegative=False, signVal=1., key=None,
-             useVerboseDict=False, directory=None
 class HebbianSynapse(Component):
     """
     A synaptic cable that adjusts its efficacies via a two-factor Hebbian
