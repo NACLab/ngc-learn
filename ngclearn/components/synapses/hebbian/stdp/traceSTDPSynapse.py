@@ -5,7 +5,7 @@ from ngclearn.utils.model_utils import initialize_params, normalize_matrix
 import time
 
 @partial(jit, static_argnums=[6,7,8,9,10,11,12])
-def _evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
+def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
             x_tar=0.0, mu=0., Aplus=1., Aminus=0., w_norm=None):
     """
     Evolves/changes the synpatic value matrix underlying this synaptic cable,
@@ -238,11 +238,11 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         post = self.outputCompartment
         x_pre = self.presynapticTrace
         x_post = self.postsynapticTrace
-        self.weights = _evolve(dt, pre, x_pre, post, x_post, self.weights,
-                               w_bound=self.w_bound, eta=self.eta,
-                               x_tar=self.preTrace_target, mu=self.mu,
-                               Aplus=self.Aplus, Aminus=self.Aminus,
-                               w_norm=self.w_norm)
+        self.weights = evolve(dt, pre, x_pre, post, x_post, self.weights,
+                              w_bound=self.w_bound, eta=self.eta,
+                              x_tar=self.preTrace_target, mu=self.mu,
+                              Aplus=self.Aplus, Aminus=self.Aminus,
+                              w_norm=self.w_norm)
         if self.norm_T > 0:
             if t % (self.norm_T-1) == 0: #t % self.norm_t == 0:
                 self.weights = normalize_matrix(self.weights, self.w_norm, ord=1, axis=0)
