@@ -4,8 +4,40 @@ from functools import partial
 import time
 
 @partial(jit, static_argnums=[6,7,8,9,10,11,12])
-def _evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
+def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
             x_tar=0.7, exp_beta=1., Aplus=1., Aminus=0., w_norm=None):
+    """
+    Evolves/changes the synpatic value matrix underlying this synaptic cable,
+    given relevant statistics.
+
+    Args:
+        pre: pre-synaptic statistic to drive update
+
+        x_pre: pre-synaptic trace value
+
+        post: post-synaptic statistic to drive update
+
+        x_post: post-synaptic trace value
+
+        W: synaptic weight values (at time t)
+
+        w_bound: maximum value to enforce over newly computed efficacies
+
+        eta: global learning rate to apply to the Hebbian update
+
+        x_tar: controls degree of pre-synaptic disconnect
+
+        exp_beta: controls effect of exponential Hebbian shift/dependency
+
+        Aplus: strength of long-term potentiation (LTP)
+
+        Aminus: strength of long-term depression (LTD)
+
+        w_norm: if not None, applies an L2 norm constraint to synapses
+
+    Returns:
+        the newly evolved synaptic weight value matrix
+    """
     ## equations 4 from Diehl and Cook - full exponential weight-dependent STDP
     ## calculate post-synaptic term
     post_term1 = jnp.exp(-exp_beta * W) * jnp.matmul(x_pre.T, post)
@@ -26,10 +58,67 @@ def _evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
     return _W
 
 @jit
-def _compute_layer(inp, weight):
+def compute_layer(inp, weight):
+    """
+    Applies the transformation/projection induced by the synaptic efficacie
+    associated with this synaptic cable
+
+    Args:
+        inp: signal input to run through this synaptic cable
+
+        weight: this cable's synaptic value matrix
+
+    Returns:
+        a projection/transformation of input "inp"
+    """
     return jnp.matmul(inp, weight)
 
 class ExpSTDPSynapse(Component):
+    """
+    A synaptic cable that adjusts its efficacies via trace-based form of
+    spike-timing-dependent plasticity (STDP) based on an exponential weight
+    dependence (the strength of which is controlled by a factor).
+
+    | References:
+    | Nessler, Bernhard, et al. "Bayesian computation emerges in generic cortical
+    | microcircuits through spike-timing-dependent plasticity." PLoS computational
+    | biology 9.4 (2013): e1003037.
+    |
+    | Bi, Guo-qiang, and Mu-ming Poo. "Synaptic modification by correlated
+    | activity: Hebb's postulate revisited." Annual review of neuroscience 24.1
+    | (2001): 139-166.
+
+    Args:
+        name: the string name of this cell
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
+
+        eta: global learning rate
+
+        exp_beta: controls effect of exponential Hebbian shift/dependency
+
+        Aplus: strength of long-term potentiation (LTP)
+
+        Aminus: strength of long-term depression (LTD)
+
+        preTrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
+                 (higher -> lower synaptic values)
+
+        wInit: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
+            for each dimension/value of this cable's underlying value matrix
+
+        key: PRNG key to control determinism of any underlying random values
+            associated with this synaptic cable
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+
+        directory: string indicating directory on disk to save synaptic parameter
+            values to (i.e., initial threshold values and any persistent adaptive
+            threshold values)
+    """
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -54,11 +143,6 @@ class ExpSTDPSynapse(Component):
 
     @inputCompartment.setter
     def inputCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[0]:
-                raise RuntimeError(
-                    "Input compartment size (n, " + str(self.shape[0]) + ") does not match provided input size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.inputCompartmentName()] = x
 
     @property
@@ -67,11 +151,6 @@ class ExpSTDPSynapse(Component):
 
     @outputCompartment.setter
     def outputCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[1]:
-                raise RuntimeError(
-                    "Output compartment size (n, " + str(self.shape[1]) + ") does not match provided output size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.outputCompartmentName()] = x
 
     @property
@@ -80,12 +159,6 @@ class ExpSTDPSynapse(Component):
 
     @presynapticTrace.setter
     def presynapticTrace(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[0]:
-                raise RuntimeError(
-                    "Presynaptic trace compartment size (n, " + str(
-                        self.shape[0]) + ") does not match provided presynaptic size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.presynapticTraceName()] = x
 
     @property
@@ -94,12 +167,6 @@ class ExpSTDPSynapse(Component):
 
     @postsynapticTrace.setter
     def postsynapticTrace(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[1]:
-                raise RuntimeError(
-                    "Postsynaptic trace compartment size (n, " + str(
-                        self.shape[1]) + ") does not match provided postsynaptic size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.postsynapticTraceName()] = x
 
     # Define Functions
@@ -139,17 +206,17 @@ class ExpSTDPSynapse(Component):
 
     def advance_state(self, dt, t, **kwargs):
         ## run signals across synapses
-        self.outputCompartment = _compute_layer(self.inputCompartment, self.weights)
+        self.outputCompartment = compute_layer(self.inputCompartment, self.weights)
 
     def evolve(self, dt, t, **kwargs):
         pre = self.inputCompartment
         post = self.outputCompartment
         x_pre = self.presynapticTrace
         x_post = self.postsynapticTrace
-        self.weights = _evolve(dt, pre, x_pre, post, x_post, self.weights,
-                               w_bound=self.w_bound, eta=self.eta,
-                               x_tar=self.preTrace_target, exp_beta=self.exp_beta,
-                               Aplus=self.Aplus, Aminus=self.Aminus)
+        self.weights = evolve(dt, pre, x_pre, post, x_post, self.weights,
+                              w_bound=self.w_bound, eta=self.eta,
+                              x_tar=self.preTrace_target, exp_beta=self.exp_beta,
+                              Aplus=self.Aplus, Aminus=self.Aminus)
 
     def reset(self, **kwargs):
         self.inputCompartment = None

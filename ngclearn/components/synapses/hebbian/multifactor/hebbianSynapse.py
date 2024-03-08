@@ -25,7 +25,7 @@ def update_eligibility(dt, Eg, dW, elg_tau):
     return _Eg
 
 @partial(jit, static_argnums=[3,4,5])
-def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.):
+def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
 
@@ -52,7 +52,7 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.):
     return dW * signVal
 
 @partial(jit, static_argnums=[2,3,4])
-def _adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
+def adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
     """
     Evolves/changes the synpatic value matrix underlying this synaptic cable,
     given a computed synaptic update.
@@ -80,7 +80,7 @@ def _adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
     return _W
 
 @partial(jit, static_argnums=[4,5])
-def _evolve(pre, post, W, w_bound, eta, is_nonnegative=True):
+def evolve(pre, post, W, w_bound, eta, is_nonnegative=True):
     """
     Evolves/changes the synpatic value matrix underlying this synaptic cable,
     given relevant statistics.
@@ -101,8 +101,8 @@ def _evolve(pre, post, W, w_bound, eta, is_nonnegative=True):
     Returns:
         the newly evolved synaptic weight value matrix
     """
-    dW = _calc_update(pre, post, W, w_bound, is_nonnegative)
-    _W = _adjust_synapses(dW, W, w_bound, eta, is_nonnegative)
+    dW = calc_update(pre, post, W, w_bound, is_nonnegative)
+    _W = adjust_synapses(dW, W, w_bound, eta, is_nonnegative)
     return _W
 
 @jit
@@ -269,15 +269,15 @@ class HebbianSynapse(Component):
                               signVal=self.signVal)
             self.Eg = update_eligibility(dt, self.Eg, dW, self.elg_tau)
             if trigger > 0.:
-                self.weights = _adjust_synapses(self.Eg, self.weights, self.w_bounds, self.eta,
-                                                is_nonnegative=self.is_nonnegative)
+                self.weights = adjust_synapses(self.Eg, self.weights, self.w_bounds, self.eta,
+                                               is_nonnegative=self.is_nonnegative)
         else:
-            dW = _calc_update(self.presynapticCompartment, self.postsynapticCompartment,
-                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
-                              signVal=self.signVal)
+            dW = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
+                             self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
+                             signVal=self.signVal)
             self.Eg = dW
-            self.weights = _adjust_synapses(dW, self.weights, self.w_bounds, self.eta,
-                                            is_nonnegative=self.is_nonnegative)
+            self.weights = adjust_synapses(dW, self.weights, self.w_bounds, self.eta,
+                                           is_nonnegative=self.is_nonnegative)
 
     def reset(self, **kwargs):
         self.inputCompartment = None
