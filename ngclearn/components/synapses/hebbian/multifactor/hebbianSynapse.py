@@ -106,7 +106,7 @@ def _evolve(pre, post, W, w_bound, eta, is_nonnegative=True):
     return _W
 
 @jit
-def _compute_layer(inp, weight):
+def compute_layer(inp, weight):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -259,7 +259,7 @@ class HebbianSynapse(Component):
         self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
 
     def advance_state(self, **kwargs):
-        self.outputCompartment = _compute_layer(self.inputCompartment, self.weights)
+        self.outputCompartment = compute_layer(self.inputCompartment, self.weights)
 
     def evolve(self, t, dt, **kwargs):
         if self.elg_tau > 0.:
