@@ -7,6 +7,38 @@ import time
 @partial(jit, static_argnums=[6,7,8,9,10,11,12])
 def _evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
             x_tar=0.0, mu=0., Aplus=1., Aminus=0., w_norm=None):
+    """
+    Evolves/changes the synpatic value matrix underlying this synaptic cable,
+    given relevant statistics.
+
+    Args:
+        pre: pre-synaptic statistic to drive update
+
+        x_pre: pre-synaptic trace value
+
+        post: post-synaptic statistic to drive update
+
+        x_post: post-synaptic trace value
+
+        W: synaptic weight values (at time t)
+
+        w_bound: maximum value to enforce over newly computed efficacies
+
+        eta: global learning rate to apply to the Hebbian update
+
+        x_tar: controls degree of pre-synaptic disconnect
+
+        mu: controls the power scale of the Hebbian shift
+
+        Aplus: strength of long-term potentiation (LTP)
+
+        Aminus: strength of long-term depression (LTD)
+
+        w_norm: (Unused)
+
+    Returns:
+        the newly evolved synaptic weight value matrix
+    """
     if mu > 0.:
         ## equations 3, 5, & 6 from Diehl and Cook - full power-law STDP
         post_shift = jnp.power(w_bound - W, mu)
@@ -31,10 +63,72 @@ def _evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
     return _W
 
 @jit
-def _compute_layer(inp, weight):
+def compute_layer(inp, weight):
+    """
+    Applies the transformation/projection induced by the synaptic efficacie
+    associated with this synaptic cable
+
+    Args:
+        inp: signal input to run through this synaptic cable
+
+        weight: this cable's synaptic value matrix
+
+    Returns:
+        a projection/transformation of input "inp"
+    """
     return jnp.matmul(inp, weight)
 
 class TraceSTDPSynapse(Component): # power-law / trace-based STDP
+    """
+    A synaptic cable that adjusts its efficacies via trace-based form of
+    spike-timing-dependent plasticity (STDP), including an optional power-scale
+    dependence that can be equipped to the Hebbian adjustment (the strength of
+    which is controlled by a scalar factor).
+
+    | References:
+    | Morrison, Abigail, Ad Aertsen, and Markus Diesmann. "Spike-timing-dependent
+    | plasticity in balanced random networks." Neural computation 19.6 (2007): 1437-1467.
+    |
+    | Bi, Guo-qiang, and Mu-ming Poo. "Synaptic modification by correlated
+    | activity: Hebb's postulate revisited." Annual review of neuroscience 24.1
+    | (2001): 139-166.
+
+    Args:
+        name: the string name of this cell
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
+
+        eta: global learning rate
+
+        Aplus: strength of long-term potentiation (LTP)
+
+        Aminus: strength of long-term depression (LTD)
+
+        mu: controls the power scale of the Hebbian shift
+
+        preTrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
+                 (higher -> lower synaptic values)
+
+        wInit: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
+            for each dimension/value of this cable's underlying value matrix
+
+        w_norm: if not None, applies an L1 norm constraint to synapses
+
+        norm_T: clocked time at which to apply L1 synaptic norm constraint
+
+        key: PRNG key to control determinism of any underlying random values
+            associated with this synaptic cable
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+
+        directory: string indicating directory on disk to save synaptic parameter
+            values to (i.e., initial threshold values and any persistent adaptive
+            threshold values)
+    """
+
     ## Class Methods for Compartment Names
     @classmethod
     def inputCompartmentName(cls):
@@ -63,11 +157,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @inputCompartment.setter
     def inputCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[0]:
-                raise RuntimeError(
-                    "Input compartment size (n, " + str(self.shape[0]) + ") does not match provided input size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.inputCompartmentName()] = x
 
     @property
@@ -76,11 +165,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @outputCompartment.setter
     def outputCompartment(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[1]:
-                raise RuntimeError(
-                    "Output compartment size (n, " + str(self.shape[1]) + ") does not match provided output size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.outputCompartmentName()] = x
 
     @property
@@ -98,12 +182,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @presynapticTrace.setter
     def presynapticTrace(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[0]:
-                raise RuntimeError(
-                    "Presynaptic trace compartment size (n, " + str(
-                        self.shape[0]) + ") does not match provided presynaptic size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.presynapticTraceName()] = x
 
     @property
@@ -112,18 +190,12 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @postsynapticTrace.setter
     def postsynapticTrace(self, x):
-        if x is not None:
-            if x.shape[1] != self.shape[1]:
-                raise RuntimeError(
-                    "Postsynaptic trace compartment size (n, " + str(
-                        self.shape[1]) + ") does not match provided postsynaptic size "
-                    + str(x.shape) + " for " + str(self.name))
         self.compartments[self.postsynapticTraceName()] = x
 
     # Define Functions
     def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
                  preTrace_target=0., wInit=("uniform", 0.025, 0.8), w_norm=None,
-                 key=None, norm_T=250., useVerboseDict=False, directory=None, **kwargs):
+                 norm_T=250., key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -158,7 +230,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     def advance_state(self, dt, t, **kwargs):
         ## run signals across synapses
-        self.outputCompartment = _compute_layer(self.inputCompartment, self.weights)
+        self.outputCompartment = compute_layer(self.inputCompartment, self.weights)
 
     def evolve(self, dt, t, **kwargs):
         #trigger = self.trigger
