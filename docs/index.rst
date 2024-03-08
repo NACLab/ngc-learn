@@ -14,10 +14,14 @@ Welcome to ngc-learn's documentation!
    installation
 
 .. toctree::
-  :maxdepth: 1
-  :caption: Model Museum
+  :maxdepth: 2
+  :caption: Modeling API
 
-  museum/model_museum
+  modeling/components
+  modeling/neurons
+  modeling/synapses
+  modeling/input_encoders
+  modeling/other_ops
 
 .. toctree::
    :maxdepth: 6

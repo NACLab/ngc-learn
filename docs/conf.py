@@ -119,6 +119,10 @@ html_theme_options = {
     'display_version': True,
 }
 
+# def setup(app):
+#     RateCell.__name__ = 'RateCell'
+#     #ngclearn.comopnents.neurons.rate_coded.RateCell.__name__ = 'RateCell'
+
 # # Output file base name for HTML help builder.
 # htmlhelp_basename = "ngclearndoc"
 #

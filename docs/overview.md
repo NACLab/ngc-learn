@@ -50,9 +50,14 @@ The overarching goal of ngc-learn is to provide researchers and engineers with:
 * a powerful, approachable tool, written by and maintained by researchers and
 experimenters directly studying and working to advance predictive processing and
 biomimetic systems, meant to lower the barriers to entry to this field of research;
+* a model museum that captures the essence of fundamental
+and interesting predictive processing and other biomimetic models throughout
+history, allowing for the study of and experimentation with classical and modern ideas.
+<!--
 * a ["model museum"](museum/model_museum) that captures the essence of fundamental
 and interesting predictive processing and other biomimetic models throughout
 history, allowing for the study of and experimentation with classical and modern ideas.
+-->
 
 The ngc-learn software framework was originally developed in 2019 by the Neural Adaptive
 Computing (NAC) laboratory in Rochester Institute of Technology meant to serve as
