@@ -24,6 +24,12 @@ Welcome to ngc-learn's documentation!
   modeling/other_ops
 
 .. toctree::
+  :maxdepth: 1
+  :caption: Model Museum
+
+  museum
+
+.. toctree::
    :maxdepth: 6
    :caption: Source API
 

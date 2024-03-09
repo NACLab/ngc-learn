@@ -12,6 +12,15 @@ cell and dynamics under consideration.
 
 ### The Rate Cell
 
+This cell evolves one set of dynamics over state `z` (a sort of real-valued
+continuous membrane potential). The "electrical" inputs that drive it include
+`j` (non-modulated signals) and `j_td` (modulated signals), which can be mapped
+to bottom-up and top-down pressures (such as those produced by error neurons) if
+one is building a strictly hierarchical neural model. Note that the "spikes" `zF`
+emitted are real-valued for the rate-cell and are represented via the application
+of a nonlinear activation function (default is the `identity`) configured by
+the user.
+
 ```{eval-rst}
 .. autoclass:: ngclearn.components.RateCell
   :noindex:
@@ -25,6 +34,18 @@ cell and dynamics under consideration.
 ```
 
 ### The Error Cell
+
+This cell is (currently) a stateless neuron, i.e., it is not driven by an
+underlying differential equation, emulating a "fixed-point" error or mismatch
+calculation. Specifically, this cell is (currently) fixed to be a Gaussian
+cell that assumes an identity covariance. Note that this neuronal cell has
+several important compartments: in terms of input compartments, `target` is
+for placing the desired target activity level while `mu` is for placing an
+externally produced mean prediction value, while in terms of output
+compartments, `dtarget` is the first derivative with respect to the target
+(sometimes used to emulate a top-down pressure/expectation in predictive coding)
+and `dmu` is the first derivative with respect to the mean parameter. (Note that
+these compartment values depend on the distribution assumed by the error-cell.)
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.ErrorCell
