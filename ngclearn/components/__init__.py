@@ -2,7 +2,7 @@
 from .neurons.rate_coded.rateCell import RateCell
 from .neurons.rate_coded.gaussErrorCell import GaussErrorCell
 from .neurons.rate_coded.laplaceErrorCell import LaplaceErrorCell
-## point to spiking cell component types
+## point to standard spiking cell component types
 from .neurons.spiking.sLIFCell import SLIFCell
 from .neurons.spiking.LIFCell import LIFCell
 from .neurons.spiking.izhCell import IzhikevichCell
