@@ -4,14 +4,14 @@
 without a GPU.
 
 <i>Setup:</i> Ensure that you have installed the following base dependencies in
-your system. Note that this library was developed and tested on Ubuntu 18.04.
+your system. Note that this library was developed and tested on Ubuntu 22.04.
 Specifically, ngc-learn requires:
-* Python (>=3.9)
+* Python (>=3.10)
+* ngclib (>=0.1.0)
 * Numpy (>=1.26.0)
 * JAX (>= 0.4.16) (tested for cuda 11.8)
-* scikit-learn (>=1.3.1) (needed for `walkthroughs/` as well as `ngclearn.density`)
-* matplotlib (>=3.4.3) (needed for `walkthroughs/`)
-* patchify
+* matplotlib (>=3.4.2)
+* scikit-learn (>=1.3.1) (for `ngclearn.utils.patch_utils`)
 
 ## Install from Source
 
