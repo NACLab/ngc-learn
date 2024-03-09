@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   ngclearn.components.synapses.hebbian.multifactor
+   ngclearn.components.synapses.hebbian.factor
    ngclearn.components.synapses.hebbian.stdp
 
 Module contents
