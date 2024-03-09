@@ -17,7 +17,7 @@ Specifically, ngc-learn requires:
 
 1. Clone the ngc-learn repository:
 ```console
-$ git clone https://github.com/ago109/ngc-learn.git
+$ git clone https://github.com/NACLab/ngc-learn.git
 $ cd ngc-learn
 ```
 

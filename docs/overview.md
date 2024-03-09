@@ -67,7 +67,7 @@ and used for predictive processing and biomimetics research in the NAC lab
 (see ngc-learn's mention/announcement in this
 <a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">engineering blog post</a>).
 We warmly welcome community contributions to this project. For details please check out our
-[contributing guidelines](https://github.com/ago109/ngc-learn/blob/main/CONTRIBUTING.md).
+[contributing guidelines](https://github.com/NACLab/ngc-learn/blob/main/CONTRIBUTING.md).
 
 ## Citation
 Please cite ngc-learn's source/core paper if you use this framework in your publications:
