@@ -24,7 +24,7 @@ def update_times(t, s, tols):
 class IzhikevichCell(Component): ## Izhikevich neuronal cell
     """
     A spiking cell based on Izhikevich's model of neuronal dynamics.
-    (Note that this cell is under construction -- will do nothing at the
+    (Note that this cell is under construction -- will do not much at the
     moment.)
 
     Args:
