@@ -1,4 +1,4 @@
-from ngclearn.optim. import Opt
+from ngclearn.optim.opt import Opt
 import numpy as np
 from jax import jit, numpy as jnp, random, nn, lax
 from functools import partial
