@@ -15,21 +15,19 @@ def run_cell(dt, targ, mu, eType="gaussian"):
 
         mu: prediction value
 
-        eType: distribution type to use (Currently supported: "gaussian")
-
     Returns:
         derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
     """
-    dmu = None
-    dtarg = None
-    if eType == "gaussian":
-        return run_gaussian_cell(dt, targ, mu)
-    return dmu, dtarg
+    return run_laplacian_cell(dt, targ, mu)
 
 @jit
-def run_gaussian_cell(dt, targ, mu):
+def run_laplacian_cell(dt, targ, mu):
     """
-    Moves gaussian cell dynamics one step forward.
+    Moves Laplacian cell dynamics one step forward. Specifically, this
+    routine emulates the error unit behavior of the local cost functional:
+
+    | L(targ, mu) = ||targ - mu||_1
+    | or log likelihood of the Laplace distribution with identity scale
 
     Args:
         dt: integration time constant
@@ -41,14 +39,14 @@ def run_gaussian_cell(dt, targ, mu):
     Returns:
         derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
     """
-    dmu = (targ - mu) # e (error unit)
+    dmu = jnp.sign(targ - mu) # e (error unit)
     dtarg = -dmu # reverse of e
     return dmu, dtarg
 
-class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
+class LaplaceErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     """
-    A simple (non-spiking) Gaussian error cell - this is a rate-coded
-    approximation of a mismatch signal.
+    A simple (non-spiking) Laplacian error cell - this is a fixed-point solution
+    of a mismatch signal.
 
     Args:
         name: the string name of this cell
@@ -159,7 +157,7 @@ class ErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     def advance_state(self, t, dt, **kwargs):
         ## currently only Gaussian error cells supported
-        self.derivMean, self.derivTarget = run_cell(dt, self.target, self.mean, eType="gaussian")
+        self.derivMean, self.derivTarget = run_cell(dt, self.target, self.mean)
         if self.modulator is not None:
             self.derivMean = self.derivMean * self.modulator
             self.derivTarget = self.derivTarget * self.modulator

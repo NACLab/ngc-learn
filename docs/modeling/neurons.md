@@ -47,8 +47,27 @@ compartments, `dtarget` is the first derivative with respect to the target
 and `dmu` is the first derivative with respect to the mean parameter. (Note that
 these compartment values depend on the distribution assumed by the error-cell.)
 
+Variations of the fixed-point error cell depend on the local distribution assumed
+over mismatch activities, e.g., Gaussian distribution yields a Gaussian error cell.
+
+#### Gaussian Error Cell
+
 ```{eval-rst}
-.. autoclass:: ngclearn.components.ErrorCell
+.. autoclass:: ngclearn.components.GaussErrorCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: verify_connections
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+#### Laplacian Error Cell
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.LaplaceErrorCell
   :noindex:
 
   .. automethod:: advance_state

@@ -1,5 +1,6 @@
 from .neurons.rate_coded.rateCell import RateCell
-from .neurons.rate_coded.errorCell import ErrorCell
+from .neurons.rate_coded.gaussErrorCell import GaussErrorCell
+from .neurons.rate_coded.laplaceErrorCell import LaplaceErrorCell
 from .neurons.spiking.sLIFCell import SLIFCell
 from .neurons.spiking.LIFCell import LIFCell
 from .other.varTrace import VarTrace
