@@ -5,6 +5,8 @@ from .neurons.rate_coded.laplaceErrorCell import LaplaceErrorCell
 ## point to spiking cell component types
 from .neurons.spiking.sLIFCell import SLIFCell
 from .neurons.spiking.LIFCell import LIFCell
+from .neurons.spiking.izhCell import IzhikevichCell
+## point to transformer/operater component types
 from .other.varTrace import VarTrace
 ## point to input encoder component types
 from .input_encoders.bernoulliCell import BernoulliCell

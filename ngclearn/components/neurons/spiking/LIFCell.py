@@ -148,7 +148,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
         useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
 
-        directory: string indicating directory on disk to save sLIF parameter
+        directory: string indicating directory on disk to save LIF parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
     """
