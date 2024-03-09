@@ -12,9 +12,23 @@ typically associated with a local plasticity rule, e.g., a Hebbian-type
 update, that either is either triggered online (at some or all simulation time
 steps) or by integrating a differential equation, e.g., via eligibility traces.
 
-## Multi-Factor Learning Synapse Types
+## Simple Factor Learning Synapse Types
+
+Hebbian rules operate in a local manner -- they generally use information more
+immediately available to synapses in both space and time -- and can come in a
+wide variety of flavors. One general way to categorize variants of Hebbian learning
+is to clarify what (neural) statistics they operate on, e.g, do they work with
+real-valued information or discrete spikes, and how many factors (or distinct
+terms) are involved in calculating the rule. (Note that, in principle, all
+forms of plasticity in ngc-learn are technically local, factor-based rules. )
 
 ### (Two-Factor) Hebbian Synapse
+
+This synapse performs a linear transform of its input signals and evolves
+according to a simple, strictly two-factor update rule. In other words, the
+underlying synaptic efficacy matrix is changed according to a product between
+pre-synaptic compartment values (`pre`) and post-synaptic compartment (`post`)
+values, which can contain any type of vector/matrix statistics.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.HebbianSynapse
@@ -30,7 +44,31 @@ steps) or by integrating a differential equation, e.g., via eligibility traces.
 
 ## Spike-Timing-Dependent Plasticity (STDP) Synapse Types
 
+Synapse that evolve according to a spike-timing-dependent plasticity (STDP)
+process operate, at a high level, much like multi-factor Hebbian rules (given
+that STDP is a generalization of Hebbian adjustment to spike trains) and share
+many of their properties. Nevertheless, a distinguishing factor for STDP-based
+synapses is that they must involve action potentials (spikes) in their
+calculations and are typically computing synaptic change according to the
+relative timing of spikes. In principle, any of the synapses in this grouping
+of components adapt their efficacies according to rules that are at least special
+four-factor terms, i.e., a pre-synaptic spike (an "event"), a pre-synaptic delta
+timing (which can come in the form of a trace), a post-synaptic spike (or event),
+and a post-synaptic delta timing (also can be a trace). In addition, STDP rules
+in ngc-learn typically enforce soft/hard synaptic strength bounding, i.e., there
+is a maximum magnitude allowed for any single synaptic efficacy, and, by default,
+enforce that synaptic strengths are non-negative.
+
 ### Trace-based STDP
+
+This is a four-factor STDP rule that adjusts the underlying synaptic strength
+matrix via a weighted combination of long-term depression (LTD) and long-term
+potentiation (LTP). For the LTP portion of the update, a pre-synaptic trace and
+a post-synaptic event/spike-trigger are used, and for the LTD portion of the
+update, a pre-synaptic event/spike-trigger and a post-synaptic trace are
+utilized. Note that this specific rule can be configured to use different forms
+of soft threshold bounding including a scheme that recovers a power-scaling
+form of STDP (via the hyper-parameter `mu`).
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.TraceSTDPSynapse
@@ -45,6 +83,11 @@ steps) or by integrating a differential equation, e.g., via eligibility traces.
 ```
 
 ### Exponential STDP
+
+This is a four-factor STDP rule that directly incorporates a controllable
+exponential synaptic strength dependency into its dynamics. This synapse's LTP
+and LTD use traces and spike events in a manner similar to the trace-based STDP
+described above.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.ExpSTDPSynapse
