@@ -10,6 +10,16 @@ and a compartment such as [VarTrace](ngclearn.components.other.varTrace).
 
 ### Variable Trace
 
+This operator processes and tracks a particular value (dependent upon which
+external component's compartment is wired into this one's input compartment).  
+In general, a trace integrates a differential equation based on an external
+component's compartment value, e.g., the spike `s` of a spiking neuronal cell,
+producing a real-valued cumulative representation of it across time. For
+instance, instead of directly tracking spike times of a particular spiking cell,
+a trace can be used to represent a soft, single approximation. Another way to
+view a variable trace is that it acts as a low-pass filter of another signal
+sequence.
+
 ```{eval-rst}
 .. autoclass:: ngclearn.components.VarTrace
   :noindex:
@@ -21,3 +31,7 @@ and a compartment such as [VarTrace](ngclearn.components.other.varTrace).
   .. automethod:: reset
     :noindex:
 ```
+
+## Kernels
+
+(Coming soon!)
