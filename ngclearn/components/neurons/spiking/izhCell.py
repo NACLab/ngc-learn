@@ -113,10 +113,6 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     def refract(self, rfr):
         self.compartments[self.refractCompartmentName()] = rfr
 
-    @threshold_theta.setter
-    def threshold_theta(self, thr):
-        self.compartments[self.thresholdThetaName()] = thr
-
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr=45., v_rest=-65.,
                  useVerboseDict=False, directory=None, **kwargs):
