@@ -23,12 +23,12 @@ include:
    the dynamics of interest, such as those related to leaky integrators that
    emit discrete action potentials or recurrent rate-coded neural states that
    follow a gradient flow (such as that of a free energy functional).
-2. <b>Synapses</b>: the synaptic cable is a key component that allows operators,
+2. <b>[Synapses](../modeling/synapses.md)</b>: the synaptic cable is a key component that allows operators,
    such as neuronal cells, to communicate signals to one another. Synaptic cables
    facilitate the <i>message passing</i> between the cells of your system and
    generally are differentiated the way they project/transform signals and how
    they evolve with time (i.e., they specify their form of plasticity).
-3. <b>Input Encoders</b>: the input encoder is particularly useful when the
+3. <b>[Input Encoders](../modeling/input_encoders.md)</b>: the input encoder is particularly useful when the
    simulated biomimetic system needs to encode its sensory inputs in a particular
    manner and this processing should be considered to a part of the model itself.
    A good example is a spiking neural network, where one typically wants to
@@ -36,6 +36,6 @@ include:
    potentials; this can be done in ngc-learn using, for instance, a `PoissonCell`
    component, which produces a Poisson spike train under a certain desired
    maximum frequency.
-4. <b>Other Operators</b>: these include mathematical transforms that may or
+4. <b>[Other Operators](../modeling/other_ops.md)</b>: these include mathematical transforms that may or
    may not have biological analogues. Some commonly-used ones include variable
    traces and kernels.
