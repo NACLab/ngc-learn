@@ -1,7 +1,6 @@
 .. ngc-learn documentation master file, created by
    sphinx-quickstart on Wed Apr 20 02:52:17 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+   Note - This file needs to at least contain a root `toctree` directive.
 
 Welcome to ngc-learn's documentation!
 =====================================
@@ -18,6 +17,7 @@ Welcome to ngc-learn's documentation!
   :caption: Tutorials
 
   tutorials/intro
+  tutorials/theory
   tutorials/lesson1
 
 .. toctree::
