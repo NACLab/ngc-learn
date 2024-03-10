@@ -14,11 +14,10 @@ Welcome to ngc-learn's documentation!
    installation
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Tutorials
+  :maxdepth: 2
+  :caption: Tutorials
 
   tutorials/intro
-  tutorials/lesson1
 
 .. toctree::
   :maxdepth: 2
