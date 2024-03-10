@@ -19,6 +19,9 @@ Welcome to ngc-learn's documentation!
   tutorials/intro
   tutorials/theory
   tutorials/lesson1
+  tutorials/lesson2
+  tutorials/lesson3
+  tutorials/lesson4
 
 .. toctree::
   :maxdepth: 2
