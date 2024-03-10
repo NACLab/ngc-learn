@@ -78,9 +78,12 @@ def initialize_params(dkey, initKernel, shape):
         eyeScale, _ = args
         dim = shape[1]
         params = jnp.eye(dim) * eyeScale
-    elif initType == "uniform": # uniform
+    elif initType == "uniform": ## uniformly distributed values
         lb, ub = args
         params = random.uniform(dkey, shape, minval=lb, maxval=ub)
+    elif initType == "constant": ## constant value(s)
+        scale, _ = args
+        params = jnp.ones(shape) * scale
     else:
         raise RuntimeError(
             "Initialization scheme (" + initType + ") is not recognized/supported!"
