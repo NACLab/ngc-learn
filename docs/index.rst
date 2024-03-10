@@ -14,6 +14,13 @@ Welcome to ngc-learn's documentation!
    installation
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+  modeling/intro
+  modeling/lesson1
+
+.. toctree::
   :maxdepth: 2
   :caption: Modeling API
 
