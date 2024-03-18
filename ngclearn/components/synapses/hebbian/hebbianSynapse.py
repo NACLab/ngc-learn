@@ -83,10 +83,9 @@ def adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
             _W = jnp.clip(_W, -w_bound, w_bound)
     return _W
 
-#@jit
+@jit
 def apply_decay(dW, pre_s, post_s, w_decay):
     _dW = dW - jnp.matmul((1. - pre_s).T, (1. - post_s)) * w_decay
-    sys.exit(0)
     return _dW
 
 @partial(jit, static_argnums=[4,5])
