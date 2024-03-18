@@ -12,6 +12,6 @@ from .other.varTrace import VarTrace
 from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
 ## point to synapse component types
-from .synapses.hebbian.factor.hebbianSynapse import HebbianSynapse
-from .synapses.hebbian.stdp.traceSTDPSynapse import TraceSTDPSynapse
-from .synapses.hebbian.stdp.expSTDPSynapse import ExpSTDPSynapse
+from .synapses.hebbian.hebbianSynapse import HebbianSynapse
+from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
+from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
