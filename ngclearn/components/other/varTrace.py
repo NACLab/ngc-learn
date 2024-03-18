@@ -3,7 +3,7 @@ from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
 
-@partial(jit, static_argnums=[3,4])
+@partial(jit, static_argnums=[4])
 def run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
     """
     Run variable trace filter (low-pass filter) dynamics one step forward.
@@ -48,7 +48,7 @@ class VarTrace(Component): ## low-pass filter
 
             :Note: string values that this can be (Default: "exp") are:
                 1) `'lin'` = linear trace filter, i.e., decay = x_tr + (-x_tr) * (dt/tau_tr);
-                2) `'exp'` = exponential trace filter, i.e., decay = exp(-dt/tau_tr) * x_tr; 
+                2) `'exp'` = exponential trace filter, i.e., decay = exp(-dt/tau_tr) * x_tr;
                 3) `'step'` = step trace, i.e., decay = 0 (a pulse applied upon input value)
 
         key: PRNG key to control determinism of any underlying random values
@@ -127,16 +127,15 @@ class VarTrace(Component): ## low-pass filter
     def advance_state(self, t, dt, **kwargs):
         if self.decayFactor is None: ## compute only once the decay factor
             self.decayFactor = 0. ## <-- pulse filter decay
-            if "exp" in decay_type:
+            if "exp" in self.decay_type:
                 self.decayFactor = jnp.exp(-dt/self.tau_tr)
-            elif "lin" in decay_type:
+            elif "lin" in self.decay_type:
                 self.decayFactor = (1. - dt/self.tau_tr)
             ## else "step", yielding a step/pulse-like filter
         if self.trace is None:
             self.trace = jnp.zeros((1, self.n_units))
         s = self.inputCompartment
-        self.trace = run_varfilter(dt, s, self.trace, self.tau_tr, self.a_delta,
-                                   decay_type=self.decay_type)
+        self.trace = run_varfilter(dt, s, self.trace, self.decayFactor, self.a_delta)
         self.outputCompartment = self.trace
         #self.inputCompartment = None
 
