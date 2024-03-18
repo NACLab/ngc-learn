@@ -53,7 +53,7 @@ over mismatch activities, e.g., Gaussian distribution yields a Gaussian error ce
 #### Gaussian Error Cell
 
 ```{eval-rst}
-.. autoclass:: ngclearn.components.GaussErrorCell
+.. autoclass:: ngclearn.components.GaussianErrorCell
   :noindex:
 
   .. automethod:: advance_state
@@ -67,7 +67,7 @@ over mismatch activities, e.g., Gaussian distribution yields a Gaussian error ce
 #### Laplacian Error Cell
 
 ```{eval-rst}
-.. autoclass:: ngclearn.components.LaplaceErrorCell
+.. autoclass:: ngclearn.components.LaplacianErrorCell
   :noindex:
 
   .. automethod:: advance_state
