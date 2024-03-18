@@ -24,8 +24,8 @@ def update_eligibility(dt, Eg, dW, elg_tau):
     _Eg = Eg + (-Eg + dW) * (dt/elg_tau)
     return _Eg
 
-@partial(jit, static_argnums=[3,4,5])
-def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.):
+@partial(jit, static_argnums=[3,4,5,6])
+def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
 
@@ -43,12 +43,16 @@ def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.):
         signVal: multiplicative factor to modulate final update by (good for
             flipping the signs of a computed synaptic change matrix)
 
+        w_decay: synaptic decay factor to apply to this update
+
     Returns:
         an update/adjustment matrix
     """
     dW = jnp.matmul(pre.T, post)
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
+    if w_decay > 0.:
+        dW = dW - W * w_decay # jnp.matmul((1. - pre).T, (1. - post)) * w_decay
     return dW * signVal
 
 @partial(jit, static_argnums=[2,3,4])
@@ -78,6 +82,12 @@ def adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
         else:
             _W = jnp.clip(_W, -w_bound, w_bound)
     return _W
+
+#@jit
+def apply_decay(dW, pre_s, post_s, w_decay):
+    _dW = dW - jnp.matmul((1. - pre_s).T, (1. - post_s)) * w_decay
+    sys.exit(0)
+    return _dW
 
 @partial(jit, static_argnums=[4,5])
 def evolve(pre, post, W, w_bound, eta, is_nonnegative=True):
@@ -181,6 +191,14 @@ class HebbianSynapse(Component):
         return 'pre'
 
     @classmethod
+    def postsynSpikeName(cls):
+        return 's_post'
+
+    @classmethod
+    def presynSpikeName(cls):
+        return 's_pre'
+
+    @classmethod
     def postsynapticCompartmentName(cls):
         return 'post'
 
@@ -225,9 +243,25 @@ class HebbianSynapse(Component):
     def postsynapticCompartment(self, x):
         self.compartments[self.postsynapticCompartmentName()] = x
 
+    @property
+    def presynSpike(self):
+        return self.compartments.get(self.presynSpikeName(), None)
+
+    @presynSpike.setter
+    def presynSpike(self, x):
+        self.compartments[self.presynSpikeName()] = x
+
+    @property
+    def postsynSpike(self):
+        return self.compartments.get(self.postsynSpikeName(), None)
+
+    @postsynSpike.setter
+    def postsynSpike(self, x):
+        self.compartments[self.postsynSpikeName()] = x
+
     # Define Functions
     def __init__(self, name, shape, eta, wInit=("uniform", 0., 0.3), w_bound=1.,
-                 elg_tau=0., is_nonnegative=False, signVal=1., key=None,
+                 elg_tau=0., is_nonnegative=False, w_decay=0., signVal=1., key=None,
                  useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -239,6 +273,7 @@ class HebbianSynapse(Component):
         ##params
         self.shape = shape
         self.w_bounds = w_bound
+        self.w_decay = w_decay ## synaptic decay
         self.eta = eta
         self.wInit = wInit
         self.is_nonnegative = is_nonnegative
@@ -264,9 +299,9 @@ class HebbianSynapse(Component):
     def evolve(self, t, dt, **kwargs):
         if self.elg_tau > 0.:
             trigger = self.trigger
-            dW = _calc_update(self.presynapticCompartment, self.postsynapticCompartment,
-                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
-                              signVal=self.signVal)
+            dW = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
+                             self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
+                             signVal=self.signVal)
             self.Eg = update_eligibility(dt, self.Eg, dW, self.elg_tau)
             if trigger > 0.:
                 self.weights = adjust_synapses(self.Eg, self.weights, self.w_bounds, self.eta,
@@ -274,7 +309,9 @@ class HebbianSynapse(Component):
         else:
             dW = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
-                             signVal=self.signVal)
+                             signVal=self.signVal, w_decay=0.)
+            if self.w_decay > 0.:
+                dW = apply_decay(dW, self.presynSpike, self.postsynSpike, self.w_decay)
             self.Eg = dW
             self.weights = adjust_synapses(dW, self.weights, self.w_bounds, self.eta,
                                            is_nonnegative=self.is_nonnegative)
@@ -284,6 +321,8 @@ class HebbianSynapse(Component):
         self.outputCompartment = None
         self.presynapticCompartment = None
         self.postsynapticCompartment = None
+        self.presynSpike = None
+        self.postsynSpike = None
         self.Eg = self.weights * 0
 
     def save(self, directory, **kwargs):
