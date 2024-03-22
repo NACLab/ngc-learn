@@ -14,7 +14,7 @@ def update_times(t, s, tols):
         s: binary spike vector
 
         tols: current time-of-last-spike variable
-        
+
     Returns:
         updated tols variable
     """
@@ -110,6 +110,7 @@ class PoissonCell(Component):
         self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
 
         ##Layer Size Setup
+        self.batch_size = 1
         self.n_units = n_units
         self.reset()
 
@@ -124,8 +125,8 @@ class PoissonCell(Component):
 
     def reset(self, **kwargs):
         self.inputCompartment = None
-        self.outputCompartment = jnp.zeros((1, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((1, self.n_units))
+        self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
+        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
 
     def save(self, **kwargs):
         pass

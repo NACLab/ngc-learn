@@ -15,3 +15,4 @@ from .input_encoders.poissonCell import PoissonCell
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
+from .synapses.hebbian.CSDPSynapse import CSDPSynapse
