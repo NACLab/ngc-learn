@@ -82,9 +82,9 @@ def modify_current(j, spikes, inh_weights, R_m, inh_R):
         _j = _j - (jnp.matmul(spikes, inh_weights) * inh_R)
     return _j
 
-@partial(jit, static_argnums=[6,7,8,9])
+@partial(jit, static_argnums=[6,7,8,9,10])
 def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
-             thrLeak=0.0005, sticky_spikes=False):
+             thrLeak=0.0005, rho_b = 0., sticky_spikes=False):
     """
     Runs leaky integrator neuronal dynamics
 
@@ -108,6 +108,9 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
 
         thrLeak: the amount of threshold value leaked per time step
 
+        rho_b: sparsity factor; if > 0, will force adaptive threshold to operate
+            with sparsity across a layer enforced
+
         sticky_spikes: if True, then spikes are pinned at value of action potential
             (i.e., 1) for as long as the relative refractory occurs (this recovers
             the source paper's core spiking process)
@@ -121,9 +124,13 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
     spikes = jnp.where(new_voltage > v_thr, 1, 0)
     new_voltage = (1. - spikes) * new_voltage ## hyper-polarize cells
     ## update thresholds if applicable
-    thr_gain = spikes * thrGain
-    thr_leak = (v_thr * thrLeak)
-    new_thr = v_thr + thr_gain - thr_leak
+    if rho_b > 0.: ## run sparsity-enforcement threshold
+        dthr = jnp.sum(spikes, axis=1, keepdims=True) - 1.0
+        new_thr = jnp.maximum(v_thr + dthr * rho_b, 0.025)
+    else: ## run simple adaptive threshold
+        thr_gain = spikes * thrGain
+        thr_leak = (v_thr * thrLeak)
+        new_thr = v_thr + thr_gain - thr_leak
     ## update refractory variables
     _rfr = (rfr + dt) * (1. - spikes)
     if sticky_spikes == True: ## pin refractory spikes if configured
@@ -170,6 +177,8 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         thrLeak: how much adaptive thresholds are decremented/decayed by
 
         refract_T: relative refractory period time (ms; Default: 1 ms)
+
+        rho_b: threshold sparsity factor (Default: 0)
 
         sticky_spikes: if True, spike variables will be pinned to action potential
             value (i.e, 1) throughout duration of the refractory period; this recovers
@@ -273,7 +282,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=6., thr_persist=False,
-                 thrGain=0.001, thrLeak=0.00005, refract_T=1., sticky_spikes=True,
+                 thrGain=0.001, thrLeak=0.00005, rho_b=0., refract_T=1., sticky_spikes=True,
                  key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -298,8 +307,10 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
         ##Layer Size Setup
         self.n_units = n_units
+        self.batch_size = 1
 
         ## adaptive threshold setup
+        self.rho_b = rho_b
         self.thr_persist = thr_persist ## are adapted thresholds persistent? True (persistent)
         self.thrGain = thrGain #0.0005
         self.thrLeak = thrLeak #0.00005
@@ -323,9 +334,9 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
     def advance_state(self, t, dt, **kwargs):
         if self.spikes is None:
-            self.spikes = jnp.zeros((1, self.n_units))
+            self.spikes = jnp.zeros((self.batch_size, self.n_units))
         if self.refract is None:
-            self.refract = jnp.zeros((1, self.n_units)) + self.refract_T
+            self.refract = jnp.zeros((self.batch_size, self.n_units)) + self.refract_T
         ## run one step of Euler integration over neuronal dynamics
         j_curr = self.current
         ## apply simplified inhibitory pressure
@@ -335,18 +346,18 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.voltage, self.spikes, self.threshold, self.refract = \
             run_cell(dt, j_curr, self.voltage, self.threshold, self.tau_m,
                      self.refract, self.refract_T, self.thrGain, self.thrLeak,
-                     sticky_spikes=self.sticky_spikes)
+                     self.rho_b, sticky_spikes=self.sticky_spikes)
         ## update tols
         self.timeOfLastSpike = update_times(t, self.spikes, self.timeOfLastSpike)
         #self.timeOfLastSpike = (1 - self.spikes) * self.timeOfLastSpike + (self.spikes * t)
 
     def reset(self, **kwargs):
-        self.voltage = jnp.zeros((1, self.n_units))
-        self.refract = jnp.zeros((1, self.n_units)) + self.refract_T
+        self.voltage = jnp.zeros((self.batch_size, self.n_units))
+        self.refract = jnp.zeros((self.batch_size, self.n_units)) + self.refract_T
         self.current = None
         self.surrogate = None
-        self.timeOfLastSpike = jnp.zeros((1, self.n_units))
-        self.spikes = jnp.zeros((1, self.n_units)) #None
+        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
+        self.spikes = jnp.zeros((self.batch_size, self.n_units)) #None
         if self.thr_persist == False: ## if thresh non-persistent, reset to base value
             self.threshold = self.threshold0 + 0
 
