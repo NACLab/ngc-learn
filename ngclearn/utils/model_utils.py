@@ -72,12 +72,10 @@ def initialize_params(dkey, initKernel, shape):
     params = None
     if initType == "hollow":
         eyeScale, _ = args
-        dim = shape[1]
-        params = (1. - jnp.eye(dim)) * eyeScale
+        params = (1. - jnp.eye(N=shape[0], M=shape[1])) * eyeScale
     elif initType == "eye":
         eyeScale, _ = args
-        dim = shape[1]
-        params = jnp.eye(dim) * eyeScale
+        params = jnp.eye(N=shape[0], M=shape[1]) * eyeScale
     elif initType == "uniform": ## uniformly distributed values
         lb, ub = args
         params = random.uniform(dkey, shape, minval=lb, maxval=ub)
