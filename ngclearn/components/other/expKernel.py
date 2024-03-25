@@ -27,7 +27,7 @@ class ExpKernel(Component): ## Exponential spike kernel
 
         n_units: number of calculating entities or units
 
-        nu - (ms, spike time interval for window)
+        nu: (ms, spike time interval for window)
 
         tau_w: spike window time constant (in micro-secs, or nano-s)
 
