@@ -120,8 +120,11 @@ class QuadLIFCell(Component): ## quadratic leaky integrate-and-fire cell
     dynamics.
 
     Dynamics can be taken to be governed by the following ODE:
+
     | d.Vz/d.t = a0 * (V - V_rest) * (V - V_c) + Jz * R) * (dt/tau_mem)
+
     where:
+
     |   a0 - scaling factor for voltage accumulation
     |   V_c - critical voltage (value)
 
