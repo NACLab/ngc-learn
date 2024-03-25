@@ -5,12 +5,14 @@ from pkg_resources import get_distribution
 
 __version__ = get_distribution('ngclearn').version
 
-required = {'ngclib'} ## list of core ngclearn dependencies
+required = {'ngclib', 'jax', 'jaxlib'} ## list of core ngclearn dependencies
 installed = {pkg.key for pkg in pkg_resources.working_set}
 missing = required - installed
-if len(missing) >= 1:
-    print("Error: ngclib, a core dependency of ngclearn, is not currently installed!")
-    sys.exit(1)
-    ## below will auto-install missing dependency silently (AO: not using this yet)
-    #python = sys.executable
-    #subprocess.check_call([python, '-m', 'pip', 'install', *missing], stdout=subprocess.DEVNULL)
+
+for key in required:
+    if key in missing:
+        raise ImportError(str(key) + ", a core dependency of ngclean, is not " \
+                             "currently installed!")
+
+import ngclib
+
