@@ -34,4 +34,27 @@ sequence.
 
 ## Kernels
 
-(Coming soon!)
+Kernels are an important and useful building block for constructing what is
+known in computational neuroscience as spike-response models (SRMs). In
+ngc-learn, these generally involve the construction of nodes that apply a
+particular mathematical function (or set of them) to integrate over a window
+of collected values, generally discrete spikes or action potentials produced
+within a particular window of time.
+
+### Exponential Kernel
+
+This kernel operator processes and tracks a window of values (generally spikes) to
+produce an excitatory postsynaptic potential (EPSP) pulse value via application
+of an exponential kernel.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.ExpKernel
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: verify_connections
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
