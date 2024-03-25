@@ -7,7 +7,9 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   ngclearn.utils.density
    ngclearn.utils.optim
+   ngclearn.utils.viz
 
 Submodules
 ----------
@@ -40,14 +42,6 @@ ngclearn.utils.patch\_utils module
 ----------------------------------
 
 .. automodule:: ngclearn.utils.patch_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.utils.viz\_utils module
---------------------------------
-
-.. automodule:: ngclearn.utils.viz_utils
    :members:
    :undoc-members:
    :show-inheritance:

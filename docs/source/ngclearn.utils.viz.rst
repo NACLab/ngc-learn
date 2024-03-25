@@ -1,0 +1,29 @@
+ngclearn.utils.viz package
+==========================
+
+Submodules
+----------
+
+ngclearn.utils.viz.raster module
+--------------------------------
+
+.. automodule:: ngclearn.utils.viz.raster
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.utils.viz.synapse\_plot module
+---------------------------------------
+
+.. automodule:: ngclearn.utils.viz.synapse_plot
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: ngclearn.utils.viz
+   :members:
+   :undoc-members:
+   :show-inheritance:
