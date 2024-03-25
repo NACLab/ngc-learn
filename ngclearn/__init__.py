@@ -5,7 +5,7 @@ from pkg_resources import get_distribution
 
 __version__ = get_distribution('ngclearn').version
 
-required = {'ngclib'}
+required = {'ngclib'} ## list of core ngclearn dependencies
 installed = {pkg.key for pkg in pkg_resources.working_set}
 missing = required - installed
 if len(missing) >= 1:
