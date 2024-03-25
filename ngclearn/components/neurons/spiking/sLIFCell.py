@@ -82,9 +82,9 @@ def modify_current(j, spikes, inh_weights, R_m, inh_R):
         _j = _j - (jnp.matmul(spikes, inh_weights) * inh_R)
     return _j
 
-@partial(jit, static_argnums=[6,7,8,9,10])
+@partial(jit, static_argnums=[6,7,8,9,10,11])
 def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
-             thrLeak=0.0005, rho_b = 0., sticky_spikes=False):
+             thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
     """
     Runs leaky integrator neuronal dynamics
 
@@ -120,6 +120,8 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
     """
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     new_voltage = (v + (-v + j) * (dt / tau_m)) * mask
+    if v_min is not None:
+        new_voltage = jnp.maximum(v_min, new_voltage)
     #new_voltage = v + (-v) * (dt / tau_m) + j * mask
     spikes = jnp.where(new_voltage > v_thr, 1, 0)
     new_voltage = (1. - spikes) * new_voltage ## hyper-polarize cells
@@ -183,6 +185,8 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         sticky_spikes: if True, spike variables will be pinned to action potential
             value (i.e, 1) throughout duration of the refractory period; this recovers
             a key setting used by Samadi et al., 2017
+
+        thr_jitter: scale of uniform jitter to add to initialization of thresholds
 
         key: PRNG key to control determinism of any underlying random values
             associated with this cell
@@ -283,7 +287,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=6., thr_persist=False,
                  thrGain=0.001, thrLeak=0.00005, rho_b=0., refract_T=1., sticky_spikes=True,
-                 key=None, useVerboseDict=False, directory=None, **kwargs):
+                 thr_jitter=0.05, key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -295,6 +299,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.tau_m = tau_m ## membrane time constant
         self.R_m = R_m ## resistance value
         self.refract_T = refract_T #5. # 2. ## refractory period  # ms
+        self.v_min = -3.
         ## variable below determines if spikes pinned at 1 during refractory period?
         self.sticky_spikes = sticky_spikes
 
@@ -315,7 +320,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.thrGain = thrGain #0.0005
         self.thrLeak = thrLeak #0.00005
         if directory is None:
-            self.thr_jitter = 0.05 ## some random jitter to ensure thresholds start off different
+            self.thr_jitter =  thr_jitter ## some random jitter to ensure thresholds start off different
             self.key, subkey = random.split(self.key)
             #self.threshold = random.uniform(subkey, (1, n_units), minval=thr, maxval=1.25 * thr)
             self.threshold0 = thr + random.uniform(subkey, (1, n_units),
@@ -346,7 +351,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.voltage, self.spikes, self.threshold, self.refract = \
             run_cell(dt, j_curr, self.voltage, self.threshold, self.tau_m,
                      self.refract, self.refract_T, self.thrGain, self.thrLeak,
-                     self.rho_b, sticky_spikes=self.sticky_spikes)
+                     self.rho_b, sticky_spikes=self.sticky_spikes, v_min=self.v_min)
         ## update tols
         self.timeOfLastSpike = update_times(t, self.spikes, self.timeOfLastSpike)
         #self.timeOfLastSpike = (1 - self.spikes) * self.timeOfLastSpike + (self.spikes * t)

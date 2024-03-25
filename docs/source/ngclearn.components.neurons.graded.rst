@@ -1,19 +1,27 @@
 ngclearn.components.neurons.graded package
-===============================================
+==========================================
 
 Submodules
 ----------
 
 ngclearn.components.neurons.graded.gaussianErrorCell module
-----------------------------------------------------------------
+-----------------------------------------------------------
 
 .. automodule:: ngclearn.components.neurons.graded.gaussianErrorCell
    :members:
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.neurons.graded.goodnessModCell module
+---------------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.graded.goodnessModCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.neurons.graded.laplacianErrorCell module
------------------------------------------------------------------
+------------------------------------------------------------
 
 .. automodule:: ngclearn.components.neurons.graded.laplacianErrorCell
    :members:
@@ -21,7 +29,7 @@ ngclearn.components.neurons.graded.laplacianErrorCell module
    :show-inheritance:
 
 ngclearn.components.neurons.graded.rateCell module
--------------------------------------------------------
+--------------------------------------------------
 
 .. automodule:: ngclearn.components.neurons.graded.rateCell
    :members:

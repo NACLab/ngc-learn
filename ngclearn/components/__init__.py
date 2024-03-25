@@ -5,6 +5,7 @@ from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
 ## point to standard spiking cell component types
 from .neurons.spiking.sLIFCell import SLIFCell
 from .neurons.spiking.LIFCell import LIFCell
+from .neurons.spiking.quadLIFCell import QuadLIFCell
 from .neurons.spiking.izhikevichCell import IzhikevichCell
 ## point to transformer/operater component types
 from .other.varTrace import VarTrace

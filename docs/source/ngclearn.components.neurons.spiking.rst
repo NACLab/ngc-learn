@@ -20,6 +20,14 @@ ngclearn.components.neurons.spiking.izhikevichCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.neurons.spiking.quadLIFCell module
+------------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.spiking.quadLIFCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.neurons.spiking.sLIFCell module
 ---------------------------------------------------
 

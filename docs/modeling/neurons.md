@@ -112,6 +112,27 @@ is: `thr + thrTheta(t)`).
     :noindex:
 ```
 
+### The Quadratic LIF (Leaky Integrator) Cell
+
+This cell models dynamics over the voltage `v` and threshold shift `thrTheta`
+(a homeostatic variable) (with optional dynamics for current `j`). Note that
+`thr` is used as a baseline level for the membrane potential threshold while
+`thrTheta`  is treated as a form of short-term plasticity (full threshold
+is: `thr + thrTheta(t)`). The dynamics are driven by a critical voltage value
+as well as a voltage scaling factor for membrane potential accumulation over time.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.QuadLIFCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: verify_connections
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### The Simplified LIF (sLIF) Cell
 
 This cell, which is a simplified version of the leaky integrator, models dynamics

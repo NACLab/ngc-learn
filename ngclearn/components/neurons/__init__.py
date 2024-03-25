@@ -5,4 +5,5 @@ from .graded.laplacianErrorCell import LaplacianErrorCell
 ## point to standard spiking cell component types
 from .spiking.sLIFCell import SLIFCell
 from .spiking.LIFCell import LIFCell
+from .spiking.quadLIFCell import QuadLIFCell
 from .spiking.izhikevichCell import IzhikevichCell
