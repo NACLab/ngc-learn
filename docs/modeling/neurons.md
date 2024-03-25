@@ -92,6 +92,29 @@ Note that the interactions or dynamics underlying each component might itself
 be complex and nonlinear, depending on the neuronal cell simulated (i.e., some
 neurons might be running multiple differential equations under the hood).
 
+### The Simplified LIF (sLIF) Cell
+
+This cell, which is a simplified version of the leaky integrator (i.e., model
+described later below), models dynamics over voltage `v` and threshold `thr`
+(note that `j` is further treated as a point-wise current for simplicity).
+Importantly, an optional fast form of lateral inhibition can be emulated with
+this cell by setting the inhibitory resistance `inhibit_R > 0` -- this will mean
+that the dynamics over `v` include a term that is equal to a negative hollow
+matrix product with the spikes emitted at time `t-1` (yielding a recurrent
+negative pressure on the membrane potential values at `t`).
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.SLIFCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: verify_connections
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### The LIF (Leaky Integrator) Cell
 
 This cell models dynamics over the voltage `v` and threshold shift `thrTheta`
@@ -123,29 +146,6 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.QuadLIFCell
-  :noindex:
-
-  .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
-    :noindex:
-  .. automethod:: reset
-    :noindex:
-```
-
-### The Simplified LIF (sLIF) Cell
-
-This cell, which is a simplified version of the leaky integrator, models dynamics
-over voltage `v` and threshold `thr` (note that `j` is further treated as a
-point-wise current for simplicity). Importantly, an optional fast form of
-lateral inhibition can be emulated with this cell by setting the inhibitory
-resistance `inhibit_R > 0` -- this will mean that the dynamics over `v` include
-a term that is equal to a negative hollow matrix product with the spikes
-emitted at time `t-1` (yielding a recurrent negative pressure on the membrane
-potential values at `t`).
-
-```{eval-rst}
-.. autoclass:: ngclearn.components.SLIFCell
   :noindex:
 
   .. automethod:: advance_state
