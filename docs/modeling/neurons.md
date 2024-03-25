@@ -8,7 +8,11 @@ neuronal cell(s) are to be deposited). Typically, a neuron integrates an
 (ordinary) differential equation, which depends on the type of neuronal
 cell and dynamics under consideration.
 
-## Rate-coded / Real-valued Neurons
+## Graded, Real-valued Neurons
+
+This family of neuronal cells adheres to dynamics or performs calculations
+utilizing graded (real-valued/continuous) values; in other words, they do not
+produce any discrete signals or action potential values.
 
 ### The Rate Cell
 
