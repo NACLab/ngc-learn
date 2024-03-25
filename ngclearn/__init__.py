@@ -14,5 +14,8 @@ for key in required:
         raise ImportError(str(key) + ", a core dependency of ngclean, is not " \
                              "currently installed!")
 
+## Needed to preload is called before anything in ngclearn
 import ngclib
+
+from ngclib.controller import Controller
 
