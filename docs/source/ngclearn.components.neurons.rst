@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   ngclearn.components.neurons.rate_coded
+   ngclearn.components.neurons.graded
    ngclearn.components.neurons.spiking
 
 Module contents
