@@ -4,6 +4,14 @@ ngclearn.utils.viz package
 Submodules
 ----------
 
+ngclearn.utils.viz.dim\_reduce module
+-------------------------------------
+
+.. automodule:: ngclearn.utils.viz.dim_reduce
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.viz.raster module
 --------------------------------
 

@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   ngclearn.commands
    ngclearn.components
    ngclearn.utils
 

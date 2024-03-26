@@ -23,6 +23,14 @@ ngclearn.components.baseComponentTemplate module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.wrappers module
+-----------------------------------
+
+.. automodule:: ngclearn.components.wrappers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
