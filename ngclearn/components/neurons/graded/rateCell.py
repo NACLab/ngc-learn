@@ -101,6 +101,22 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
     ## Bind Properties to Compartments for ease of use
     @property
+    def inputCompartment(self):
+        return self.compartments.get(self.outputCompartmentName(), None)
+
+    @inputCompartment.setter
+    def inputCompartment(self, out):
+        self.compartments[self.outputCompartmentName()] = out
+
+    @property
+    def outputCompartment(self):
+        return self.compartments.get(self.outputCompartmentName(), None)
+
+    @outputCompartment.setter
+    def outputCompartment(self, out):
+        self.compartments[self.outputCompartmentName()] = out
+
+    @property
     def current(self):
         return self.compartments.get(self.inputCompartmentName(), None)
 
