@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Simulation software for building and analyzing arbitrary predictive coding, spiking network, and biomimetic neural systems."
 authors = [
   {name = "Alexander Ororbia", email = "ago@cs.rit.edu"},
-  {name = "William Gebhardt", email = "wdg1351@rit.edu"},,
+  {name = "William Gebhardt", email = "wdg1351@rit.edu"},
 ]
 readme = "README.md"
 keywords = ['python', 'ngc-learn', 'predictive-processing', 'predictive-coding',
