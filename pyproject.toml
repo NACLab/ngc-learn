@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ngclearn"
+version = "1.0.0"
+description = "Simulation software for building and analyzing arbitrary predictive coding, spiking network, and biomimetic neural systems."
+authors = [
+  {name = "Alexander Ororbia", email = "ago@cs.rit.edu"},
+  {name = "William Gebhardt", email = "wdg1351@rit.edu"},,
+]
+readme = "README.md"
+keywords = ['python', 'ngc-learn', 'predictive-processing', 'predictive-coding',
+            'jax', 'spiking-neural-networks', 'biomimetics', 'bionics', 'computational-neuroscience']
+requires-python = ">=3.10"
+license = {text = "BSD-3-Clause License"}
+classifiers=[
+  "Development Status :: 4 - Beta", #3 - Alpha", # 5 - Production/Stable
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: BSD-3-Clause License",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Topic :: Scientific/Engineering :: Cognitive Science",
+  "Topic :: Scientific/Engineering :: Computational Neuroscience", 
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Operating System :: Linux :: Ubuntu"
+]
+dynamic = ["dependencies"]
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]} ## use classic requirements file
+#dependencies = [
+#  "imageio==2.31.5",
+#  "numpy>=1.26.0", 
+#  "scikit-learn>=0.24.2", 
+#  "scipy>=1.7.0",
+#  "matplotlib>=3.8.0",
+#]
+
+[project.urls]
+Homepage = "https://github.com/NACLab/ngc-learn"
+Documentation = "https://ngc-learn.readthedocs.io/"
+"Lab Page" = "https://www.cs.rit.edu/~ago/nac_lab.html"
+Changelog = "https://github.com/NACLab/ngc-learn/blob/main/history.txt"
+
+[tool.setuptools.packages.find]
+exclude = ["tutorials"]
