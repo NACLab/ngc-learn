@@ -18,6 +18,8 @@ def run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
         decayFactor: coefficient to decay trace by before application of new value
 
         a_delta: increment to made to filter (multiplied w/ stimulus x)
+    Returns:
+        updated trace/filter value/state
     """
     _x_tr = x_tr * decayFactor
     #x_tr + (-x_tr) * (dt / tau_tr) = (1 - dt/tau_tr) * x_tr
