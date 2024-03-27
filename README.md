@@ -67,8 +67,8 @@ and complete the following sequence of steps as depicted in the screenshot below
 
 ## <b>Attribution:</b>
 
-If you use this code in any form in your project(s), please cite its source
-paper:
+If you use this library in any form in your project(s), please cite ngc-learn's
+software citation (see `CITATION.cff`) as well as its source publication:
 <pre>
 @article{Ororbia2022,
   author={Ororbia, Alexander and Kifer, Daniel},
