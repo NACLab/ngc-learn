@@ -1,6 +1,5 @@
 cff-version: 1.2.0
-message: "If you use NGC-Learn, please cite both the software and the
-source paper/publication referenced in the README."
+message: "If you use NGC-Learn, please cite both the software and the source paper/publication referenced in the README."
 authors:
   - family-names: Ororbia
     given-names: Alexander
