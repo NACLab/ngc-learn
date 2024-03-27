@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ngclearn"
-version = "1.0.0"
+version = "1.0.alpha0"
 description = "Simulation software for building and analyzing arbitrary predictive coding, spiking network, and biomimetic neural systems."
 authors = [
   {name = "Alexander Ororbia", email = "ago@cs.rit.edu"},
@@ -49,4 +49,4 @@ Documentation = "https://ngc-learn.readthedocs.io/"
 Changelog = "https://github.com/NACLab/ngc-learn/blob/main/history.txt"
 
 [tool.setuptools.packages.find]
-exclude = ["tutorials"]
+exclude = ["docs"]
