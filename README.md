@@ -3,17 +3,10 @@
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing biomimetic systems, neurobiological
-agents, and predictive coding models (predictive processing theory) based on the neural generative
+agents, spiking neuronal systems, and predictive coding models (predictive processing theory) based on the neural generative
 coding (NGC) computational framework. This toolkit is built on top of JAX and is distributed under the 3-Clause BSD license.
 
-<b>WARNING:</b> The development branch is under active construction/updating -- it will not likely work for you at the moment
-if you pull from the dev branch. Please pull from/use either the <i>ngc-learn</i> branch or
-the Tensorflow-2 <i>ngc-learn-legacy</i> repo: https://github.com/NACLab/ngc-learn-legacy. The main
-version update will be completed soon.
-
-<!--
-<b>NOTICE:</b> This is a dev branch of ngc-learn and <i>no guarantees</i> are offered as to whether or not this particular branch works (until is finally merged back into main).
--->
+<b>NOTICE:</b> This is currently the JAX branch of ngc-learn; we offer <i>no guarantees</i> as to whether or not this particular branch works at the moment (until we finish the ngc-learn update to officially release version 1.0.0). For access to the previous working Tensorflow-2 version, please visit the repo for <a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
 
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
@@ -35,40 +28,43 @@ chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics<
 
 ## <b>Installation:</b>
 
-<i>Setup:</i> Ensure that you have installed the following base dependencies in
-your system. Note that this library was developed on Ubuntu 18.04 and tested on
-Ubuntu(s) 16.04 and 18.04 (and should also work on Ubuntu 20.04).
+<i>Setup:</i> To install ngc-learn, you can run (at the top-level of the
+the <code>ngclearn</code> directory) the following bash command:
+<pre>
+$ python install .
+</pre>
+which will ensure that all the required base dependencies are installed in
+your system. Note that this library was developed on Ubuntu 20.04 and tested on
+Ubuntu(s) 18.04 and 20.04.
 ngc-learn requires:
-1) Python (>=3.9)
-2) Numpy (>=1.26.0)
-3) JAX (>= 0.4.16)
-4) scikit-learn (>=1.3.1) if using `ngclearn.density` (needed for the demo/tutorial
+1) ngclib (>=0.2.0), (for installation, visit <a href="https://github.com/NACLab/ngc-lib">here</a>)
+2) Python (>=3.9)
+3) Numpy (>=1.26.0)
+4) JAX (>= 0.4.16)
+5) scikit-learn (>=1.3.1) if using `ngclearn.density` (needed for the demo/tutorial
     files in `examples/`)
-5) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
+6) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
 <!--
 6) networkx  (>=2.6.3) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
 7) pyviz (>=0.2.0) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
 -->
 
-(Which you can have setup/installed by running `$ pip install -r requirements.txt`.)
-
-Once you have ensured that the above dependencies have been installed, you can then
-run the setup script at the top of the <code>ngclearn</code> directory
-to have the <code>ngclearn</code> package install on your system using the
-following bash command:
-<pre>
-$ python setup.py install
-</pre>
+(Which you can have setup/installed a priori by running `$ pip install -r requirements.txt`.)
 
 If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="docs/images/test_ngclearn_install.png" width="512">
 
+If you are working on and developing ngc-learn, then run the following command:
+<pre>
+$ python install -e . # sets up an editable install
+</pre>
+
 ## <b>Attribution:</b>
 
-If you use this library in any form in your project(s), please cite ngc-learn's
-software citation (see `CITATION.cff`) as well as its source publication:
+If you use this code in any form in your project(s), please cite its source
+paper:
 <pre>
 @article{Ororbia2022,
   author={Ororbia, Alexander and Kifer, Daniel},
