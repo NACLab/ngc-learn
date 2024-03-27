@@ -1,12 +1,31 @@
 cff-version: 1.2.0
-message: "NGC-Learn: A Software Framework for Biologically-Inspired Learning and Brain-Inspired Computing."
-authors:
-  - family-names: Ororbia, Gebhardt, Mali
-    given-names: Alex, William, Ankur
-    orcid: https://orcid.org/0000-0002-2590-1310
-title: "ngc-learn"
-version: 1.0.0
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.6605728
-date-released: 2022-05-10
+message: "If you use NGC-Learn, please cite both the software and the
+source paper/publication referenced in the README."
+references:
+  - type: software
+    authors:
+      - family-names: Ororbia
+        given-names: Alexander
+        orcid: https://orcid.org/0000-0002-2590-1310
+      - family-names: Gebhardt
+        given-names: William
+      - family-names: Mali
+        given-names: Ankur
+    title: "ngc-learn"
+    version: 1.0.0
+    identifiers:
+      - type: doi
+        value: 10.5281/zenodo.6605728
+    date-released: 2022-05-10
+  - type: article
+    authors:
+      - family-names: Ororbia
+        given-names: Alexander
+        orcid: https://orcid.org/0000-0002-2590-1310
+      - family-names: Gebhardt
+        given-names: William
+    title: "The neural coding framework for learning generative models"
+    year: 2022
+    journal: Nature Communications
+    volume: 13
+    doi: 10.1038/s41467-022-29632-7
