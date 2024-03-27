@@ -16,6 +16,5 @@ for key in required:
 
 ## Needed to preload is called before anything in ngclearn
 import ngclib
-
 from ngclib.controller import Controller
 
