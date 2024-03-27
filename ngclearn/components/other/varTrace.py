@@ -135,8 +135,6 @@ class VarTrace(Component): ## low-pass filter
         if self.trace is None:
             self.trace = jnp.zeros((1, self.n_units))
         s = self.inputCompartment
-        if self.name == "tr1":
-            print("DECAY.1 = ", self.decayFactor)
         self.trace = run_varfilter(dt, s, self.trace, self.decayFactor, self.a_delta)
         self.outputCompartment = self.trace
         #self.inputCompartment = None
