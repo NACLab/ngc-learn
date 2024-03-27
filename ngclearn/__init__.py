@@ -11,7 +11,7 @@ missing = required - installed
 
 for key in required:
     if key in missing:
-        raise ImportError(str(key) + ", a core dependency of ngclean, is not " \
+        raise ImportError(str(key) + ", a core dependency of ngclearn, is not " \
                              "currently installed!")
 
 ## Needed to preload is called before anything in ngclearn
