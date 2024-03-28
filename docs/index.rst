@@ -18,7 +18,7 @@ Welcome to ngc-learn's documentation!
 
   tutorials/intro
   tutorials/theory
-  tutorials/lesson1
+  tutorials/lesson1_modules
   tutorials/lesson2
   tutorials/lesson3
   tutorials/lesson4
