@@ -10,8 +10,8 @@ from ngclearn.utils.model_utils import softmax
 #from kmeans import K_Means
 from sklearn import mixture
 
-seed = 69
-tf.random.set_seed(seed=seed)
+#seed = 69
+#tf.random.set_seed(seed=seed)
 
 class GMM:
     """
