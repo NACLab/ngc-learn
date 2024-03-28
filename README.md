@@ -105,7 +105,7 @@ $ python install -e . # sets up an editable install
 </pre>
 
 **Version:**<br>
-0.9.9 <!-- -Alpha -->
+1.0.0-Alpha <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>
