@@ -1,7 +1,0 @@
-.DS_Store
-.idea
-dist/
-build
-ngclib.egg-info
-
-__pycache__
