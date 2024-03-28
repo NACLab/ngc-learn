@@ -14,14 +14,6 @@ Subpackages
 Submodules
 ----------
 
-ngclearn.utils.img\_utils module
---------------------------------
-
-.. automodule:: ngclearn.utils.img_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.utils.io\_utils module
 -------------------------------
 
