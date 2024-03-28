@@ -37,7 +37,7 @@ which will ensure that all the required base dependencies are installed in
 your system. Note that this library was developed on Ubuntu 20.04 and tested on
 Ubuntu(s) 18.04 and 20.04.
 ngc-learn requires:
-1) ngcsimlib (>=0.2.b1), (for installation, visit <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
+1) ngcsimlib (>=0.2.b1), (for more information, visit the <a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
 2) Python (>=3.9)
 3) Numpy (>=1.26.0)
 4) JAX (>= 0.4.16) (to enable GPU use, make sure to install one of the CUDA variants)
