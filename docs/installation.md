@@ -7,7 +7,7 @@ without a GPU.
 your system. Note that this library was developed and tested on Ubuntu 22.04.
 Specifically, ngc-learn requires:
 * Python (>=3.10)
-* ngclib (>=0.1.0)
+* ngcsimlib (>=0.1.b1)
 * Numpy (>=1.26.0)
 * JAX (>= 0.4.16) (tested for cuda 11.8)
 * matplotlib (>=3.4.2)

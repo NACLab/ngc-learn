@@ -6,13 +6,13 @@ The basic usage for the `modules.json` file is to provide a straightforward
 method for the imports of arbitrary classes and methods without needing to
 register them before use. The primary use for these is for adding components
 and commands to controller objects. If there is a need to use the imported
-modules outside of these cases, use `ngclib.utils.load_attribute` and the loaded
+modules outside of these cases, use `ngcsimlib.utils.load_attribute` and the loaded
 attribute will be returned.
 
-By default, <a href="https://github.com/NACLab/ngc-lib">ngclib</a>, the backend
+By default, <a href="https://github.com/NACLab/ngc-sim-lib">ngcsimlib</a>, the backend
 dependency of ngc-learn, looks for `json_files/modules.json` in your project path.
 However, this can be changed with the `--modules` flag. In the event that this
-file is missing, ngclib will not break but its ability to import and create
+file is missing, ngcsimlib will not break but its ability to import and create
 parts of the model will be hindered. It is highly recommended to set up the
 `modules.json` file at the start of a project. There is a schema file named
 `modules.shema` that can be referenced and used to verify that custom modules
@@ -26,7 +26,7 @@ parts have to be registered/imported at the top of a trial file, the creation of
 additional trial files will lead to code duplication. Obviously, one solution to
 this code duplication is to extract it into a file and then import and run that
 file at the top of each trial. This is almost what was done in the original
-ngclib, but we also had the goal of allowing users to alias components, and
+ngcsimlib, but we also had the goal of allowing users to alias components, and
 then swap out their source with ease. To do this we moved to the use of a JSON
 file that fulfills this need.
 
@@ -36,18 +36,18 @@ A complete schema for the modules file can be found in `modules.schema`
 The general structure of the modules file can be thought of as a transformation
 of python import statements to JSON objects. Take the following example:
 ```python
-from ngclib.commands import AdvanceState as advance
+from ngcsimlib.commands import AdvanceState as advance
 ```
-In this statement we are importing a command from ngclib and aliasing it to the
+In this statement we are importing a command from ngcsimlib and aliasing it to the
 word "advance". Now we will transform this into JSON for the modules file. First,
 we take the top level module that we are importing from, in this case
-`ngclib.commands`; this the absolute path to the location of this module. Next,
+`ngcsimlib.commands`; this the absolute path to the location of this module. Next,
 we look at the name of what we are importing here: `AdvanceState`. Finally, we
 look at the keyword since this import is being assigned to `advance`. We then
 take these three parts and combine them into the following JSON object:
 ```json
   {
-    "absolute_path": "ngclib.commands",
+    "absolute_path": "ngcsimlib.commands",
     "attributes": [
       {
         "name": "AdvanceState",
@@ -64,7 +64,7 @@ to specify more than one attribute to import from a single top level module
 such as also importing the evolve command.
 ```json
   {
-    "absolute_path": "ngclib.commands",
+    "absolute_path": "ngcsimlib.commands",
     "attributes": [
       {
         "name": "AdvanceState",
@@ -90,13 +90,13 @@ header import statements to JSON configuration.
 ### Case 1
 Python:
 ```python
-from ngclib.commands import AdvanceState as advance, Evolve, multiclamp as mClamp
+from ngcsimlib.commands import AdvanceState as advance, Evolve, multiclamp as mClamp
 ```
 Json:
 ```json
 [
   {
-    "absolute_path": "ngclib.commands",
+    "absolute_path": "ngcsimlib.commands",
     "attributes": [
       {
         "name": "AdvanceState",
@@ -117,15 +117,15 @@ Json:
 ### Case 2
 Python
 ```python
-from ngclib.commands import AdvanceState as advance
-from ngclib.bundle_rules import additive as add, overwrite
+from ngcsimlib.commands import AdvanceState as advance
+from ngcsimlib.bundle_rules import additive as add, overwrite
 ```
 
 Json
 ```json
 [
   {
-    "absolute_path": "ngclib.commands",
+    "absolute_path": "ngcsimlib.commands",
     "attributes": [
       {
         "name": "AdvanceState",
@@ -134,7 +134,7 @@ Json
     ]
   },
   {
-    "absolute_path": "ngclib.bundle_rules",
+    "absolute_path": "ngcsimlib.bundle_rules",
     "attributes": [
       {
         "name": "additive",
