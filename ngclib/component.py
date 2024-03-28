@@ -305,7 +305,7 @@ class Component(ABC):
     def advance_state(self, **kwargs):
         """
         An abstract method to advance the state of the component to the next one
-        (a componet transitions from its current state at time t to a new one
+        (a component transitions from its current state at time t to a new one
         at time t + dt)
         """
         pass
