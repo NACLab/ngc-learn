@@ -12,14 +12,6 @@ ngclearn.components.neurons.graded.gaussianErrorCell module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.components.neurons.graded.goodnessModCell module
----------------------------------------------------------
-
-.. automodule:: ngclearn.components.neurons.graded.goodnessModCell
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.components.neurons.graded.laplacianErrorCell module
 ------------------------------------------------------------
 
