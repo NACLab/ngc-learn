@@ -1,4 +1,4 @@
-from ngclib.component import Component
+from ngcsimlib.component import Component
 from jax import random, numpy as jnp, jit
 from functools import partial
 import time

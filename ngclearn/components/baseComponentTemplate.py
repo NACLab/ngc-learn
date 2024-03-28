@@ -1,4 +1,4 @@
-from ngclib.component import Component
+from ngcsimlib.component import Component
 from jax import random
 import time
 

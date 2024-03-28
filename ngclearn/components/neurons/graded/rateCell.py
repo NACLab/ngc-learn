@@ -1,4 +1,4 @@
-from ngclib.component import Component
+from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils.model_utils import create_function

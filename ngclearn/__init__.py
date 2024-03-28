@@ -7,8 +7,8 @@ from pkg_resources import get_distribution
 
 __version__ = get_distribution('ngclearn').version
 
-#required = {'ngclib', 'jax', 'jaxlib'} ## list of core ngclearn dependencies
-required = {'jax', 'jaxlib'}
+#required = {'ngcsimlib', 'jax', 'jaxlib'} ## list of core ngclearn dependencies
+required = {'ngcsimlib', 'jax', 'jaxlib'}
 installed = {pkg.key for pkg in pkg_resources.working_set}
 missing = required - installed
 
@@ -19,6 +19,5 @@ for key in required:
 
 
 ## Needed to preload is called before anything in ngclearn
-import ngclib
-from ngclib.controller import Controller
-
+import ngcsimlib
+from ngcsimlib.controller import Controller
