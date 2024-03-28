@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "NGC-Lib: A Simulation Framework for Supporting NGC-Learn."
+authors:
+  - family-names: Gebhardt, Ororbia
+    given-names: William, Alex
+  - family-names: Ororbia
+    given-names: Alexander
+    orcid: https://orcid.org/0000-0002-2590-1310
+title: "ngc-lib"
+version: 0.2.0
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10888211
+date-released: 2023-12-1

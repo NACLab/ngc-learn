@@ -1,0 +1,25 @@
+{
+  title: "Commands",
+  description: "A list of all commands the controller can execute",
+  type: "array",
+  items: {
+    description: "The a required value for creating a command, the command name as the keyword to run the command, and then all other keyword arguments needed for to build the command",
+    type: "object",
+    required: ["command_type", "command_name"],
+    properties: {
+      step_type: {
+        type: "string"
+      },
+      command_name: {
+        type: "string"
+      },
+      components: {
+        type: "array",
+        items: {
+          description: "The names of the components needed",
+          type: "string"
+        }
+      },
+    }
+  }
+}

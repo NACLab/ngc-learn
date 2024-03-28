@@ -1,0 +1,36 @@
+{
+  "title": "Modules",
+  "description": "A list of modules and attributes to import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "absolute_path": {
+        "description": "The import path for the module",
+        "type": "string"
+      },
+      "attributes": {
+        "description": "A list of attributes to load from the module",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name of the attribute being loaded",
+              "type": "string"
+            },
+            "keywords": {
+              "description": "Other keywords can can be used to reference this attribute",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["name"]
+        }
+      }
+    },
+    "required": ["absolute_path"]
+  }
+}

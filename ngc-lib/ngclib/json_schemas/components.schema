@@ -1,0 +1,18 @@
+{
+  title: "Components",
+  description: "A list of all components",
+  type: "array",
+  items: {
+    description: "The two required values for creating a components, and then all other keyword arguments needed for to build the components",
+    type: "object",
+    required: ["component_type", "name"],
+    properties: {
+      component_type: {
+        type: "string"
+      },
+      name: {
+        type: "string"
+      },
+    }
+  }
+}
