@@ -69,7 +69,7 @@ myst_enable_extensions = [
 
 pygments_style = "sphinx"
 
-autodoc_mock_imports = ['jax', 'imageio', 'patchify']
+autodoc_mock_imports = ['jax', 'jaxlib', 'imageio', 'patchify', 'ngclib']
 #autodoc_mock_imports = ['scipy','sklearn','tensorflow','tensorflow_probability']
 #autodoc_mock_imports = ['patchify', 'imageio', 'jax', 'scipy','sklearn','tensorflow','tensorflow_probability']
 
