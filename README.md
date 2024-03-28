@@ -40,7 +40,7 @@ ngc-learn requires:
 1) ngclib (>=0.2.0), (for installation, visit <a href="https://github.com/NACLab/ngc-lib">here</a>)
 2) Python (>=3.9)
 3) Numpy (>=1.26.0)
-4) JAX (>= 0.4.16)
+4) JAX (>= 0.4.16) (to enable GPU use, make sure to install one of the CUDA variants)
 5) scikit-learn (>=1.3.1) if using `ngclearn.density` (needed for the demo/tutorial
     files in `examples/`)
 6) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
@@ -49,17 +49,22 @@ ngc-learn requires:
 7) pyviz (>=0.2.0) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
 -->
 
-(Which you can have setup/installed a priori by running `$ pip install -r requirements.txt`.)
+<i>Note:</i> Running the above pip install will automatically install the CPU
+version of JAX. If you want to use the GPU version instead, make sure to,
+before running the above, to install JAX via the correct pip command
+with the proper CUDA flags (depending on which CUDA is configured for your system)
+as per their
+<a href="https://jax.readthedocs.io/en/latest/installation.html">installation instructions</a>.
+
+<!--
+(If you want to set up/install dependencies a priori, try running
+`$ pip install -r requirements.txt` first before pip installing ngc-learn.)
+-->
 
 If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="docs/images/test_ngclearn_install.png" width="512">
-
-If you are working on and developing ngc-learn, then run the following command:
-<pre>
-$ python install -e . # sets up an editable install
-</pre>
 
 ## <b>Attribution:</b>
 
@@ -94,6 +99,10 @@ You can check/pull the latest source code for this library via:
 $ git clone https://github.com/ngc-learn/ngc-learn.git
 </pre>
 
+If you are working on and developing ngc-learn, then run the following command:
+<pre>
+$ python install -e . # sets up an editable install
+</pre>
 
 **Version:**<br>
 0.9.9 <!-- -Alpha -->
