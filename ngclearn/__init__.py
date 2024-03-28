@@ -2,6 +2,8 @@ import sys
 import subprocess
 import pkg_resources
 from pkg_resources import get_distribution
+from pathlib import Path
+from sys import argv
 
 __version__ = get_distribution('ngclearn').version
 
