@@ -48,5 +48,5 @@ def preload():
 
 if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
     print("PRINT? ",argv[0])
-    print("_NAME? ",argv[0].name)
+    print("_NAME? ",Path(argv[0]).name)
     preload()
