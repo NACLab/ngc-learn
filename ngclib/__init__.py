@@ -47,5 +47,6 @@ def preload():
                     utils._Loaded_Attributes[keyword] = atr
 
 if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
-    print("PRINT? ",argv)
+    print("PRINT? ",argv[0])
+    print("_NAME? ",argv[0].name)
     preload()
