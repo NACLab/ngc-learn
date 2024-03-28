@@ -14,7 +14,7 @@ from pkg_resources import get_distribution
 
 ###### Preload Modules
 def preload():
-    parser = argparse.ArgumentParser(description='Build and run a model using ngclean')
+    parser = argparse.ArgumentParser(description='Build and run a model using ngclearn')
     parser.add_argument("--modules", type=str, help='location of modules.json file')
 
     args = parser.parse_args()
@@ -47,4 +47,5 @@ def preload():
                     utils._Loaded_Attributes[keyword] = atr
 
 if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
+    print("ARG: ",argv[0])
     preload()
