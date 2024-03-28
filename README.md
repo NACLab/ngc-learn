@@ -10,7 +10,7 @@ coding (NGC) computational framework. This toolkit is built on top of JAX and is
 its complete JAX version; for acess to the previous Tensorflow-2 version, please
 visit the repo for
 <a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
-<--
+<!--
 This is currently the JAX branch of ngc-learn; we offer <i>no guarantees</i> as to whether or not this particular branch works at the moment (until we finish the ngc-learn update to officially release version 1.0.0). For access to the previous working Tensorflow-2 version, please visit the repo for <a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
 -->
 
