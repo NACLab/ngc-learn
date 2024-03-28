@@ -15,7 +15,7 @@ from pkg_resources import get_distribution
 ###### Preload Modules
 def preload():
     parser = argparse.ArgumentParser(description='Build and run a model using ngclearn')
-    parser.add_argument("--modules", type=str, help='location of modules.json file')
+    parser.add_argument("--modules", default="void", type=str, help='location of modules.json file')
 
     args = parser.parse_args()
     try:
