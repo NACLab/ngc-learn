@@ -5,6 +5,13 @@
 Welcome to ngc-learn's documentation!
 =====================================
 
+<b>ngc-learn</b> is a Python library for building, simulating, and analyzing
+biomimetic computational models and arbitrary
+predictive processing/coding models based on the neural generative
+coding (NGC) computational framework. This toolkit is built on top of
+<a href="https://github.com/google/jax">JAX</a> and is distributed under the
+3-Clause BSD license.
+
 .. toctree::
    :maxdepth: 1
    :caption: Introduction:

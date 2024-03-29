@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.abspath('../'))
 import sphinx_rtd_theme
 #import jax
 #import imageio
+#import ngcsimlib
 import ngclearn
 
 # -- Project information -----------------------------------------------------
@@ -69,7 +70,7 @@ myst_enable_extensions = [
 
 pygments_style = "sphinx"
 
-autodoc_mock_imports = ['jax', 'jaxlib', 'imageio', 'patchify', 'ngclib']
+autodoc_mock_imports = ['jax', 'jaxlib', 'imageio', 'patchify', 'ngcsimlib']
 #autodoc_mock_imports = ['scipy','sklearn','tensorflow','tensorflow_probability']
 #autodoc_mock_imports = ['patchify', 'imageio', 'jax', 'scipy','sklearn','tensorflow','tensorflow_probability']
 

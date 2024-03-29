@@ -1,10 +1,12 @@
 # Overview
 
+<!--
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing
 biomimetic computational models and arbitrary
 predictive processing/coding models based on the neural generative
 coding (NGC) computational framework. This toolkit is built on top of JAX and
 is distributed under the 3-Clause BSD license.
+-->
 
 Advances made in research on artificial neural networks (ANNs) have led to many
 breakthroughs in machine learning and beyond, resulting in the design of powerful
@@ -27,22 +29,17 @@ manipulating dynamically-evolving environments. This would benefit researchers
 in fields including, but not limited to, machine learning, (computational)
 neuroscience, and cognitive science.
 
-ngc-learn aims to fill the above need by concretely instantiating an important
-theory in neuroscience known as <i>predictive processing</i>, positing that the brain
-is largely a continual prediction engine, constantly hypothesizing the state of its
-environment and updating its own internal mental model of it as data is gathered.
-Moreover, prediction and correction happen at many levels or regions within the
-brain -- clusters or groups of neurons in one region attempt to predict the state
-of neurons at another region, forming a complex, somewhat hierarchical structure
-that includes neurons which attempt to predict actual sensory input. Neurons within
-this system adjust their internal activity values (as well the strengths of the
-synapses that wire to them) based on how different their predictions were from
-observed signals.
-Concretely, ngc-learn implements a general predictive processing framework known
-as neural generative coding (NGC). On top of this, ngc-learn implements a general
-simulation framework for simulating biomimetic systems characterized by
-differential equations, notably ones based on biophysical <i>spiking neuronal
-cells</i>.
+ngc-learn[^1], a Python simulation library, aims to fill the above need by
+concretely instantiating neuronal dynamics and forms of
+synaptic plasticity in the form of flexibly rearranged components and operations
+to build arbitrary, modular, and complex biomimetic systems for research
+in brain-inspired computing and neurocognitive modeling. More importantly, it is
+designed to facilitate the design, development, and analysis of novel models of
+neural computation and information processing, neuronal circuitry,
+biologically-plausible credit assignment, and neuromimetic agents. Specifically,
+ngc-learn implements a general schema for simulating biomimetic systems
+characterized by differential equations, including ones based on
+biophysical <i>spiking neuronal cells</i>.
 
 The overarching goal of ngc-learn is to provide researchers and engineers with:
 * a modular design that allows for the flexible creation, simulation, and analysis of
@@ -61,13 +58,32 @@ history, allowing for the study of and experimentation with classical and modern
 
 The ngc-learn software framework was originally developed in 2019 by the Neural Adaptive
 Computing (NAC) laboratory in Rochester Institute of Technology meant to serve as
-an internal tool for predictive processing research (with earlier incarnations in the Scala
+an internal tool for predictive coding research (with earlier incarnations in the Scala
 programming language, dating back to early 2017). It remains actively maintained by
 and used for predictive processing and biomimetics research in the NAC lab
 (see ngc-learn's mention/announcement in this
 <a href="https://engineeringcommunity.nature.com/posts/the-neural-coding-framework-for-learning-generative-models">engineering blog post</a>).
 We warmly welcome community contributions to this project. For details please check out our
 [contributing guidelines](https://github.com/NACLab/ngc-learn/blob/main/CONTRIBUTING.md).
+
+[^1]: The name `ngc-learn` stems from an important theory in neuroscience that served
+as one of the library's first motivations to offer generalized research and
+educational support for -- <i>predictive processing</i>, which posits that the
+brain is largely a continual prediction engine, constantly hypothesizing the
+state of its environment and updating its own internal mental model of it as
+data is gathered. 
+<!--
+Moreover, prediction and correction happen at many levels or regions within the
+brain -- clusters or groups of neurons in one region attempt to predict the state
+of neurons at another region, forming a complex, somewhat hierarchical structure
+that includes neurons which attempt to predict actual sensory input. Neurons within
+this system adjust their internal activity values (as well the strengths of the
+synapses that wire to them) based on how different their predictions were from
+observed signals.
+-->
+The very first paradigm of neural computation that ngc-learn implemented and offered
+general support for was a predictive coding framework known
+as neural generative coding (NGC).
 
 ## Citation
 Please cite ngc-learn's source/core paper if you use this framework in your publications:
