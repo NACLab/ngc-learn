@@ -3,7 +3,7 @@
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing
-biomimetic systems, neurobiological agents, spiking neuronal systems,
+biomimetic systems, neurobiological agents, spiking neuronal networks,
 predictive coding circuitry, and models that learn via biologically-plausible
 forms of credit assignment. This simulation toolkit is built on top of JAX and is
 distributed under the 3-Clause BSD license.
@@ -44,10 +44,10 @@ ngc-learn requires:
 -->
 
 ---
-ngc-learn 1.0.beta0 and later require Python 3.10 or newer and ngcsimlib >=0.2.b1.
-ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require Matplotlib (>3.8.0) and imageio>=2.31.5; many of the tutorials will require Matplotlib >=3.8.0 and imageio>=2.31.5.
-ngc-learn's image patching and density estimation utilities (routines within
-``ngclearn.utils.density``) require Scikit-learn >=0.24.2. <!-- (Note: if using the `_generate_patch_set()` within the
+ngc-learn 1.0.beta0 and later require Python 3.10 or newer as well as ngcsimlib >=0.2.b1.
+ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require Matplotlib (>=3.8.0) and imageio (>=2.31.5). Many of the tutorials will require Matplotlib (>=3.8.0) and imageio (>=2.31.5).
+ngc-learn's image patching and density estimation tools (routines within
+``ngclearn.utils.density``) require Scikit-learn (>=0.24.2). <!-- (Note: if using the `_generate_patch_set()` within the
 image patching utilities, then Patchify will be needed).-->
 
 ### User Installation
@@ -130,7 +130,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-1.0.0-Alpha <!-- -Alpha -->
+1.0.0-Beta <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>
