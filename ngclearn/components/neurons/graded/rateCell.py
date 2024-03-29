@@ -102,11 +102,11 @@ class RateCell(Component): ## Rate-coded/real-valued cell
     ## Bind Properties to Compartments for ease of use
     @property
     def inputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
+        return self.compartments.get(self.inputCompartmentName(), None)
 
     @inputCompartment.setter
     def inputCompartment(self, out):
-        self.compartments[self.outputCompartmentName()] = out
+        self.compartments[self.inputCompartmentName()] = out
 
     @property
     def outputCompartment(self):
@@ -167,9 +167,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.batch_size = 1
 
         self.fx, self.dfx = create_function(fun_name=act_fx)
-
-        ## Set up bundle for multiple inputs of current
-        self.create_bundle('multi_input', 'additive')
+        
         self.reset()
 
     def verify_connections(self):

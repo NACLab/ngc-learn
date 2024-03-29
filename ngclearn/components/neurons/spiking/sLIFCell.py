@@ -330,8 +330,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         else:
             self.load(directory)
 
-        ## Set up bundle for multiple inputs of current
-        self.create_bundle('multi_input', 'additive')
         self.reset()
 
     def verify_connections(self):
