@@ -25,23 +25,15 @@ either for their own research or to contribute to the development of the main li
 ## Organization of Tutorials
 
 ### Setting Up a Simulated Model
-The tutorials for ngc-learn are organized in the following manner:
-1. <b>[Setting Up a JSON Experimental Configuration](../tutorials/model_basics/json_modules.md)</b>:
-   In this lesson, you will learn how JSON configuration is used to rapidly
-   allow you to import parts of ngc-learn relevant to the model that you want to build.
-2. <b>[Crafting a Basic Model](../tutorials/model_basics/model_building.md)</b>: This
-   lesson will walk you through a basic setup of a controller with a few components, the
-   essence of a basic model or system that is simulated in ngc-learn.
-3. <b>[Evolving a Synapse](../tutorials/model_basics/evolving_synapses.md)</b>: In this
-   lesson, you will take your controller and configure its single synapse to
-   evolve iteratively via a 2-factor Hebbian rule.
-<!--6. <b>XXX</b>:-->
+These [tutorials/lessons](../tutorials/lessons.md) go through the very basics of constructing a dynamical
+system in ngc-learn, including setting up a
+[JSON configuration](../tutorials/model_basics/json_modules.md),
+constructing a [basic model](../tutorials/model_basics/model_building.md),
+and setting up a basic [form of plasticity](../tutorials/model_basics/evolving_synapses.md).
 
 ### Foundational Elements of ngc-learn and ngcsimlib
-1. <b>[Understanding Commands](../tutorials/foundations/commands.md)</b>: This lesson will
-   walk you through the basics of a command -- an essential part of building a
-   simulation controller in ngc-learn and ngcsimlib -- and offer some useful
-   points for designing new ones.
-2. <b>[Bundle Rules](../tutorials/foundations/bundle_rules.md)</b>: Here, the basics
-   of bundle rules, a commonly use mechanism for crafting complex biophysical
-   systems, will be presented.
+These [tutorials/lessons](../tutorials/foundations.md) go through the foundational
+aspects of ngc-learn's simulation. Some current elements that walkthroughs are
+provided for include:
+[commands](../tutorials/foundations/commands.md) and
+[bundle_rules](../tutorials/foundations/bundle_rules.md).

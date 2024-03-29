@@ -23,6 +23,8 @@ and spiking neural networks. This toolkit is built on top of
 
   tutorials/intro
   tutorials/theory
+  tutorials/lessons
+  tutorials/foundations
   tutorials/model_basics/json_modules
   tutorials/model_basics/model_building
   tutorials/model_basics/evolving_synapses
