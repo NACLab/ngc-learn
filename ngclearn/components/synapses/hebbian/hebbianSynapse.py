@@ -259,7 +259,7 @@ class HebbianSynapse(Component):
         self.compartments[self.postsynSpikeName()] = x
 
     # Define Functions
-    def __init__(self, name, shape, eta, wInit=("uniform", 0., 0.3), w_bound=1.,
+    def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3), w_bound=1.,
                  elg_tau=0., is_nonnegative=False, w_decay=0., signVal=1., key=None,
                  useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
