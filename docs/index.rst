@@ -25,10 +25,11 @@ coding (NGC) computational framework. This toolkit is built on top of
 
   tutorials/intro
   tutorials/theory
-  tutorials/lesson1_modules
-  tutorials/lesson2
-  tutorials/lesson3
-  tutorials/lesson4
+  tutorials/model_basics/json_modules
+  tutorials/model_basics/model_building
+  tutorials/model_basics/evolving_synapses
+  tutorials/foundations/commands
+  tutorials/foundations/bundle_rules
 
 .. toctree::
   :maxdepth: 2
