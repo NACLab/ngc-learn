@@ -3,10 +3,10 @@
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing
-biomimetic systems, neurobiological agents, spiking neuronal systems, and
-predictive coding models (predictive processing theory) based on the neural
-generative coding (NGC) computational framework. This toolkit is built on top of
-JAX and is distributed under the 3-Clause BSD license.
+biomimetic systems, neurobiological agents, spiking neuronal systems,
+predictive coding circuitry, and models that learn via biologically-plausible
+forms of credit assignment. This simulation toolkit is built on top of JAX and is
+distributed under the 3-Clause BSD license.
 
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
@@ -93,7 +93,7 @@ which we no longer support), please visit the repo for
 ## <b>Attribution:</b>
 
 If you use this code in any form in your project(s), please cite its source
-paper:
+paper (as well as ngc-learn's official software citation):
 <pre>
 @article{Ororbia2022,
   author={Ororbia, Alexander and Kifer, Daniel},
@@ -120,12 +120,13 @@ make a contribution to ngc-learn, please see our
 <b>Source Code</b>
 You can check/pull the latest source code for this library via:
 <pre>
-$ git clone https://github.com/ngc-learn/ngc-learn.git
+$ git clone https://github.com/NACLab/ngc-learn.git
 </pre>
 
-If you are working on and developing ngc-learn, then run the following command:
+If you are working on and developing with ngc-learn pulled from the github
+repo, then run the following command to set up an editable install:
 <pre>
-$ python install -e . # sets up an editable install
+$ python install -e .
 </pre>
 
 **Version:**<br>
