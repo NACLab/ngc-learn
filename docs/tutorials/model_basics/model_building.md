@@ -1,1 +1,1 @@
-## Lesson 2: Building a Model
+# Lesson 2: Building a Model
