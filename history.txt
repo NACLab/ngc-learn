@@ -41,7 +41,7 @@ History
 0.9.9 (2023-10-15; pre-release dev branch)
 — — — — — — — — -
   * ngc-learn backend re-engineered to be pure Jax
-  * LIF, quad-LIF, WTAS cell nodes integrated
+  * LIF, quad-LIF spiking cells, as well as a set of graded neuronal cells, integrated
   * exponential STDP synaptic plasticity integrated
   * power-law STDP synaptic plasticity integrated
-  * docs rebuilts/revised to adhere to new ngc-learn nodes-and-cables simulator backend
+  * docs rebuilts/revised to adhere to new ngc-learn nodes-and-cables simulator/controller backend -- ngcsimlib
