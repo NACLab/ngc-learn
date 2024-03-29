@@ -2,17 +2,11 @@
 
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
-<b>ngc-learn</b> is a Python library for building, simulating, and analyzing biomimetic systems, neurobiological
-agents, spiking neuronal systems, and predictive coding models (predictive processing theory) based on the neural generative
-coding (NGC) computational framework. This toolkit is built on top of JAX and is distributed under the 3-Clause BSD license.
-
-<b>NOTICE:</b> We are in the process of finishing the migration of ngc-learn to
-its complete JAX version; for acess to the previous Tensorflow-2 version, please
-visit the repo for
-<a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
-<!--
-This is currently the JAX branch of ngc-learn; we offer <i>no guarantees</i> as to whether or not this particular branch works at the moment (until we finish the ngc-learn update to officially release version 1.0.0). For access to the previous working Tensorflow-2 version, please visit the repo for <a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
--->
+<b>ngc-learn</b> is a Python library for building, simulating, and analyzing
+biomimetic systems, neurobiological agents, spiking neuronal systems, and
+predictive coding models (predictive processing theory) based on the neural
+generative coding (NGC) computational framework. This toolkit is built on top of
+JAX and is distributed under the 3-Clause BSD license.
 
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
@@ -32,35 +26,56 @@ chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics<
 <!--The technical report going over the theoretical underpinnings of the
     NGC framework can be found here. TO BE RELEASED SOON. -->
 
-## <b>Installation:</b>
+## Installation
 
+### Dependencies
+
+ngc-learn requires:
+1) Python (>=3.10)
+2) NumPy (>=1.26.0)
+3) SciPy (>=1.7.0)
+4) ngcsimlib (>=0.2.b1), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
+5) JAX (>= 0.4.16) (to enable GPU use, make sure to install one of the CUDA variants)
+<!--
+5) scikit-learn (>=1.3.1) if using `ngclearn.utils.density`
+6) matplotlib (>=3.4.3) if using `ngclearn.utils.viz`
+6) networkx  (>=2.6.3) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
+7) pyviz (>=0.2.0) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
+-->
+
+---
+ngc-learn 1.0.beta0 and later require Python 3.10 or newer and ngcsimlib >=0.2.b1.
+ngc-learn's plotting capabilities (functions/routines within `ngclearn.utils.viz`) require Matplotlib (>3.8.0) and imageio>=2.31.5; many of the tutorials will require Matplotlib >=3.8.0 and imageio>=2.31.5.
+ngc-learn's image patching and density estimation utilities require
+Scikit-learn >=0.24.2. <!-- (Note: if using the `_generate_patch_set()` within the
+image patching utilities, then Patchify will be needed).-->
+
+### User Installation
+
+<i>Setup (CPU)</i> The easiest way to install ngc-learn is through <code>pip</code>:
+<pre>
+$ python install ngclearn
+</pre>
+
+The documentation includes more detailed
+<a href="https://ngc-learn.readthedocs.io/en/latest/installation.html"installation instructions</a>.
+Note that this library was developed on Ubuntu 20.04 and tested on
+Ubuntu(s) 18.04 and 20.04.
+
+<!--
 <i>Setup:</i> To install ngc-learn, you can run (at the top-level of the
 the <code>ngclearn</code> directory) the following bash command:
 <pre>
 $ python install .
 </pre>
-which will ensure that all the required base dependencies are installed in
-your system. Note that this library was developed on Ubuntu 20.04 and tested on
-Ubuntu(s) 18.04 and 20.04.
-ngc-learn requires:
-1) ngcsimlib (>=0.2.b1), (for more information, visit the <a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
-2) Python (>=3.9)
-3) Numpy (>=1.26.0)
-4) JAX (>= 0.4.16) (to enable GPU use, make sure to install one of the CUDA variants)
-5) scikit-learn (>=1.3.1) if using `ngclearn.density` (needed for the demo/tutorial
-    files in `examples/`)
-6) matplotlib (>=3.4.3) (for the demo/tutorial files in `examples/`)
-<!--
-6) networkx  (>=2.6.3) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
-7) pyviz (>=0.2.0) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
--->
 
-<i>Note:</i> Running the above pip install will automatically install the CPU
+Running the above pip install will automatically install the CPU
 version of JAX. If you want to use the GPU version instead, make sure to,
 before running the above, to install JAX via the correct pip command
 with the proper CUDA flags (depending on which CUDA is configured for your system)
 as per their
 <a href="https://jax.readthedocs.io/en/latest/installation.html">installation instructions</a>.
+-->
 
 <!--
 (If you want to set up/install dependencies a priori, try running
@@ -71,6 +86,10 @@ If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command
 and complete the following sequence of steps as depicted in the screenshot below:<br>
 <img src="docs/images/test_ngclearn_install.png" width="512">
+
+<i>Note:</i> For access to the previous Tensorflow-2 version of ngc-learn (of
+which we no longer support), please visit the repo for
+<a href="https://github.com/NACLab/ngc-learn-legacy"><i>ngc-learn-legacy</i></a>.
 
 ## <b>Attribution:</b>
 
