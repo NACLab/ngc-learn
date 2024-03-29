@@ -36,7 +36,7 @@ The tutorials for ngc-learn are organized in the following manner:
    evolve iteratively via a 2-factor Hebbian rule.
 <!--6. <b>XXX</b>:-->
 
-### Foundational Concepts and Elements of ngc-learn and ngcsimlib
+### Foundational Elements of ngc-learn and ngcsimlib
 1. <b>[Understanding Commands](../tutorials/foundations/commands.md)</b>: This lesson will
    walk you through the basics of a command -- an essential part of building a
    simulation controller in ngc-learn and ngcsimlib -- and offer some useful
