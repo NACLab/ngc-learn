@@ -66,25 +66,6 @@ and used for predictive processing and biomimetics research in the NAC lab
 We warmly welcome community contributions to this project. For details please check out our
 [contributing guidelines](https://github.com/NACLab/ngc-learn/blob/main/CONTRIBUTING.md).
 
-[^1]: The name `ngc-learn` stems from an important theory in neuroscience that served
-as one of the library's first motivations to offer generalized research and
-educational support for -- <i>predictive processing</i>, which posits that the
-brain is largely a continual prediction engine, constantly hypothesizing the
-state of its environment and updating its own internal mental model of it as
-data is gathered. 
-<!--
-Moreover, prediction and correction happen at many levels or regions within the
-brain -- clusters or groups of neurons in one region attempt to predict the state
-of neurons at another region, forming a complex, somewhat hierarchical structure
-that includes neurons which attempt to predict actual sensory input. Neurons within
-this system adjust their internal activity values (as well the strengths of the
-synapses that wire to them) based on how different their predictions were from
-observed signals.
--->
-The very first paradigm of neural computation that ngc-learn implemented and offered
-general support for was a predictive coding framework known
-as neural generative coding (NGC).
-
 ## Citation
 Please cite ngc-learn's source/core paper if you use this framework in your publications:
 ```
@@ -103,3 +84,21 @@ Please cite ngc-learn's source/core paper if you use this framework in your publ
   url={https://doi.org/10.1038/s41467-022-29632-7}
 }
 ```
+
+[^1]: The name `ngc-learn` stems from an important theory in neuroscience that served
+as one of the library's first motivations to offer generalized research and
+educational support for -- <i>predictive processing</i>, which posits that the
+brain is largely a continual prediction engine, constantly hypothesizing the
+state of its environment and updating its own internal mental model of it as
+data is gathered. The very first paradigm of neural computation that ngc-learn
+implemented and offered general support for was a predictive coding framework known
+as neural generative coding (NGC) (Ororbia and Kifer, 2022).
+<!--
+Moreover, prediction and correction happen at many levels or regions within the
+brain -- clusters or groups of neurons in one region attempt to predict the state
+of neurons at another region, forming a complex, somewhat hierarchical structure
+that includes neurons which attempt to predict actual sensory input. Neurons within
+this system adjust their internal activity values (as well the strengths of the
+synapses that wire to them) based on how different their predictions were from
+observed signals.
+-->
