@@ -45,22 +45,21 @@ ngc-learn requires:
 
 ---
 ngc-learn 1.0.beta0 and later require Python 3.10 or newer and ngcsimlib >=0.2.b1.
-ngc-learn's plotting capabilities (functions/routines within `ngclearn.utils.viz`) require Matplotlib (>3.8.0) and imageio>=2.31.5; many of the tutorials will require Matplotlib >=3.8.0 and imageio>=2.31.5.
-ngc-learn's image patching and density estimation utilities require
-Scikit-learn >=0.24.2. <!-- (Note: if using the `_generate_patch_set()` within the
+ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require Matplotlib (>3.8.0) and imageio>=2.31.5; many of the tutorials will require Matplotlib >=3.8.0 and imageio>=2.31.5.
+ngc-learn's image patching and density estimation utilities (routines within
+``ngclearn.utils.density``) require Scikit-learn >=0.24.2. <!-- (Note: if using the `_generate_patch_set()` within the
 image patching utilities, then Patchify will be needed).-->
 
 ### User Installation
 
-<i>Setup (CPU)</i> The easiest way to install ngc-learn is through <code>pip</code>:
+<i>Setup</i>: The easiest way to install ngc-learn (CPU version) is through <code>pip</code>:
 <pre>
 $ python install ngclearn
 </pre>
 
 The documentation includes more detailed
-<a href="https://ngc-learn.readthedocs.io/en/latest/installation.html"installation instructions</a>.
-Note that this library was developed on Ubuntu 20.04 and tested on
-Ubuntu(s) 18.04 and 20.04.
+<a href="https://ngc-learn.readthedocs.io/en/latest/installation.html">installation instructions</a>.
+Note that this library was developed on Ubuntu 20.04 and tested on Ubuntu(s) 18.04 and 20.04.
 
 <!--
 <i>Setup:</i> To install ngc-learn, you can run (at the top-level of the
