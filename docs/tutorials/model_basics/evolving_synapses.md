@@ -17,7 +17,7 @@ compute a simple Hebbian adjustment.
 We do this specifically as follows:
 
 ```python
-from ngclib.controller import Controller
+from ngcsimlib.controller import Controller
 from jax import numpy as jnp, random, nn, jit
 
 ## create seeding keys

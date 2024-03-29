@@ -1,4 +1,4 @@
-# Tutorials
+# Introduction
 
 ngc-learn is a general-purpose library for modeling biomimetic/neuro-mimetic
 complex systems. While the library is designed to provide flexibility on the
@@ -24,14 +24,15 @@ either for their own research or to contribute to the development of the main li
 
 ## Organization of Tutorials
 
-### Setting Up a Simple Model
+### Setting Up a Simulated Model
 The tutorials for ngc-learn are organized in the following manner:
 1. <b>[Setting Up a JSON Experimental Configuration](../tutorials/model_basics/json_modules.md)</b>:
    In this lesson, you will learn how JSON configuration is used to rapidly
-   allow you to import parts of ngc-learn relevant to the model you want to build.
-2. <b>[Setting Up a Controller](../tutorials/model_basics/model_building.md)</b>: This
-   lesson walk you through a basic setup of a controller with a few components.
-3. <b>[Evolving Synaptic Parameter Values](../tutorials/model_basics/evolving_synapses.md)</b>: In this
+   allow you to import parts of ngc-learn relevant to the model that you want to build.
+2. <b>[Crafting a Basic Model](../tutorials/model_basics/model_building.md)</b>: This
+   lesson will walk you through a basic setup of a controller with a few components, the
+   essence of a basic model or system that is simulated in ngc-learn.
+3. <b>[Evolving a Synapse](../tutorials/model_basics/evolving_synapses.md)</b>: In this
    lesson, you will take your controller and configure its single synapse to
    evolve iteratively via a 2-factor Hebbian rule.
 <!--6. <b>XXX</b>:-->
