@@ -1,7 +1,7 @@
-# Lessons: Model and Simulation Basics
+# Model and Simulation Basics
 
-In this set of tutorials/lessons, we go through the basic use of ngc-learn
-to construct basic functioning dynamical systems and simulating them.
+In this set of tutorials, we go through the core use of ngc-learn
+in constructing functioning dynamical systems as well as simulating them.
 
 The lessons are organized to be followed sequentially, though you may jump to
 different points as is relevant:

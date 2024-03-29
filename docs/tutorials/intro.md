@@ -24,15 +24,15 @@ either for their own research or to contribute to the development of the main li
 
 ## Organization of Tutorials
 
-### Setting Up a Simulated Model
-These [tutorials/lessons](../tutorials/lessons.md) go through the very basics of constructing a dynamical
-system in ngc-learn, including setting up a
+### Setting Up and Modeling Basics
+These [tutorials](../tutorials/modeling_basics.md) go through the key steps
+and ideas of constructing a dynamical system in ngc-learn, including setting up a
 [JSON configuration](../tutorials/model_basics/json_modules.md),
 constructing a [basic model](../tutorials/model_basics/model_building.md),
 and setting up a basic [form of plasticity](../tutorials/model_basics/evolving_synapses.md).
 
 ### Foundational Elements of ngc-learn and ngcsimlib
-These [tutorials/lessons](../tutorials/foundations.md) go through the foundational
+These [walkthroughs](../tutorials/foundations.md) go through the foundational
 aspects of ngc-learn's simulation. Some current elements that walkthroughs are
 provided for include:
 [commands](../tutorials/foundations/commands.md) and

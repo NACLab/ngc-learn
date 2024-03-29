@@ -11,9 +11,9 @@ simulation schema and design.
 
 .. toctree::
   :maxdepth: 1
-  :caption: Lessons
+  :caption: Modeling Basics
 
-  lessons
+  modeling_basics
   model_basics/json_modules
   model_basics/model_building
   model_basics/evolving_synapses

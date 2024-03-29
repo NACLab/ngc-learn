@@ -1,11 +1,11 @@
 # Foundational Elements
 
-In this set of tutorials/lessons, we go through the some of the core elements
+In this set of tutorials/walkthroughs, we go through the some of the core elements
 and mechanisms underlying ngc-learn in order understand how its simulation
 scheme (and the nodes-and-cables system) works and to help in writing your
 own custom elements.
 
-The foundational walkthroughs/elements are organized as follows:
+The foundational walkthroughs are organized as follows:
 1. <b>[Understanding Commands](../tutorials/foundations/commands.md)</b>: This lesson will
    walk you through the basics of a command -- an essential part of building a
    simulation controller in ngc-learn and ngcsimlib -- and offer some useful
