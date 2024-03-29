@@ -155,7 +155,7 @@ for ts in range(x_seq.shape[1]):
 and, assuming you place your code above in a Python script
 (e.g., `run_lesson2.py`), we should obtain output in your terminal as below:
 
-```code
+```console
 $ python run_lesson2.py
  0: a.zF = [1.] ~> b.zF = [[0.05]]
  1: a.zF = [2.] ~> b.zF = [[0.15]]
