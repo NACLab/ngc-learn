@@ -2,7 +2,7 @@
    sphinx-quickstart on Wed Apr 20 02:52:17 2022.
    Note - This file needs to at least contain a root `toctree` directive.
 
-Table of Contents
+Tutorial Contents
 =================
 
 Lessons go through the very basics of constructing a dynamical system in
