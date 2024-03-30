@@ -66,8 +66,8 @@ def extract_spike(spk_times, t):
     Returns:
         binary spikes
     """
-    s_t = (stimes <= t).astype(jnp.float32) # get spike
-    return s_t
+    spikes_t = (spk_times <= t).astype(jnp.float32) # get spike
+    return spikes_t
 
 class LatencyCell(Component):
     """
