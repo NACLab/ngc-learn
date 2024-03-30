@@ -113,6 +113,15 @@ def normalize_matrix(M, wnorm, ord=1, axis=0):
     return _M
 
 @jit
+def clamp_max(x, max_val):
+    # condition = torch.bitwise_or(torch.le(a, max), a_isnan)  # type: ignore[arg-type]
+    #a = torch.where(condition, a, max)
+    mask = (x < max_val).astype(jnp.float32)
+    _x = x * mask + (1. - mask) * max_val
+    return _x 
+
+
+@jit
 def one_hot(P):
     '''
     Converts a matrix of probabilities to a corresponding binary one-hot matrix

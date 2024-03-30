@@ -1,4 +1,5 @@
 from ngcsimlib.component import Component
+from ngclearn.utils.model_utils import clamp_max
 from jax import numpy as jnp, random, jit
 import time
 
@@ -21,21 +22,28 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def calc_spike_times_linear(data_in, tau, thr):
+def calc_spike_times_linear(data_in, tau, thr, first_spk_t):
     """
     Computes spike times from data according to a
 
     Args:
-        spk_times: spike times to compare against
+        data_in: 
 
-        t: current time
+        tau: 
+
+        thr: 
+
+        first_spk_t: first spike time(s) (either int or vector 
+            with same shape as spk_times; in ms)
 
     Returns:
-        binary spikes
+        projected spike times
     """
     #torch.clamp_max((-tau * (data - 1)), -tau * (threshold - 1))
-    stimes = jnp.fmax(-tau * (data_in - 1.), -tau * (thr - 1.))
-    return stimes
+    stimes = -tau * (data_in - 1.) ## calc raw latency code values
+    max_bound = -tau * (thr - 1.) ## upper bound latency code values
+    stimes = clamp_max(stimes, max_bound) ## apply upper bound
+    return stimes + first_spk_t
 
 @jit
 def calc_spike_times_nonlinear(data_in, tau, thr):
@@ -43,18 +51,22 @@ def calc_spike_times_nonlinear(data_in, tau, thr):
     Extracts a spike from a latency-coding spike train.
 
     Args:
-        spk_times: spike times to compare against
+        data_in: 
+
+        tau: 
+
+        thr:
 
         t: current time
 
     Returns:
-        binary spikes
+        projected spike times
     """
     stimes = jnp.log(data_in / (data_in - thr)) * tau ## calc spike times
     return stimes
 
 @jit
-def extract_spike(spk_times, t):
+def extract_spike(spk_times, t, mask):
     """
     Extracts a spike from a latency-coded spike train.
 
@@ -63,11 +75,15 @@ def extract_spike(spk_times, t):
 
         t: current time
 
+        mask: prior spike mask (1 if spike has occurred, 0 otherwise)
+
     Returns:
         binary spikes
     """
     spikes_t = (spk_times <= t).astype(jnp.float32) # get spike
-    return spikes_t
+    spikes_t = spikes_t * (1. - mask)
+    _mask = mask + (1. - mask) * spikes_t
+    return spikes_t, _mask
 
 class LatencyCell(Component):
     """
@@ -83,6 +99,8 @@ class LatencyCell(Component):
 
         threshold: sensory input features below this threhold value will fire at
             final step in time of this latency coded spike train
+
+        first_spike_time: time of first allowable spike (ms) (Default: 0 ms)
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
@@ -129,8 +147,8 @@ class LatencyCell(Component):
         self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     # Define Functions
-    def __init__(self, name, n_units, tau=1., threshold=0.01, key=None,
-                 useVerboseDict=False, **kwargs):
+    def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0., 
+                 key=None, useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -138,14 +156,16 @@ class LatencyCell(Component):
         if self.key is None:
             self.key = random.PRNGKey(time.time_ns())
 
+        self.first_spike_time = first_spike_time
         self.tau = tau
         self.threshold = threshold
         self.linearize = False
         ## normalize latency code s.t. final spike(s) occur w/in num_steps
-        # self.normalize = False
-        # self.num_steps = 100.
+        self.normalize = False
+        self.num_steps = 100.
 
         self.target_spike_times = None
+        self._mask = None
 
         ##Layer Size Setup
         self.batch_size = 1
@@ -158,17 +178,25 @@ class LatencyCell(Component):
     def advance_state(self, t, dt, **kwargs):
         self.key, *subkeys = random.split(self.key, 2)
         tau = self.tau
-        # if self.normalize == True:
-        #     tau = num_steps - 1. - first_spike_time ## linear normalization
+        if self.normalize == True:
+            tau = self.num_steps - 1. - self.first_spike_time ## linear normalization
         data = self.inputCompartment ## get sensory pattern data / features
+        tols = self.timeOfLastSpike
         if self.target_spike_times == None: ## calc spike times
             if self.linearize == True: ## linearize spike time calculation
-                stimes = calc_spike_times_linear(data, self.tau, self.threshold)
+                stimes = calc_spike_times_linear(data, tau, self.threshold, 
+                                                 self.first_spike_time)
                 self.target_spike_times = stimes
             else: ## standard nonlinear spike time calculation
-                stimes = calc_spike_times_nonlinear(data, self.tau, self.threshold)
+                stimes = calc_spike_times_nonlinear(data, tau, self.threshold)
                 self.target_spike_times = stimes
-        spikes = extract_spike(self.target_spike_times, t) ## get spikes at t
+            tols = tols * -0.001
+            #print(self.target_spike_times)
+            #sys.exit(0)
+        #print("t = ",t)
+        spk_mask = self._mask
+        spikes, spk_mask = extract_spike(self.target_spike_times, t, spk_mask) ## get spikes at t
+        self._mask = spk_mask
         self.outputCompartment = spikes
         self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
 
@@ -176,7 +204,7 @@ class LatencyCell(Component):
         self.inputCompartment = None
         self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
         self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
-        self.target_spike_times = None
+        self._mask = jnp.zeros((self.batch_size, self.n_units))
 
     def save(self, **kwargs):
         pass
