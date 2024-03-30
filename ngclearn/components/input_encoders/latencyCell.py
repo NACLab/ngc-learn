@@ -181,8 +181,8 @@ class LatencyCell(Component):
         if self.normalize == True:
             tau = self.num_steps - 1. - self.first_spike_time ## linear normalization
         data = self.inputCompartment ## get sensory pattern data / features
-        tols = self.timeOfLastSpike
-        if self.target_spike_times == None: ## calc spike times
+        
+        if self.target_spike_times == None: ## calc spike times if not called yet
             if self.linearize == True: ## linearize spike time calculation
                 stimes = calc_spike_times_linear(data, tau, self.threshold, 
                                                  self.first_spike_time)
@@ -190,10 +190,8 @@ class LatencyCell(Component):
             else: ## standard nonlinear spike time calculation
                 stimes = calc_spike_times_nonlinear(data, tau, self.threshold)
                 self.target_spike_times = stimes
-            tols = tols * -0.001
             #print(self.target_spike_times)
             #sys.exit(0)
-        #print("t = ",t)
         spk_mask = self._mask
         spikes, spk_mask = extract_spike(self.target_spike_times, t, spk_mask) ## get spikes at t
         self._mask = spk_mask
