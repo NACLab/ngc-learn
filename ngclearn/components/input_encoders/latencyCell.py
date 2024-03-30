@@ -158,12 +158,12 @@ class LatencyCell(Component):
         tau = self.tau
         # if self.normalize == True:
         #     tau = num_steps - 1. - first_spike_time ## linear normalization
-        data_in = self.inputCompartment
+        data = self.inputCompartment ## get sensory pattern data / features
         ## calc spike times
         if self.linearize == True: ## linearize spike time calculation
-            stimes = calc_spike_times_linear(data_in, self.tau, self.thr)
+            stimes = calc_spike_times_linear(data, self.tau, self.threshold)
         else: ## standard nonlinear spike time calculation
-            stimes = calc_spike_times_nonlinear(data_in, self.tau, self.thr)
+            stimes = calc_spike_times_nonlinear(data, self.tau, self.threshold)
         s = extract_spike(stimes, t) ## get spike
 
         self.outputCompartment = s
