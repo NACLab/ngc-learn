@@ -79,7 +79,7 @@ def calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
     Returns:
         projected spike times
     """
-    _data = min_clamp(data, thr + eps) # saturates all values below threshold.
+    _data = clamp_min(data, thr + eps) # saturates all values below threshold.
     stimes = jnp.log(_data / (_data - thr)) * tau ## calc spike times
     stimes = stimes + first_spk_t
 
@@ -212,7 +212,7 @@ class LatencyCell(Component):
                 self.target_spike_times = stimes
             else: ## standard nonlinear spike time calculation
                 stimes = calc_spike_times_nonlinear(data, tau, self.threshold,
-                                                    self.first_spike_time, 
+                                                    self.first_spike_time,
                                                     num_steps=self.num_steps,
                                                     normalize=self.normalize)
                 self.target_spike_times = stimes
