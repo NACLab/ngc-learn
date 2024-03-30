@@ -13,6 +13,7 @@ from .other.expKernel import ExpKernel
 ## point to input encoder component types
 from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
+from .input_encoders.latencyCell import LatencyCell
 ## point to synapse component types
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse

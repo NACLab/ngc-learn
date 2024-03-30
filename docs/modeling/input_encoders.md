@@ -58,3 +58,22 @@ normalized between `[0,1]` (otherwise, results may not be as expected).
   .. automethod:: reset
     :noindex:
 ```
+
+### Latency Cell
+
+This cell takes a real-valued pattern(s) and transforms it on-the-fly to
+a spike train where each spike vector is a sample of a latency (en)coded spike
+train; higher intensity values will result in a firing time that occurs earlier
+whereas lower intensity values yield later firing times.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.LatencyCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: verify_connections
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```

@@ -1,6 +1,5 @@
 from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit
-from functools import partial
 import time
 
 @jit
@@ -22,29 +21,68 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def sample_bernoulli(dkey, data):
+def calc_spike_times_linear(data_in, tau, thr):
     """
-    Samples a Bernoulli spike train on-the-fly
+    Computes spike times from data according to a
 
     Args:
-        dkey: JAX key to drive stochasticity/noise
-        
-        data: sensory data (vector/matrix)
+        spk_times: spike times to compare against
+
+        t: current time
 
     Returns:
         binary spikes
     """
-    s_t = random.bernoulli(dkey, p=data).astype(jnp.float32)
+    #torch.clamp_max((-tau * (data - 1)), -tau * (threshold - 1))
+    stimes = jnp.fmax(-tau * (data_in - 1.), -tau * (thr - 1.))
+    return stimes
+
+@jit
+def calc_spike_times_nonlinear(data_in, tau, thr):
+    """
+    Extracts a spike from a latency-coding spike train.
+
+    Args:
+        spk_times: spike times to compare against
+
+        t: current time
+
+    Returns:
+        binary spikes
+    """
+    stimes = jnp.log(data_in / (data_in - thr)) * tau ## calc spike times
+    return stimes
+
+@jit
+def extract_spike(spk_times, t):
+    """
+    Extracts a spike from a latency-coding spike train.
+
+    Args:
+        spk_times: spike times to compare against
+
+        t: current time
+
+    Returns:
+        binary spikes
+    """
+    s_t = (stimes <= t).astype(jnp.float32) # get spike
     return s_t
 
-class BernoulliCell(Component):
+class LatencyCell(Component):
     """
-    A Bernoulli cell that produces Bernoulli-distributed spikes on-the-fly.
+    A (nonlinear) latency encoding (spike) cell; produces a time-lagged set of
+    spikes on-the-fly.
 
     Args:
         name: the string name of this cell
 
         n_units: number of cellular entities (neural population size)
+
+        tau: time constant for model used to calculate firing time (Default: 1 ms)
+
+        threshold: sensory input features below this threhold value will fire at
+            final step in time of this latency coded spike train
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
@@ -91,13 +129,21 @@ class BernoulliCell(Component):
         self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     # Define Functions
-    def __init__(self, name, n_units, key=None, useVerboseDict=False, **kwargs):
+    def __init__(self, name, n_units, tau=1., threshold=0.01, key=None,
+                 useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
         self.key = key
         if self.key is None:
             self.key = random.PRNGKey(time.time_ns())
+
+        self.tau = tau
+        self.threshold = threshold
+        self.linearize = False
+        ## normalize latency code s.t. final spike(s) occur w/in num_steps
+        # self.normalize = False
+        # self.num_steps = 100.
 
         ##Layer Size Setup
         self.batch_size = 1
@@ -109,9 +155,18 @@ class BernoulliCell(Component):
 
     def advance_state(self, t, dt, **kwargs):
         self.key, *subkeys = random.split(self.key, 2)
+        tau = self.tau
+        # if self.normalize == True:
+        #     tau = num_steps - 1. - first_spike_time ## linear normalization
+        data_in = self.inputCompartment
+        ## calc spike times
+        if self.linearize == True: ## linearize spike time calculation
+            stimes = calc_spike_times_linear(data_in, self.tau, self.thr)
+        else: ## standard nonlinear spike time calculation
+            stimes = calc_spike_times_nonlinear(data_in, self.tau, self.thr)
+        s = extract_spike(stimes, t) ## get spike
 
-        self.outputCompartment = sample_bernoulli(subkeys[0], data=self.inputCompartment)
-        #self.timeOfLastSpike = (1 - self.outputCompartment) * self.timeOfLastSpike + (self.outputCompartment * t)
+        self.outputCompartment = s
         self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
 
     def reset(self, **kwargs):

@@ -27,6 +27,8 @@ def sample_poisson(dkey, data, dt, fmax=63.75):
     Samples a Poisson spike train on-the-fly.
 
     Args:
+        dkey: JAX key to drive stochasticity/noise
+        
         data: sensory data (vector/matrix)
 
         dt: integration time constant
