@@ -25,3 +25,10 @@ simulation schema and design.
   foundations
   foundations/commands
   foundations/bundle_rules
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Neurocognitive Modeling
+
+  neurocog_modeling
+  neurocog/lif_lesson

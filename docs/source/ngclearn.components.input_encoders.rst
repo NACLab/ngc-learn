@@ -12,6 +12,14 @@ ngclearn.components.input\_encoders.bernoulliCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.input\_encoders.latencyCell module
+------------------------------------------------------
+
+.. automodule:: ngclearn.components.input_encoders.latencyCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.input\_encoders.poissonCell module
 ------------------------------------------------------
 
