@@ -56,7 +56,7 @@ def calc_spike_times_nonlinear(data_in, tau, thr):
 @jit
 def extract_spike(spk_times, t):
     """
-    Extracts a spike from a latency-coding spike train.
+    Extracts a spike from a latency-coded spike train.
 
     Args:
         spk_times: spike times to compare against
@@ -145,6 +145,8 @@ class LatencyCell(Component):
         # self.normalize = False
         # self.num_steps = 100.
 
+        self.target_spike_times = None
+
         ##Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
@@ -159,20 +161,22 @@ class LatencyCell(Component):
         # if self.normalize == True:
         #     tau = num_steps - 1. - first_spike_time ## linear normalization
         data = self.inputCompartment ## get sensory pattern data / features
-        ## calc spike times
-        if self.linearize == True: ## linearize spike time calculation
-            stimes = calc_spike_times_linear(data, self.tau, self.threshold)
-        else: ## standard nonlinear spike time calculation
-            stimes = calc_spike_times_nonlinear(data, self.tau, self.threshold)
-        s = extract_spike(stimes, t) ## get spike
-
-        self.outputCompartment = s
+        if self.target_spike_times == None: ## calc spike times
+            if self.linearize == True: ## linearize spike time calculation
+                stimes = calc_spike_times_linear(data, self.tau, self.threshold)
+                self.target_spike_times = stimes
+            else: ## standard nonlinear spike time calculation
+                stimes = calc_spike_times_nonlinear(data, self.tau, self.threshold)
+                self.target_spike_times = stimes
+        spikes = extract_spike(self.target_spike_times, t) ## get spikes at t
+        self.outputCompartment = spikes
         self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
 
     def reset(self, **kwargs):
         self.inputCompartment = None
         self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
         self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
+        self.target_spike_times = None
 
     def save(self, **kwargs):
         pass
