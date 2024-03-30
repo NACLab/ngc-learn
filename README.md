@@ -44,7 +44,7 @@ ngc-learn requires:
 -->
 
 ---
-ngc-learn 1.0.beta0 and later require Python 3.10 or newer as well as ngcsimlib >=0.2.b1.
+ngc-learn 1.0.beta0 and later require Python 3.10 or newer as well as ngcsimlib >=0.2.b2.
 ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require
 Matplotlib (>=3.8.0) and imageio (>=2.31.5) and both plotting and density estimation
 tools (routines within ``ngclearn.utils.density``) will require Scikit-learn (>=0.24.2).
@@ -132,7 +132,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-1.0.0-Beta <!-- -Alpha -->
+1.0.2-Beta <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>
