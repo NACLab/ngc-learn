@@ -167,7 +167,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.batch_size = 1
 
         self.fx, self.dfx = create_function(fun_name=act_fx)
-        
+
         self.reset()
 
     def verify_connections(self):

@@ -1,6 +1,7 @@
 from ngcsimlib.component import Component
-from ngclearn.utils.model_utils import clamp_max
+from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
+from functools import partial
 import time
 
 @jit
@@ -21,48 +22,71 @@ def update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
-@jit
-def calc_spike_times_linear(data_in, tau, thr, first_spk_t):
+@partial(jit, static_argnums=[5])
+def calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
+                            normalize=False):
     """
     Computes spike times from data according to a
 
     Args:
-        data_in: 
+        data:
 
-        tau: 
+        tau:
 
-        thr: 
+        thr:
 
-        first_spk_t: first spike time(s) (either int or vector 
+        first_spk_t: first spike time(s) (either int or vector
             with same shape as spk_times; in ms)
+
+        num_steps: number of total time steps of simulation to consider
+
+        normalize: normalize the logarithmic latency code values (uses num_steps)
 
     Returns:
         projected spike times
     """
+    _tau = tau
+    if normalize == True:
+        _tau = num_steps - 1. - first_spk_t ## linear normalization
     #torch.clamp_max((-tau * (data - 1)), -tau * (threshold - 1))
-    stimes = -tau * (data_in - 1.) ## calc raw latency code values
-    max_bound = -tau * (thr - 1.) ## upper bound latency code values
+    stimes = -_tau * (data - 1.) ## calc raw latency code values
+    max_bound = -_tau * (thr - 1.) ## upper bound latency code values
     stimes = clamp_max(stimes, max_bound) ## apply upper bound
     return stimes + first_spk_t
 
-@jit
-def calc_spike_times_nonlinear(data_in, tau, thr):
+@partial(jit, static_argnums=[6])
+def calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
+                               num_steps=1., normalize=False):
     """
     Extracts a spike from a latency-coding spike train.
 
     Args:
-        data_in: 
+        data:
 
-        tau: 
+        tau:
 
         thr:
 
-        t: current time
+        first_spk_t: first spike time(s) (either int or vector
+            with same shape as spk_times; in ms)
+
+        eps: small numerical error control factor (added to thr)
+
+        num_steps: number of total time steps of simulation to consider
+
+        normalize: normalize the logarithmic latency code values (uses num_steps)
 
     Returns:
         projected spike times
     """
-    stimes = jnp.log(data_in / (data_in - thr)) * tau ## calc spike times
+    _data = min_clamp(data, thr + eps) # saturates all values below threshold.
+    stimes = jnp.log(_data / (_data - thr)) * tau ## calc spike times
+    stimes = stimes + first_spk_t
+
+    if normalize == True:
+        term1 = (stimes - first_spk_t)
+        term2 = (num_steps - first_spk_t - 1.) / jnp.maximum(stimes, first_spk_t)
+        stimes = term1 * term2 + first_spk_t
     return stimes
 
 @jit
@@ -78,7 +102,7 @@ def extract_spike(spk_times, t, mask):
         mask: prior spike mask (1 if spike has occurred, 0 otherwise)
 
     Returns:
-        binary spikes
+        binary spikes, boolean mask to indicate if spikes have occurred as of yet
     """
     spikes_t = (spk_times <= t).astype(jnp.float32) # get spike
     spikes_t = spikes_t * (1. - mask)
@@ -147,7 +171,7 @@ class LatencyCell(Component):
         self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     # Define Functions
-    def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0., 
+    def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
                  key=None, useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -178,17 +202,18 @@ class LatencyCell(Component):
     def advance_state(self, t, dt, **kwargs):
         self.key, *subkeys = random.split(self.key, 2)
         tau = self.tau
-        if self.normalize == True:
-            tau = self.num_steps - 1. - self.first_spike_time ## linear normalization
         data = self.inputCompartment ## get sensory pattern data / features
-        
+
         if self.target_spike_times == None: ## calc spike times if not called yet
             if self.linearize == True: ## linearize spike time calculation
-                stimes = calc_spike_times_linear(data, tau, self.threshold, 
-                                                 self.first_spike_time)
+                stimes = calc_spike_times_linear(data, tau, self.threshold,
+                                                 self.first_spike_time,
+                                                 self.num_steps, self.normalize)
                 self.target_spike_times = stimes
             else: ## standard nonlinear spike time calculation
-                stimes = calc_spike_times_nonlinear(data, tau, self.threshold)
+                stimes = calc_spike_times_nonlinear(data, tau, self.threshold,
+                                                    num_steps=self.num_steps,
+                                                    normalize=self.normalize)
                 self.target_spike_times = stimes
             #print(self.target_spike_times)
             #sys.exit(0)

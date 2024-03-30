@@ -113,17 +113,45 @@ def normalize_matrix(M, wnorm, ord=1, axis=0):
     return _M
 
 @jit
+def clamp_min(x, min_val):
+    """
+    Clamps values in data x that exceed a minimum value to that value.
+
+    Args:
+        x: data to lower-bound clamp
+
+        min_val: minimum value threshold
+
+    Returns:
+        x with minimum clamped values
+    """
+    mask = (x > min_val).astype(jnp.float32)
+    _x = x * mask + (1. - mask) * min_val
+    return _x
+
+@jit
 def clamp_max(x, max_val):
+    """
+    Clamps values in data x that exceed a maximum value to that value.
+
+    Args:
+        x: data to upper-bound clamp
+
+        max_val: maximum value threshold
+
+    Returns:
+        x with maximum clamped values
+    """
     # condition = torch.bitwise_or(torch.le(a, max), a_isnan)  # type: ignore[arg-type]
     #a = torch.where(condition, a, max)
     mask = (x < max_val).astype(jnp.float32)
     _x = x * mask + (1. - mask) * max_val
-    return _x 
+    return _x
 
 
 @jit
 def one_hot(P):
-    '''
+    """
     Converts a matrix of probabilities to a corresponding binary one-hot matrix
     (each row is a one-hot encoding).
 
@@ -133,7 +161,7 @@ def one_hot(P):
 
     Returns:
         the one-hot encoding (matrix) of probabilities in P
-    '''
+    """
     nC = P.shape[1] # compute number of dimensions/classes
     p_t = jnp.argmax(P, axis=1)
     return nn.one_hot(p_t, num_classes=nC, dtype=jnp.float32)
