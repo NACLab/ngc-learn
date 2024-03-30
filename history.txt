@@ -45,3 +45,9 @@ History
   * exponential STDP synaptic plasticity integrated
   * power-law STDP synaptic plasticity integrated
   * docs rebuilts/revised to adhere to new ngc-learn nodes-and-cables simulator/controller backend -- ngcsimlib
+
+1.0.0-beta, 1.0.1-beta, 1.0.2-beta (beta release of migrated/JAX/ngcsimlib version)
+— — — — — — — — -
+  * backend migration/revision finished; ngc-learn now depends on ngc-sim-lib (ngcsimlib)
+  * tutorials updated reflected
+  * STDP is now first-class citizen
