@@ -29,11 +29,11 @@ def calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
     Computes spike times from data according to a
 
     Args:
-        data:
+        data: pattern data to convert to spikes/times
 
-        tau:
+        tau: latency coding time constant
 
-        thr:
+        thr: latency coding threshold value
 
         first_spk_t: first spike time(s) (either int or vector
             with same shape as spk_times; in ms)
@@ -61,11 +61,11 @@ def calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
     Extracts a spike from a latency-coding spike train.
 
     Args:
-        data:
+        data: pattern data to convert to spikes/times
 
-        tau:
+        tau: latency coding time constant
 
-        thr:
+        thr: latency coding threshold value
 
         first_spk_t: first spike time(s) (either int or vector
             with same shape as spk_times; in ms)
@@ -85,8 +85,9 @@ def calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
 
     if normalize == True:
         term1 = (stimes - first_spk_t)
-        term2 = (num_steps - first_spk_t - 1.) / jnp.maximum(stimes, first_spk_t)
-        stimes = term1 * term2 + first_spk_t
+        term2 = (num_steps - first_spk_t - 1.)
+        term3 = jnp.max(stimes - first_spk_t)
+        stimes = term1 * (term2 / term3) + first_spk_t
     return stimes
 
 @jit
@@ -104,7 +105,8 @@ def extract_spike(spk_times, t, mask):
     Returns:
         binary spikes, boolean mask to indicate if spikes have occurred as of yet
     """
-    spikes_t = (spk_times <= t).astype(jnp.float32) # get spike
+    _spk_times = jnp.round(spk_times) # snap times to nearest integer time
+    spikes_t = (_spk_times <= t).astype(jnp.float32) # get spike
     spikes_t = spikes_t * (1. - mask)
     _mask = mask + (1. - mask) * spikes_t
     return spikes_t, _mask
