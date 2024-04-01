@@ -26,7 +26,7 @@ def update_times(t, s, tols):
 def calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
                             normalize=False):
     """
-    Computes spike times from data according to a
+    Computes spike times from data according to a linear latency encoding scheme.
 
     Args:
         data: pattern data to convert to spikes/times
@@ -58,7 +58,7 @@ def calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
 def calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
                                num_steps=1., normalize=False):
     """
-    Extracts a spike from a latency-coding spike train.
+    Computes spike times from data according to a logarithmic encoding scheme.
 
     Args:
         data: pattern data to convert to spikes/times
