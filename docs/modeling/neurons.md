@@ -158,10 +158,11 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
 
 ### The Fitzhugh-Nagumo Cell
 
-This cell models dynamics over voltage `v` and a recover variable `w`,
-specifically modeling the action potential of a spiking neuronal cell (in
-terms of an approximation and simplification of the classical Hodgkin-Huxley
-squid axon model). A voltage `v_thr` can be to extract binary spike pulses.
+This cell models dynamics over voltage `v` and a recover variable `w` (which
+governs the behavior of the action potential of a spiking neuronal cell). In
+effect, the Fitzhugh-Nagumo model is a set of two coupled differential equations
+that simplify the four differential equation Hodgkin-Huxley (squid axon) model. 
+A voltage `v_thr` can be used to extract binary spike pulses.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.FitzhughNagumoCell
