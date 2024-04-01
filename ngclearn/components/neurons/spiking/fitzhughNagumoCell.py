@@ -24,7 +24,7 @@ def update_times(t, s, tols):
 @partial(jit, static_argnums=[5,6,7,8,9])
 def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
     dv_dt = v - jnp.power(v, 3)/g - w + j ## dv/dt
-    dw_dt = v - a - b * w ## dw/dt
+    dw_dt = v + a - b * w ## dw/dt
     ## run step of (forward) Euler integration
     _v = v + dv_dt * (dt/tau_m)
     _w = w + dw_dt * (dt/tau_w)
