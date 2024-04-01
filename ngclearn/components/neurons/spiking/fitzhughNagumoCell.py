@@ -42,7 +42,7 @@ class FitzhughNagumoCell(Component):
 
     The specific pair of differential equations that characterize this cell
     are (for adjusting v and w, given current j, over time):
-    
+
     | tau_m * dv/dt = v - (v^3)/3 - w + j
     | tau_w * dw/dt = v + a - b * w
 
@@ -63,9 +63,9 @@ class FitzhughNagumoCell(Component):
 
         tau_w: recover variable time constant (Default: 12.5 ms)
 
-        alpha: dimensionless recovery variable shift factor (Default: 0.7)
+        alpha: dimensionless recovery variable shift factor "a" (Default: 0.7)
 
-        beta: dimensionless recovery variable scale factor (Default: 0.8)
+        beta: dimensionless recovery variable scale factor "b" (Default: 0.8)
 
         gamma: power-term divisor (Default: 3.)
 
