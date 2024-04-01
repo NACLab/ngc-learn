@@ -47,13 +47,16 @@ $ cd ngc-learn
    <a href="https://jax.readthedocs.io/en/latest/installation.html">installation instructions</a>
    on the official JAX page to properly install the CUDA 11 or 12 version.
 
-3. (<i>Optional</i>) Install the base requirements (and a few extras for building
-  the docs) with:
+<!--
+3. (<i>Optional</i>) Install, a pre-package installation step (for only the
+   non-ngclearn dependencies), the base requirements (and a few extras for building
+   the docs) with:
 ```console
 $ pip install -r requirements.txt
 ```
+-->
 
-4. Install the ngc-learn package via:
+3. Install the ngc-learn package via:
 ```console
 $ pip install .
 ```
