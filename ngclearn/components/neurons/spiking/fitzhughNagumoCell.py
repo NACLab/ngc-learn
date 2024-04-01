@@ -42,6 +42,7 @@ class FitzhughNagumoCell(Component):
 
     The specific pair of differential equations that characterize this cell
     are (for adjusting v and w, given current j, over time):
+    
     | tau_m * dv/dt = v - (v^3)/3 - w + j
     | tau_w * dw/dt = v + a - b * w
 
