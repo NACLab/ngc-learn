@@ -56,7 +56,7 @@ image patching utilities, then Patchify will be needed).-->
 
 <i>Setup</i>: The easiest way to install ngc-learn (CPU version) is through <code>pip</code>:
 <pre>
-$ python install ngclearn
+$ pip install ngclearn
 </pre>
 
 The documentation includes more detailed
