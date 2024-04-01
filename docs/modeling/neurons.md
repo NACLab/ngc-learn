@@ -40,21 +40,22 @@ the user.
 ### The Error Cell
 
 This cell is (currently) a stateless neuron, i.e., it is not driven by an
-underlying differential equation, emulating a "fixed-point" error or mismatch
-calculation. Specifically, this cell is (currently) fixed to be a Gaussian
+underlying differential equation, thus emulating a "fixed-point" error or mismatch
+calculation. Variations of the fixed-point error cell depend on the local
+distribution assumed over mismatch activities, e.g., Gaussian distribution
+yields a Gaussian error cell, which will also change the form of their
+internal compartments (typically a `target`, `mu`, `dtarget`, and `dmu`).
+
+#### Gaussian Error Cell
+
+This cell is (currently) fixed to be a Gaussian
 cell that assumes an identity covariance. Note that this neuronal cell has
 several important compartments: in terms of input compartments, `target` is
 for placing the desired target activity level while `mu` is for placing an
 externally produced mean prediction value, while in terms of output
 compartments, `dtarget` is the first derivative with respect to the target
 (sometimes used to emulate a top-down pressure/expectation in predictive coding)
-and `dmu` is the first derivative with respect to the mean parameter. (Note that
-these compartment values depend on the distribution assumed by the error-cell.)
-
-Variations of the fixed-point error cell depend on the local distribution assumed
-over mismatch activities, e.g., Gaussian distribution yields a Gaussian error cell.
-
-#### Gaussian Error Cell
+and `dmu` is the first derivative with respect to the mean parameter.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.GaussianErrorCell
@@ -69,6 +70,15 @@ over mismatch activities, e.g., Gaussian distribution yields a Gaussian error ce
 ```
 
 #### Laplacian Error Cell
+
+This cell is (currently) fixed to be a Laplacian
+cell that assumes an identity scale. Note that this neuronal cell has
+several important compartments: in terms of input compartments, `target` is
+for placing the desired target activity level while `mu` is for placing an
+externally produced mean prediction value, while in terms of output
+compartments, `dtarget` is the first derivative with respect to the target
+(sometimes used to emulate a top-down pressure/expectation in predictive coding)
+and `dmu` is the first derivative with respect to the mean parameter.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.LaplacianErrorCell
@@ -161,7 +171,7 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
 This cell models dynamics over voltage `v` and a recover variable `w` (which
 governs the behavior of the action potential of a spiking neuronal cell). In
 effect, the Fitzhugh-Nagumo model is a set of two coupled differential equations
-that simplify the four differential equation Hodgkin-Huxley (squid axon) model. 
+that simplify the four differential equation Hodgkin-Huxley (squid axon) model.
 A voltage `v_thr` can be used to extract binary spike pulses.
 
 ```{eval-rst}
