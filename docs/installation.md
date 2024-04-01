@@ -59,7 +59,7 @@ $ pip install .
 ```
 or, to install as an editable install for development:
 ```console
-pip install -e .
+$ pip install -e .
 ```
 
 If the installation was successful, you should see the following if you test
