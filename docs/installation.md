@@ -57,7 +57,7 @@ $ pip install -r requirements.txt
 ```console
 $ pip install .
 ```
-or, to install as an editable install for development:
+or, to install as an editable install for development, run:
 ```console
 $ pip install -e .
 ```
