@@ -125,13 +125,13 @@ negative pressure on the membrane potential values at `t`).
     :noindex:
 ```
 
-### The LIF (Leaky Integrator) Cell
+### The LIF (Leaky Integrate-and-Fire) Cell
 
-This cell models dynamics over the voltage `v` and threshold shift `thrTheta`
-(a homeostatic variable) (with optional dynamics for current `j`). Note that
-`thr` is used as a baseline level for the membrane potential threshold while
-`thrTheta`  is treated as a form of short-term plasticity (full threshold
-is: `thr + thrTheta(t)`).
+This cell (the "leaky integrator") models dynamics over the voltage `v` 
+and threshold shift `thrTheta` (a homeostatic variable). Note that `thr` 
+is used as a baseline level for the membrane potential threshold while 
+`thrTheta`  is treated as a form of short-term plasticity (full 
+threshold is: `thr + thrTheta(t)`).
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.LIFCell
@@ -145,10 +145,10 @@ is: `thr + thrTheta(t)`).
     :noindex:
 ```
 
-### The Quadratic LIF (Leaky Integrator) Cell
+### The Quadratic LIF (Leaky Integrate-and-Fire) Cell
 
-This cell models dynamics over the voltage `v` and threshold shift `thrTheta`
-(a homeostatic variable) (with optional dynamics for current `j`). Note that
+This cell (the quadratic "leaky integrator") models dynamics over the voltage 
+`v` and threshold shift `thrTheta` (a homeostatic variable). Note that
 `thr` is used as a baseline level for the membrane potential threshold while
 `thrTheta`  is treated as a form of short-term plasticity (full threshold
 is: `thr + thrTheta(t)`). The dynamics are driven by a critical voltage value
@@ -166,11 +166,11 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
     :noindex:
 ```
 
-### The Fitzhugh-Nagumo Cell
+### The FitzHugh–Nagumo Cell
 
-This cell models dynamics over voltage `v` and a recover variable `w` (which
+This cell models dynamics over voltage `v` and a recover variable `w` (where `w` 
 governs the behavior of the action potential of a spiking neuronal cell). In
-effect, the Fitzhugh-Nagumo model is a set of two coupled differential equations
+effect, the FitzHugh-Nagumo model is a set of two coupled differential equations
 that simplify the four differential equation Hodgkin-Huxley (squid axon) model.
 A voltage `v_thr` can be used to extract binary spike pulses.
 
