@@ -128,6 +128,18 @@ class LatencyCell(Component):
 
         first_spike_time: time of first allowable spike (ms) (Default: 0 ms)
 
+        linearize: should the linear latency encoding scheme be used? (otherwise,
+            defaults to logarithmic latency encoding)
+
+        normalize: normalize the latency code such that final spike(s) occur
+            a pre-specified number of simulation steps "num_steps"? (Default: False)
+
+            :Note: if this set to True, you will need to choose a useful value
+                for the "num_steps" argument (>1), depending on how many steps simulated
+
+        num_steps: number of discrete time steps to consider for normalized latency
+            code (only useful if "normalize" is set to True) (Default: 1)
+
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
 
@@ -174,7 +186,8 @@ class LatencyCell(Component):
 
     # Define Functions
     def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
-                 key=None, useVerboseDict=False, **kwargs):
+                 linearize=False, normalize=False, num_steps=1., key=None,
+                 useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -185,10 +198,10 @@ class LatencyCell(Component):
         self.first_spike_time = first_spike_time
         self.tau = tau
         self.threshold = threshold
-        self.linearize = False
+        self.linearize = linearize
         ## normalize latency code s.t. final spike(s) occur w/in num_steps
-        self.normalize = False
-        self.num_steps = 100.
+        self.normalize = normalize
+        self.num_steps = num_steps
 
         self.target_spike_times = None
         self._mask = None

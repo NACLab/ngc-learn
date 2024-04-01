@@ -12,6 +12,14 @@ ngclearn.components.neurons.spiking.LIFCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.neurons.spiking.fitzhughNagumoCell module
+-------------------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.spiking.fitzhughNagumoCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.neurons.spiking.izhikevichCell module
 ---------------------------------------------------------
 
