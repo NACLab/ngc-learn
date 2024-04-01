@@ -68,8 +68,8 @@ class FitzhughNagumoCell(Component):
 
         gamma: power-term divisor (Default: 3.)
 
-        v_thr: voltage/membrane threshold (to convert action potential to
-            binary spike)
+        v_thr: voltage/membrane threshold (to obtain action potentials in terms
+            of binary spikes)
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell

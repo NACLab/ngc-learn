@@ -155,3 +155,22 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
   .. automethod:: reset
     :noindex:
 ```
+
+### The Fitzhugh-Nagumo Cell
+
+This cell models dynamics over voltage `v` and a recover variable `w`,
+specifically modeling the action potential of a spiking neuronal cell (in
+terms of an approximation and simplification of the classical Hodgkin-Huxley
+squid axon model). A voltage `v_thr` can be to extract binary spike pulses.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.FitzhughNagumoCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: verify_connections
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
