@@ -66,7 +66,7 @@ components we would like to build into it:
 
 ```python
 from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random, nn, jit
+from jax import numpy as jnp, random
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
@@ -139,10 +139,10 @@ simple sequence of one-dimensional real-valued numbers:
 ## run some data through our simple dynamical system
 x_seq = jnp.asarray([[1., 2., 3., 4., 5.]], dtype=jnp.float32)
 
-model.reset(do_reset=True)
+model.reset(True)
 for ts in range(x_seq.shape[1]):
   x_t = jnp.expand_dims(x_seq[0,ts], axis=0) ## get data at time ts
-  model.clamp_data(x=x_t)
+  model.clamp_data(x_t)
   model.runCycle(t=ts*1., dt=1.)
   ## naively extract simple statistics at time ts and print them to I/O
   a_out = model.components["a"].outputCompartment
@@ -183,4 +183,4 @@ by inspecting the API for `RateCell`, with your integration time constant
 3. at `ts = 2`, a value `3` is clamped to `a`, which is then multiplied by `0.05`
    to yield `0.15` and then added to `b`'s current state -- meaning that the new
    state is `0.15 + 0.15 = 0.3`
-and so on and so forth (`b` acts like a non-decaying recurrently additive state). 
+and so on and so forth (`b` acts like a non-decaying recurrently additive state).
