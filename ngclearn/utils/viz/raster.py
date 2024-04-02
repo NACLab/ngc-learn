@@ -13,7 +13,7 @@ import jax.numpy as jnp
 #suffix = '.jpg' #.png
 
 def _create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
-                       plot_fname=None, indices=None, tag="", suffix='.jpg'):
+                       plot_fname=None, indices=None, suffix='.jpg'):
     spk_ = spike_train
     # Process spikes and create the binary coordinate grid
     if len(spk_.shape) == 1:
@@ -43,7 +43,7 @@ def _create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
         yint = range(0, n_units)
         ax.set_yticks(yint)
         ax.set_yticklabels(yint, fontsize=12)
-        plt.title("Spike Train Raster Plot, {}".format(tag))
+        plt.title("Spike Train Raster Plot")
         plt.xlabel("Time Step")
         plt.ylabel("Neuron Index")
         plt.savefig(plot_fname)
