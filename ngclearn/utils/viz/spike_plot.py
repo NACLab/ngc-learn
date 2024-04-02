@@ -8,6 +8,35 @@ from ngclearn.utils.viz.raster import _create_raster_plot
 
 def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
                     title=False, min_mem_val=0.0, max_mem_val=1.25, fname=None):
+    """
+    Simple plotting function for visualizing the trajectory of a single neuron
+    (where its input electrical current, membrane potential value, output
+    spike readings, and refractory variable states have been recorded into arrays).
+
+    This is particularly useful for single neuronal dynamics demonstrations and
+    analyses.
+
+    Args:
+        curr: the recorded electrical current (over T steps)
+
+        mem: the recorded membrane potential (over T steps)
+
+        spike: the recorded spike train (over T steps)
+
+        ref: the recorded refractory state value (over T steps)
+
+        dt: the integration time constant
+
+        thr_line: optional vertical threshold line to plot for voltage
+
+        title: the title of the plot
+
+        min_mem_val: minimum value bound on membrane potential subplot (min of y-axis)
+
+        max_mem_val: maximum value bound on membrane potential subplot (max of y-axis)
+
+        fname: the filename to save this plot as, i.e., /path/to/name.png (Default: lif_analysis.png)
+    """
     x_lim = curr.shape[0]
     y_curr_lim = float(np.amax(curr)) + 0.2
     fig, ax = plt.subplots(3, figsize=(8,6), sharex=True,
