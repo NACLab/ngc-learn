@@ -70,7 +70,7 @@ from jax import numpy as jnp, random
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
-dkey, *subkeys = random.split(dkey, 6)
+dkey, *subkeys = random.split(dkey, 4)
 
 ## create simple dynamical system: a --> w_ab --> b
 model = Controller() ## the simulation object
@@ -79,7 +79,7 @@ a = model.add_component("rate", name="a", n_units=1, tau_m=0.,
 b = model.add_component("rate", name="b", n_units=1, tau_m=20.,
                         act_fx="identity", leakRate=0., key=subkeys[1])
 Wab = model.add_component("hebbian", name="Wab", shape=(1, 1),
-                          wInit=("constant", 1., None), key=subkeys[3])
+                          wInit=("constant", 1., None), key=subkeys[2])
 ```
 
 Next, we will want to wire together the three components we have embedded into
