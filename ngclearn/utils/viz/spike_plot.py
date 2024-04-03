@@ -69,5 +69,6 @@ def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
     plt.yticks([])
     if fname is None:
         fname = "lif_plot.png"
+    plt.tight_layout()
     plt.savefig(fname)
     plt.clf()
