@@ -26,8 +26,13 @@ are built with ngc-learn, ranging from predictive processing to sparse coding to
 spiking systems to harmoniums.
 
 Lessons are specifically organized in the following manner.
+
+Input encoding cells are examined here:
+1. <b>A</b>: Bernoulli and Poisson Spike Trains
+2. <b>B</b>: Latency-coded Spike Train
+
 Spiking cells are studied here:
-1. <b>A</b>: [The Leaky Integator](neurocog/leaky_integrator.md)
+1. <b>A</b>: [Simple Leaky Integator](neurocog/simple_leaky_integrator.md)
 2. <b>B</b>: The FitzHugh–Nagumo Neuronal Model
 3. <b>C</b>: The Izhikevich Neuronal Model
 
