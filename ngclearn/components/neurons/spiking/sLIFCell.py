@@ -285,8 +285,8 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.compartments[self.thresholdCompartmentName()] = thr
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=6., thr_persist=False,
-                 thrGain=0.001, thrLeak=0.00005, rho_b=0., refract_T=1., sticky_spikes=True,
+    def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=0., thr_persist=False,
+                 thrGain=0.0, thrLeak=0.0, rho_b=0., refract_T=0., sticky_spikes=False,
                  thr_jitter=0.05, key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 

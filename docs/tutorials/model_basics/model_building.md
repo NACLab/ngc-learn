@@ -141,15 +141,15 @@ x_seq = jnp.asarray([[1., 2., 3., 4., 5.]], dtype=jnp.float32)
 
 model.reset(True)
 for ts in range(x_seq.shape[1]):
-  x_t = jnp.expand_dims(x_seq[0,ts], axis=0) ## get data at time ts
-  model.clamp_data(x_t)
-  model.runCycle(t=ts*1., dt=1.)
-  ## naively extract simple statistics at time ts and print them to I/O
-  a_out = model.components["a"].outputCompartment
-  aName = model.components["a"].outputCompartmentName()
-  b_out = model.components["b"].outputCompartment
-  bName = model.components["b"].outputCompartmentName()
-  print(" {}: a.{} = {} ~> b.{} = {}".format(ts, aName, a_out, bName, b_out))
+    x_t = jnp.expand_dims(x_seq[0,ts], axis=0) ## get data at time ts
+    model.clamp_data(x_t)
+    model.runCycle(t=ts*1., dt=1.)
+    ## naively extract simple statistics at time ts and print them to I/O
+    a_out = model.components["a"].outputCompartment
+    aName = model.components["a"].outputCompartmentName()
+    b_out = model.components["b"].outputCompartment
+    bName = model.components["b"].outputCompartmentName()
+    print(" {}: a.{} = {} ~> b.{} = {}".format(ts, aName, a_out, bName, b_out))
 ```
 
 and, assuming you place your code above in a Python script
