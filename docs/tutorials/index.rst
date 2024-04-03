@@ -31,6 +31,6 @@ simulation schema and design.
   :caption: Neurocognitive Modeling
 
   neurocog_modeling
-  neurocog/leaky_integrator
+  neurocog/simple_leaky_integrator
   neurocog/rate_cell
   neurocog/error_cell
