@@ -183,8 +183,13 @@ w = ax_ptr.plot(time_span, recov_rec, color='C1', alpha=.5)
 ax_ptr.legend([v[0],w[0]],['v','w'])
 
 plt.tight_layout()
-plt.savefig("{0}".format("cell_plot.png"))#, dpi=300)
+plt.savefig("{0}".format("fncell_plot.png"))#, dpi=300)
 ```
+
+You should get a plot that depicts the evolution of the voltage and recovery,
+i.e., saved as `fncell_plot.png` locally to disk, like the one below:
+
+<img src="../../images/tutorials/neurocog/fncell_plot.png" width="400" />
 
 ## References
 
