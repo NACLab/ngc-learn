@@ -54,6 +54,7 @@ single component system made up of the Fitzhugh-Nagumo (`F-N`) cell.
 ```python
 from ngcsimlib.controller import Controller
 from jax import numpy as jnp, random, nn, jit
+import numpy as np
 
 import matplotlib #.pyplot as plt
 matplotlib.use('Agg')
@@ -138,7 +139,6 @@ spk_rec = []
 i_app = 0.23 ## electrical current to inject into F-N cell
 data = jnp.asarray([[i_app]], dtype=jnp.float32)
 
-#dt = 0.13342228152101404 ## integration time constant
 T = 1500 ## number of simulation steps to run
 time_span = np.linspace(0, 200, num=T)
 
@@ -162,28 +162,25 @@ for ts in range(T):
     print(" {}: s {} ; v {} ; w {}".format(ts, s, v, w))
 
 ## Post-process statistics and create plot
-import numpy as np
 curr_in = np.squeeze(np.asarray(curr_in))
 mem_rec = np.squeeze(np.asarray(mem_rec))
 recov_rec = np.squeeze(np.asarray(recov_rec))
 spk_rec = np.squeeze(np.asarray(spk_rec))
 
 # Plot the F-N cell trajectory
-n_scenarios = 1
-fig, ax = plt.subplots(1, n_scenarios, figsize=(5*n_scenarios,5))
+n_plots = 1
+fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 
 ax_ptr = ax
-if n_scenarios > 1:
-    ax_ptr = ax[i]
 ax_ptr.set(xlabel='Time', ylabel='voltage (v), recovery (w)',
-           title='Fitzhugh Nagumo Voltage/Recovery Dynamics')
+           title='Fitzhugh-Nagumo Voltage/Recovery Dynamics')
 
 v = ax_ptr.plot(time_span, mem_rec, color='C0')
 w = ax_ptr.plot(time_span, recov_rec, color='C1', alpha=.5)
 ax_ptr.legend([v[0],w[0]],['v','w'])
 
 plt.tight_layout()
-plt.savefig("{0}".format("fncell_plot.png"))#, dpi=300)
+plt.savefig("{0}".format("fncell_plot.png"))
 ```
 
 You should get a plot that depicts the evolution of the voltage and recovery,
