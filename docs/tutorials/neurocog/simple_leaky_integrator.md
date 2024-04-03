@@ -223,9 +223,12 @@ where we see that above integration tells us that the membrane potential of this
 over time as a function of the sum of its input electrical current $\mathbf{j}_t$
 (multiplied by the cell membrane resistance) and a leak (or decay) $-\mathbf{v}_t$
 modulated by the integration time constant divided by the membrane time constant.
-The `sLIF` allows you to control the value of $\tau_m$ either directly (and
-will tell the node to set $R=1$ and $C=\tau_m$ and the node will ignore any
+The `sLIF` allows you to control the value of $\tau_m$ directly (hence why we 
+calculated $\tau_m$ externally via our chosen $R$ and $C$; other neuronal cells 
+allow you to change $\tau_m$ via $R$ and $C$).
+<!--either directly (and will tell the node to set $R=1$ and $C=\tau_m$ and the node will ignore any
 argument values provided for $R$ and $C$) or via $R$ and $C$.
+-->
 <!--(Notice that this default state of the `sLIF` assumes that the input spike
 signals from external nodes that feed into $\mathbf{dz}_{bu}$ and $\mathbf{dz}_{td}$
 result in an instantaneous jump in each neuron's synaptic current $\mathbf{J}_t$.-->
