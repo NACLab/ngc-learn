@@ -72,6 +72,10 @@ class FitzhughNagumoCell(Component):
         v_thr: voltage/membrane threshold (to obtain action potentials in terms
             of binary spikes)
 
+        v0: initial condition / reset for voltage
+
+        w0: initial condition / reset for recovery
+
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
 
@@ -142,7 +146,7 @@ class FitzhughNagumoCell(Component):
 
     # Define Functions
     def __init__(self, name, n_units, tau_m=1., tau_w=12.5, alpha=0.7,
-                 beta=0.8, gamma=3., v_thr=1.07,
+                 beta=0.8, gamma=3., v_thr=1.07, v0=0., w0=0.,
                  key=None, useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -158,8 +162,8 @@ class FitzhughNagumoCell(Component):
         self.beta = beta
         self.gamma = gamma
 
-        self.v0 = 0. ## initial membrane potential/voltage condition
-        self.w0 = 0. ## initial w-parameter condition
+        self.v0 = v0 #0. ## initial membrane potential/voltage condition
+        self.w0 = w0 #0. ## initial w-parameter condition
         self.v_thr = v_thr
 
         ## Layer Size Setup
