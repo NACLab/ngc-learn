@@ -4,7 +4,7 @@ In this tutorial, we will extend a controller with three components,
 two cell components connected with a synaptic cable component, to incorporate a
 basic a two-factor Hebbian adjustment process.
 
-## Adding a Learnable Synapses to a Multi-Component System
+## Adding a Learnable Synapse to a Multi-Component System
 
 Let us start by building a controller similar to previous lessons with the one
 exception that now we will trigger the synaptic connection between `a` and `b`
