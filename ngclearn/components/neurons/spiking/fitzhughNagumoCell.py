@@ -193,8 +193,8 @@ class FitzhughNagumoCell(Component):
         self.beta = beta
         self.gamma = gamma
 
-        self.v0 = v0 #0. ## initial membrane potential/voltage condition
-        self.w0 = w0 #0. ## initial w-parameter condition
+        self.v0 = v0 ## initial membrane potential/voltage condition
+        self.w0 = w0 ## initial w-parameter condition
         self.v_thr = v_thr
 
         ## Layer Size Setup
