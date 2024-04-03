@@ -32,9 +32,10 @@ Input encoding cells are examined here:
 2. <b>B</b>: Latency-coded Spike Train
 
 Spiking cells are studied here:
-1. <b>A</b>: [Simple Leaky Integator](neurocog/simple_leaky_integrator.md)
-2. <b>B</b>: The FitzHugh–Nagumo Neuronal Model
-3. <b>C</b>: The Izhikevich Neuronal Model
+1. <b>A</b>: [Simple Leaky Integrator](neurocog/simple_leaky_integrator.md)
+2. <b>B</b>: A More Intricate Leaky Integrator-and-Fire
+3. <b>C</b>: The [FitzHugh–Nagumo Neuronal Model](neurocog/fitzhugh_nagumo_cell.md)
+4. <b>D</b>: The Izhikevich Neuronal Model
 
 Graded cells are studied here:
 1. <b>A</b>: [The Rate Cell Model](neurocog/rate_cell.md)

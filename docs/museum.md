@@ -13,4 +13,4 @@ access/run historical models and agents built with ngc-learn to perform
 different experimental tasks.
 
 ## References
-[1] Ororbia, Alexander G. "Brain-inspired machine intelligence: A survey of neurobiologically-plausible credit assignment." arXiv preprint arXiv:2312.09257 (2023).
+<b>[1]</b> Ororbia, Alexander G. "Brain-inspired machine intelligence: A survey of neurobiologically-plausible credit assignment." arXiv preprint arXiv:2312.09257 (2023).

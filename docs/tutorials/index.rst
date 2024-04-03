@@ -32,5 +32,6 @@ simulation schema and design.
 
   neurocog_modeling
   neurocog/simple_leaky_integrator
+  neurocog/fitzhugh_nagumo_cell
   neurocog/rate_cell
   neurocog/error_cell
