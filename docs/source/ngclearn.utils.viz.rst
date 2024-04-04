@@ -20,6 +20,14 @@ ngclearn.utils.viz.raster module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.viz.spike\_plot module
+-------------------------------------
+
+.. automodule:: ngclearn.utils.viz.spike_plot
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.viz.synapse\_plot module
 ---------------------------------------
 

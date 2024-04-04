@@ -81,6 +81,12 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     voltage "v" and recovery "w", the last of which represents the combined
     effects of sodium channel deinactivation and potassium channel deactivation.
 
+    The specific pair of differential equations that characterize this cell
+    are (for adjusting v and w, given current j, over time):
+
+    | tau_m * dv/dt = 0.04 v^2 + 5v + 140 - w + j * R_m
+    | tau_w * dw/dt = (v * b - w)  where tau_w = 1/a
+
     | References:
     | Izhikevich, Eugene M. "Simple model of spiking neurons." IEEE Transactions
     | on neural networks 14.6 (2003): 1569-1572.
