@@ -101,7 +101,7 @@ model, attempting to extract some of the benefits of its more detailed modeling
 of the spiking cellular activation and deactivation dynamics (specifically
 attempting to isolate the properties related to sodium/potassium ion flow
 from cellular properties of excitation and propagation). Notably, the `F-N`
-cell notably models membrane potential `v` with a cubic function (which facilitates
+cell models membrane potential `v` with a cubic function (which facilitates
 self-excitation through positive feedback) in tandem with a recovery variable `w`
 that provides a slower form of negative feedback. The linear dynamics that govern
 `w` are controlled by (dimensionless) coefficients `alpha` and  `beta`, which
@@ -120,8 +120,8 @@ purposes of this tutorial but, by default, are `0` in the `F-N` cell component.
 
 ### Simulating a FitzHugh–Nagumo Neuronal Cell
 
-Given that single-cell dynamical system is set up as above, we can next
-write some code the `F-N` node and visualize its how its membrane potential and
+Given that we have a single-cell dynamical system set up as above, we can next
+write some code for visualizing how the `F-N` node's membrane potential and
 coupled recovery variable evolve with time (specifically over a period of about
 `200` milliseconds). We will, much as we did with the leaky integrators in
 prior tutorials, inject an electrical current `j` into the `F-N` cell (this time
@@ -159,7 +159,9 @@ for ts in range(T):
     mem_rec.append(v)
     recov_rec.append(w)
     spk_rec.append(s)
-    print(" {}: s {} ; v {} ; w {}".format(ts, s, v, w))
+    ## print stats to I/O (overriding previous print-outs to reduce clutter)
+    print("\r {}: s {} ; v {} ; w {}".format(ts, s, v, w), end="")
+print()
 
 ## Post-process statistics and create plot
 curr_in = np.squeeze(np.asarray(curr_in))
@@ -188,11 +190,11 @@ i.e., saved as `fncell_plot.png` locally to disk, like the one below:
 
 <img src="../../images/tutorials/neurocog/fncell_plot.png" width="400" />
 
-A useful note is that the `F-N` above used Euler integration to step through its 
-dynamics (this is the default/base routine for all cell components in ngc-learn); 
-however, one could configure it to use the midpoint method for integration 
-by setting its argument `integration_type = rk2` in cases where more 
-accuracy in the dynamics is needed (at the cost of additional computational time). 
+A useful note is that the `F-N` above used Euler integration to step through its
+dynamics (this is the default/base routine for all cell components in ngc-learn);
+however, one could configure it to use the midpoint method for integration
+by setting its argument `integration_type = rk2` in cases where more
+accuracy in the dynamics is needed (at the cost of additional computational time).
 
 ## References
 

@@ -35,7 +35,7 @@ Spiking cells are studied here:
 1. <b>2A</b>: [Simple Leaky Integrator](neurocog/simple_leaky_integrator.md)
 2. <b>2B</b>: A More Intricate Leaky Integrator-and-Fire
 3. <b>2C</b>: The [FitzHugh–Nagumo Neuronal Model](neurocog/fitzhugh_nagumo_cell.md)
-4. <b>2D</b>: The Izhikevich Neuronal Model
+4. <b>2D</b>: The [Izhikevich Neuronal Model](neurocog/izhikevich_cell.md)
 
 Graded cells are studied here:
 1. <b>3A</b>: [The Rate Cell Model](neurocog/rate_cell.md)

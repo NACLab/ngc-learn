@@ -132,9 +132,9 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     model), one can recover specific models with the following particular values:
 
     | Intrinsically bursting neurons: ``v_reset=-55, w_reset=4``
-    | Chattering neurons: ``v_reset = -50, w_reset=2``
+    | Chattering neurons: ``v_reset = -50, w_reset = 2``
     | Fast spiking neurons: ``tau_w = 10``
-    | Low-threshold spiking neurons: ``coupling_factor = 0.25``
+    | Low-threshold spiking neurons: ``tau_w = 10, coupling_factor = 0.25, w_reset = 2``
     | Resonator neurons: ``tau_w = 10, coupling_factor = 0.26``
 
     Args:
