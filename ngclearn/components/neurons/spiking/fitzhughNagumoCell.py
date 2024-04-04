@@ -45,7 +45,7 @@ def step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of RK-2
     _v, _w = step_euler(dt/2., j, v, w, a, b, g, tau_m, tau_w)
     dv_dt = _dfv(j, _v, _w, a, b, g)
     dw_dt = _dfw(j, _v, _w, a, b, g)
-    ## run step of (forward) Euler integration
+    ## run a 2nd step of (forward) Euler integration
     _v2 = v + dv_dt * (1./tau_m) * dt
     _w2 = w + dw_dt * (1./tau_w) * dt
     return _v2, _w2
@@ -54,7 +54,7 @@ def step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of RK-2
 def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     """
 
-    Args: 
+    Args:
         dt: integration time constant
 
         j: electrical current
@@ -78,8 +78,8 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
 
         integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
 
-    Returns: 
-        updated voltage, updated recovery, spikes        
+    Returns:
+        updated voltage, updated recovery, spikes
     """
     if integType == 1:
         _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
@@ -133,12 +133,12 @@ class FitzhughNagumoCell(Component):
         w0: initial condition / reset for recovery
 
         integration_type: type of integration to use for this cell's dynamics;
-            only two kinds supported, i.e., "euler" and "midpoint" (Default: "euler")
+            current supported forms include "euler" (Euler/RK-1 integration)
+            and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
-                at an increase in computational cost (and simulation time); 
-                also note that "rk2" will trigger midpoint integration as well
+                at an increase in computational cost (and simulation time)
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
@@ -252,7 +252,7 @@ class FitzhughNagumoCell(Component):
         v = self.voltage
         w = self.recovery
 
-        v, w, s = run_cell(dt, j, v, w, self.v_thr, self.tau_m, self.tau_w, self.alpha, 
+        v, w, s = run_cell(dt, j, v, w, self.v_thr, self.tau_m, self.tau_w, self.alpha,
                            self.beta, self.gamma, self.intgFlag)
 
         self.voltage = v

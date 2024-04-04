@@ -22,8 +22,39 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def run_cell_euler(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65.,
-                   d=8., R_m=1.):
+def _dfv(j, v, w, b):
+    ## (v^2 * 0.04 + v * 5 + 140 - u + j) * a, where a = (1./tau_m) (w = u)
+    dv_dt = (jnp.square(v) * 0.04 + v * 5. + 140. - w + j)
+    return dv_dt
+
+@jit
+def _dfw(j, v, w, b):
+    ## (v * b - u) from (v * b - u) * a (Izh. form)  (w = u)
+    dw_dt = (v * b - w)
+    return dw_dt
+
+@jit
+def step_euler(dt, j, v, w, b, tau_m, tau_w): ## perform step of Euler/RK-1
+    dv_dt = _dfv(j, v, w, b)
+    dw_dt = _dfw(j, v, w, b)
+    ## run step of (forward) Euler integration
+    _v = v + dv_dt * (1./tau_m) * dt
+    _w = w + dw_dt * (1./tau_w) * dt
+    return _v, _w
+
+@jit
+def step_midpoint(dt, j, v, w, b, tau_m, tau_w): ## perform step of RK-2
+    _v, _w = step_euler(dt/2., j, v, w, b, tau_m, tau_w)
+    dv_dt = _dfv(j, _v, _w, b)
+    dw_dt = _dfw(j, _v, _w, b)
+    ## run a 2nd step of (forward) Euler integration
+    _v2 = v + dv_dt * (1./tau_m) * dt
+    _w2 = w + dw_dt * (1./tau_w) * dt
+    return _v2, _w2
+
+@partial(jit, static_argnums=[12])
+def run_cell(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
+             R_m=1., integType=0):
     """
     Runs Izhikevich neuronal dynamics
 
@@ -54,6 +85,8 @@ def run_cell_euler(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65.,
 
         R_m: membrane resistance value (Default: 1 mega-Ohm)
 
+        integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
+
     Returns:
         updated voltage, updated recovery, spikes
     """
@@ -64,10 +97,11 @@ def run_cell_euler(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65.,
     _s = (v > thr).astype(jnp.float32)
     ## for non-spikes, evolve according to dynamics
     _j = j * R_m
-    dv = (jnp.square(v) * 0.04 + v * 5. + 140. - w + _j) * (1./tau_m)
-    dw = (v * b - w) * a
-    _v = v + dv * dt
-    _w = w + dw * dt
+    if integType == 1:
+        _v, _w = step_midpoint(dt, _j, v, w, b, tau_m, tau_w)
+    else:
+        _v, _w = step_euler(dt, _j, v, w, b, tau_m, tau_w)
+
     ## for spikes, snap to particular states
     _v = _v * (1. - _s) + _s * c
     _w = _w * (1. - _s) + _s * (w + d)
@@ -132,11 +166,15 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         key: PRNG key to control determinism of any underlying random values
             associated with this cell
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
+        integration_type: type of integration to use for this cell's dynamics;
+            current supported forms include "euler" (Euler/RK-1 integration)
+            and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
-        directory: string indicating directory on disk to save Izhikevich parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
+            :Note: setting the integration type to the midpoint method will
+                increase the accuray of the estimate of the cell's evolution
+                at an increase in computational cost (and simulation time)
+
+        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
     ## Class Methods for Compartment Names
@@ -204,7 +242,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     # Define Functions
     def __init__(self, name, n_units, tau_m=1., R_m=1., v_thr=30., v_reset=-65.,
                  tau_w=50., w_reset=8., coupling_factor=0.2, v0=-65., w0=-14.,
-                 key=None, useVerboseDict=False, **kwargs):
+                 integration_type="euler", key=None, useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ## Cell properties
@@ -218,6 +256,12 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         self.v0 = v0 ## initial membrane potential/voltage condition
         self.w0 = w0 ## initial recovery w-parameter condition
         self.v_thr = v_thr
+
+        ## Integration properties
+        self.integrationType = integration_type
+        self.intgFlag = 0
+        if self.integrationType == "midpoint" or self.integrationType == "rk2":
+            self.intgFlag = 1
 
         ##Random Number Set up
         self.key = key
@@ -239,9 +283,9 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         w = self.recovery
         s = self.outputCompartment
         #if self.integration_type == "euler":
-        v, w, s = run_cell_euler(dt, j, v, s, w, thr=self.v_thr, tau_m=self.tau_m,
-                                 tau_w=self.tau_w, b=self.coupling, c=self.v_reset,
-                                 d=self.w_reset, R_m=self.R_m)
+        v, w, s = run_cell(dt, j, v, s, w, thr=self.v_thr, tau_m=self.tau_m,
+                           tau_w=self.tau_w, b=self.coupling, c=self.v_reset,
+                           d=self.w_reset, R_m=self.R_m, integType=self.intgFlag)
         self.voltage = v
         self.recovery = w
         self.outputCompartment = s
