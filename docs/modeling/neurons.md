@@ -172,7 +172,8 @@ This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
 governs the behavior of the action potential of a spiking neuronal cell). In
 effect, the FitzHugh-Nagumo model is a set of two coupled differential equations
 that simplify the four differential equation Hodgkin-Huxley (squid axon) model.
-A voltage `v_thr` can be used to extract binary spike pulses.
+A voltage `v_thr` can be used to extract binary spike pulses. (Note that this 
+cell support either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.FitzhughNagumoCell

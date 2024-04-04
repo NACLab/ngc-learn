@@ -32,7 +32,7 @@ def _dfw(j, v, w, a, b, g):
     return dw_dt
 
 @jit
-def step_euler(dt, j, v, w, a, b, g, tau_m, tau_w):
+def step_euler(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of Euler/RK-1
     dv_dt = _dfv(j, v, w, a, b, g)
     dw_dt = _dfw(j, v, w, a, b, g)
     ## run step of (forward) Euler integration
@@ -41,7 +41,7 @@ def step_euler(dt, j, v, w, a, b, g, tau_m, tau_w):
     return _v, _w
 
 @jit
-def step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w):
+def step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of RK-2
     _v, _w = step_euler(dt/2., j, v, w, a, b, g, tau_m, tau_w)
     dv_dt = _dfv(j, _v, _w, a, b, g)
     dw_dt = _dfw(j, _v, _w, a, b, g)
@@ -52,6 +52,13 @@ def step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w):
 
 @partial(jit, static_argnums=[10])
 def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
+    """
+
+    Args: 
+
+    Returns: 
+        
+    """
     if integType == 1:
         _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
     else: # integType == 0 (default -- Euler)
@@ -108,7 +115,8 @@ class FitzhughNagumoCell(Component):
 
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
-                at an increase in computational cost (and simulation time)
+                at an increase in computational cost (and simulation time); 
+                also note that "rk2" will trigger midpoint integration as well
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
@@ -193,7 +201,7 @@ class FitzhughNagumoCell(Component):
         ## Integration properties
         self.integrationType = integration_type
         self.intgFlag = 0
-        if self.integrationType == "midpoint":
+        if self.integrationType == "midpoint" or self.integrationType == "rk2":
             self.intgFlag = 1
 
         ## Cell properties
