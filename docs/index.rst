@@ -26,7 +26,7 @@ and spiking neural networks. This toolkit is built on top of
   tutorials/index
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
   :caption: Modeling API
 
   modeling/components

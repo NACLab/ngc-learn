@@ -1,9 +1,12 @@
-# The Component
+# The Nodes-and-Cables System: The Component Building Block
 
 The "component" is a core building block of the simulation construct that
-ngc-learn and ngclib refer to as the controller. A controller, in short, maintains
-and does the bookkeeping for a set of related components that compose the
-underlying simulation graph (or operator graph) that represents a biomimetic
+ngc-learn and ngclib refer to as the controller (in effect, a controller, a
+set of components embedded within it, and commands that drive the controller's
+simulation process effectively make up ngc-learn's "nodes-and-cables system").
+A controller, in short, maintains and does the bookkeeping for a set of
+related components that compose the underlying simulation graph
+(or operator graph) that represents a biomimetic
 system in ngc-learn. Ultimately, when you create and connect components together,
 you do so by placing them into a controller which will perform the calculations
 in a pre-specified order -- this is what ngc-learn and ngclib use under the hood
