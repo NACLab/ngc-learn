@@ -21,36 +21,68 @@ def update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
-@partial(jit, static_argnums=[5,6,7,8,9])
-def run_cell_euler(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
+@jit
+def _dfv(j, v, w, a, b, g):
     dv_dt = v - jnp.power(v, 3)/g - w + j ## dv/dt
-    dw_dt = v + a - b * w ## dw/dt
+    return dv_dt
 
+@jit
+def _dfw(j, v, w, a, b, g):
+    dw_dt = v + a - b * w ## dw/dt
+    return dw_dt
+
+@jit
+def step_euler(dt, j, v, w, a, b, g, tau_m, tau_w):
+    dv_dt = _dfv(j, v, w, a, b, g)
+    dw_dt = _dfw(j, v, w, a, b, g)
     ## run step of (forward) Euler integration
-    _v = v + dv_dt * (dt/tau_m)
-    _w = w + dw_dt * (dt/tau_w)
+    _v = v + dv_dt * (1./tau_m) * dt
+    _w = w + dw_dt * (1./tau_w) * dt
+    return _v, _w
 
+@jit
+def step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w):
+    _v, _w = step_euler(dt/2., j, v, w, a, b, g, tau_m, tau_w)
+    dv_dt = _dfv(j, _v, _w, a, b, g)
+    dw_dt = _dfw(j, _v, _w, a, b, g)
+    ## run step of (forward) Euler integration
+    _v2 = v + dv_dt * (1./tau_m) * dt
+    _w2 = w + dw_dt * (1./tau_w) * dt
+    return _v2, _w2
+
+@partial(jit, static_argnums=[10])
+def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
+    if integType == 1:
+        _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
+    else: # integType == 0 (default -- Euler)
+        _v, _w = step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
+    s = (_v > v_thr).astype(jnp.float32)
+    return _v, _w, s
+
+'''
+#@partial(jit, static_argnums=[5,6,7,8,9])
+@jit
+def run_cell_euler(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
+    _v, _w = step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
     ## produce spikes
     s = (_v > v_thr).astype(jnp.float32)
     return _v, _w, s
 
-@partial(jit, static_argnums=[5,6,7,8,9])
+# @jit
+# def run_cell_midpoint(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
+#     _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
+#     ## produce spikes
+#     s = (_v > v_thr).astype(jnp.float32)
+#     return _v, _w, s
+
+#@partial(jit, static_argnums=[5,6,7,8,9])
+@jit
 def run_cell_midpoint(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
-    ## get ODE values for the projected Euler step
-    dv_dt = v - jnp.power(v, 3)/g - w + j ## dv/dt
-    dw_dt = v + a - b * w ## dw/dt
-    ## run first step of (forward) Euler integration w/ current ODE values
-    _v = v + dv_dt * (1./tau_m) * dt/2.
-    _w = w + dw_dt * (1./tau_w) * dt/2.
-    _dv_dt = _v - jnp.power(_v, 3)/g - _w + j ## dv/dt for Euler projected step
-    _dw_dt = _v + a - b * _w ## dw/dt for Euler projected step
-    ## using first Euler step's ODE values, run the midpoint estimate step
-    _v = v + _dv_dt * (1./tau_m) * dt
-    _w = w + _dw_dt * (1./tau_w) * dt
-
+    _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
     ## produce spikes
     s = (_v > v_thr).astype(jnp.float32)
     return _v, _w, s
+'''
 
 class FitzhughNagumoCell(Component):
     """
@@ -174,7 +206,7 @@ class FitzhughNagumoCell(Component):
     # Define Functions
     def __init__(self, name, n_units, tau_m=1., tau_w=12.5, alpha=0.7,
                  beta=0.8, gamma=3., v_thr=1.07, v0=0., w0=0.,
-                 integration_type="midpoint", key=None, useVerboseDict=False,
+                 integration_type="euler", key=None, useVerboseDict=False,
                  **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -184,7 +216,10 @@ class FitzhughNagumoCell(Component):
             self.key = random.PRNGKey(time.time_ns())
 
         ## Integration properties
-        self.integration_type = integration_type
+        self.integrationType = integration_type
+        self.intgFlag = 0
+        if self.integrationType == "midpoint":
+            self.intgFlag = 1
 
         ## Cell properties
         self.tau_m = tau_m
@@ -211,12 +246,10 @@ class FitzhughNagumoCell(Component):
         j = self.inputCompartment
         v = self.voltage
         w = self.recovery
-        if self.integration_type == "euler":
-            v, w, s = run_cell_euler(dt, j, v, w, self.v_thr, self.tau_m, self.tau_w,
-                                     self.alpha, self.beta, self.gamma)
-        else:
-            v, w, s = run_cell_midpoint(dt, j, v, w, self.v_thr, self.tau_m, self.tau_w,
-                                        self.alpha, self.beta, self.gamma)
+
+        v, w, s = run_cell(dt, j, v, w, self.v_thr, self.tau_m, self.tau_w, self.alpha, 
+                           self.beta, self.gamma, self.intgFlag)
+
         self.voltage = v
         self.recovery = w
         self.outputCompartment = s
