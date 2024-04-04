@@ -110,6 +110,18 @@ recovery values (i.e., `w0`), which we see have been set to interesting values
 for the purposes of this lesson (these are actually the default values of
 the Izhikevich component, i.e., `v0=-65` and `w0=-14`).
 
+Formally, the core dynamics of the `IZH` can be written out as follows:
+
+$$
+\tau_m \frac{\partial \mathbf{v}_t}{\partial t} &= -0.04 (\mathbf{v}_t)^2 + \mathbf{v}_t + 140 - \mathbf{w}_t + R \mathbf{j}_t \\
+\tau_w \frac{\partial \mathbf{w}_t}{\partial t} &= b \mathbf{v}_t - \mathbf{w}_t
+$$
+
+where $b$ is the coupling factor, $R$ is the membrane resistance, $\tau_m$ is the
+membrane time constant, and $\tau_w$ is the recovery time constant (technically,
+$\tau_m = 1$, $R = 1$, and $\tau_w = 1/a$ to get to the perspective originally
+put forth in [1]).
+
 ### Simulating a Izhikevich Neuronal Cell
 
 Given the single-cell dynamical system we set up above, we finally write
