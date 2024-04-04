@@ -1,1 +1,1 @@
-# Lecture 2B: Error Cell Models
+# Lecture 3B: Error Cell Models

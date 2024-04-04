@@ -1,4 +1,4 @@
-# Lecture 3B: The Izhikevich Neuronal Cell
+# Lecture 2D: The Izhikevich Neuronal Cell
 
 In this tutorial, we will study another one of ngc-learn's more complex spiking
 components, the Izhikevich (IZH) biophysical neuronal cell model, often a useful

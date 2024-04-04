@@ -1,1 +1,1 @@
-# Lecture 2B: The Rate Cell Model
+# Lecture 3A: The Rate Cell Model
