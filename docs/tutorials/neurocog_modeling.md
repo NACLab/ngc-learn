@@ -28,22 +28,22 @@ spiking systems to harmoniums.
 Lessons are specifically organized in the following manner.
 
 Input encoding cells are examined here:
-1. <b>A</b>: Bernoulli and Poisson Spike Trains
-2. <b>B</b>: Latency-coded Spike Train
+1. <b>1A</b>: Bernoulli and Poisson Spike Trains
+2. <b>1B</b>: Latency-coded Spike Train
 
 Spiking cells are studied here:
-1. <b>A</b>: [Simple Leaky Integrator](neurocog/simple_leaky_integrator.md)
-2. <b>B</b>: A More Intricate Leaky Integrator-and-Fire
-3. <b>C</b>: The [FitzHugh–Nagumo Neuronal Model](neurocog/fitzhugh_nagumo_cell.md)
-4. <b>D</b>: The Izhikevich Neuronal Model
+1. <b>2A</b>: [Simple Leaky Integrator](neurocog/simple_leaky_integrator.md)
+2. <b>2B</b>: A More Intricate Leaky Integrator-and-Fire
+3. <b>2C</b>: The [FitzHugh–Nagumo Neuronal Model](neurocog/fitzhugh_nagumo_cell.md)
+4. <b>2D</b>: The Izhikevich Neuronal Model
 
 Graded cells are studied here:
-1. <b>A</b>: [The Rate Cell Model](neurocog/rate_cell.md)
-2. <b>B</b>: [Error Cell Models](neurocog/error_cell.md)
+1. <b>3A</b>: [The Rate Cell Model](neurocog/rate_cell.md)
+2. <b>3B</b>: [Error Cell Models](neurocog/error_cell.md)
 
 Synaptic cables are studied here:
-1. <b>A</b>: The Hebbian Synapse Model
-2. <b>B</b>: Trace-based Spike-Timing-Dependent Plasticity (STDP)
+1. <b>4A</b>: The Hebbian Synapse Model
+2. <b>4B</b>: Trace-based Spike-Timing-Dependent Plasticity (STDP)
 
 Neuronal models that will be examined (using `ngc-museum`) here:
 1. Sparse Coding

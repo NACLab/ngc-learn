@@ -1,4 +1,4 @@
-# Lecture 1B: The FitzHugh–Nagumo Neuronal Cell
+# Lecture 2B: The FitzHugh–Nagumo Neuronal Cell
 
 In this tutorial, we will study one of ngc-learn's more complex spiking components,
 the FitzHugh–Nagumo (FN) biophysical neuronal cell model.

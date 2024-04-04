@@ -1,4 +1,4 @@
-# Lecture 1A: The Leaky Integrate-and-Fire Cell
+# Lecture 2A: The Leaky Integrate-and-Fire Cell
 
 In this tutorial, we will study one of ngc-learn's (simplest) in-built leaky
 integrator components, the simplified leaky integrate-and-fire (SLIF).
