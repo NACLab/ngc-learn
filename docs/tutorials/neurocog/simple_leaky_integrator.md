@@ -33,11 +33,7 @@ Inside the JSON file, write the following:
     "absolute_path": "ngclearn.components",
     "attributes": [
       {"name": "SLIFCell",
-       "keywords": ["SLIF"]
-      },
-      {
-        "name": "LIFCell",
-        "keywords": ["LIF"]
+       "keywords": ["sLIF"]
       }
     ]
   }
