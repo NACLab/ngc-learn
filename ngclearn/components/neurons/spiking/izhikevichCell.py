@@ -85,7 +85,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     are (for adjusting v and w, given current j, over time):
 
     | tau_m * dv/dt = 0.04 v^2 + 5v + 140 - w + j * R_m
-    | tau_w * dw/dt = (v * b - w)  where tau_w = 1/a
+    | tau_w * dw/dt = (v * b - w),  where tau_w = 1/a
 
     | References:
     | Izhikevich, Eugene M. "Simple model of spiking neurons." IEEE Transactions
