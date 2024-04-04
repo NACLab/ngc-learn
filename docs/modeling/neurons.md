@@ -127,10 +127,10 @@ negative pressure on the membrane potential values at `t`).
 
 ### The LIF (Leaky Integrate-and-Fire) Cell
 
-This cell (the "leaky integrator") models dynamics over the voltage `v` 
-and threshold shift `thrTheta` (a homeostatic variable). Note that `thr` 
-is used as a baseline level for the membrane potential threshold while 
-`thrTheta`  is treated as a form of short-term plasticity (full 
+This cell (the "leaky integrator") models dynamics over the voltage `v`
+and threshold shift `thrTheta` (a homeostatic variable). Note that `thr`
+is used as a baseline level for the membrane potential threshold while
+`thrTheta`  is treated as a form of short-term plasticity (full
 threshold is: `thr + thrTheta(t)`).
 
 ```{eval-rst}
@@ -147,7 +147,7 @@ threshold is: `thr + thrTheta(t)`).
 
 ### The Quadratic LIF (Leaky Integrate-and-Fire) Cell
 
-This cell (the quadratic "leaky integrator") models dynamics over the voltage 
+This cell (the quadratic "leaky integrator") models dynamics over the voltage
 `v` and threshold shift `thrTheta` (a homeostatic variable). Note that
 `thr` is used as a baseline level for the membrane potential threshold while
 `thrTheta`  is treated as a form of short-term plasticity (full threshold
@@ -168,7 +168,7 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
 
 ### The FitzHugh–Nagumo Cell
 
-This cell models dynamics over voltage `v` and a recover variable `w` (where `w` 
+This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
 governs the behavior of the action potential of a spiking neuronal cell). In
 effect, the FitzHugh-Nagumo model is a set of two coupled differential equations
 that simplify the four differential equation Hodgkin-Huxley (squid axon) model.
@@ -176,6 +176,28 @@ A voltage `v_thr` can be used to extract binary spike pulses.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.FitzhughNagumoCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: verify_connections
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### The Izhikevich Cell
+
+This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
+governs the behavior of the action potential of a spiking neuronal cell). In
+effect, the Izhikevich model is a set of two coupled differential equations
+that simplify the more complex dynamics of the Hodgkin-Huxley model. Note that
+this Izhikevich model can be configured to model particular classes of neurons,
+including regular spiking (RS), intrinsically bursting (IB), chattering (CH),
+fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.IzhikevichCell
   :noindex:
 
   .. automethod:: advance_state
