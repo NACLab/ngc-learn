@@ -55,9 +55,31 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     """
 
     Args: 
+        dt: integration time constant
+
+        j: electrical current
+
+        v: membrane potential / voltage
+
+        w: recovery variable value(s)
+
+        v_thr: voltage/membrane threshold (to obtain action potentials in terms
+            of binary spikes)
+
+        tau_m: membrane time constant
+
+        tau_w: recover variable time constant (Default: 12.5 ms)
+
+        a: dimensionless recovery variable shift factor "alpha" (Default: 0.7)
+
+        b: dimensionless recovery variable scale factor "beta" (Default: 0.8)
+
+        g: power-term divisor 'gamma' (Default: 3.)
+
+        integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
 
     Returns: 
-        
+        updated voltage, updated recovery, spikes        
     """
     if integType == 1:
         _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
