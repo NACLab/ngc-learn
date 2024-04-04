@@ -59,31 +59,6 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     s = (_v > v_thr).astype(jnp.float32)
     return _v, _w, s
 
-'''
-#@partial(jit, static_argnums=[5,6,7,8,9])
-@jit
-def run_cell_euler(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
-    _v, _w = step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
-    ## produce spikes
-    s = (_v > v_thr).astype(jnp.float32)
-    return _v, _w, s
-
-# @jit
-# def run_cell_midpoint(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
-#     _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
-#     ## produce spikes
-#     s = (_v > v_thr).astype(jnp.float32)
-#     return _v, _w, s
-
-#@partial(jit, static_argnums=[5,6,7,8,9])
-@jit
-def run_cell_midpoint(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3.):
-    _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
-    ## produce spikes
-    s = (_v > v_thr).astype(jnp.float32)
-    return _v, _w, s
-'''
-
 class FitzhughNagumoCell(Component):
     """
     The Fitzhugh-Nagumo neuronal cell model; a two-variable simplification
