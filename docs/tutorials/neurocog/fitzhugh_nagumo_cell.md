@@ -117,6 +117,19 @@ The initial conditions for the voltage (i.e., `v0`) and the recovery (i.e., `w0`
 have been set to particular interesting values above for the demonstration
 purposes of this tutorial but, by default, are `0` in the `F-N` cell component.
 
+Formally, the core dynamics of the `F-N` can be written out as follows:
+
+$$
+\tau_m \frac{\partial \mathbf{v}_t}{\partial t} &= -\frac{1}{g}(\mathbf{v}_t)^3 + \mathbf{v}_t - \mathbf{w}_t + R \mathbf{j}_t \\
+\tau_w \frac{\partial \mathbf{w}_t}{\partial t} &= \mathbf{v}_t + a - b\mathbf{w}_t
+$$
+
+where $a$ and $b$ are factors that drive the recovery variable's dynamics
+(shift and scaling, respectively), $R$ is the membrane resistance, $\tau_m$ is the
+membrane time constant, and $\tau_w$ is the recovery time constant ($g$ is a
+dividing constant meant to dampen the effects of the cubic term, but is generally
+set to $g = 1$ to adhere to [1] and [2])
+
 
 ### Simulating a FitzHugh–Nagumo Neuronal Cell
 
