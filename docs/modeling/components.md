@@ -1,25 +1,32 @@
-# The Nodes-and-Cables System: The Component Building Block
+# The Nodes-and-Cables System
 
-The "component" is a core building block of the simulation construct that
-ngc-learn and ngclib refer to as the controller (in effect, a controller, a
-set of components embedded within it, and commands that drive the controller's
-simulation process effectively make up ngc-learn's "nodes-and-cables system").
+In ngc-learn, a simulation of any biomimetic model is conducted, under the hood,
+through what is known as the "nodes-and-cables system" (which is what together
+ngc-learn and ngcsimlib make up). In effect, this system
+can generically be decomposed into a controller, a set of components that are
+embedded to it, and a set of a commands that are pinned to drive and coordinate
+the computations underlying the controller's executed simulation.
 A controller, in short, maintains and does the bookkeeping for a set of
 related components that compose the underlying simulation graph
 (or operator graph) that represents a biomimetic
-system in ngc-learn. Ultimately, when you create and connect components together,
-you do so by placing them into a controller which will perform the calculations
-in a pre-specified order -- this is what ngc-learn and ngclib use under the hood
+system in ngc-learn. The "component" itself is a critical building block, i.e.,
+ranging from simple mathematical operations to groups of neuronal cells, and
+often represents the atomic biophysical building block we are interested in
+using to construct more complex dynamical systems.
+Ultimately, when you create and connect components together, you do so by
+placing them into a controller which will perform the calculations
+in a pre-specified order (further coordinated and executed with "commands") --
+this is what ngc-learn and ngcsimlib use under the hood
 to integrate the differential equations or recurrence relations that typically
-describe a computational neuronal model. The final result: you can think of a
-biomimetic model as a system of components that will be simulated across
+describe a computational neuronal model in research. The final result:
+you can think of a biomimetic model as a system of components that will be simulated across
 time and all you need to do is tell the controller what components you want and
 how they interact with one another.
 
 ## Biophysical Components
 
 Concretely, in ngc-learn, you will deal with (or create) biophysical elements
-that subclass the component class in ngclib. ngc-learn offers, at its base, a
+that subclass the component class in ngcsimlib. ngc-learn offers, at its base, a
 set of fundamental biophysical components from a variety of categories -- these
 include:
 1. <b>[Neurons](../modeling/neurons.md)</b>: the neuronal cell is a foundational component allowing you to build
