@@ -25,13 +25,13 @@ def _dfz(z, j, j_td, leak_gamma):
     return dz_dt
 
 @partial(jit, static_argnums=[4,5,6])
-def step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of Euler/RK-1
+def _step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of Euler/RK-1
     dz_dt = _dfz(z, j, j_td, leak_gamma)
     _z = z * beta + dz_dt * (1./tau_m) * dt
     return _z
 
 @partial(jit, static_argnums=[4,5,6])
-def step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of RK-2
+def _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of RK-2
     ## take initial Euler step
     _z = step_euler(dt/2., j, j_td, z, tau_m, leak_gamma, beta)
     ## take 2nd Euler step on projected value (midpoint step)
@@ -65,9 +65,9 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0):
         New value of membrane/state for next time step
     """
     if integType == 1:
-        _z = step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta)
+        _z = _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta)
     else:
-        _z = step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta)
+        _z = _step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta)
     return _z
 
 @jit
