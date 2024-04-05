@@ -2,6 +2,7 @@ from ngcsimlib.component import Component
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.model_utils import initialize_params
+from ngclearn.utils.optim import SGD, Adam
 import time
 
 @partial(jit, static_argnums=[3])
@@ -55,27 +56,23 @@ def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=
         dW = dW - W * w_decay # jnp.matmul((1. - pre).T, (1. - post)) * w_decay
     return dW * signVal
 
-@partial(jit, static_argnums=[2,3,4])
-def adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
+@partial(jit, static_argnums=[1,2])
+def enforce_constraints(W, w_bound, is_nonnegative=True):
     """
-    Evolves/changes the synpatic value matrix underlying this synaptic cable,
-    given a computed synaptic update.
+    Enforces constraints that the (synaptic) efficacies/values within matrix
+    `W` must adhere to.
 
     Args:
-        dW: synaptic adjustment matrix to be applied/used
-
         W: synaptic weight values (at time t)
 
         w_bound: maximum value to enforce over newly computed efficacies
-
-        eta: global learning rate to apply to the Hebbian update
 
         is_nonnegative: ensure updated value matrix is strictly non-negative
 
     Returns:
         the newly evolved synaptic weight value matrix
     """
-    _W = W + dW * eta
+    _W = W
     if w_bound > 0.:
         if is_nonnegative == True:
             _W = jnp.clip(_W, 0., w_bound)
@@ -87,32 +84,6 @@ def adjust_synapses(dW, W, w_bound, eta, is_nonnegative=True):
 def apply_decay(dW, pre_s, post_s, w_decay):
     _dW = dW - jnp.matmul((1. - pre_s).T, (1. - post_s)) * w_decay
     return _dW
-
-@partial(jit, static_argnums=[4,5])
-def evolve(pre, post, W, w_bound, eta, is_nonnegative=True):
-    """
-    Evolves/changes the synpatic value matrix underlying this synaptic cable,
-    given relevant statistics.
-
-    Args:
-        pre: pre-synaptic statistic to drive Hebbian update
-
-        post: post-synaptic statistic to drive Hebbian update
-
-        W: synaptic weight values (at time t)
-
-        w_bound: maximum value to enforce over newly computed efficacies
-
-        eta: global learning rate to apply to the Hebbian update
-
-        is_nonnegative: ensure updated value matrix is strictly non-negative
-
-    Returns:
-        the newly evolved synaptic weight value matrix
-    """
-    dW = calc_update(pre, post, W, w_bound, is_nonnegative)
-    _W = adjust_synapses(dW, W, w_bound, eta, is_nonnegative)
-    return _W
 
 @jit
 def compute_layer(inp, weight):
@@ -161,6 +132,8 @@ class HebbianSynapse(Component):
             it is applied to synapses; this is useful if gradient descent schemes
             are to be applied (as Hebbian rules typically yield adjustments for
             ascent)
+
+        optim_type:
 
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
@@ -260,8 +233,9 @@ class HebbianSynapse(Component):
 
     # Define Functions
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3), w_bound=1.,
-                 elg_tau=0., is_nonnegative=False, w_decay=0., signVal=1., key=None,
-                 useVerboseDict=False, directory=None, **kwargs):
+                 elg_tau=0., is_nonnegative=False, w_decay=0., signVal=1.,
+                 optim_type="sgd", key=None, useVerboseDict=False,
+                 directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -269,7 +243,7 @@ class HebbianSynapse(Component):
         if self.key is None:
             self.key = random.PRNGKey(time.time_ns())
 
-        ##params
+        ## synaptic plasticity properties and characteristics
         self.shape = shape
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
@@ -279,6 +253,13 @@ class HebbianSynapse(Component):
         self.signVal = signVal
         self.elg_tau = elg_tau
         self.Eg = None
+
+        ## optimization / adjustment properties (given learning dynamics above)
+        self.opt = None
+        if optim_type == "adam":
+            self.opt = Adam(learning_rate=self.eta)
+        else: ## default is SGD
+            self.opt = SGD(learning_rate=self.eta)
 
         if directory is None:
             self.key, subkey = random.split(self.key)
@@ -303,8 +284,13 @@ class HebbianSynapse(Component):
                              signVal=self.signVal)
             self.Eg = update_eligibility(dt, self.Eg, dW, self.elg_tau)
             if trigger > 0.:
-                self.weights = adjust_synapses(self.Eg, self.weights, self.w_bounds, self.eta,
-                                               is_nonnegative=self.is_nonnegative)
+                ## conduct a step of optimization - get newly evolved synaptic weight value matrix
+                theta = [self.weights]
+                self.opt.update(theta, [self.Eg])
+                self.weights = theta[0]
+                ## ensure synaptic efficacies adhere to constraints
+                self.weights = enforce_constraints(self.weights, self.w_bounds,
+                                                   is_nonnegative=self.is_nonnegative)
         else:
             dW = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
@@ -312,8 +298,13 @@ class HebbianSynapse(Component):
             if self.w_decay > 0.:
                 dW = apply_decay(dW, self.presynSpike, self.postsynSpike, self.w_decay)
             self.Eg = dW
-            self.weights = adjust_synapses(dW, self.weights, self.w_bounds, self.eta,
-                                           is_nonnegative=self.is_nonnegative)
+            ## conduct a step of optimization - get newly evolved synaptic weight value matrix
+            theta = [self.weights]
+            self.opt.update(theta, [dW])
+            self.weights = theta[0]
+            ## ensure synaptic efficacies adhere to constraints
+            self.weights = enforce_constraints(self.weights, self.w_bounds,
+                                               is_nonnegative=self.is_nonnegative)
 
     def reset(self, **kwargs):
         self.inputCompartment = None

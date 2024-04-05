@@ -59,6 +59,57 @@ def calc_acc(mu, y): ## calculates accuracy
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
+def measure_CatNLL(p, x, epsilon=0.0000001): #1e-7):
+    """
+    Measures the negative Categorical log likelihood
+
+    Args:
+        p: predicted probabilities; (N x C matrix, where C is number of categories)
+
+        x: true one-hot encoded targets; (N x C matrix, where C is number of categories)
+
+    Returns:
+        an (N x 1) column vector, where each row is the Cat.NLL(x_pred, x_true)
+        for that row's datapoint
+    """
+    p_ = jnp.clip(p, epsilon, 1.0 - epsilon)
+    loss = -(x * jnp.log(p_))
+    nll = jnp.sum(loss, axis=1, keepdims=True) #/(y_true.shape[0] * 1.0)
+    return nll #tf.reduce_mean(nll)
+
+def measure_MSE(mu, x):
+    """
+    Measures mean squared error (MSE), or the negative Gaussian log likelihood
+    with variance of 1.0.
+
+    Args:
+        mu: predicted values (mean); (N x D matrix)
+
+        x: target values (data); (N x D matrix)
+
+    Returns:
+        an (N x 1) column vector, where each row is the MSE(x_pred, x_true) for that row's datapoint
+    """
+    diff = mu - x
+    se = jnp.square(diff) #diff * diff # squared error
+    # NLL = -( -se )
+    return jnp.sum(se, axis=1, keepdims=True) # tf.math.reduce_mean(se)
+
+def measure_BCE(p, x, offset=1e-7): #1e-10
+    """
+    Calculates the negative Bernoulli log likelihood or binary cross entropy (BCE).
+
+    Args:
+        p: predicted probabilities of shape; (N x D matrix)
+
+        x: target binary values (data) of shape; (N x D matrix)
+
+    Returns:
+        an (N x 1) column vector, where each row is the BCE(p, x) for that row's datapoint
+    """
+    p_ = jnp.clip(p, offset, 1 - offset)
+    return -jnp.sum(x * jnp.log(p_) + (1.0 - x) * jnp.log(1.0 - p_),axis=1, keepdims=True)
+
 def create_function(fun_name):
     """
     Activation function creation routine.

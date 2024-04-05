@@ -27,12 +27,12 @@ dkey, *subkeys = random.split(dkey, 6)
 ## create simple dynamical system: a --> w_ab --> b
 model = Controller()
 a = model.add_component("rate", name="a", n_units=1, tau_m=0.,
-                        act_fx="identity", leakRate=0., key=subkeys[0])
+                        act_fx="identity", key=subkeys[0])
 b = model.add_component("rate", name="b", n_units=1, tau_m=0.,
-                        act_fx="identity", leakRate=0., key=subkeys[1])
+                        act_fx="identity", key=subkeys[1])
 Wab = model.add_component("hebbian", name="Wab", shape=(1, 1),
-                          eta=1., wInit=("constant", 1., None), w_bound=0.,
-                          key=subkeys[3])
+                          eta=1., signVal=-1., wInit=("constant", 1., None),
+                          w_bound=0., key=subkeys[3])
 ## wire a to w_ab and wire w_ab to b
 model.connect(a.name, a.outputCompartmentName(), Wab.name, Wab.inputCompartmentName())
 model.connect(Wab.name, Wab.outputCompartmentName(), b.name, b.inputCompartmentName())
