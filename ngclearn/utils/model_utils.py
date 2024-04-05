@@ -3,6 +3,27 @@ from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 import os, sys
 from functools import partial
 
+def get_integrator_code(integrationType):
+    """
+    Convenience function for mapping integrator type string to ngc-learn's
+    internal integer code value.
+
+    Args:
+        integrationType: string indicating integrator type
+            (`euler` or `rk1`, `rk2`)
+
+    Returns:
+        integator type integer code
+    """
+    intgFlag = 0 ## Default is Euler (RK1)
+    if integrationType == "midpoint" or integrationType == "rk2":
+        intgFlag = 1
+    elif integrationType == "rk3": ## Runge-Kutte 3rd order code
+        intgFlag = 2
+    elif integrationType == "rk4": ## Runge-Kutte 4rd order code
+        intgFlag = 3
+    return intgFlag
+
 def pull_equation(component):
     """
     Extracts the dynamics string of this component.
@@ -19,7 +40,6 @@ def pull_equation(component):
             if attr == "equation":
                 eqn = "{}".format(attr)
     return eqn
-
 
 @jit
 def calc_acc(mu, y): ## calculates accuracy

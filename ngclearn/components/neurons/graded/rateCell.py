@@ -1,7 +1,8 @@
 from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
-from ngclearn.utils.model_utils import create_function, threshold_soft, threshold_cauchy
+from ngclearn.utils.model_utils import create_function, threshold_soft, \
+                                       threshold_cauchy, get_integrator_code
 import time, sys
 
 @jit
@@ -226,9 +227,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         ## integration properties
         self.integrationType = integration_type
-        self.intgFlag = 0
-        if self.integrationType == "midpoint" or self.integrationType == "rk2":
-            self.intgFlag = 1
+        self.intgFlag = get_integrator_code(self.integrationType)
 
         ##Layer Size Setup
         self.n_units = n_units

@@ -2,6 +2,7 @@ from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time
+from ngclearn.utils.model_utils import get_integrator_code
 
 @jit
 def update_times(t, s, tols):
@@ -222,9 +223,7 @@ class FitzhughNagumoCell(Component):
 
         ## Integration properties
         self.integrationType = integration_type
-        self.intgFlag = 0
-        if self.integrationType == "midpoint" or self.integrationType == "rk2":
-            self.intgFlag = 1
+        self.intgFlag = get_integrator_code(self.integrationType)
 
         ## Cell properties
         self.tau_m = tau_m
