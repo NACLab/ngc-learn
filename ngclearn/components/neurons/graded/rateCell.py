@@ -33,7 +33,7 @@ def _step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step
 @partial(jit, static_argnums=[4,5,6])
 def _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of RK-2
     ## take initial Euler step
-    _z = step_euler(dt/2., j, j_td, z, tau_m, leak_gamma, beta)
+    _z = _step_euler(dt/2., j, j_td, z, tau_m, leak_gamma, beta)
     ## take 2nd Euler step on projected value (midpoint step)
     dz_dt = _dfz(_z, j, j_td, leak_gamma)
     _z2 = z * beta + dz_dt * (1./tau_m) * dt

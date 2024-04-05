@@ -34,7 +34,7 @@ def _dfw(j, v, w, b):
     return dw_dt
 
 @jit
-def step_euler(dt, j, v, w, b, tau_m, tau_w): ## perform step of Euler/RK-1
+def _step_euler(dt, j, v, w, b, tau_m, tau_w): ## perform step of Euler/RK-1
     dv_dt = _dfv(j, v, w, b)
     dw_dt = _dfw(j, v, w, b)
     ## run step of (forward) Euler integration
@@ -43,8 +43,8 @@ def step_euler(dt, j, v, w, b, tau_m, tau_w): ## perform step of Euler/RK-1
     return _v, _w
 
 @jit
-def step_midpoint(dt, j, v, w, b, tau_m, tau_w): ## perform step of RK-2
-    _v, _w = step_euler(dt/2., j, v, w, b, tau_m, tau_w)
+def _step_midpoint(dt, j, v, w, b, tau_m, tau_w): ## perform step of RK-2
+    _v, _w = _step_euler(dt/2., j, v, w, b, tau_m, tau_w)
     dv_dt = _dfv(j, _v, _w, b)
     dw_dt = _dfw(j, _v, _w, b)
     ## run a 2nd step of (forward) Euler integration
@@ -98,9 +98,9 @@ def run_cell(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
     ## for non-spikes, evolve according to dynamics
     _j = j * R_m
     if integType == 1:
-        _v, _w = step_midpoint(dt, _j, v, w, b, tau_m, tau_w)
+        _v, _w = _step_midpoint(dt, _j, v, w, b, tau_m, tau_w)
     else:
-        _v, _w = step_euler(dt, _j, v, w, b, tau_m, tau_w)
+        _v, _w = _step_euler(dt, _j, v, w, b, tau_m, tau_w)
 
     ## for spikes, snap to particular states
     _v = _v * (1. - _s) + _s * c

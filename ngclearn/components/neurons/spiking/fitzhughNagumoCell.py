@@ -32,7 +32,7 @@ def _dfw(j, v, w, a, b, g):
     return dw_dt
 
 @jit
-def step_euler(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of Euler/RK-1
+def _step_euler(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of Euler/RK-1
     dv_dt = _dfv(j, v, w, a, b, g)
     dw_dt = _dfw(j, v, w, a, b, g)
     ## run step of (forward) Euler integration
@@ -41,8 +41,8 @@ def step_euler(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of Euler/RK-
     return _v, _w
 
 @jit
-def step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of RK-2
-    _v, _w = step_euler(dt/2., j, v, w, a, b, g, tau_m, tau_w)
+def _step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of RK-2
+    _v, _w = _step_euler(dt/2., j, v, w, a, b, g, tau_m, tau_w)
     dv_dt = _dfv(j, _v, _w, a, b, g)
     dw_dt = _dfw(j, _v, _w, a, b, g)
     ## run a 2nd step of (forward) Euler integration
@@ -82,9 +82,9 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
         updated voltage, updated recovery, spikes
     """
     if integType == 1:
-        _v, _w = step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
+        _v, _w = _step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
     else: # integType == 0 (default -- Euler)
-        _v, _w = step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
+        _v, _w = _step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
     s = (_v > v_thr).astype(jnp.float32)
     return _v, _w, s
 
