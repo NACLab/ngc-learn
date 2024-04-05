@@ -19,28 +19,39 @@ def modulate(j, dfx_val):
     """
     return j * dfx_val
 
-@partial(jit, static_argnums=[3])
-def _dfz(z, j, j_td, leak_gamma):
-    dz_dt = (-z * leak_gamma + (j + j_td))
+@partial(jit, static_argnums=[3, 4])
+def _dfz(z, j, j_td, leak_gamma, priorType=None): ## dynamics differential equation
+    z_leak = z # * 2 ## Default: assume Gaussian
+    if priorType != None:
+        if priorType == "laplacian": ## Laplace dist
+            z_leak = jnp.sign(z) ## d/dx of Laplace is signum
+        elif priorType == "cauchy":  ## Cauchy dist: x ~ (1.0 + tf.math.square(z))
+            z_leak = (z * 2)/(1. + jnp.square(z))
+        elif priorType == "exp":  ## Exp dist: x ~ -exp(-x^2)
+            z_leak = jnp.exp(-jnp.square(z)) * z * 2
+    dz_dt = (-z_leak * leak_gamma + (j + j_td))
     return dz_dt
 
-@partial(jit, static_argnums=[4,5,6])
-def _step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of Euler/RK-1
-    dz_dt = _dfz(z, j, j_td, leak_gamma)
+@partial(jit, static_argnums=[4,5,6,7])
+def _step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None):
+    ## perform step of Euler/RK-1
+    dz_dt = _dfz(z, j, j_td, leak_gamma, priorType)
     _z = z * beta + dz_dt * (1./tau_m) * dt
     return _z
 
-@partial(jit, static_argnums=[4,5,6])
-def _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of RK-2
-    ## take initial Euler step
-    _z = _step_euler(dt/2., j, j_td, z, tau_m, leak_gamma, beta)
-    ## take 2nd Euler step on projected value (midpoint step)
-    dz_dt = _dfz(_z, j, j_td, leak_gamma)
+@partial(jit, static_argnums=[4,5,6,7])
+def _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None):
+    ## perform step of RK-2
+    ### take initial Euler step
+    _z = _step_euler(dt/2., j, j_td, z, tau_m, leak_gamma, beta, priorType)
+    ### take 2nd Euler step on projected value (midpoint step)
+    dz_dt = _dfz(_z, j, j_td, leak_gamma, priorType)
     _z2 = z * beta + dz_dt * (1./tau_m) * dt
     return _z2
 
-@partial(jit, static_argnums=[4,5,6,7])
-def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0):
+@partial(jit, static_argnums=[4,5,6,7,8])
+def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
+             priorType=None):
     """
     Runs leaky rate-coded state dynamics one step in time.
 
@@ -61,13 +72,15 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0):
 
         integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
 
+        priorType: scale-shift prior distribution to impose over neural dynamics
+
     Returns:
         New value of membrane/state for next time step
     """
     if integType == 1:
-        _z = _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta)
+        _z = _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
     else:
-        _z = _step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta)
+        _z = _step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
     return _z
 
 @jit
@@ -97,6 +110,17 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         tau_m: membrane/state time constant (milliseconds)
 
         leakRate: membrane/state leak value (Default: 0.)
+
+        prior: string name indicating type of centered scale-shift distribution
+            to impose over neuronal dynamics (applied to each neuron or
+            dimension within this component); note that the argument `leakRate`
+            controls the scale (influence/weighting) that this distribution
+            has on dynamics (Default: "gaussian"); for example, if `leakRate > 0`
+            and prior is "laplacian", then a weighted laplacian distribution
+            will be injected into this cell's dynamics ODE
+
+            :Note: supported scale-shift distributions include "laplacian",
+                "cauchy", "exp", and "gaussian"
 
         act_fx: string name of activation function/nonlinearity to use
 
@@ -181,8 +205,9 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.compartments[self.outputCompartmentName()] = out
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, leakRate=0., act_fx="identity",
-                 integration_type="euler", key=None, useVerboseDict=False, **kwargs):
+    def __init__(self, name, n_units, tau_m, leakRate=0., prior="gaussian",
+                 act_fx="identity", integration_type="euler", key=None,
+                 useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -193,6 +218,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
         self.leakRate = leakRate ## degree to which rate neurons leak
+        self.prior = prior
 
         ## Integration properties
         self.integrationType = integration_type
@@ -222,7 +248,8 @@ class RateCell(Component): ## Rate-coded/real-valued cell
             self.rateActivity = run_cell(dt, self.current, self.pressure,
                                          self.rateActivity, self.tau_m,
                                          leak_gamma=self.leakRate,
-                                         integType=self.intgFlag)
+                                         integType=self.intgFlag,
+                                         priorType=self.prior)
             self.activity = self.fx(self.rateActivity)
             self.current = None
         else:
