@@ -3,6 +3,24 @@ from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 import os, sys
 from functools import partial
 
+def pull_equation(component):
+    """
+    Extracts the dynamics string of this component.
+
+    Args:
+        component: component to extract dynamics equation(s) from
+
+    Returns:
+        string containing this component's dynamics equation(s)
+    """
+    eqn = ""
+    for attr in dir(component):
+        if not callable(getattr(component, attr)) and not attr.startswith("__"):
+            if attr == "equation":
+                eqn = "{}".format(attr)
+    return eqn
+
+
 @jit
 def calc_acc(mu, y): ## calculates accuracy
     """
@@ -13,7 +31,7 @@ def calc_acc(mu, y): ## calculates accuracy
 
         y: target / ground-truth (design) matrix
 
-    Returns
+    Returns:
         scalar accuracy score
     """
     guess = jnp.argmax(mu, axis=1)
@@ -309,3 +327,39 @@ def softmax(x, tau=0.0):
     max_x = jnp.max(x, axis=1, keepdims=True)
     exp_x = jnp.exp(x - max_x)
     return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
+
+def threshold_soft(x, lmbda):
+    """
+    A soft threshold routine applied to each dimension of input
+
+    Args:
+        x: data to apply threshold function over
+
+        lmbda: scalar to control strength/influence of thresholding
+
+    Returns:
+        thresholded x
+    """
+    # soft thresholding fx - S(x) = (|x| - lmbda) *@ sign(x)
+    ## legacy ngclearn: tf.math.maximum(x - lmbda, 0.) - tf.math.maximum(-x - lmbda, 0.)
+    return jnp.maximum(x - lmbda, 0.) - jnp.maximum(-x - lmbda, 0.)
+
+def threshold_cauchy(x, lmbda):
+    """
+    A Cauchy distributional threshold routine applied to each dimension of input
+
+    Args:
+        x: data to apply threshold function over
+
+        lmbda: scalar to control strength/influence of Cauchy thresholding
+
+    Returns:
+        thresholded x
+    """
+    # threshold function based on that proposed in: https://arxiv.org/abs/2003.12507
+    inner_term = jnp.sqrt(jnp.maximum(jnp.square(x) - lmbda), 0.)
+    f = (x + inner_term) * 0.5
+    g = (x - inner_term) * 0.5
+    term1 = f * (x >= lmbda).astype(jnp.float32) ## f * (x >= lmda)
+    term2 = g * (x <= -lmbda).astype(jnp.float32) ## g * (x <= -lmda)
+    return term1 + term2

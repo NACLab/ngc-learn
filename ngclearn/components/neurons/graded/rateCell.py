@@ -1,7 +1,7 @@
 from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
-from ngclearn.utils.model_utils import create_function
+from ngclearn.utils.model_utils import create_function, threshold_soft, threshold_cauchy
 import time, sys
 
 @jit
@@ -109,15 +109,15 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         tau_m: membrane/state time constant (milliseconds)
 
-        leakRate: membrane/state leak value (Default: 0.)
-
-        prior: string name indicating type of centered scale-shift distribution
-            to impose over neuronal dynamics (applied to each neuron or
-            dimension within this component); note that the argument `leakRate`
-            controls the scale (influence/weighting) that this distribution
-            has on dynamics (Default: "gaussian"); for example, if `leakRate > 0`
-            and prior is "laplacian", then a weighted laplacian distribution
-            will be injected into this cell's dynamics ODE
+        prior: a kernel for specifying the type of centered scale-shift distribution
+           to impose over neuronal dynamics, applied to each neuron or
+           dimension within this component (Default: ("gaussian", 0)); this is
+           a tuple with 1st element containing a string name of the distribution
+           one wants to use while the second value is a `leak rate` scalar
+           that controls the influence/weighting that this distribution
+            has on the dynamics; for example, ("laplacian, 0.001") means that a
+            centered laplacian distribution scaled by `0.001` will be injected
+            into this cell's dynamics ODE each step of simulated time
 
             :Note: supported scale-shift distributions include "laplacian",
                 "cauchy", "exp", and "gaussian"
@@ -205,9 +205,9 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.compartments[self.outputCompartmentName()] = out
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, leakRate=0., prior="gaussian",
-                 act_fx="identity", integration_type="euler", key=None,
-                 useVerboseDict=False, **kwargs):
+    def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.),
+                 act_fx="identity", threshold=("none", 0.),
+                 integration_type="euler", key=None, useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -217,10 +217,14 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
-        self.leakRate = leakRate ## degree to which rate neurons leak
-        self.prior = prior
+        priorType, leakRate = prior
+        self.priorType = priorType ## type of scale-shift prior to impose over the leak
+        self.priorLeakRate = leakRate ## degree to which rate neurons leak (according to prior)
+        thresholdType, thr_lmbda = threshold
+        self.thresholdType = thresholdType ## type of thresholding function to use
+        self.thr_lmbda = thr_lmbda ## scale to drive thresholding dynamics
 
-        ## Integration properties
+        ## integration properties
         self.integrationType = integration_type
         self.intgFlag = 0
         if self.integrationType == "midpoint" or self.integrationType == "rk2":
@@ -245,11 +249,15 @@ class RateCell(Component): ## Rate-coded/real-valued cell
             ## self.current <-- "bottom-up" data-dependent signal
             dfx_val = self.dfx(self.rateActivity)
             self.current = modulate(self.current, dfx_val)
-            self.rateActivity = run_cell(dt, self.current, self.pressure,
-                                         self.rateActivity, self.tau_m,
-                                         leak_gamma=self.leakRate,
-                                         integType=self.intgFlag,
-                                         priorType=self.prior)
+            z = run_cell(dt, self.current, self.pressure, self.rateActivity,
+                         self.tau_m, leak_gamma=self.priorLeakRate,
+                         integType=self.intgFlag, priorType=self.priorType)
+            ## apply optional thresholding sub-dynamics
+            if self.thresholdType == "soft_threshold":
+                z = threshold_soft(z, self.thr_lmbda)
+            elif self.thresholdType == "cauchy_threshold":
+                z = threshold_cauchy(z, self.thr_lmbda)
+            self.rateActivity = z
             self.activity = self.fx(self.rateActivity)
             self.current = None
         else:
