@@ -328,6 +328,64 @@ def d_lrelu(x): ## deriv of fx (dampening function)
     return dx
 
 @jit
+def relu6(x):
+    """
+    The linear rectifier upper bounded at the value of 6: min(max(0, x), 6.).
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
+    return nn.relu6(x)
+
+@jit
+def d_relu6(x):
+    """
+    Derivative of the bounded leaky linear rectifier (upper bounded at 6).
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
+    # df/dx = 1 if 0<x<6 else 0
+    # I_x = (z >= a_min) *@ (z <= b_max) //create an indicator function  a = 0 b = 6
+    Ix1 = (x > 0.).astype(jnp.float32) #tf.cast(tf.math.greater_equal(x, 0.0),dtype=tf.float32)
+    Ix2 = (x <= 6.).astype(jnp.float32) #tf.cast(tf.math.less_equal(x, 6.0),dtype=tf.float32)
+    Ix = Ix1 * Ix2
+    return Ix
+
+@jit
+def softplus(x):
+    """
+    The softplus elementwise function.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
+    return nn.softplus(x)
+
+@jit
+def d_softplus(x):
+    """
+    Derivative of the softplus function.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
+    ## d/dx of softplus = logistic sigmoid
+    return nn.sigmoid(x)
+
+@jit
 def softmax(x, tau=0.0):
     """
     Softmax function with overflow control built in directly. Contains optional
