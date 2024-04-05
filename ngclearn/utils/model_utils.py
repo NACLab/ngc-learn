@@ -136,18 +136,22 @@ def normalize_matrix(M, wnorm, ord=1, axis=0):
 
         wnorm: target norm for each
 
-        ord: order of norm to use in normalization
+        ord: order of norm to use in normalization (Default: 1);
+            note that `ord=1` results in the L1-norm, `ord=2` results in the L2-norm
 
         axis: 0 (apply to column vectors), 1 (apply to row vectors)
 
     Returns:
         a normalized value matrix
     """
-    wAbsSum = jnp.sum(jnp.abs(M), axis=axis, keepdims=True)
-    m = (wAbsSum == 0.).astype(dtype=jnp.float32)
-    wAbsSum = wAbsSum * (1. - m) + m
+    if order == 2: ## denominator is L2 norm
+        wOrdSum = jnp.square(jnp.sum(jnp.square(M), axis=axis, keepdims=True))
+    else: ## denominator is L1 norm
+        wOrdSum = jnp.sum(jnp.abs(M), axis=axis, keepdims=True)
+    m = (wOrdSum == 0.).astype(dtype=jnp.float32)
+    wOrdSum = wOrdSum * (1. - m) + m
     #wAbsSum[wAbsSum == 0.] = 1.
-    _M = M * (wnorm/wAbsSum)
+    _M = M * (wnorm/wOrdSum)
     return _M
 
 @jit
