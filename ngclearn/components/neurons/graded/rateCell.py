@@ -19,8 +19,28 @@ def modulate(j, dfx_val):
     """
     return j * dfx_val
 
+@partial(jit, static_argnums=[3])
+def _dfz(z, j, j_td, leak_gamma):
+    dz_dt = (-z * leak_gamma + (j + j_td))
+    return dz_dt
+
 @partial(jit, static_argnums=[4,5,6])
-def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):
+def step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of Euler/RK-1
+    dz_dt = _dfz(z, j, j_td, leak_gamma)
+    _z = z * beta + dz_dt * (1./tau_m) * dt
+    return _z
+
+@partial(jit, static_argnums=[4,5,6])
+def step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):  ## perform step of RK-2
+    ## take initial Euler step
+    _z = step_euler(dt/2., j, j_td, z, tau_m, leak_gamma, beta)
+    ## take 2nd Euler step on projected value (midpoint step)
+    dz_dt = _dfz(_z, j, j_td, leak_gamma)
+    _z2 = z * beta + dz_dt * (1./tau_m) * dt
+    return _z2
+
+@partial(jit, static_argnums=[4,5,6,7])
+def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0):
     """
     Runs leaky rate-coded state dynamics one step in time.
 
@@ -39,11 +59,15 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1.):
 
         beta: dampening coefficient (Default: 1.)
 
+        integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
+
     Returns:
         New value of membrane/state for next time step
     """
-    dz_dt = (-z * leak_gamma + (j + j_td))
-    _z = z * beta + dz_dt * (dt/tau_m)
+    if integType == 1:
+        _z = step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta)
+    else:
+        _z = step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta)
     return _z
 
 @jit
@@ -75,6 +99,14 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         leakRate: membrane/state leak value (Default: 0.)
 
         act_fx: string name of activation function/nonlinearity to use
+
+        integration_type: type of integration to use for this cell's dynamics;
+            current supported forms include "euler" (Euler/RK-1 integration)
+            and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
+
+            :Note: setting the integration type to the midpoint method will
+                increase the accuray of the estimate of the cell's evolution
+                at an increase in computational cost (and simulation time)
 
         key: PRNG Key to control determinism of any underlying random values
             associated with this cell
@@ -150,7 +182,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, leakRate=0., act_fx="identity",
-                 key=None, useVerboseDict=False, directory=None, **kwargs):
+                 integration_type="euler", key=None, useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -161,6 +193,12 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
         self.leakRate = leakRate ## degree to which rate neurons leak
+
+        ## Integration properties
+        self.integrationType = integration_type
+        self.intgFlag = 0
+        if self.integrationType == "midpoint" or self.integrationType == "rk2":
+            self.intgFlag = 1
 
         ##Layer Size Setup
         self.n_units = n_units
@@ -182,7 +220,9 @@ class RateCell(Component): ## Rate-coded/real-valued cell
             dfx_val = self.dfx(self.rateActivity)
             self.current = modulate(self.current, dfx_val)
             self.rateActivity = run_cell(dt, self.current, self.pressure,
-                                         self.rateActivity, self.tau_m, leak_gamma=self.leakRate)
+                                         self.rateActivity, self.tau_m,
+                                         leak_gamma=self.leakRate,
+                                         integType=self.intgFlag)
             self.activity = self.fx(self.rateActivity)
             self.current = None
         else:
