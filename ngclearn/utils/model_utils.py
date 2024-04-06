@@ -3,27 +3,6 @@ from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 import os, sys
 from functools import partial
 
-def get_integrator_code(integrationType):
-    """
-    Convenience function for mapping integrator type string to ngc-learn's
-    internal integer code value.
-
-    Args:
-        integrationType: string indicating integrator type
-            (`euler` or `rk1`, `rk2`)
-
-    Returns:
-        integator type integer code
-    """
-    intgFlag = 0 ## Default is Euler (RK1)
-    if integrationType == "midpoint" or integrationType == "rk2":
-        intgFlag = 1
-    elif integrationType == "rk3": ## Runge-Kutte 3rd order code
-        intgFlag = 2
-    elif integrationType == "rk4": ## Runge-Kutte 4rd order code
-        intgFlag = 3
-    return intgFlag
-
 def pull_equation(component):
     """
     Extracts the dynamics string of this component.
@@ -42,7 +21,7 @@ def pull_equation(component):
     return eqn
 
 @jit
-def calc_acc(mu, y): ## calculates accuracy
+def measure_ACC(mu, y): ## measures/calculates accuracy
     """
     Calculates the accuracy (ACC) given a matrix of predictions and matrix of targets.
 
@@ -59,7 +38,8 @@ def calc_acc(mu, y): ## calculates accuracy
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
-def measure_CatNLL(p, x, epsilon=0.0000001): #1e-7):
+@partial(jit, static_argnums=[3])
+def measure_CatNLL(p, x, epsilon=0.0000001, preserve_batch=False): #1e-7):
     """
     Measures the negative Categorical log likelihood
 
@@ -68,6 +48,11 @@ def measure_CatNLL(p, x, epsilon=0.0000001): #1e-7):
 
         x: true one-hot encoded targets; (N x C matrix, where C is number of categories)
 
+        epsilon: factor to control for numerical stability (Default: 1e-7)
+
+        preserve_batch: if True, will return one score per sample in batch 
+            (Default: False), otherwise, returns scalar mean score
+
     Returns:
         an (N x 1) column vector, where each row is the Cat.NLL(x_pred, x_true)
         for that row's datapoint
@@ -75,8 +60,11 @@ def measure_CatNLL(p, x, epsilon=0.0000001): #1e-7):
     p_ = jnp.clip(p, epsilon, 1.0 - epsilon)
     loss = -(x * jnp.log(p_))
     nll = jnp.sum(loss, axis=1, keepdims=True) #/(y_true.shape[0] * 1.0)
+    if preserve_batch == False:
+        nll = jnp.mean(nll)
     return nll #tf.reduce_mean(nll)
 
+@jit
 def measure_MSE(mu, x):
     """
     Measures mean squared error (MSE), or the negative Gaussian log likelihood
@@ -95,6 +83,7 @@ def measure_MSE(mu, x):
     # NLL = -( -se )
     return jnp.sum(se, axis=1, keepdims=True) # tf.math.reduce_mean(se)
 
+@jit
 def measure_BCE(p, x, offset=1e-7): #1e-10
     """
     Calculates the negative Bernoulli log likelihood or binary cross entropy (BCE).
@@ -126,6 +115,9 @@ def create_function(fun_name):
     if fun_name == "tanh":
         fx = tanh
         dfx = d_tanh
+    elif fun_name == "sigmoid":
+        fx = sigmoid
+        dfx = d_sigmoid
     elif fun_name == "relu":
         fx = relu
         dfx = d_relu
@@ -445,6 +437,15 @@ def d_softplus(x):
     """
     ## d/dx of softplus = logistic sigmoid
     return nn.sigmoid(x)
+
+@jit
+def sigmoid(x):
+    return nn.sigmoid(x)
+
+@jit 
+def d_sigmoid(x):
+    sigm_x = nn.sigmoid(x) ## pre-compute once
+    return sigm_x * (1. - sigm_x)
 
 @jit
 def softmax(x, tau=0.0):

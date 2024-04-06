@@ -2,9 +2,10 @@ from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
-                                       threshold_cauchy, get_integrator_code
+                                       threshold_cauchy
 import time, sys
-from ngclearn.utils.diffeq.ode_utils import step_euler, step_rk2
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
+                                            step_euler, step_rk2
 
 ## rewritten code
 @partial(jit, static_argnums=[3, 4, 5])
@@ -68,11 +69,9 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
         New value of membrane/state for next time step
     """
     if integType == 1:
-        #_z = _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
         params = (j, j_td, tau_m, leak_gamma, priorType)
         _z = step_rk2(z, params, _dfz, dt)
     else:
-        #_z = _step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
         params = (j, j_td, tau_m, leak_gamma, priorType)
         _z = step_euler(z, params, _dfz, dt)
     return _z
@@ -235,7 +234,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
     def advance_state(self, t, dt, **kwargs):
         if self.tau_m > 0.:
-            ### run one step of Euler integration over neuronal dynamics
+            ### run a step of integration over neuronal dynamics
             ## Notes:
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal

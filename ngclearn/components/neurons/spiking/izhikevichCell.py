@@ -2,7 +2,8 @@ from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 import time, sys
-from ngclearn.utils.model_utils import get_integrator_code
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
+                                            step_euler, step_rk2
 
 @jit
 def update_times(t, s, tols):
