@@ -4,35 +4,7 @@ from functools import partial
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy, get_integrator_code
 import time, sys
-from ngclearn.utils.diffeq.ode_utils import step_euler
-
-@jit
-def modulate(j, dfx_val):
-    """
-    Apply a signal modulator to j (typically of the form of a derivative/dampening function)
-
-    Args:
-        j: current/stimulus value to modulate
-
-        dfx_val: modulator signal
-
-    Returns:
-        modulated j value
-    """
-    return j * dfx_val
-
-# @partial(jit, static_argnums=[3, 4])
-# def _dfz(z, j, j_td, leak_gamma, priorType=None): ## dynamics differential equation
-#     z_leak = z # * 2 ## Default: assume Gaussian
-#     if priorType != None:
-#         if priorType == "laplacian": ## Laplace dist
-#             z_leak = jnp.sign(z) ## d/dx of Laplace is signum
-#         elif priorType == "cauchy":  ## Cauchy dist: x ~ (1.0 + tf.math.square(z))
-#             z_leak = (z * 2)/(1. + jnp.square(z))
-#         elif priorType == "exp":  ## Exp dist: x ~ -exp(-x^2)
-#             z_leak = jnp.exp(-jnp.square(z)) * z * 2
-#     dz_dt = (-z_leak * leak_gamma + (j + j_td))
-#     return dz_dt
+from ngclearn.utils.diffeq.ode_utils import step_euler, step_rk2
 
 ## rewritten code
 @partial(jit, static_argnums=[3, 4, 5])
@@ -53,24 +25,21 @@ def _dfz(z, params): ## diff-eq dynamics wrapper
     dz_dt = _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType)
     return dz_dt
 
-# @partial(jit, static_argnums=[4,5,6,7])
-# def _step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None):
-#     ## perform step of Euler/RK-1
-#     dz_dt = _dfz(z, j, j_td, leak_gamma, priorType)
-#     _z = z * beta + dz_dt * (1./tau_m) * dt
-#     return _z
+@jit
+def modulate(j, dfx_val):
+    """
+    Apply a signal modulator to j (typically of the form of a derivative/dampening function)
 
-@partial(jit, static_argnums=[4,5,6,7])
-def _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None):
-    ## perform step of RK-2
-    ### take initial Euler step
-    _z = _step_euler(dt/2., j, j_td, z, tau_m, leak_gamma, beta, priorType)
-    ### take 2nd Euler step on projected value (midpoint step)
-    dz_dt = _dfz(_z, j, j_td, leak_gamma, priorType)
-    _z2 = z * beta + dz_dt * (1./tau_m) * dt
-    return _z2
+    Args:
+        j: current/stimulus value to modulate
 
-#@partial(jit, static_argnums=[4,5,6,7,8])
+        dfx_val: modulator signal
+
+    Returns:
+        modulated j value
+    """
+    return j * dfx_val
+
 def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
              priorType=None):
     """
@@ -99,7 +68,9 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
         New value of membrane/state for next time step
     """
     if integType == 1:
-        _z = _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
+        #_z = _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
+        params = (j, j_td, tau_m, leak_gamma, priorType)
+        _z = step_rk2(z, params, _dfz, dt)
     else:
         #_z = _step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
         params = (j, j_td, tau_m, leak_gamma, priorType)
