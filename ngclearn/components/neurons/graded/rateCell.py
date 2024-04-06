@@ -4,6 +4,7 @@ from functools import partial
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy, get_integrator_code
 import time, sys
+from ngclearn.utils.diffeq.ode_utils import step_euler
 
 @jit
 def modulate(j, dfx_val):
@@ -20,8 +21,22 @@ def modulate(j, dfx_val):
     """
     return j * dfx_val
 
-@partial(jit, static_argnums=[3, 4])
-def _dfz(z, j, j_td, leak_gamma, priorType=None): ## dynamics differential equation
+# @partial(jit, static_argnums=[3, 4])
+# def _dfz(z, j, j_td, leak_gamma, priorType=None): ## dynamics differential equation
+#     z_leak = z # * 2 ## Default: assume Gaussian
+#     if priorType != None:
+#         if priorType == "laplacian": ## Laplace dist
+#             z_leak = jnp.sign(z) ## d/dx of Laplace is signum
+#         elif priorType == "cauchy":  ## Cauchy dist: x ~ (1.0 + tf.math.square(z))
+#             z_leak = (z * 2)/(1. + jnp.square(z))
+#         elif priorType == "exp":  ## Exp dist: x ~ -exp(-x^2)
+#             z_leak = jnp.exp(-jnp.square(z)) * z * 2
+#     dz_dt = (-z_leak * leak_gamma + (j + j_td))
+#     return dz_dt
+
+## rewritten code
+@partial(jit, static_argnums=[3, 4, 5])
+def _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType=None): ## raw dynamics
     z_leak = z # * 2 ## Default: assume Gaussian
     if priorType != None:
         if priorType == "laplacian": ## Laplace dist
@@ -30,15 +45,20 @@ def _dfz(z, j, j_td, leak_gamma, priorType=None): ## dynamics differential equat
             z_leak = (z * 2)/(1. + jnp.square(z))
         elif priorType == "exp":  ## Exp dist: x ~ -exp(-x^2)
             z_leak = jnp.exp(-jnp.square(z)) * z * 2
-    dz_dt = (-z_leak * leak_gamma + (j + j_td))
+    dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
     return dz_dt
 
-@partial(jit, static_argnums=[4,5,6,7])
-def _step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None):
-    ## perform step of Euler/RK-1
-    dz_dt = _dfz(z, j, j_td, leak_gamma, priorType)
-    _z = z * beta + dz_dt * (1./tau_m) * dt
-    return _z
+def _dfz(z, params): ## diff-eq dynamics wrapper
+    j, j_td, tau_m, leak_gamma, priorType = params
+    dz_dt = _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType)
+    return dz_dt
+
+# @partial(jit, static_argnums=[4,5,6,7])
+# def _step_euler(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None):
+#     ## perform step of Euler/RK-1
+#     dz_dt = _dfz(z, j, j_td, leak_gamma, priorType)
+#     _z = z * beta + dz_dt * (1./tau_m) * dt
+#     return _z
 
 @partial(jit, static_argnums=[4,5,6,7])
 def _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None):
@@ -50,7 +70,7 @@ def _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., priorType=None
     _z2 = z * beta + dz_dt * (1./tau_m) * dt
     return _z2
 
-@partial(jit, static_argnums=[4,5,6,7,8])
+#@partial(jit, static_argnums=[4,5,6,7,8])
 def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
              priorType=None):
     """
@@ -81,7 +101,9 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
     if integType == 1:
         _z = _step_midpoint(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
     else:
-        _z = _step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
+        #_z = _step_euler(dt, j, j_td, z, tau_m, leak_gamma, beta, priorType)
+        params = (j, j_td, tau_m, leak_gamma, priorType)
+        _z = step_euler(z, params, _dfz, dt)
     return _z
 
 @jit
