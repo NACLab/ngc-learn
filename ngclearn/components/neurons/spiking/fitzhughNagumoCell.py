@@ -24,35 +24,33 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def _dfv(j, v, w, a, b, g):
+def _dfv_internal(j, v, w, a, b, g, tau_m): ## raw voltage dynamics
     dv_dt = v - jnp.power(v, 3)/g - w + j ## dv/dt
+    dv_dt = dv_dt * (1./tau_m)
+    return dv_dt
+
+def _dfv(v, params): ## voltage dynamics wrapper
+    j, w, a, b, g, tau_m = params
+    dv_dt = _dfv_internal(j, v, w, a, b, g, tau_m)
     return dv_dt
 
 @jit
-def _dfw(j, v, w, a, b, g):
+def _dfw_internal(j, v, w, a, b, g, tau_w): ## raw recovery dynamics
     dw_dt = v + a - b * w ## dw/dt
+    dw_dt = dw_dt * (1./tau_w)
     return dw_dt
 
-@jit
-def _step_euler(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of Euler/RK-1
-    dv_dt = _dfv(j, v, w, a, b, g)
-    dw_dt = _dfw(j, v, w, a, b, g)
-    ## run step of (forward) Euler integration
-    _v = v + dv_dt * (1./tau_m) * dt
-    _w = w + dw_dt * (1./tau_w) * dt
-    return _v, _w
+def _dfw(w, params): ## recovery dynamics wrapper
+    j, v, a, b, g, tau_m = params
+    dv_dt = _dfw_internal(j, v, w, a, b, g, tau_m)
+    return dv_dt
 
 @jit
-def _step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w): ## perform step of RK-2
-    _v, _w = _step_euler(dt/2., j, v, w, a, b, g, tau_m, tau_w)
-    dv_dt = _dfv(j, _v, _w, a, b, g)
-    dw_dt = _dfw(j, _v, _w, a, b, g)
-    ## run a 2nd step of (forward) Euler integration
-    _v2 = v + dv_dt * (1./tau_m) * dt
-    _w2 = w + dw_dt * (1./tau_w) * dt
-    return _v2, _w2
+def _emit_spike(v, v_thr):
+    s = (v > v_thr).astype(jnp.float32)
+    return s
 
-@partial(jit, static_argnums=[10])
+#@partial(jit, static_argnums=[10])
 def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     """
 
@@ -83,11 +81,24 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     Returns:
         updated voltage, updated recovery, spikes
     """
+    # if integType == 1:
+    #     _v, _w = _step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
+    # else: # integType == 0 (default -- Euler)
+    #     _v, _w = _step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
+
     if integType == 1:
-        _v, _w = _step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
+        v_params = (j, w, a, b, g, tau_m)
+        _v = step_rk2(v, v_params, _dfv, dt)
+        w_params = (j, v, a, b, g, tau_w)
+        _w = step_rk2(w, w_params, _dfw, dt)
     else: # integType == 0 (default -- Euler)
-        _v, _w = _step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
-    s = (_v > v_thr).astype(jnp.float32)
+        #dt, j, v, w, a, b, g, tau_m, tau_w
+        v_params = (j, w, a, b, g, tau_m)
+        _v = step_euler(v, v_params, _dfv, dt)
+        w_params = (j, v, a, b, g, tau_w)
+        _w = step_euler(w, w_params, _dfw, dt)
+    #s = (_v > v_thr).astype(jnp.float32)
+    s = _emit_spike(_v, v_thr)
     return _v, _w, s
 
 class FitzhughNagumoCell(Component):
