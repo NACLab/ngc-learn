@@ -81,11 +81,6 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     Returns:
         updated voltage, updated recovery, spikes
     """
-    # if integType == 1:
-    #     _v, _w = _step_midpoint(dt, j, v, w, a, b, g, tau_m, tau_w)
-    # else: # integType == 0 (default -- Euler)
-    #     _v, _w = _step_euler(dt, j, v, w, a, b, g, tau_m, tau_w)
-
     if integType == 1:
         v_params = (j, w, a, b, g, tau_m)
         _v = step_rk2(v, v_params, _dfv, dt)
