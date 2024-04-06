@@ -132,6 +132,12 @@ def create_function(fun_name):
     elif fun_name == "lrelu":
         fx = lrelu
         dfx = d_lrelu
+    elif fun_name == "relu6":
+        fx = relu6
+        dfx = d_relu6
+    elif fun_name == "softplus":
+        fx = softplus
+        dfx = d_softplus
     elif fun_name == "identity":
         fx = identity
         dfx = d_identity
