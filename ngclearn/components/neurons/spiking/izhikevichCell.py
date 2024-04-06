@@ -24,38 +24,49 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def _dfv(j, v, w, b):
+def _dfv_internal(j, v, w, b, tau_m): ## raw voltage dynamics
     ## (v^2 * 0.04 + v * 5 + 140 - u + j) * a, where a = (1./tau_m) (w = u)
     dv_dt = (jnp.square(v) * 0.04 + v * 5. + 140. - w + j)
+    dv_dt = dv_dt * (1./tau_m)
+    return dv_dt
+
+def _dfv(v, params): ## voltage dynamics wrapper
+    j, w, b, tau_m = params
+    dv_dt = _dfv_internal(j, v, w, b, tau_m)
     return dv_dt
 
 @jit
-def _dfw(j, v, w, b):
+def _dfw_internal(j, v, w, b, tau_w): ## raw recovery dynamics
     ## (v * b - u) from (v * b - u) * a (Izh. form)  (w = u)
     dw_dt = (v * b - w)
+    dw_dt = dw_dt * (1./tau_w)
     return dw_dt
 
-@jit
-def _step_euler(dt, j, v, w, b, tau_m, tau_w): ## perform step of Euler/RK-1
-    dv_dt = _dfv(j, v, w, b)
-    dw_dt = _dfw(j, v, w, b)
-    ## run step of (forward) Euler integration
-    _v = v + dv_dt * (1./tau_m) * dt
-    _w = w + dw_dt * (1./tau_w) * dt
-    return _v, _w
+def _dfw(w, params): ## recovery dynamics wrapper
+    j, v, b, tau_w = params
+    dv_dt = _dfw_internal(j, v, w, b, tau_w)
+    return dv_dt
+
+def _post_process(s, _v, _w, v, w, c, d): ## internal post-processing routine
+    # this step is specific to izh neuronal cells, where, after dynamics
+    # have evolved for a step in term, we then use the variables c and d
+    # to gate accordingly the dynamics for voltage v and recovery w
+    v_next = _v * (1. - s) + s * c
+    w_next = _w * (1. - s) + s * (w + d)
+    return v_next, w_next
 
 @jit
-def _step_midpoint(dt, j, v, w, b, tau_m, tau_w): ## perform step of RK-2
-    _v, _w = _step_euler(dt/2., j, v, w, b, tau_m, tau_w)
-    dv_dt = _dfv(j, _v, _w, b)
-    dw_dt = _dfw(j, _v, _w, b)
-    ## run a 2nd step of (forward) Euler integration
-    _v2 = v + dv_dt * (1./tau_m) * dt
-    _w2 = w + dw_dt * (1./tau_w) * dt
-    return _v2, _w2
+def _emit_spike(v, v_thr):
+    s = (v > v_thr).astype(jnp.float32)
+    return s
 
-@partial(jit, static_argnums=[12])
-def run_cell(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
+@jit
+def _modify_current(j, R_m):
+    _j = j * R_m
+    return _j
+
+#@partial(jit, static_argnums=[12])
+def run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
              R_m=1., integType=0):
     """
     Runs Izhikevich neuronal dynamics
@@ -71,7 +82,7 @@ def run_cell(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
 
         w: recovery variable/state
 
-        thr: voltage threshold value (in mV)
+        v_thr: voltage threshold value (in mV)
 
         tau_m: membrane time constant
 
@@ -94,20 +105,24 @@ def run_cell(dt, j, v, s, w, thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
     """
     ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
     a = 1./tau_w ## we map time constant to variable "a" (a = 1/tau_w)
-    #_j = jnp.maximum(-30.0, j) ## lower-bound/clip input current
+    _j = _modify_current(j, R_m)
+    #_j = jnp.maximum(-30.0, _j) ## lower-bound/clip input current
     ## check for spikes
-    _s = (v > thr).astype(jnp.float32)
+    s = _emit_spike(v, v_thr)
     ## for non-spikes, evolve according to dynamics
-    _j = j * R_m
     if integType == 1:
-        _v, _w = _step_midpoint(dt, _j, v, w, b, tau_m, tau_w)
-    else:
-        _v, _w = _step_euler(dt, _j, v, w, b, tau_m, tau_w)
-
+        v_params = (_j, w, b, tau_m)
+        _v = step_rk2(v, v_params, _dfv, dt)
+        w_params = (_j, v, b, tau_w)
+        _w = step_rk2(w, w_params, _dfw, dt)
+    else: # integType == 0 (default -- Euler)
+        v_params = (_j, w, b, tau_m)
+        _v = step_euler(v, v_params, _dfv, dt)
+        w_params = (_j, v, b, tau_w)
+        _w = step_euler(w, w_params, _dfw, dt)
     ## for spikes, snap to particular states
-    _v = _v * (1. - _s) + _s * c
-    _w = _w * (1. - _s) + _s * (w + d)
-    return  _v, _w, _s
+    _v, _w = _post_process(s, _v, _w, v, w, c, d)
+    return  _v, _w, s
 
 class IzhikevichCell(Component): ## Izhikevich neuronal cell
     """
@@ -283,7 +298,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         w = self.recovery
         s = self.outputCompartment
         #if self.integration_type == "euler":
-        v, w, s = run_cell(dt, j, v, s, w, thr=self.v_thr, tau_m=self.tau_m,
+        v, w, s = run_cell(dt, j, v, s, w, v_thr=self.v_thr, tau_m=self.tau_m,
                            tau_w=self.tau_w, b=self.coupling, c=self.v_reset,
                            d=self.w_reset, R_m=self.R_m, integType=self.intgFlag)
         self.voltage = v
