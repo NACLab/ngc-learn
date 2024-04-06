@@ -5,9 +5,9 @@ from jax import numpy as jnp, random, jit #, nn
 from functools import partial
 import time, sys
 
-def step_euler(x, params, dfx, dt): ## RK-1 routine
+def step_euler(x, params, dfx, dt, dt_div=1., x_scale=1.): ## RK-1 routine
     dx_dt = dfx(x, params) ## assumed will be a jit-i-fied function
-    return _step_forward(x, dx_dt, dt) ## jit-i-fied function
+    return _step_forward(x, dx_dt, dt, dt_div, x_scale) ## jit-i-fied function
 
 def step_rk2(x, params, dfx, dt): ## RK-2 routine
     _x1 = step_euler(x, params, dfx, dt, dt_div=2.)
