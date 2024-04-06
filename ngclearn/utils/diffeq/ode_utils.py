@@ -23,8 +23,9 @@ def get_integrator_code(integrationType):
     elif integrationType == "rk4": ## Runge-Kutte 4rd order code
         intgFlag = 3
     else:
-        print("ERROR: unrecognized integration method {} provided! Defaulting \
-              to RK-1/Euler routine".format(integrationType))
+        if integrationType != "euler":
+            print("ERROR: unrecognized integration method {} provided! Defaulting \
+                  to RK-1/Euler routine".format(integrationType))
     return intgFlag
 
 def step_euler(x, params, dfx, dt, dt_div=1., x_scale=1.): ## RK-1 routine
