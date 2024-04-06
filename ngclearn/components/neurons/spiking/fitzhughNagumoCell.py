@@ -87,7 +87,6 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
         w_params = (j, v, a, b, g, tau_w)
         _w = step_rk2(w, w_params, _dfw, dt)
     else: # integType == 0 (default -- Euler)
-        #dt, j, v, w, a, b, g, tau_m, tau_w
         v_params = (j, w, a, b, g, tau_m)
         _v = step_euler(v, v_params, _dfv, dt)
         w_params = (j, v, a, b, g, tau_w)
