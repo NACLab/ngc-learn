@@ -50,7 +50,7 @@ def measure_CatNLL(p, x, epsilon=0.0000001, preserve_batch=False): #1e-7):
 
         epsilon: factor to control for numerical stability (Default: 1e-7)
 
-        preserve_batch: if True, will return one score per sample in batch 
+        preserve_batch: if True, will return one score per sample in batch
             (Default: False), otherwise, returns scalar mean score
 
     Returns:
@@ -442,7 +442,7 @@ def d_softplus(x):
 def sigmoid(x):
     return nn.sigmoid(x)
 
-@jit 
+@jit
 def d_sigmoid(x):
     sigm_x = nn.sigmoid(x) ## pre-compute once
     return sigm_x * (1. - sigm_x)
@@ -503,3 +503,21 @@ def threshold_cauchy(x, lmbda):
     term1 = f * (x >= lmbda).astype(jnp.float32) ## f * (x >= lmda)
     term2 = g * (x <= -lmbda).astype(jnp.float32) ## g * (x <= -lmda)
     return term1 + term2
+
+def inverse_logistic(x, clip_bound=0.03): # 0.03
+    """
+    The inverse logistic link - logit function.
+
+    Args:
+        x: data to transform via inverse logistic function
+
+        clip_bound: pre-processing lower/upper bounds to enforce on data
+            before applying inverse logistic
+
+    Returns:
+        x transformed via inverse logistic function
+    """
+    x_ = x
+    if clip_bound > 0.0:
+        x_ = jnp.clip(x_, clip_bound, 1.0 - clip_bound)
+    return jnp.log( x_/((1.0 - x_) + 1e-6) )
