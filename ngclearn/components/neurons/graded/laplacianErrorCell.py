@@ -26,7 +26,7 @@ def run_laplacian_cell(dt, targ, mu):
     Moves Laplacian cell dynamics one step forward. Specifically, this
     routine emulates the error unit behavior of the local cost functional:
 
-    | L(targ, mu) = ||targ - mu||_1
+    | L(targ, mu) = -||targ - mu||_1
     | or log likelihood of the Laplace distribution with identity scale
 
     Args:
@@ -41,7 +41,7 @@ def run_laplacian_cell(dt, targ, mu):
     """
     dmu = jnp.sign(targ - mu) # e (error unit)
     dtarg = -dmu # reverse of e
-    L = jnp.sum(jnp.abs(dmu)) # technically, this is mean absolute error
+    L = -jnp.sum(jnp.abs(dmu)) # technically, this is mean absolute error
     return dmu, dtarg, L
 
 class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell

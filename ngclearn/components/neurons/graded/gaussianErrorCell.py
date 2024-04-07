@@ -26,7 +26,7 @@ def run_gaussian_cell(dt, targ, mu):
     Moves Gaussian cell dynamics one step forward. Specifically, this
     routine emulates the error unit behavior of the local cost functional:
 
-    | L(targ, mu) = (1/2) * ||targ - mu||^2_2
+    | L(targ, mu) = -(1/2) * ||targ - mu||^2_2
     | or log likelihood of the multivariate Gaussian with identity covariance
 
     Args:
@@ -41,7 +41,7 @@ def run_gaussian_cell(dt, targ, mu):
     """
     dmu = (targ - mu) # e (error unit)
     dtarg = -dmu # reverse of e
-    L = jnp.sum(jnp.square(dmu)) * 0.5
+    L = -jnp.sum(jnp.square(dmu)) * 0.5
     return dmu, dtarg, L
 
 class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
