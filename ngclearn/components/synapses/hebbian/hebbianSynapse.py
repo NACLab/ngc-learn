@@ -106,6 +106,9 @@ class HebbianSynapse(Component):
         is_nonnegative: enforce that synaptic efficacies are always non-negative
             after each synaptic update (if False, no constraint will be applied)
 
+        w_decay: degree to which (L2) synaptic weight decay is applied to the
+            computed Hebbian adjustment (Default: 0)
+
         signVal: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
             optimization is required (as Hebbian rules typically yield
