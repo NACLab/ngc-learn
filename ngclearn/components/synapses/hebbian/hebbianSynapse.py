@@ -235,6 +235,10 @@ class HebbianSynapse(Component):
         self.eta = eta
         self.wInit = wInit
         self.bInit = bInit
+        print("--------")
+        print(self.name)
+        print(self.bInit)
+        print("--------")
         self.is_nonnegative = is_nonnegative
         self.signVal = signVal
 
@@ -265,7 +269,7 @@ class HebbianSynapse(Component):
         if self.bInit != None:
             biases = self.biases
         self.outputCompartment = compute_layer(self.inputCompartment,
-                                               self.weights, self.biases)
+                                               self.weights, biases)
 
     def evolve(self, t, dt, **kwargs):
         dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
