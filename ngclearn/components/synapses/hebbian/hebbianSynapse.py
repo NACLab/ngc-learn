@@ -107,7 +107,8 @@ class HebbianSynapse(Component):
             after each synaptic update (if False, no constraint will be applied)
 
         w_decay: degree to which (L2) synaptic weight decay is applied to the
-            computed Hebbian adjustment (Default: 0)
+            computed Hebbian adjustment (Default: 0); note that decay is not
+            applied to any configured biases
 
         signVal: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
