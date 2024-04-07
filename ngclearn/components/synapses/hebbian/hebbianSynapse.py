@@ -235,10 +235,6 @@ class HebbianSynapse(Component):
         self.eta = eta
         self.wInit = wInit
         self.bInit = bInit
-        print("--------")
-        print(self.name)
-        print(self.bInit)
-        print("--------")
         self.is_nonnegative = is_nonnegative
         self.signVal = signVal
 
