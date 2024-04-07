@@ -147,8 +147,15 @@ def initialize_params(dkey, initKernel, shape):
     Args:
         dkey: PRNG key to control determinism of this routine
 
-        initKernel: tuple with 1st element as a string calling the name of
-            initialization to use (Currently supported: "hollow", "eye", "uniform")
+        initKernel: triplet/3-tuple with 1st element as a string calling the name
+            of initialization scheme to use
+
+            :Note: Currently supported kernel schemes include:
+                ("hollow", off_diagonal_scale, ~ignored~);
+                ("eye", diagonal_scale, ~ignored~);
+                ("uniform", min_val, max_val);
+                ("gaussian", mu, sigma);
+                ("constant", magnitude, ~ignored~)
 
         shape: tuple containing the dimensions/shape of the tensor to initialize
 
@@ -166,6 +173,9 @@ def initialize_params(dkey, initKernel, shape):
     elif initType == "uniform": ## uniformly distributed values
         lb, ub = args
         params = random.uniform(dkey, shape, minval=lb, maxval=ub)
+    elif initType == "gaussian": ## gaussian distributed values
+        mu, sigma = args
+        params = random.normal(dkey, shape) * sigma + mu
     elif initType == "constant": ## constant value(s)
         scale, _ = args
         params = jnp.ones(shape) * scale
