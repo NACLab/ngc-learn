@@ -353,6 +353,23 @@ def d_tanh(x):
     return -(tanh_x * tanh_x) + 1.0
 
 @jit
+def inverse_tanh(x):
+    """
+    The inverse hyperbolic tangent.
+
+    Args:
+        x: data to transform via inverse hyperbolic tangent
+
+        clip_bound: pre-processing lower/upper bounds to enforce on data
+            before applying inverse hyperbolic tangent
+
+    Returns:
+        x transformed via inverse hyperbolic tangent
+    """
+    #m = 0.5 * log ( (ones(size(x)) + x) ./ (ones(size(x)) - x))
+    return jnp.log((1. + x)/(1. - x))
+
+@jit
 def lrelu(x): ## activation fx
     """
     The leaky linear rectifier: max(0, x) if x >= 0, 0.01 * x if x < 0 = f(x).
@@ -448,6 +465,25 @@ def d_sigmoid(x):
     return sigm_x * (1. - sigm_x)
 
 @jit
+def inverse_logistic(x, clip_bound=0.03): # 0.03
+    """
+    The inverse logistic link - logit function.
+
+    Args:
+        x: data to transform via inverse logistic function
+
+        clip_bound: pre-processing lower/upper bounds to enforce on data
+            before applying inverse logistic
+
+    Returns:
+        x transformed via inverse logistic function
+    """
+    x_ = x
+    if clip_bound > 0.0:
+        x_ = jnp.clip(x_, clip_bound, 1.0 - clip_bound)
+    return jnp.log( x_/((1.0 - x_) + 1e-6) )
+
+@jit
 def softmax(x, tau=0.0):
     """
     Softmax function with overflow control built in directly. Contains optional
@@ -503,21 +539,3 @@ def threshold_cauchy(x, lmbda):
     term1 = f * (x >= lmbda).astype(jnp.float32) ## f * (x >= lmda)
     term2 = g * (x <= -lmbda).astype(jnp.float32) ## g * (x <= -lmda)
     return term1 + term2
-
-def inverse_logistic(x, clip_bound=0.03): # 0.03
-    """
-    The inverse logistic link - logit function.
-
-    Args:
-        x: data to transform via inverse logistic function
-
-        clip_bound: pre-processing lower/upper bounds to enforce on data
-            before applying inverse logistic
-
-    Returns:
-        x transformed via inverse logistic function
-    """
-    x_ = x
-    if clip_bound > 0.0:
-        x_ = jnp.clip(x_, clip_bound, 1.0 - clip_bound)
-    return jnp.log( x_/((1.0 - x_) + 1e-6) )
