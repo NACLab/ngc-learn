@@ -112,13 +112,18 @@ class HebbianSynapse(Component):
             after each synaptic update (if False, no constraint will be applied)
 
         signVal: multiplicative factor to apply to final synaptic update before
-            it is applied to synapses; this is useful if gradient descent schemes
-            are to be applied (as Hebbian rules typically yield adjustments for
-            ascent)
+            it is applied to synapses; this is useful if gradient descent style
+            optimization is required (as Hebbian rules typically yield
+            adjustments for ascent)
 
         optim_type: optimization scheme to physically alter synaptic values
             once an update is computed (Default: "sgd"); supported schemes
             include "sgd" and "adam"
+
+            :Note: technically, if "sgd" or "adam" is used but `signVal = 1`,
+                then the ascent form of each rule is employed (signVal = -1) or
+                a negative learning rate will mean a descent form of the
+                `optim_scheme` is being employed
 
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
@@ -281,6 +286,7 @@ class HebbianSynapse(Component):
             self.weights = theta[0]
             self.biases = theta[1]
         else:
+            # ignore db since no biases configured
             theta = [self.weights]
             self.opt.update(theta, [dW])
             self.weights = theta[0]
