@@ -62,11 +62,6 @@ def enforce_constraints(W, w_bound, is_nonnegative=True):
     return _W
 
 @jit
-def apply_decay(dW, pre_s, post_s, w_decay):
-    _dW = dW - jnp.matmul((1. - pre_s).T, (1. - post_s)) * w_decay
-    return _dW
-
-@jit
 def compute_layer(inp, weight, biases):
     """
     Applies the transformation/projection induced by the synaptic efficacie
@@ -153,14 +148,6 @@ class HebbianSynapse(Component):
         return 'pre'
 
     @classmethod
-    def postsynSpikeName(cls):
-        return 's_post'
-
-    @classmethod
-    def presynSpikeName(cls):
-        return 's_pre'
-
-    @classmethod
     def postsynapticCompartmentName(cls):
         return 'post'
 
@@ -204,22 +191,6 @@ class HebbianSynapse(Component):
     @postsynapticCompartment.setter
     def postsynapticCompartment(self, x):
         self.compartments[self.postsynapticCompartmentName()] = x
-
-    @property
-    def presynSpike(self):
-        return self.compartments.get(self.presynSpikeName(), None)
-
-    @presynSpike.setter
-    def presynSpike(self, x):
-        self.compartments[self.presynSpikeName()] = x
-
-    @property
-    def postsynSpike(self):
-        return self.compartments.get(self.postsynSpikeName(), None)
-
-    @postsynSpike.setter
-    def postsynSpike(self, x):
-        self.compartments[self.postsynSpikeName()] = x
 
     # Define Functions
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
@@ -275,10 +246,7 @@ class HebbianSynapse(Component):
     def evolve(self, t, dt, **kwargs):
         dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
-                             signVal=self.signVal, w_decay=0.)
-        if self.w_decay > 0.:
-            dW = apply_decay(dW, self.presynSpike, self.postsynSpike, self.w_decay)
-
+                             signVal=self.signVal, w_decay=self.w_decay)
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if self.bInit != None:
             theta = [self.weights, self.biases]
@@ -299,8 +267,6 @@ class HebbianSynapse(Component):
         self.outputCompartment = None
         self.presynapticCompartment = None
         self.postsynapticCompartment = None
-        self.presynSpike = None
-        self.postsynSpike = None
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
