@@ -5,26 +5,6 @@ from ngclearn.utils.model_utils import initialize_params
 from ngclearn.utils.optim import SGD, Adam
 import time
 
-@partial(jit, static_argnums=[3])
-def update_eligibility(dt, Eg, dW, elg_tau):
-    """
-    Apply a signal modulator to j (typically of the form of a derivative/dampening function)
-
-    Args:
-        dt: integration time constant
-
-        Eg: current value of the eligibility trace
-
-        dW: synaptic update (at t) to update eligibility trace with
-
-        elg_tau: eligibility trace time constant
-
-    Returns:
-        updated eligibility trace tensor Eg
-    """
-    _Eg = Eg + (-Eg + dW) * (dt/elg_tau)
-    return _Eg
-
 @partial(jit, static_argnums=[3,4,5,6])
 def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.):
     """
@@ -47,14 +27,15 @@ def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=
         w_decay: synaptic decay factor to apply to this update
 
     Returns:
-        an update/adjustment matrix
+        an update/adjustment matrix, an update adjustment vector (for biases)
     """
     dW = jnp.matmul(pre.T, post)
+    db = jnp.sum(post + 0, axis=0, keepdims=True)
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
     if w_decay > 0.:
         dW = dW - W * w_decay # jnp.matmul((1. - pre).T, (1. - post)) * w_decay
-    return dW * signVal
+    return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
 def enforce_constraints(W, w_bound, is_nonnegative=True):
@@ -86,7 +67,7 @@ def apply_decay(dW, pre_s, post_s, w_decay):
     return _dW
 
 @jit
-def compute_layer(inp, weight):
+def compute_layer(inp, weight, biases):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -96,10 +77,12 @@ def compute_layer(inp, weight):
 
         weight: this cable's synaptic value matrix
 
+        biases: this cable's bias value vector
+
     Returns:
         a projection/transformation of input "inp"
     """
-    return jnp.matmul(inp, weight)
+    return jnp.matmul(inp, weight) + biases
 
 class HebbianSynapse(Component):
     """
@@ -119,11 +102,11 @@ class HebbianSynapse(Component):
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
+        bInit: a kernel to drive initialization of biases for this synaptic cable
+            (Default: None, which turns off/disables biases)
+
         w_bound: maximum weight to softly bound this cable's value matrix to; if
             set to 0, then no synaptic value bounding will be applied
-
-        elg_tau: if > 0., triggers the use of an eligibility trace where this value
-            serves as its time constant
 
         is_nonnegative: enforce that synaptic efficacies are always non-negative
             after each synaptic update (if False, no constraint will be applied)
@@ -133,7 +116,9 @@ class HebbianSynapse(Component):
             are to be applied (as Hebbian rules typically yield adjustments for
             ascent)
 
-        optim_type:
+        optim_type: optimization scheme to physically alter synaptic values
+            once an update is computed (Default: "sgd"); supported schemes
+            include "sgd" and "adam"
 
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
@@ -232,9 +217,9 @@ class HebbianSynapse(Component):
         self.compartments[self.postsynSpikeName()] = x
 
     # Define Functions
-    def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3), w_bound=1.,
-                 elg_tau=0., is_nonnegative=False, w_decay=0., signVal=1.,
-                 optim_type="sgd", key=None, useVerboseDict=False,
+    def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
+                 bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
+                 signVal=1., optim_type="sgd", key=None, useVerboseDict=False,
                  directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -249,10 +234,9 @@ class HebbianSynapse(Component):
         self.w_decay = w_decay ## synaptic decay
         self.eta = eta
         self.wInit = wInit
+        self.bInit = bInit
         self.is_nonnegative = is_nonnegative
         self.signVal = signVal
-        self.elg_tau = elg_tau
-        self.Eg = None
 
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = None
@@ -264,6 +248,9 @@ class HebbianSynapse(Component):
         if directory is None:
             self.key, subkey = random.split(self.key)
             self.weights = initialize_params(subkey, wInit, shape)
+            if self.bInit is not None:
+                self.key, subkey = random.split(self.key)
+                self.biases = initialize_params(subkey, bInit, (1, shape[1]))
         else:
             self.load(directory)
 
@@ -274,37 +261,32 @@ class HebbianSynapse(Component):
         self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
 
     def advance_state(self, **kwargs):
-        self.outputCompartment = compute_layer(self.inputCompartment, self.weights)
+        biases = 0.
+        if self.bInit != None:
+            biases = self.biases
+        self.outputCompartment = compute_layer(self.inputCompartment,
+                                               self.weights, self.biases)
 
     def evolve(self, t, dt, **kwargs):
-        if self.elg_tau > 0.:
-            trigger = self.trigger
-            dW = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
-                             self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
-                             signVal=self.signVal)
-            self.Eg = update_eligibility(dt, self.Eg, dW, self.elg_tau)
-            if trigger > 0.:
-                ## conduct a step of optimization - get newly evolved synaptic weight value matrix
-                theta = [self.weights]
-                self.opt.update(theta, [self.Eg])
-                self.weights = theta[0]
-                ## ensure synaptic efficacies adhere to constraints
-                self.weights = enforce_constraints(self.weights, self.w_bounds,
-                                                   is_nonnegative=self.is_nonnegative)
-        else:
-            dW = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
+        dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
                              signVal=self.signVal, w_decay=0.)
-            if self.w_decay > 0.:
-                dW = apply_decay(dW, self.presynSpike, self.postsynSpike, self.w_decay)
-            self.Eg = dW
-            ## conduct a step of optimization - get newly evolved synaptic weight value matrix
+        if self.w_decay > 0.:
+            dW = apply_decay(dW, self.presynSpike, self.postsynSpike, self.w_decay)
+
+        ## conduct a step of optimization - get newly evolved synaptic weight value matrix
+        if self.bInit != None:
+            theta = [self.weights, self.biases]
+            self.opt.update(theta, [dW, db])
+            self.weights = theta[0]
+            self.biases = theta[1]
+        else:
             theta = [self.weights]
             self.opt.update(theta, [dW])
             self.weights = theta[0]
-            ## ensure synaptic efficacies adhere to constraints
-            self.weights = enforce_constraints(self.weights, self.w_bounds,
-                                               is_nonnegative=self.is_nonnegative)
+        ## ensure synaptic efficacies adhere to constraints
+        self.weights = enforce_constraints(self.weights, self.w_bounds,
+                                           is_nonnegative=self.is_nonnegative)
 
     def reset(self, **kwargs):
         self.inputCompartment = None
@@ -313,13 +295,16 @@ class HebbianSynapse(Component):
         self.postsynapticCompartment = None
         self.presynSpike = None
         self.postsynSpike = None
-        self.Eg = self.weights * 0
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         jnp.savez(file_name, weights=self.weights)
+        if self.bInit != None:
+            jnp.savez(file_name, biases=self.biases)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.weights = data['weights']
+        if self.bInit != None:
+            self.biases = data['biases']
