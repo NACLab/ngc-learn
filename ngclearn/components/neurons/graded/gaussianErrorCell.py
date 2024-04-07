@@ -16,7 +16,7 @@ def run_cell(dt, targ, mu, eType="gaussian"):
         mu: prediction value
 
     Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
+        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, local loss
     """
     return run_gaussian_cell(dt, targ, mu)
 
@@ -37,11 +37,12 @@ def run_gaussian_cell(dt, targ, mu):
         mu: prediction value
 
     Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
+        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, loss
     """
     dmu = (targ - mu) # e (error unit)
     dtarg = -dmu # reverse of e
-    return dmu, dtarg
+    L = jnp.sum(jnp.square(dmu)) * 0.5
+    return dmu, dtarg, L
 
 class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     """
@@ -64,6 +65,10 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     """
 
     ## Class Methods for Compartment Names
+    @classmethod
+    def lossName(cls):
+        return "L"
+
     @classmethod
     def inputCompartmentName(cls):
         return 'j' ## electrical current
@@ -93,6 +98,14 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         return 'modulator'
 
     ## Bind Properties to Compartments for ease of use
+    @property
+    def loss(self):
+        return self.compartments.get(self.lossName(), None)
+
+    @loss.setter
+    def loss(self, inp):
+        self.compartments[self.lossName()] = inp
+
     @property
     def mean(self):
         return self.compartments.get(self.meanName(), None)
@@ -157,7 +170,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     def advance_state(self, t, dt, **kwargs):
         ## currently only Gaussian error cells supported
-        self.derivMean, self.derivTarget = run_cell(dt, self.target, self.mean)
+        self.derivMean, self.derivTarget, self.loss = run_cell(dt, self.target, self.mean)
         if self.modulator is not None:
             self.derivMean = self.derivMean * self.modulator
             self.derivTarget = self.derivTarget * self.modulator
