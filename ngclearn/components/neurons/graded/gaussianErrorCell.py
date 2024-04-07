@@ -164,13 +164,13 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.reset()
 
     def verify_connections(self):
-        #self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
         self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
         self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
 
     def advance_state(self, t, dt, **kwargs):
-        ## currently only Gaussian error cells supported
-        self.derivMean, self.derivTarget, self.loss = run_cell(dt, self.target, self.mean)
+        ## compute Gaussian error cell output
+        self.derivMean, self.derivTarget, self.loss = \
+            run_cell(dt, self.target, self.mean)
         if self.modulator is not None:
             self.derivMean = self.derivMean * self.modulator
             self.derivTarget = self.derivTarget * self.modulator

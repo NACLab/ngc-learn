@@ -16,7 +16,7 @@ def run_cell(dt, targ, mu, eType="gaussian"):
         mu: prediction value
 
     Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
+        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, local loss
     """
     return run_laplacian_cell(dt, targ, mu)
 
@@ -37,11 +37,12 @@ def run_laplacian_cell(dt, targ, mu):
         mu: prediction value
 
     Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg
+        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, loss
     """
     dmu = jnp.sign(targ - mu) # e (error unit)
     dtarg = -dmu # reverse of e
-    return dmu, dtarg
+    L = jnp.sum(jnp.abs(dmu)) # technically, this is mean absolute error
+    return dmu, dtarg, L
 
 class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     """
@@ -64,6 +65,10 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     """
 
     ## Class Methods for Compartment Names
+    @classmethod
+    def lossName(cls):
+        return "L"
+
     @classmethod
     def inputCompartmentName(cls):
         return 'j' ## electrical current
@@ -93,6 +98,14 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         return 'modulator'
 
     ## Bind Properties to Compartments for ease of use
+    @property
+    def loss(self):
+        return self.compartments.get(self.lossName(), None)
+
+    @loss.setter
+    def loss(self, inp):
+        self.compartments[self.lossName()] = inp
+
     @property
     def mean(self):
         return self.compartments.get(self.meanName(), None)
@@ -151,13 +164,13 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.reset()
 
     def verify_connections(self):
-        #self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
         self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
         self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
 
     def advance_state(self, t, dt, **kwargs):
-        ## currently only Gaussian error cells supported
-        self.derivMean, self.derivTarget = run_cell(dt, self.target, self.mean)
+        ## compute Laplacian/MAE error cell output
+        self.derivMean, self.derivTarget, self.loss = \
+            run_cell(dt, self.target, self.mean)
         if self.modulator is not None:
             self.derivMean = self.derivMean * self.modulator
             self.derivTarget = self.derivTarget * self.modulator
