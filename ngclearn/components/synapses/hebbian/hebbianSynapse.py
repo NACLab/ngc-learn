@@ -34,7 +34,7 @@ def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
     if w_decay > 0.:
-        dW = dW - W * w_decay # jnp.matmul((1. - pre).T, (1. - post)) * w_decay
+        dW = dW - W * w_decay
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
@@ -202,7 +202,7 @@ class HebbianSynapse(Component):
                  directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ##Random Number Set up
+        ## random Number Set up
         self.key = key
         if self.key is None:
             self.key = random.PRNGKey(time.time_ns())
