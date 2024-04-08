@@ -549,3 +549,25 @@ def threshold_cauchy(x, lmbda):
     term1 = f * (x >= lmbda).astype(jnp.float32) ## f * (x >= lmda)
     term2 = g * (x <= -lmbda).astype(jnp.float32) ## g * (x <= -lmda)
     return term1 + term2
+
+@jit
+def drop_out(dkey, input, rate=0.0):
+    """
+    Applies a drop-out transform to an input matrix.
+
+    Args:
+        dkey: Jax randomness key for this operator
+
+        input: data to apply random/drop-out mask to
+
+        rate: probability of a dimension being dropped
+
+    Returns:
+        output as well as binary mask
+    """
+    eps = random.uniform(dkey, (input.shape[0],input.shape[1]),
+                         minval=0.0, maxval=1.0)
+    mask = (eps <= (1.0 - rate)).astype(jnp.float32)
+    mask = mask * (1.0 / (1.0 - rate))
+    output = input * mask
+    return output, mask
