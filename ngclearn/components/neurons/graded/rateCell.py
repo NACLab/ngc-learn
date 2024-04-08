@@ -102,12 +102,12 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         tau_m: membrane/state time constant (milliseconds)
 
-        prior: a kernel for specifying the type of centered scale-shift distribution
-           to impose over neuronal dynamics, applied to each neuron or
-           dimension within this component (Default: ("gaussian", 0)); this is
-           a tuple with 1st element containing a string name of the distribution
-           one wants to use while the second value is a `leak rate` scalar
-           that controls the influence/weighting that this distribution
+        prior: a kernel for specifying the type of centered scale-shift distribution 
+            to impose over neuronal dynamics, applied to each neuron or
+            dimension within this component (Default: ("gaussian", 0)); this is
+            a tuple with 1st element containing a string name of the distribution
+            one wants to use while the second value is a `leak rate` scalar
+            that controls the influence/weighting that this distribution
             has on the dynamics; for example, ("laplacian, 0.001") means that a
             centered laplacian distribution scaled by `0.001` will be injected
             into this cell's dynamics ODE each step of simulated time

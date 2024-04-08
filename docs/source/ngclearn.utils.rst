@@ -8,11 +8,20 @@ Subpackages
    :maxdepth: 4
 
    ngclearn.utils.density
+   ngclearn.utils.diffeq
    ngclearn.utils.optim
    ngclearn.utils.viz
 
 Submodules
 ----------
+
+ngclearn.utils.data\_loader module
+----------------------------------
+
+.. automodule:: ngclearn.utils.data_loader
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 ngclearn.utils.io\_utils module
 -------------------------------
