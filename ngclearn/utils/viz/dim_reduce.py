@@ -24,8 +24,8 @@ def extract_pca_latents(vectors): ## PCA mapping routine
     z_2D = None
     if z_dim != 2:
         ipca = IncrementalPCA(n_components=2, batch_size=batch_size)
-        ipca.fit(vectors.numpy())
-        z_2D = ipca.transform(vectors.numpy())
+        ipca.fit(vectors)
+        z_2D = ipca.transform(vectors)
     else:
         z_2D = vectors
     return z_2D
@@ -56,8 +56,8 @@ def extract_tsne_latents(vectors, perplexity=30): ## tSNE mapping routine
             n_comp = vectors.shape[1] - 2 #z_top.shape[1]-2
             n_comp = max(2, n_comp)
         ipca = IncrementalPCA(n_components=n_comp, batch_size=batch_size)
-        ipca.fit(vectors.numpy())
-        z_2D = ipca.transform(vectors.numpy())
+        ipca.fit(vectors)
+        z_2D = ipca.transform(vectors)
         print(" PCA.lat.shape = ",z_2D.shape)
         print(" > Finishing projection via t-SNE...")
         z_2D = TSNE(n_components=2,perplexity=perplexity, verbose=1).fit_transform(z_2D)
