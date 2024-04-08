@@ -274,9 +274,10 @@ class HebbianSynapse(Component):
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, weights=self.weights)
         if self.bInit != None:
-            jnp.savez(file_name, biases=self.biases)
+            jnp.savez(file_name, weights=self.weights, biases=self.biases)
+        else:
+            jnp.savez(file_name, weights=self.weights)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
