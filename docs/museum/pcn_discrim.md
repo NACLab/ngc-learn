@@ -2,7 +2,7 @@
 
 In this exhibit, we will see how a classifier can be created based on
 predictive coding. This exhibit model effectively reproduces some of the results
-reported (Whittington &amp; Bogacz, 2017) [1]. The model code for this
+reported (Whittington &amp; Bogacz, 2017) <b>[1]</b. The model code for this
 exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_discrim).
 
@@ -10,12 +10,12 @@ exhibit can be found
 
 The discriminative predictive coding network (PCN) is a hierarchical neuronal
 model that seeks to predict the label `y` ($\mathbf{y}$; typically a one-hot encoded label) of a
-given sensory input data point `x` ($\mathbf{x}$). The PCN model of [1] showed that constructing
+given sensory input data point `x` ($\mathbf{x}$). The PCN model of <b>[1]</b> showed that constructing
 a multi-layer system composed of layers of stateful neural processing units, where one layer
 of neurons would locally predict the activities of the ones (situated) above them,
 resulted in an effective yet more biologically-plausible classifier,
 as compared to deep neural networks trained with backpropagation of errors (or
-backprop). Furthermore, [1] showed that the underlying dynamics of the PCN could
+backprop). Furthermore, <b>[1]</b> showed that the underlying dynamics of the PCN could
 be shown to recover the updates to synaptic weights produced by backprop under
 certain assumptions/conditions.
 
@@ -23,7 +23,7 @@ In ngc-learn, building the PCN requires working with the library's `graded` neur
 i.e., those that follow dynamics without spikes/discrete action potentials,
 specifically the [RateCell](ngclearn.components.neurons.graded.rateCell)
 and the [GaussianErrorCell](ngclearn.components.neurons.graded.gaussianErrorCell)
-components. In effect, to construct a two hidden layer model of the form of [1], one will
+components. In effect, to construct a two hidden layer model of the form of <b>[1]</b>, one will
 wire together four layers of `RateCell`'s, i.e., `z0` ($\mathbf{z}^0$),
 `z1` ($\mathbf{z}^1$), `z2` ($\mathbf{z}^2$), `z3` ($\mathbf{z}^3$), with
 three [hebbian synapses](ngclearn.components.synapses.hebbian.hebbianSynapse),
@@ -33,7 +33,7 @@ generally follows a message-passing scheme where local prediction errors  -- the
 error/mismatch activities associated with each layer's guess of the activities
 of the one above it -- are passed up and down via local feedback synaptic
 connections in order to produce updates to the neuronal activities themselves. Notice
-that this is much akin to the E-step of expectation-maximization (E-M) [2]. This
+that this is much akin to the E-step of expectation-maximization (E-M) <b>[]</b. This
 message-passing is done typically for several steps in time and, after these
 dynamics are iteratively run several times, the synaptic weight updates are computed for
 each layer's associated predictive synapses (`W1`, `W2`, and `W3`) using
@@ -62,7 +62,7 @@ the `RateCell` does by default).
 The only other key aspect to define in the above ODE is what $\mathbf{e}^\ell_t$
 means. This is known in ngc-learn as an "error cell", which is another type of
 [graded neuron component](../modeling/neurons.md) and is, for the purposes of
-constructing the model of [1], defined as:
+constructing the model of <b>[1]</b>, defined as:
 
 $$
 \mathbf{e}^\ell_t = (\mathbf{z}^\ell_t - \mu^\ell_t), \; \text{where} \;
@@ -95,7 +95,7 @@ activities described earlier.
 
 The last part for constructing an effective PCN for classification is simply
 determining how the initial conditions are set for the neurons in layers
-$\ell = 1$ and $\ell = 2$. Much as in [1], this is done by clamping the input
+$\ell = 1$ and $\ell = 2$. Much as in <b>[1]</b, this is done by clamping the input
 layer to sensory data, i.e., $\mathbf{z}^0 = \mathbf{x}$, clamping
 the output layer to label data $\mathbf{z}^3 = \mathbf{y}$,
 and initializing $\mathbf{z}^1$ and $\mathbf{z}^2$ to values that are produced
@@ -152,7 +152,7 @@ model = PCN(subkeys[1], x_dim, y_dim, hid1_dim=512, hid2_dim=512, T=20,
 where the integration time constant for the Euler integration of the neuronal
 dynamics is set to `1` millisecond (ms) which are run for `T = 20` (E-)steps
 before synaptic weights are updated with the Hebbian ODE shown above. Also,
-much as in [1], the Adam adaptive learning rate (with global learning rate
+much as in <b>[1]</b, the Adam adaptive learning rate (with global learning rate
 `eta = 0.001`) is used to apply the Hebbian adjustments to the synaptic weight values.
 
 Note that the `PCN` exhibit model constructor provides, among several model and
@@ -207,7 +207,7 @@ which should result in an output similar what is shown below:
 ```
 
 Desirably, our out-of-sample results on both the validation and
-test-set corroborate the measurements reported in (Whittington &amp; Bogacz, 2017) [1],
+test-set corroborate the measurements reported in (Whittington &amp; Bogacz, 2017) <b>[1]</b,
 i.e., a range of `1.7`-`1.8`\% validation error was reported and our
 simulation yields a validation accuracy of `0.9824 * 100 = 98.24`\% (or `1.76`\% error)
 and a test accuracy of `0.9803 * 100 = 98.03`\% (or about `1.969`\% error),
@@ -310,10 +310,10 @@ to run "stateless dynamics" or, in other words, to just employ a simple forwardi
 operation that does not require integrating an ODE (this just reduces unused
 calculations of little interest to the modeler).   
 [^2]: Note that the bottom/input layer `z0`'s activation $\phi^0$ is set to the
-identity function in both ngc-learn and in [1]. The same is done for the
+identity function in both ngc-learn and in <b>[1]</b. The same is done for the
 PCN's top/layer `z1`'s activation $\phi^3$.
 [^3]: The most notable difference is that our PCN model works directly with
-the normalized pixel data whereas [1] transforms the
+the normalized pixel data whereas <b>[1]</b transforms the
 data with an inverse logistic transform. However, note that you can find this
 function implemented in ngc-learn as `inverse_logistic()` in
 `ngclearn.utils.model_utils` if you wanted to do this yourself.
