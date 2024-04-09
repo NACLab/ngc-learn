@@ -57,7 +57,7 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
     dW = (dWpost + dWpre) * eta
     _W = W + dW
     # if w_norm is not None:
-    #     _W = normalize_matrix(_W, w_norm, ord=1, axis=1) ## L1 norm constraint
+    #     _W = normalize_matrix(_W, w_norm, order=1, axis=1) ## L1 norm constraint
     #    #_W = _W * (w_norm/(jnp.linalg.norm(_W, axis=1, keepdims=True) + 1e-5))
     _W = jnp.clip(_W, 0.001, w_bound) # 0.01, w_bound)
     return _W
@@ -245,7 +245,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
                               w_norm=self.w_norm)
         if self.norm_T > 0:
             if t % (self.norm_T-1) == 0: #t % self.norm_t == 0:
-                self.weights = normalize_matrix(self.weights, self.w_norm, ord=1, axis=0)
+                self.weights = normalize_matrix(self.weights, self.w_norm, order=1, axis=0)
 
     def reset(self, **kwargs):
         self.inputCompartment = None
