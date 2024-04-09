@@ -186,7 +186,7 @@ def initialize_params(dkey, initKernel, shape):
     return params
 
 @partial(jit, static_argnums=[2, 3])
-def normalize_matrix(M, wnorm, ord=1, axis=0):
+def normalize_matrix(M, wnorm, order=1, axis=0):
     """
     Normalizes the values in matrix to have a particular norm across each vector span.
 
@@ -195,7 +195,7 @@ def normalize_matrix(M, wnorm, ord=1, axis=0):
 
         wnorm: target norm for each
 
-        ord: order of norm to use in normalization (Default: 1);
+        order: order of norm to use in normalization (Default: 1);
             note that `ord=1` results in the L1-norm, `ord=2` results in the L2-norm
 
         axis: 0 (apply to column vectors), 1 (apply to row vectors)
