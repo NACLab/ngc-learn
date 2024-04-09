@@ -262,4 +262,3 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.weights = data['weights']
-        print("W1.load = ",self.weights.shape)
