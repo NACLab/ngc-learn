@@ -45,6 +45,10 @@ def measure_KLD(p_xHat, p_x, preserve_batch=False):
     they are matrices). Note: If batch is preserved, this returns a column
     vector where each row is the KLD(x_pred, x_true) for that row's datapoint.
 
+    | Formula:
+    | KLD(p_xHat, p_x) = (1/N) [ sum_i(p_x * jnp.log(p_x)) - sum_i(p_x * jnp.log(p_xHat)) ]
+    | where sum_i implies summing across dimensions of vector-space of p_x
+
     Args:
         p_xHat: predicted probabilities; (N x C matrix, where C is number of categories)
 
@@ -56,13 +60,15 @@ def measure_KLD(p_xHat, p_x, preserve_batch=False):
     Returns:
         an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
     """
+    ## numerical control step
     offset = 1e-6
     _p_x = jnp.clip(p_x, offset, 1. - offset)
     _p_xHat = jnp.clip(p_xHat, offset, 1. - offset)
+    ## calc raw KLD scores
     N = p_x.shape[1]
-    term1 = (1/N) * jnp.sum(_p_x * jnp.log(_p_x), axis=1, keepdims=True)
-    term2 = -(1/N) * jnp.sum(_p_x * jnp.log(_p_xHat), axis=1, keepdims=True)
-    kld = term1 + term2
+    term1 = jnp.sum(_p_x * jnp.log(_p_x), axis=1, keepdims=True) # * (1/N)
+    term2 = -jnp.sum(_p_x * jnp.log(_p_xHat), axis=1, keepdims=True) # * (1/N)
+    kld = (term1 + term2) * (1/N)
     if preserve_batch == False:
         kld = jnp.mean(kld)
     return kld
