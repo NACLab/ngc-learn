@@ -114,12 +114,6 @@ class VarTrace(Component): ## low-pass filter
 
         ##Layer Size Setup
         self.n_units = n_units
-
-        if directory is None:
-            self.key, subkey = random.split(self.key)
-        else:
-            self.load(directory)
-
         self.reset()
 
     def verify_connections(self):

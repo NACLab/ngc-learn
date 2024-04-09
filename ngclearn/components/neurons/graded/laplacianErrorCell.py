@@ -159,8 +159,6 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         ##Layer Size Setup
         self.n_units = n_units
         self.batch_size = 1
-
-        ## Set up bundle for multiple inputs of current
         self.reset()
 
     def verify_connections(self):

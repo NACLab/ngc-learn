@@ -102,7 +102,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         tau_m: membrane/state time constant (milliseconds)
 
-        prior: a kernel for specifying the type of centered scale-shift distribution 
+        prior: a kernel for specifying the type of centered scale-shift distribution
             to impose over neuronal dynamics, applied to each neuron or
             dimension within this component (Default: ("gaussian", 0)); this is
             a tuple with 1st element containing a string name of the distribution
@@ -224,9 +224,7 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         ##Layer Size Setup
         self.n_units = n_units
         self.batch_size = 1
-
         self.fx, self.dfx = create_function(fun_name=act_fx)
-
         self.reset()
 
     def verify_connections(self):
