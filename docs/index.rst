@@ -27,6 +27,14 @@ and spiking neural networks. This toolkit is built on top of
 
 .. toctree::
   :maxdepth: 1
+  :caption: Model Museum
+
+  museum/model_museum
+  museum/index
+
+
+.. toctree::
+  :maxdepth: 1
   :caption: Modeling API
 
   modeling/components
@@ -34,12 +42,6 @@ and spiking neural networks. This toolkit is built on top of
   modeling/synapses
   modeling/input_encoders
   modeling/other_ops
-
-.. toctree::
-  :maxdepth: 1
-  :caption: Model Museum
-
-  museum
 
 .. toctree::
    :maxdepth: 6

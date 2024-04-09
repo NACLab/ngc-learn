@@ -12,5 +12,10 @@ particular maintained repository called `ngc-museum`, where you can find and
 access/run historical models and agents built with ngc-learn to perform
 different experimental tasks.
 
+Please refer to the [table of contents](../museum/index.rst) for walkthroughs on using and running
+various historical models in the museum.
+
 ## References
-<b>[1]</b> Ororbia, Alexander G. "Brain-inspired machine intelligence: A survey of neurobiologically-plausible credit assignment." arXiv preprint arXiv:2312.09257 (2023).
+<b>[1]</b> Ororbia, Alexander G. "Brain-inspired machine intelligence: A survey
+of neurobiologically-plausible credit assignment."
+arXiv preprint arXiv:2312.09257 (2023).
