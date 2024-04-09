@@ -38,26 +38,56 @@ def measure_ACC(mu, y): ## measures/calculates accuracy
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
-@partial(jit, static_argnums=[3])
-def measure_CatNLL(p, x, epsilon=0.0000001, preserve_batch=False): #1e-7):
+def measure_KLD(p_xHat, p_x, preserve_batch=False):
     """
-    Measures the negative Categorical log likelihood
+    Measures the (raw) Kullback-Leibler divergence (KLD), assuming that the two
+    input arguments contain valid probability distributions (in each row, if
+    they are matrices). Note: If batch is preserved, this returns a column
+    vector where each row is the KLD(x_pred, x_true) for that row's datapoint.
+
+    Args:
+        p_xHat: predicted probabilities; (N x C matrix, where C is number of categories)
+
+        p_x: ground true probabilities; (N x C matrix, where C is number of categories)
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar mean score
+
+    Returns:
+        an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
+    """
+    offset = 1e-6
+    _p_x = jnp.clip(p_x, offset, 1. - offset)
+    _p_xHat = jnp.clip(p_xHat, offset, 1. - offset)
+    N = p_x.shape[1]
+    term1 = (1/N) * jnp.sum(_p_x * jnp.log(_p_x), axis=1, keepdims=True)
+    term2 = -(1/N) * jnp.sum(_p_x * jnp.log(_p_xHat), axis=1, keepdims=True)
+    kld = term1 + term2
+    if preserve_batch == False:
+        kld = jnp.mean(kld)
+    return kld
+
+@partial(jit, static_argnums=[3])
+def measure_CatNLL(p, x, offset=1e-7, preserve_batch=False):
+    """
+    Measures the negative Categorical log likelihood (Cat.NLL).  Note: If batch is
+    preserved, this returns a column vector where each row is the
+    Cat.NLL(p, x) for that row's datapoint.
 
     Args:
         p: predicted probabilities; (N x C matrix, where C is number of categories)
 
         x: true one-hot encoded targets; (N x C matrix, where C is number of categories)
 
-        epsilon: factor to control for numerical stability (Default: 1e-7)
+        offset: factor to control for numerical stability (Default: 1e-7)
 
         preserve_batch: if True, will return one score per sample in batch
             (Default: False), otherwise, returns scalar mean score
 
     Returns:
-        an (N x 1) column vector, where each row is the Cat.NLL(x_pred, x_true)
-        for that row's datapoint
+        an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
     """
-    p_ = jnp.clip(p, epsilon, 1.0 - epsilon)
+    p_ = jnp.clip(p, offset, 1.0 - offset)
     loss = -(x * jnp.log(p_))
     nll = jnp.sum(loss, axis=1, keepdims=True) #/(y_true.shape[0] * 1.0)
     if preserve_batch == False:
@@ -68,15 +98,19 @@ def measure_CatNLL(p, x, epsilon=0.0000001, preserve_batch=False): #1e-7):
 def measure_MSE(mu, x):
     """
     Measures mean squared error (MSE), or the negative Gaussian log likelihood
-    with variance of 1.0.
+    with variance of 1.0. Note: If batch is preserved, this returns a column
+    vector where each row is the MSE(mu, x) for that row's datapoint.
 
     Args:
         mu: predicted values (mean); (N x D matrix)
 
         x: target values (data); (N x D matrix)
 
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar mean score
+
     Returns:
-        an (N x 1) column vector, where each row is the MSE(x_pred, x_true) for that row's datapoint
+        an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
     """
     diff = mu - x
     se = jnp.square(diff) #diff * diff # squared error
@@ -84,17 +118,24 @@ def measure_MSE(mu, x):
     return jnp.sum(se, axis=1, keepdims=True) # tf.math.reduce_mean(se)
 
 @jit
-def measure_BCE(p, x, offset=1e-7): #1e-10
+def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
     """
     Calculates the negative Bernoulli log likelihood or binary cross entropy (BCE).
+    Note: If batch is preserved, this returns a column vector where each row is
+    the BCE(p, x) for that row's datapoint.
 
     Args:
         p: predicted probabilities of shape; (N x D matrix)
 
         x: target binary values (data) of shape; (N x D matrix)
 
+        offset: factor to control for numerical stability (Default: 1e-7)
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar mean score
+
     Returns:
-        an (N x 1) column vector, where each row is the BCE(p, x) for that row's datapoint
+        an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
     """
     p_ = jnp.clip(p, offset, 1 - offset)
     return -jnp.sum(x * jnp.log(p_) + (1.0 - x) * jnp.log(1.0 - p_),axis=1, keepdims=True)
