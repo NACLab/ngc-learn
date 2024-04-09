@@ -44,41 +44,43 @@ entail that, for each command supplied to a controller, a command will call the
 same function with the same parameters on each component provided
 to that very command. It is also expected that there is error handling within the
 constructor to catch as many runtime errors as possible. Note that base
-command class provides a list to check required calls such as `clamp` or `evolve`.
+command class provides a list to check required calls such as `reset` or `evolve`.
 
 It is important to note that, if commands are going to be constructed via a
 controller, they should have keyword arguments with default values that
 error out on bad input instead of positional arguments.
 
-## Example Command (Clamp)
+## Example Command (reset)
 
-Below, we present the key bits of source code that characterize a clamp command
+Below, we present the key bits of source code that characterize a reset command
 -- a very commonly used, built-in command for models designed in ngc-learn -- and
 its internal operation:
 
 ```python
-from ngcsimlib.commands.command import Command
+from ngcsimlib.commands import Command
 from ngcsimlib.utils import extract_args
+from ngcsimlib.logger import warn, error
 
-class Clamp(Command):
-    def __init__(self, components=None, compartment=None, clamp_name=None, **kwargs):
-        super().__init__(components=components, required_calls=['clamp'])
-        if compartment is None:
-            raise RuntimeError("A clamp command requires a \'compartment\' to clamp to for construction")
-        if clamp_name is None:
-            raise RuntimeError("A clamp command requires a \'clamp_name\' to bind to for construction")
-
-        self.clamp_name = clamp_name
-        self.compartment = compartment
+class Reset(Command):
+    def __init__(self, components=None, reset_name=None, command_name=None,
+                 **kwargs):
+        super().__init__(components=components, command_name=command_name,
+                         required_calls=['reset'])
+        if reset_name is None:
+            error(self.name, "requires a \'reset_name\' to bind to for construction")
+        self.reset_name = reset_name
 
     def __call__(self, *args, **kwargs):
         try:
-            vals = extract_args([self.clamp_name], *args, **kwargs)
+            vals = extract_args([self.reset_name], *args, **kwargs)
         except RuntimeError:
-            raise RuntimeError("Clamp, " + str(self.clamp_name) + " is missing from keyword arguments or a positional arguments can be provided")
+            warn(self.name, ",", self.reset_name,
+                 "is missing from keyword arguments and no positional arguments were provided")
+            return
 
-        for component in self.components:
-            self.components[component].clamp(self.compartment, vals[self.clamp_name])
+        if vals[self.reset_name]:
+            for component in self.components:
+                self.components[component].reset()
 ```
 
 ## Custom Command Template
@@ -89,18 +91,20 @@ designing the key operational bits that make up a useful command.
 ```python
 from ngcsimlib.commands.command import Command
 from ngcsimlib.utils import extract_args
+from ngcsimlib.logger import error
+
 
 class CustomCommand(Command):
-    def __init__(self, components=None, BINDING_VALUE=None, ADDITIONAL_INPUT=None,
+    def __init__(self, components=None, BINDING_VALUE=None, ADDITIONAL_INPUT=None, command_name=None,
                  **kwargs):
-        super().__init__(components=components, required_calls=['CUSTOM_CALL'])
+        super().__init__(components=components, command_name=None, required_calls=['CUSTOM_CALL'])
         # Make sure additional input is passed in
         if ADDITIONAL_INPUT is None:
-            raise RuntimeError("A custom command requires a \'ADDITIONAL_INPUT\' for construction")
+            error(self.name, "requires a \'ADDITIONAL_INPUT\' for construction")
 
         # Make sure command is bound to a value
         if BINDING_VALUE is None:
-            raise RuntimeError("A custom command requires a \'BINDING_VALUE\' to bind to for construction")
+            error(self.name, "requires a \'BINDING_VALUE\' to bind to for construction")
 
         self.BOUND_VALUE = BINDING_VALUE
         self.ADDITION_VALUE = ADDITIONAL_INPUT
@@ -110,7 +114,7 @@ class CustomCommand(Command):
         try:
             vals = extract_args([self.BOUND_VALUE], *args, **kwargs)
         except RuntimeError:
-            raise RuntimeError("Custom, " + str(self.BOUND_VALUE) + " is missing from keyword arguments or a positional "
+            error(self.name, ",", str(self.BOUND_VALUE), "is missing from keyword arguments or a positional "
                                                                   "arguments can be provided")
 
         #Use extracted value to call a method on each component

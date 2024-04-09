@@ -9,7 +9,7 @@ defines how each cable (within a bundle) will interact with the destination
 compartment.
 
 ## Built-in Rules
-By default, ngcsimlib (the backend of ngc-learn) comes with three bundle rules,
+By default, ngcsimlib comes with three bundle rules,
 `overwrite`, `additive`, and `append`. Of these rules, the default rule for every
 cable is overwrite, which replaces the value of the compartment with the value
 being transmitted along the cable. The additive compartment rule itself adds to
@@ -22,20 +22,20 @@ parameter is the destination component, the second is the value being
 transmitted, and finally the destination compartment. A bundle rule has no
 return value.
 
-### General Form of a Bundle Rule Routine:
-```python
-def BUNDLE_RULE_NAME(component, value, destination_compartment):
-    # Logic for processing transmitted value
-    # Syntax for referencing destination compartment ->
-        # component.compartments[destination_compartment]
-    pass
-```
+> General Form of a Bundle Rule Routine:
+> ```python
+> def BUNDLE_RULE_NAME(component, value, destination_compartment):
+>     # Logic for processing transmitted value
+>     # Syntax for referencing destination compartment ->
+>         # component.compartments[destination_compartment]
+>     pass
+> ```
 
-### An Example Bundle Rule (Additive)
-```python
-def additive(component, value, destination_compartment):
-    component.compartments[destination_compartment] += value
-```
+> Example Bundle Rule (Additive)
+> ```python
+> def additive(component, value, destination_compartment):
+>     component.compartments[destination_compartment] += value
+> ```
 
 ## Notes
 Each cable can have a different bundle rule, so the order that connections are
