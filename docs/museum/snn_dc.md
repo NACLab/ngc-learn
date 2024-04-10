@@ -74,12 +74,15 @@ dynamics as follows:
 
 $$
 \tau_\delta \frac{\partial \delta}{\partial t} &= -\delta + \alpha \mathbf{s}_t \\
-\theta &= \theta + \delta
+\theta_t &= \theta_{base} + \delta
 $$
 
 where $\delta$ is a "homeostatic variable" that essentially increments (any
 dimension $i$) by a small constant amount every time a particular cell $i$ emits
-a spike (setting $\tau_\delta = 0$ turns off the threshold dynamics). With
+a spike (setting $\tau_\delta = 0$ turns off the threshold dynamics). Note that 
+the second equation above implies that $\theta_t$ does not evolve its 
+base threshold value ($\theta_{base}$), it is simply re-computed as a sum 
+of its base value and the current value of the evolved homeostatic variable. With
 the above knowledge, we can now effectively recreate the setup of <b>[1]</b>
 by using a value greater than zero for $\tau_\delta$ for the excitatory LIFs
 and a value of zero for the inhibitory ones.
