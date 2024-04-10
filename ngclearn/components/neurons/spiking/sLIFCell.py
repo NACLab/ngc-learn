@@ -2,6 +2,7 @@ from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
+from ngclearn.utils.surrogate_fx import secant_lif_estimator
 
 @jit
 def update_times(t, s, tols):
@@ -20,34 +21,6 @@ def update_times(t, s, tols):
     """
     _tols = (1. - s) * tols + (s * t)
     return _tols
-
-@jit
-def apply_surrogate_dfx(j, c1=0.82, c2=0.08):
-    """
-    Applies a surrogate (derivative) function -- often used to approximate the
-    derivative through an action potential/spike's output value.
-
-    Args:
-        j: electrical current value
-
-        c1: control coefficient 1 (unnamed factor from paper - scales current
-            input; Default: 0.82 as in source paper)
-
-        c2: control coefficient 2 (unnamed factor from paper - scales, multiplicatively
-            with c1, the output the derivative surrogate; Default: 0.08 as in
-            source paper)
-
-    Returns:
-        surrogate output values (same shape as j)
-    """
-    # sech(x) = 1/cosh(x), cosh(x) = (e^x + e^(-x))/2
-    # c1 c2 sech^2(c2 j) for j > 0 and 0 for j <= 0
-    mask = (j > 0.).astype(jnp.float32)
-    dj = j * c2
-    cosh_j = (jnp.exp(dj) + jnp.exp(-dj))/2.
-    sech_j = 1./cosh_j #(cosh_x + 1e-6)
-    dv_dj = sech_j * (c1 * c2) # ~deriv w.r.t. j
-    return dv_dj * mask ## 0 if j < 0, otherwise, use dv/dj for j >= 0
 
 @partial(jit, static_argnums=[3,4])
 def modify_current(j, spikes, inh_weights, R_m, inh_R):
@@ -82,8 +55,43 @@ def modify_current(j, spikes, inh_weights, R_m, inh_R):
         _j = _j - (jnp.matmul(spikes, inh_weights) * inh_R)
     return _j
 
-@partial(jit, static_argnums=[6,7,8,9,10,11])
-def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
+## co-routines for run_cell
+@partial(jit, static_argnums=[4,5,6])
+def _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min=None):
+    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+    _v = (v + (-v + j) * (dt / tau_m)) * mask
+    if v_min is not None:
+        _v = jnp.maximum(v_min, _v)
+    #_v = v + (-v) * (dt / tau_m) + j * mask
+    return _v, mask
+
+@jit
+def _hyperpolarize(v, s):
+    _v = (1. - s) * v ## hyper-polarize cells
+    return _v
+
+@partial(jit, static_argnums=[3,4,5])
+def _update_threshold(dt, v_thr, spikes, thrGain=0.002, thrLeak=0.0005, rho_b = 0.):
+    ## update thresholds if applicable
+    if rho_b > 0.: ## run sparsity-enforcement threshold
+        dthr = jnp.sum(spikes, axis=1, keepdims=True) - 1.0
+        _v_thr = jnp.maximum(v_thr + dthr * rho_b, 0.025)
+    else: ## run simple adaptive threshold
+        thr_gain = spikes * thrGain
+        thr_leak = (v_thr * thrLeak)
+        _v_thr = v_thr + thr_gain - thr_leak
+    return _v_thr
+
+@partial(jit, static_argnums=[4])
+def _update_refract_and_spikes(dt, rfr, s, mask, sticky_spikes=False):
+    ## update refractory variables
+    _rfr = (rfr + dt) * (1. - s)
+    _s = s
+    if sticky_spikes == True: ## pin refractory spikes if configured
+        _s = s * mask + (1. - mask)
+    return _rfr, _s
+
+def run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
              thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
     """
     Runs leaky integrator neuronal dynamics
@@ -100,6 +108,8 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
         tau_m: cell membrane time constant
 
         rfr: refractory variable vector (one per neuronal cell)
+
+        spike_fx: spike emission function of form `spike_fx(v, v_thr)`
 
         refract_T: (relative) refractory time period (in ms; Default
             value is 1 ms)
@@ -118,25 +128,11 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, refract_T=1., thrGain=0.002,
     Returns:
         voltage(t+dt), spikes, threshold(t+dt), updated refactory variables
     """
-    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
-    new_voltage = (v + (-v + j) * (dt / tau_m)) * mask
-    if v_min is not None:
-        new_voltage = jnp.maximum(v_min, new_voltage)
-    #new_voltage = v + (-v) * (dt / tau_m) + j * mask
-    spikes = jnp.where(new_voltage > v_thr, 1, 0)
-    new_voltage = (1. - spikes) * new_voltage ## hyper-polarize cells
-    ## update thresholds if applicable
-    if rho_b > 0.: ## run sparsity-enforcement threshold
-        dthr = jnp.sum(spikes, axis=1, keepdims=True) - 1.0
-        new_thr = jnp.maximum(v_thr + dthr * rho_b, 0.025)
-    else: ## run simple adaptive threshold
-        thr_gain = spikes * thrGain
-        thr_leak = (v_thr * thrLeak)
-        new_thr = v_thr + thr_gain - thr_leak
-    ## update refractory variables
-    _rfr = (rfr + dt) * (1. - spikes)
-    if sticky_spikes == True: ## pin refractory spikes if configured
-        spikes = spikes * mask + (1. - mask)
+    new_voltage, mask = _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min)
+    spikes = spike_fx(new_voltage, v_thr)
+    new_voltage = _hyperpolarize(new_voltage, spikes)
+    new_thr = _update_threshold(dt, v_thr, spikes, thrGain, thrLeak, rho_b)
+    _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, mask, sticky_spikes)
     return new_voltage, spikes, new_thr, _rfr
 
 class SLIFCell(Component): ## leaky integrate-and-fire cell
@@ -303,6 +299,9 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         ## variable below determines if spikes pinned at 1 during refractory period?
         self.sticky_spikes = sticky_spikes
 
+        ## set up surrogate function for spike emission
+        self.spike_fx, self.d_spike_fx = secant_lif_estimator()
+
         ## create simple recurrent inhibitory pressure
         self.inh_R = inhibit_R ## lateral inhibitory magnitude
         self.key, subkey = random.split(self.key)
@@ -345,14 +344,13 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         ## apply simplified inhibitory pressure
         j_curr = modify_current(j_curr, self.spikes, self.inh_weights, self.R_m, self.inh_R)
         self.current = j_curr # None ## store electrical current
-        self.surrogate = apply_surrogate_dfx(j_curr, c1=0.82, c2=0.08)
+        self.surrogate = self.d_spike_fx(j_curr, self.voltage, self.threshold, c1=0.82, c2=0.08)
         self.voltage, self.spikes, self.threshold, self.refract = \
             run_cell(dt, j_curr, self.voltage, self.threshold, self.tau_m,
-                     self.refract, self.refract_T, self.thrGain, self.thrLeak,
+                     self.refract, self.spike_fx, self.refract_T, self.thrGain, self.thrLeak,
                      self.rho_b, sticky_spikes=self.sticky_spikes, v_min=self.v_min)
         ## update tols
         self.timeOfLastSpike = update_times(t, self.spikes, self.timeOfLastSpike)
-        #self.timeOfLastSpike = (1 - self.spikes) * self.timeOfLastSpike + (self.spikes * t)
 
     def reset(self, **kwargs):
         self.voltage = jnp.zeros((self.batch_size, self.n_units))
