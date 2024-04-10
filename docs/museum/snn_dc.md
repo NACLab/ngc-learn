@@ -135,7 +135,7 @@ excitatory neuron.
    +-------------------------------------------------------+
 ```
 
-All that remains is to specify the synaptic plasticity dynamics (learning) 
+All that remains is to specify the synaptic plasticity dynamics (learning)
 for the DC-SNN, which we do next.
 
 ### Spike-Timing-Dependent Plasticity (STDP)
@@ -226,9 +226,10 @@ of the DC-SNN's excitatory neurons for the default sampled test digit (index `99
 in the `/exp/raster/` sub-directory. You should see a raster plot much like  
 the one below:
 
-<img src="../images/museum/dc_snn/dcsnn_raster.jpg" width="450" />
+<img src="../images/museum/dc_snn/dcsnn_raster.png" width="450" />
 
-As observed, due to the competitive dynamics of this model, the spike train for
+As observed (we have overlaid pink box zoom-ins to emphasize the locations of
+the spike ticks), due to the competitive dynamics of this model, the spike train for
 this trained model end up being very sparse (and thus quite friendly for
 neuromorphic platforms, where a hard zero means no computation needs to be
 carried out, thus avoiding propagating zero values along synapses in
