@@ -85,7 +85,7 @@ base threshold value ($\theta_{base}$), it is simply re-computed as a sum
 of its base value and the current value of the evolved homeostatic variable. With
 the above knowledge, we can now effectively recreate the setup of <b>[1]</b>
 by using a value greater than zero for $\tau_\delta$ for the excitatory LIFs
-and a value of zero for the inhibitory ones.
+and a value of zero (for $\tau_\delta$) for the inhibitory ones.
 
 Finally, the last key item to specify is how the electrical current is produced
 along synapses for the excitatory and inhibitory neurons. For the excitatory
