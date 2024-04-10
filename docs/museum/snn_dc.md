@@ -232,7 +232,7 @@ Changing the `sample_idx` argument to the `analyze_dcsnn.py` allows you, in
 this model exhibit code, to query different image patterns against your
 trained DC-SNN model (like it's a "neural lookup table"). Studying our trained
 model from the exhibit code, (a zip containing the synapses our simulation
-produced is included) we got some interesting successful matches:
+produced is included[^5]) we got some interesting successful matches:
 
 ```{eval-rst}
 .. image:: ../images/museum/dc_snn/successes/digit222.png  
