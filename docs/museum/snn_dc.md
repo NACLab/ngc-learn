@@ -276,7 +276,7 @@ were used and more excitatory neurons were utilized.
 
 
 <!-- References/Citations -->
-# References
+## References
 <b>[1]</b> Diehl, Peter U., and Matthew Cook. "Unsupervised learning of digit
 recognition using spike-timing-dependent plasticity." Frontiers in computational
 neuroscience 9 (2015): 99.
