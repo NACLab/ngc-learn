@@ -295,7 +295,7 @@ those built with the [variable trace](ngclearn.components.other.varTrace) compon
 Note that the variable trace effectively applies a low-pass filter iteratively
 to the spikes produced by a spike train.
 [^4]: In the <a href="https://www.cs.rit.edu/~ago/nac_lab.html">NAC group</a>'s
-experience, observing the mean and Frobenius norm of synaptic values can a
+experience, observing the mean and Frobenius norm of synaptic values can be a
 useful starting point for determining unhealthy behavior or some degenerate cases
 in the context of spiking neural network credit assignment.
 [^5]: To load in the exact synaptic efficacies we obtained to get the images
