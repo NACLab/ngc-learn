@@ -100,8 +100,9 @@ spike vector as $\mathbf{s}^i_t$, and an input (Poisson) spike vector as
 $\mathbf{s}^{inp}_t$. As mentioned earlier, $\mathbf{W}^1_t$ is the input-to-excitatory
 synaptic cable while $\mathbf{W}^{ei}$ is the excitatory-to-inhibitory synaptic
 cable $\mathbf{W}^{ie}$ is the inhibitory-to-excitatory synaptic cable; the
-subscript $t$ has been dropped for these cables because they are held fixed
-to a constant value <b>[1]</b>. Ultimately, the inhibitory neurons will emit
+subscript $t$ has been dropped for these last two cables ($\mathbf{W}^{ei}$ 
+and $\mathbf{W}^{ie}$) because they are held fixed
+to constant values <b>[1]</b>. Ultimately, the inhibitory neurons will emit
 spikes once enough voltage has been built up as they receive enough electrical
 current driven by the excitatory neurons -- once the inhibitory neurons fire,
 they will laterally inhibit/suppress the activities of other excitatory cells
@@ -159,7 +160,7 @@ to this model, such as a synaptic rescaling step applied at particular steps
 in time (as was done in <b>[1]</b>). Notes on these minor extra mechanisms can
 be found in the DC-SNN's `README`.
 
-## ## Running the DC-SNN Model
+## Running the DC-SNN Model
 
 To fit the DC-SNN model described above, go to the `exhibits/diehl_cook_snn`
 sub-folder (this step assumes that you have git cloned the model museum repo
