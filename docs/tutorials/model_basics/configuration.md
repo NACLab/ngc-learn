@@ -13,13 +13,13 @@ to define and use them as they choose. However, there are some general design pr
 Specifically that they will not configure any parts of individual models. These configurations should be used to select
 experiments and control global level flags, not setting hyperparameters for models.
 
-## Built in Configurations
+## Built-in Configurations
 
 There are a couple configurations that ngcsimlib will look for while it is initializing. Specifically `modules`
 and `logging`. While neither of these is needed to get up and running some aspects of ngcsimlib such as logging to files
 and more verbosity are locked behind flags set here.
 
-### modules
+### Modules
 
 The modules configuration only contains one value, `module_path`. This value is the location of the `modules.json`. For
 additional information for configuring this file please
@@ -35,7 +35,7 @@ see <a href="https://ngc-learn.readthedocs.io/en/latest/tutorials/model_basics/j
 > }
 > ```
 
-### logging
+### Logging
 
 The logging configuration section sets up and controls the instance of the python logger found inside ngcsimlib. This
 section has three values found in it. Specifically `logging_level`, `logging_file`, and `hide_console`. The logging
