@@ -15,3 +15,4 @@ relevant, referenced publicly available ngc-learn simulation code.
 
   pcn_discrim
   snn_dc
+  snn_bfa
