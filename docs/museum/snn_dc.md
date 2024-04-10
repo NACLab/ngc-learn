@@ -299,5 +299,5 @@ above, you can unzip the folder `dcsnn_syn.zip`, which contains all of the
 model's numpy array values, and simply copy all of the compressed numpy arrays
 into your `exp/snn_stdp/custom/` folder, which is where ngc-learn/ngc-sim-lib
 look for pre-trained value arrays when loading in a previously constructed model.
-Once you do this, running `analyze_dcsnn.py` with the same arguments as above  
+Once you do this, running `analyze_dcsnn.py` with the same arguments as above
 should produce plots/images much like those in this walkthrough.
