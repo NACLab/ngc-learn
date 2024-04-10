@@ -53,7 +53,7 @@ $$
 where $v_{rest}$ is the resting potential (in milliVolts, mV) and
 $\mathbf{m}_{rfr}$ is a binary mask where any element is zero if the
 neuronal cell is in its refractory period (meaning that it will be clamped
-to its resting/reset potential for so many milliseconds). Note that $odot$ denotes
+to its resting/reset potential for so many milliseconds). Note that $\odot$ denotes
 an elementwise multiplication (Hadamard product) and $\cdot$ denotes a matrix-vector
 multiplication. Spikes are emitted from any cell within $\mathbf{v}_t$
 according to the following piecewise function:
