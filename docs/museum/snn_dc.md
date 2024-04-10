@@ -5,7 +5,7 @@ its synaptic efficacies via spike-timing-dependent plasticity can be created.
 This exhibit model effectively reproduces some of the results
 reported (Diehl &amp; Cook, 2015) <b>[1]</b>. The model code for this
 exhibit can be found
-[here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_discrim).
+[here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/diehl_cook_snn).
 
 ## The Diehl and Cook Spiking Network (DC-SNN)
 
