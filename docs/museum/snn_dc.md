@@ -7,6 +7,9 @@ reported (Diehl &amp; Cook, 2015) <b>[1]</b>. The model code for this
 exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/diehl_cook_snn).
 
+Note: You will need to unzip the MNIST arrays in `exhibits/data/mnist.zip` to the
+folder `exhibits/data/` to work through this exhibit/walkthrough.
+
 ## The Diehl and Cook Spiking Network (DC-SNN)
 
 The Diehl and Cook spiking neural network <b>[1]</b> (which we abbreviate to "DC-SNN")
