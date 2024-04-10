@@ -69,7 +69,7 @@ and any neuron that breached its threshold value and emitted a (binary) spike
 is immediately set to its $v_{reset}$ potential (mV); note that $v_{reset}$ might
 not be the same as the $v_{rest}$. $\theta_t$ contains all of the current
 voltage threshold values (and is the same shape as $\mathbf{v}_t$). In ngc-learn,
-the `LIFCell` component also evolves $\theta_t$ to according its own set of 
+the `LIFCell` component also evolves $\theta_t$ to according its own set of
 dynamics as follows:
 
 $$
@@ -79,9 +79,9 @@ $$
 
 where $\delta$ is a "homeostatic variable" that essentially increments (any
 dimension $i$) by a small constant amount every time a particular cell $i$ emits
-a spike (setting $\tau_\delta = 0$ turns off the threshold dynamics). Note that 
-the second equation above implies that $\theta_t$ does not evolve its 
-base threshold value ($\theta_{base}$), it is simply re-computed as a sum 
+a spike (setting $\tau_\delta = 0$ turns off the threshold dynamics). Note that
+the second equation above implies that $\theta_t$ does not evolve its
+base threshold value ($\theta_{base}$), it is simply re-computed as a sum
 of its base value and the current value of the evolved homeostatic variable. With
 the above knowledge, we can now effectively recreate the setup of <b>[1]</b>
 by using a value greater than zero for $\tau_\delta$ for the excitatory LIFs
@@ -103,7 +103,7 @@ spike vector as $\mathbf{s}^i_t$, and an input (Poisson) spike vector as
 $\mathbf{s}^{inp}_t$. As mentioned earlier, $\mathbf{W}^1_t$ is the input-to-excitatory
 synaptic cable while $\mathbf{W}^{ei}$ is the excitatory-to-inhibitory synaptic
 cable $\mathbf{W}^{ie}$ is the inhibitory-to-excitatory synaptic cable; the
-subscript $t$ has been dropped for these last two cables ($\mathbf{W}^{ei}$ 
+subscript $t$ has been dropped for these last two cables ($\mathbf{W}^{ei}$
 and $\mathbf{W}^{ie}$) because they are held fixed
 to constant values <b>[1]</b>. Ultimately, the inhibitory neurons will emit
 spikes once enough voltage has been built up as they receive enough electrical
@@ -118,7 +118,24 @@ effective adaptation of synapses via STDP).
 The spiking neural system that the above specifies will engage in a form of
 unsupervised representation learning, simply resulting in sparse spike-train
 patterns that correlate with different input digit patterns sampled from the
-MNIST database. All that remains is to specify the synaptic plasticity dynamics
+MNIST database. The figure below depicts the DC-SNN architecture, particularly
+showing the case where only one out of the population of excitatory neuronal
+cells gets triggered and drives its corresponding inhibitory cell which
+transmits back/laterally suppression signals to all but the triggered
+excitatory neuron.
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-------------------------------------------------------+
+   | .. image:: ../images/museum/dc_snn/diehl_cook_snn.png |
+   |   :scale: 85%                                         |
+   |   :align: center                                      |
+   +-------------------------------------------------------+
+```
+
+All that remains is to specify the synaptic plasticity dynamics (learning) 
 for the DC-SNN, which we do next.
 
 ### Spike-Timing-Dependent Plasticity (STDP)
