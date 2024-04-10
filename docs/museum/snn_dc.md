@@ -226,7 +226,7 @@ two images (if you use the same synaptic values as we obtained from training):
 ```
 
 In the images above, we observe that synaptic slice (or receptive field) number
-`58` was matched by model to image pattern `0`.
+`58` (i.e., `<NUMBER> = 58`) was matched by model to image pattern `0`.
 
 Changing the `sample_idx` argument to the `analyze_dcsnn.py` allows you, in
 this model exhibit code, to query different image patterns against your
@@ -294,3 +294,10 @@ to the spikes produced by a spike train.
 experience, observing the mean and Frobenius norm of synaptic values can a
 useful starting point for determining unhealthy behavior or some degenerate cases
 in the context of spiking neural network credit assignment.
+[^5]: To load in the exact synaptic efficacies we obtained to get the images
+above, you can unzip the folder `dcsnn_syn.zip`, which contains all of the
+model's numpy array values, and simply copy all of the compressed numpy arrays
+into your `exp/snn_stdp/custom/` folder, which is where ngc-learn/ngc-sim-lib
+look for pre-trained value arrays when loading in a previously constructed model.
+Once you do this, running `analyze_dcsnn.py` with the same arguments as above  
+should produce plots/images much like those in this walkthrough.
