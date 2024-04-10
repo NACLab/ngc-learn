@@ -67,8 +67,8 @@ $$
 
 and any neuron that breached its threshold value and emitted a (binary) spike
 is immediately set to its $v_{reset}$ potential (mV); note that $v_{reset}$ might
-not be the same as the $v_{rest}. $\theta_t$ contains all of the current
-voltage threshold values (and is the same shape as $\mathbf{v}_t). In ngc-learn,
+not be the same as the $v_{rest}$. $\theta_t$ contains all of the current
+voltage threshold values (and is the same shape as $\mathbf{v}_t$). In ngc-learn,
 the `LIFCell` component also evolves $\theta_t$ to its own set of dynamics as
 follows:
 
