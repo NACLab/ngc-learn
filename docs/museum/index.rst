@@ -14,3 +14,4 @@ relevant, referenced publicly available ngc-learn simulation code.
   :caption: Neuromimetic Models
 
   pcn_discrim
+  snn_dc

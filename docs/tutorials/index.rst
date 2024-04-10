@@ -14,6 +14,7 @@ simulation schema and design.
   :caption: Modeling Basics
 
   modeling_basics
+  model_basics/configuration
   model_basics/json_modules
   model_basics/model_building
   model_basics/evolving_synapses
