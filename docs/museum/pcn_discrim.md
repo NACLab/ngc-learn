@@ -2,7 +2,7 @@
 
 In this exhibit, we will see how a classifier can be created based on
 predictive coding. This exhibit model effectively reproduces some of the results
-reported (Whittington &amp; Bogacz, 2017) <b>[1]</b. The model code for this
+reported (Whittington &amp; Bogacz, 2017) <b>[1]</b>. The model code for this
 exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_discrim).
 
