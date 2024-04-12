@@ -5,8 +5,9 @@ from ngclearn.utils.model_utils import initialize_params
 from ngclearn.utils.optim import SGD, Adam
 import time
 
-@partial(jit, static_argnums=[3,4,5,6])
-def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.):
+@partial(jit, static_argnums=[3,4,5,6,7,8])
+def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
+                pre_wght=1., post_wght=1.):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
 
@@ -26,11 +27,17 @@ def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=
 
         w_decay: synaptic decay factor to apply to this update
 
+        pre_wght: pre-synaptic weighting term (Default: 1.)
+
+        post_wght: post-synaptic weighting term (Default: 1.)
+
     Returns:
         an update/adjustment matrix, an update adjustment vector (for biases)
     """
-    dW = jnp.matmul(pre.T, post)
-    db = jnp.sum(post + 0, axis=0, keepdims=True)
+    _pre = pre * pre_wght
+    _post = post * post_wght
+    dW = jnp.matmul(_pre.T, _post)
+    db = jnp.sum(_post, axis=0, keepdims=True)
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
     if w_decay > 0.:
@@ -124,6 +131,10 @@ class HebbianSynapse(Component):
                 a negative learning rate will mean a descent form of the
                 `optim_scheme` is being employed
 
+        pre_wght: pre-synaptic weighting factor (Default: 1.)
+
+        post_wght: post-synaptic weighting factor (Default: 1.)
+
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
@@ -199,8 +210,8 @@ class HebbianSynapse(Component):
     # Define Functions
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
                  bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
-                 signVal=1., optim_type="sgd", key=None, useVerboseDict=False,
-                 directory=None, **kwargs):
+                 signVal=1., optim_type="sgd", pre_wght=1., post_wght=1., 
+                 key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ## random Number Set up
@@ -212,6 +223,8 @@ class HebbianSynapse(Component):
         self.shape = shape
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
+        self.pre_wght = pre_wght
+        self.post_wght = post_wght
         self.eta = eta
         self.wInit = wInit
         self.bInit = bInit
@@ -250,7 +263,8 @@ class HebbianSynapse(Component):
     def evolve(self, t, dt, **kwargs):
         dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
-                             signVal=self.signVal, w_decay=self.w_decay)
+                             signVal=self.signVal, w_decay=self.w_decay,
+                             pre_wght=self.pre_wght, post_wght=self.post_wght)
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if self.bInit != None:
             theta = [self.weights, self.biases]

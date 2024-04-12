@@ -57,7 +57,7 @@ def secant_lif_estimator():
     LIF neuronal dynamics.)
 
     | spike_fx(x) ~ E(x) = sech(x) = 1/cosh(x), cosh(x) = (e^x + e^(-x))/2
-    | dE(x)/dj = c1 c2 sech^2(c2 j) for j > 0 and 0 for j <= 0
+    | dE(x)/dj = (c1 c2) * sech^2(c2 * j) for j > 0 and 0 for j <= 0
 
     | Reference:
     | Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep learning with
@@ -71,9 +71,12 @@ def secant_lif_estimator():
     def spike_fx(v, thr):
         #return jnp.where(new_voltage > v_thr, 1, 0)
         return (v > thr).astype(jnp.float32)
-    @jit
-    def d_spike_fx(j, v, thr, c1=0.82, c2=0.08):
+    @partial(jit, static_argnums=[5])
+    def d_spike_fx(j, v, thr, c1=0.82, c2=0.08, omit_scale=True): #c1=0.82, c2=0.08):
         """
+        | dE(x)/dj = scale * sech^2(c2 * j) for j > 0 and 0 for j <= 0;
+        | where scale = (c1 * c2) if `omit_scale = False`, otherwise, scale = 1.
+
         Args:
             j: electrical current value
 
@@ -88,6 +91,9 @@ def secant_lif_estimator():
                 with c1, the output the derivative surrogate; Default: 0.08 as in
                 source paper)
 
+            omit_scale: preserves final scaling of dv_dj by (c1 * c2) if False and
+                (Default: True)
+
         Returns:
             surrogate output values (same shape as j)
         """
@@ -95,6 +101,8 @@ def secant_lif_estimator():
         dj = j * c2
         cosh_j = (jnp.exp(dj) + jnp.exp(-dj))/2.
         sech_j = 1./cosh_j #(cosh_x + 1e-6)
-        dv_dj = sech_j * (c1 * c2) # ~deriv w.r.t. j
+        dv_dj = sech_j #* (c1 * c2) # ~deriv w.r.t. j
+        if omit_scale == False:
+            dv_dj = dv_dj * (c1 * c2)
         return dv_dj * mask ## 0 if j < 0, otherwise, use dv/dj for j >= 0
     return spike_fx, d_spike_fx
