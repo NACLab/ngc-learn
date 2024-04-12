@@ -3,22 +3,26 @@ from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 import os, sys
 from functools import partial
 
-def pull_equation(component):
+def pull_equations(controller):
     """
-    Extracts the dynamics string of this component.
+    Extracts the dynamics string of this controller (model/system).
 
     Args:
-        component: component to extract dynamics equation(s) from
+        controller: model/system to extract dynamics equation(s) from
 
     Returns:
-        string containing this component's dynamics equation(s)
+        string containing this model/system's dynamics equation(s)
     """
-    eqn = ""
-    for attr in dir(component):
-        if not callable(getattr(component, attr)) and not attr.startswith("__"):
-            if attr == "equation":
-                eqn = "{}".format(attr)
-    return eqn
+    eqn_set = ""
+    for _name in controller.components:
+        component = controller.components[_name]
+        ## determine if component has an equation and pull it out if so
+        for attr in dir(component):
+            if not callable(getattr(component, attr)) and not attr.startswith("__"):
+                if attr == "equation":
+                    eqn = "{}".format(attr) ## extract defined equation
+                    eqn_set = "{}\n{}:  {}".format(_name, eqn)
+    return eqn_set
 
 @jit
 def measure_ACC(mu, y): ## measures/calculates accuracy
