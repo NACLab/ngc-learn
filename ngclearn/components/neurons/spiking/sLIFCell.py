@@ -85,7 +85,7 @@ def _update_threshold(dt, v_thr, spikes, thrGain=0.002, thrLeak=0.0005, rho_b = 
 @partial(jit, static_argnums=[4])
 def _update_refract_and_spikes(dt, rfr, s, mask, sticky_spikes=False):
     ## update refractory variables
-    _rfr = (rfr + dt) * (1. - s)
+    _rfr = (rfr + dt) * (1. - s) + s * dt # set refract to dt
     _s = s
     if sticky_spikes == True: ## pin refractory spikes if configured
         _s = s * mask + (1. - mask)

@@ -250,6 +250,9 @@ class HebbianSynapse(Component):
         ##Reset to initialize stuff
         self.reset()
 
+        self.dW = None
+        self.db = None
+
     def verify_connections(self):
         self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
 
@@ -265,6 +268,8 @@ class HebbianSynapse(Component):
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
                              signVal=self.signVal, w_decay=self.w_decay,
                              pre_wght=self.pre_wght, post_wght=self.post_wght)
+        self.dW = dW
+        self.db = db
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if self.bInit != None:
             theta = [self.weights, self.biases]
@@ -285,6 +290,8 @@ class HebbianSynapse(Component):
         self.outputCompartment = None
         self.presynapticCompartment = None
         self.postsynapticCompartment = None
+        self.dW = None
+        self.db = None
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
