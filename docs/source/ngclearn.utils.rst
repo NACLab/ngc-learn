@@ -31,6 +31,14 @@ ngclearn.utils.io\_utils module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.metric\_utils module
+-----------------------------------
+
+.. automodule:: ngclearn.utils.metric_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.model\_utils module
 ----------------------------------
 
@@ -43,6 +51,14 @@ ngclearn.utils.patch\_utils module
 ----------------------------------
 
 .. automodule:: ngclearn.utils.patch_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.utils.surrogate\_fx module
+-----------------------------------
+
+.. automodule:: ngclearn.utils.surrogate_fx
    :members:
    :undoc-members:
    :show-inheritance:
