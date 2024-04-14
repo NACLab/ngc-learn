@@ -49,6 +49,27 @@ def triangular_estimator():
         return dfx
     return spike_fx, d_spike_fx
 
+def arctan_estimator():
+    """
+    The arctan surrogate gradient estimator for binary spike emission.
+
+    | E(x) = (1/pi) arctan(pi * x)
+    | dE(x)/dx = (1/pi) (1/(1 + (pi * x)^2))
+    | where x = v (membrane potential/voltage)
+
+    Returns:
+        spike_fx(x), d_spike_fx(x)
+    """
+    @jit
+    def spike_fx(v, thr):
+        return (v > thr).astype(jnp.float32)
+    @jit
+    def d_spike_fx(j, v, thr):
+        pi = jnp.pi
+        dfx = (1./(1. + jnp.square(v * pi))) * (1./pi)
+        return dfx
+    return spike_fx, d_spike_fx
+
 def secant_lif_estimator():
     """
     Surrogate function for computing derivative of (binary) spike function
@@ -57,7 +78,8 @@ def secant_lif_estimator():
     LIF neuronal dynamics.)
 
     | spike_fx(x) ~ E(x) = sech(x) = 1/cosh(x), cosh(x) = (e^x + e^(-x))/2
-    | dE(x)/dj = (c1 c2) * sech^2(c2 * j) for j > 0 and 0 for j <= 0
+    | dE(x)/dx = (c1 c2) * sech^2(c2 * x) for x > 0 and 0 for x <= 0
+    | where x = j (electrical current)
 
     | Reference:
     | Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep learning with
