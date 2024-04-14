@@ -259,7 +259,7 @@ vloss = mpatches.Patch(color=colors[1], label='Dev Acc')
 plt.legend(handles=[loss, vloss], fontsize=13, ncol=2,borderaxespad=0, frameon=False,
            loc='upper center', bbox_to_anchor=(0.5, -0.175))
 plt.tight_layout()
-plt.savefig("exp/bfasnn_mnist_likelihood.jpg") ## save plot to disk
+plt.savefig("exp/pcn_mnist_curves.jpg") ## save plot to disk
 plt.clf()
 ```
 
