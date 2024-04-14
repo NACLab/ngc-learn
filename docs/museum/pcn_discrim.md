@@ -242,7 +242,7 @@ import numpy as np
 
 colors = ["red", "blue"]
 # post-process learning curve data
-y = (1.0 - np.load("exp/trAcc.npy")) * 100. ## training measuremnts
+y = (1.0 - np.load("exp/trAcc.npy")) * 100. ## training measurements
 vy = (1.0 - np.load("exp/acc.npy")) * 100. ## dev measurements
 x_iter = np.asarray(list(range(0, y.shape[0])))
 ## make the plots with matplotlib
