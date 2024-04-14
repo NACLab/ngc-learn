@@ -284,7 +284,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 
 colors = ["red", "blue"]
-# post-process learning curve data
+# post-process likelihood learning curve data
 y = np.load("exp/trNll.npy") ## training measurements
 vy = np.load("exp/nll.npy") ## dev measurements
 x_iter = np.asarray(list(range(0, y.shape[0])))
