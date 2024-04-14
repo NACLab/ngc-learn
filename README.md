@@ -14,8 +14,8 @@ It is currently maintained by the
 ## <b>Documentation</b>
 
 Official documentation, including tutorials, can be found
-<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>. The model museum repo, 
-which implements several historical models, can be found 
+<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>. The model museum repo,
+which implements several historical models, can be found
 <a href="https://github.com/NACLab/ngc-museum">here</a>.
 
 The official blog-post related to the source paper behind this software library
@@ -65,30 +65,19 @@ The documentation includes more detailed
 <a href="https://ngc-learn.readthedocs.io/en/latest/installation.html">installation instructions</a>.
 Note that this library was developed on Ubuntu 20.04 and tested on Ubuntu(s) 18.04 and 20.04.
 
-<!--
-<i>Setup:</i> To install ngc-learn, you can run (at the top-level of the
-the <code>ngclearn</code> directory) the following bash command:
-<pre>
-$ python install .
-</pre>
-
-Running the above pip install will automatically install the CPU
-version of JAX. If you want to use the GPU version instead, make sure to,
-before running the above, to install JAX via the correct pip command
-with the proper CUDA flags (depending on which CUDA is configured for your system)
-as per their
-<a href="https://jax.readthedocs.io/en/latest/installation.html">installation instructions</a>.
--->
-
-<!--
-(If you want to set up/install dependencies a priori, try running
-`$ pip install -r requirements.txt` first before pip installing ngc-learn.)
--->
-
 If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command
-and complete the following sequence of steps as depicted in the screenshot below:<br>
-<img src="docs/images/test_ngclearn_install.png" width="512">
+and complete the following sequence of steps as depicted in the screenshot below
+(you should see at the bottom of your output something akin to the
+right major and minor version of ngc-learn):
+
+```console
+Python 3.11.4 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import ngclearn
+>>> ngclearn.__version__
+'1.0b3'
+```
 
 <i>Note:</i> For access to the previous Tensorflow-2 version of ngc-learn (of
 which we no longer support), please visit the repo for
