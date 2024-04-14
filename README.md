@@ -14,7 +14,9 @@ It is currently maintained by the
 ## <b>Documentation</b>
 
 Official documentation, including tutorials, can be found
-<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>.
+<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>. The model museum repo, 
+which implements several historical models, can be found 
+<a href="https://github.com/NACLab/ngc-museum">here</a>.
 
 The official blog-post related to the source paper behind this software library
 can be found
