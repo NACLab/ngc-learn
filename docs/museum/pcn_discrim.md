@@ -230,9 +230,10 @@ it is a two, etc.), which is what we would expect given that the PCN directly
 uses the labels to drive the error cells at the very top layer (at $\mathbf{e}^3)
 during training.
 
-Finally, since the model exhibit training code collects your model's training and validation
-accuracy measurements at the end of each pass through the data (or "epoch"), you
-can write some Python code to plot the model's learning curves like so:
+Finally, since the model exhibit training code collects your model's training
+and validation likelihood measurements at the end of each pass through the
+data (i.e., "epoch"), you can write some Python code to plot the model's
+learning curves like so:
 
 ```python
 import matplotlib
@@ -258,7 +259,7 @@ vloss = mpatches.Patch(color=colors[1], label='Dev Acc')
 plt.legend(handles=[loss, vloss], fontsize=13, ncol=2,borderaxespad=0, frameon=False,
            loc='upper center', bbox_to_anchor=(0.5, -0.175))
 plt.tight_layout()
-plt.savefig("exp/mnist_learning_curves.jpg") ## save plot to disk
+plt.savefig("exp/bfasnn_mnist_likelihood.jpg") ## save plot to disk
 plt.clf()
 ```
 

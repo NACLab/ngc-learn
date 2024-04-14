@@ -29,8 +29,8 @@ in order to recover one of the ways that <b>[1]</b> adapted its synaptic strengt
 The DC-SNN is effectively made up of three layers:
 1. a sensory input layer made up of [Poisson encoding](ngclearn.components.input_encoders.poissonCell)
 neuronal cells (which are configured in the exhibit model to fire spikes at a
-maximal frequency of `63.75` Hertz as in <b>[1]</b>),
-2. one hidden layer of excitatory leaky integrate-and-fire (LIF) cells, and,
+maximal frequency of `63.75` Hertz as in <b>[1]</b>);
+2. one hidden layer of excitatory leaky integrate-and-fire (LIF) cells; and,
 3. one (laterally-wired) hidden layer of inhibitory LIF cells.
 
 The sensory input layer connects to excitatory layer with a synaptic cable `W1` ($\mathbf{W}^1_t$) --
