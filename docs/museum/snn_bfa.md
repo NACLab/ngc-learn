@@ -142,7 +142,7 @@ are computed as follows:
 
 $$
  \mathbf{d}^1 = \big( \mathbf{E}^2 \cdot \mathbf{e}^2 \big) \odot
-                f_{surr}(\mathbf{j}^1_{t+\Delta t}, \mathbf{v}^1_{t+\Delta t}, \mathbf{s}^1_{t+\Delta t})
+                f_{surr}(\mathbf{j}^1_{t+\Delta t})
 $$
 
 where the first term of the Hadamard product (i.e., the $\odot$) is merely
@@ -338,10 +338,10 @@ neuronal unit threshold that adapts/decays with time; see the API of the
 [SLIF component](../tutorials/neurocog/simple_leaky_integrator.md) for details.
 This modeling decision was not used in the source work <b>[1]</b> that proposed the BFA-SNN.
 [^4]: Surrogate routines in ngc-learn take on the
-$f_{surr}(\mathbf{j}, \mathbf{v}, \mathbf{s}) function format because some
-surrogate functions use different spiking cell statistics to create approximate
-derivatives, e.g., some use electrical current as in this tutorial while others
-use the value of the voltages and actual spikes emitted.
+$f_{surr}(\mathbf{x}, \text{other args}) function format to create approximate
+derivatives; some functions, like the secant estimator use electrical current
+for $\mathbf{x}$ while others might use the voltage/membrane potential and/or
+voltage threshold.
 [^5]: Inside of the `BFA_SNN` exhibit class, we, unlike <b>[1]</b> also report and track
 the negative Categorical log likelihood (`NLL`) by approximating the SNN's
 label distribution using spike outputs (from the second `SLIF` layer `z2`) and
