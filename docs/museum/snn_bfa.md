@@ -340,7 +340,7 @@ This modeling decision was not used in the source work <b>[1]</b> that proposed 
 [^4]: Surrogate routines in ngc-learn take on the
 $f_{surr}(\mathbf{j}, \mathbf{v}, \mathbf{s}) function format because some
 surrogate functions use different spiking cell statistics to create approximate
-derivatives, e.g., some electrical current as in this tutorial while others
+derivatives, e.g., some use electrical current as in this tutorial while others
 use the value of the voltages and actual spikes emitted.
 [^5]: Inside of the `BFA_SNN` exhibit class, we, unlike <b>[1]</b> also report and track
 the negative Categorical log likelihood (`NLL`) by approximating the SNN's
