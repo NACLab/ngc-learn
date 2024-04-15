@@ -22,13 +22,13 @@ def straight_through_estimator():
     | computation." arXiv preprint arXiv:1308.3432 (2013).
 
     Returns:
-        spike_fx(x), d_spike_fx(x)
+        spike_fx(x, thr), d_spike_fx(x, thr)
     """
     @jit
     def spike_fx(v, thr):
         return (v > thr).astype(jnp.float32)
     @jit
-    def d_spike_fx(j, v, thr):
+    def d_spike_fx(v, thr):
         return v * 0 + 1.
     return spike_fx, d_spike_fx
 
@@ -37,15 +37,15 @@ def triangular_estimator():
     The triangular surrogate gradient estimator for binary spike emission.
 
     Returns:
-        spike_fx(x), d_spike_fx(x)
+        spike_fx(x, thr), d_spike_fx(x, thr)
     """
     @jit
     def spike_fx(v, thr):
         return (v > thr).astype(jnp.float32)
     @jit
-    def d_spike_fx(j, v, thr):
-        mask = (v < v_thr).astype(jnp.float32)
-        dfx = mask * v_thr - (1. - mask) * v_thr
+    def d_spike_fx(v, thr):
+        mask = (v < thr).astype(jnp.float32)
+        dfx = mask * thr - (1. - mask) * thr
         return dfx
     return spike_fx, d_spike_fx
 
@@ -58,13 +58,13 @@ def arctan_estimator():
     | where x = v (membrane potential/voltage)
 
     Returns:
-        spike_fx(x), d_spike_fx(x)
+        spike_fx(x, thr), d_spike_fx(x, thr)
     """
     @jit
     def spike_fx(v, thr):
         return (v > thr).astype(jnp.float32)
     @jit
-    def d_spike_fx(j, v, thr):
+    def d_spike_fx(v, thr=0.):
         pi = jnp.pi
         dfx = (1./(1. + jnp.square(v * pi))) * (1./pi)
         return dfx
@@ -87,14 +87,14 @@ def secant_lif_estimator():
     | (2017): 578-602.
 
     Returns:
-        spike_fx(x), d_spike_fx(x)
+        spike_fx(x, thr), d_spike_fx(x, thr, args)
     """
     @jit
     def spike_fx(v, thr):
         #return jnp.where(new_voltage > v_thr, 1, 0)
         return (v > thr).astype(jnp.float32)
     @partial(jit, static_argnums=[5])
-    def d_spike_fx(j, v, thr, c1=0.82, c2=0.08, omit_scale=True): #c1=0.82, c2=0.08):
+    def d_spike_fx(j, thr=0., c1=0.82, c2=0.08, omit_scale=True): #c1=0.82, c2=0.08):
         """
         | dE(x)/dj = scale * sech^2(c2 * j) for j > 0 and 0 for j <= 0;
         | where scale = (c1 * c2) if `omit_scale = False`, otherwise, scale = 1.
@@ -102,9 +102,7 @@ def secant_lif_estimator():
         Args:
             j: electrical current value
 
-            v: voltage (unused)
-
-            thr: voltage threshold (unused)
+            thr: threshold voltage value (UNUSED)
 
             c1: control coefficient 1 (unnamed factor from paper - scales current
                 input; Default: 0.82 as in source paper)

@@ -344,7 +344,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         ## apply simplified inhibitory pressure
         j_curr = modify_current(j_curr, self.spikes, self.inh_weights, self.R_m, self.inh_R)
         self.current = j_curr # None ## store electrical current
-        self.surrogate = self.d_spike_fx(j_curr, self.voltage, self.threshold, c1=0.82, c2=0.08)
+        self.surrogate = self.d_spike_fx(j_curr, c1=0.82, c2=0.08)
         self.voltage, self.spikes, self.threshold, self.refract = \
             run_cell(dt, j_curr, self.voltage, self.threshold, self.tau_m,
                      self.refract, self.spike_fx, self.refract_T, self.thrGain, self.thrLeak,
