@@ -93,7 +93,7 @@ def secant_lif_estimator():
     def spike_fx(v, thr):
         #return jnp.where(new_voltage > v_thr, 1, 0)
         return (v > thr).astype(jnp.float32)
-    @partial(jit, static_argnums=[5])
+    @partial(jit, static_argnums=[4])
     def d_spike_fx(j, thr=0., c1=0.82, c2=0.08, omit_scale=True): #c1=0.82, c2=0.08):
         """
         | dE(x)/dj = scale * sech^2(c2 * j) for j > 0 and 0 for j <= 0;
