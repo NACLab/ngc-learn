@@ -168,7 +168,7 @@ in [more detail elsewhere](https://arxiv.org/pdf/2109.12894.pdf), ngc-learn
 contains several useful [in-built surrogate routines](ngclearn.utils.surrogate_fx)
 for dealing with the "dead neuron problem" and among them is the very one
 utilized in <b>[1]</b> for their BFA-SNN model, i.e., ngc-learn's
-`secant_lif_estimator()`.[^] In effect, the secant LIF estimator is essentially
+`secant_lif_estimator()`.[^4] In effect, the secant LIF estimator is essentially
 a specialized mathematical approximation to LIF spiking dynamics/emission patterns,
 producing a value of $(c_1 * c_2) \text{sech}^2(c_2 * \mathbf{j}_{t + \Delta t})$ for
 electrical current values $\mathbf{j}_{t + \Delta t}$ greater than zero and zero
