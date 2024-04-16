@@ -69,7 +69,7 @@ def enforce_constraints(W, w_bound, is_nonnegative=True):
     return _W
 
 @jit
-def compute_layer(inp, weight, biases):
+def compute_layer(inp, weight, biases, Rscale):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -81,10 +81,13 @@ def compute_layer(inp, weight, biases):
 
         biases: this cable's bias value vector
 
+        Rscale: scale factor to apply to synapses before transform applied
+            to input values
+
     Returns:
         a projection/transformation of input "inp"
     """
-    return jnp.matmul(inp, weight) + biases
+    return jnp.matmul(inp, weight * Rscale) + biases
 
 class HebbianSynapse(Component):
     """
@@ -134,6 +137,9 @@ class HebbianSynapse(Component):
         pre_wght: pre-synaptic weighting factor (Default: 1.)
 
         post_wght: post-synaptic weighting factor (Default: 1.)
+
+        Rscale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
 
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
@@ -210,8 +216,8 @@ class HebbianSynapse(Component):
     # Define Functions
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
                  bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
-                 signVal=1., optim_type="sgd", pre_wght=1., post_wght=1., 
-                 key=None, useVerboseDict=False, directory=None, **kwargs):
+                 signVal=1., optim_type="sgd", pre_wght=1., post_wght=1.,
+                 Rscale=1., key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ## random Number Set up
@@ -221,6 +227,7 @@ class HebbianSynapse(Component):
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
+        self.Rscale = Rscale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.pre_wght = pre_wght
@@ -260,8 +267,8 @@ class HebbianSynapse(Component):
         biases = 0.
         if self.bInit != None:
             biases = self.biases
-        self.outputCompartment = compute_layer(self.inputCompartment,
-                                               self.weights, biases)
+        self.outputCompartment = compute_layer(self.inputCompartment, self.weights,
+                                               biases, self.Rscale)
 
     def evolve(self, t, dt, **kwargs):
         dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
