@@ -173,7 +173,7 @@ governs the behavior of the action potential of a spiking neuronal cell). In
 effect, the FitzHugh-Nagumo model is a set of two coupled differential equations
 that simplify the four differential equation Hodgkin-Huxley (squid axon) model.
 A voltage `v_thr` can be used to extract binary spike pulses. (Note that this 
-cell support either Euler or midpoint method / RK-2 integration.)
+cell supports either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.FitzhughNagumoCell
@@ -195,7 +195,8 @@ effect, the Izhikevich model is a set of two coupled differential equations
 that simplify the more complex dynamics of the Hodgkin-Huxley model. Note that
 this Izhikevich model can be configured to model particular classes of neurons,
 including regular spiking (RS), intrinsically bursting (IB), chattering (CH),
-fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
+fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons. 
+(Note that this cell supports either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.IzhikevichCell
