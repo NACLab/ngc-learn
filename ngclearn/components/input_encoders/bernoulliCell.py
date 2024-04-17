@@ -28,7 +28,7 @@ def sample_bernoulli(dkey, data):
 
     Args:
         dkey: JAX key to drive stochasticity/noise
-        
+
         data: sensory data (vector/matrix)
 
     Returns:
