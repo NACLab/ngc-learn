@@ -156,7 +156,8 @@ $$
 where we see that LTP is modeled by the first term (to the left of the minus
 sign) -- a product of the (excitatory) post-synaptic spike(s)/event(s) that
 might have occurred at time $t$ and the value of the pre-synaptic trace[^3] at
-the occurrence of spikes at $t$ -- and that LTD is modeled by the second term
+the occurrence of spikes at $t$ -- and that LTD is modeled by the second term 
+(to the right of the minus sign) 
 -- a product of the (excitatory) post-synaptic trace at time $t$ and the
 pre-synaptic spike(s)/event(s) that might have happened at $t$. $A_{+}$ is the
 scaling factor controlling how much LTP is applied to a synaptic update
