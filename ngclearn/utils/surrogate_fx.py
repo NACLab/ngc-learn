@@ -74,7 +74,7 @@ def arctan_estimator(get_surr_fx=False):
     @jit
     def surr_fx(v, alpha=2.):
         pi = jnp.pi
-        return nn.arctan(v * (alpha/2.) * pi) * (1. / pi)
+        return jnp.arctan(v * (alpha/2.) * pi) * (1. / pi)
     @jit
     def d_spike_fx(v, thr=0., alpha=2.):
         pi = jnp.pi
