@@ -4,9 +4,10 @@ surrogate (derivative) functions; these function builders are useful if
 differentiation through the discrete spike emission steps in spiking neuronal
 cells is required (e.g., cases of surrogate backprop,
 broadcast feedback alignment schemes, etc.). Calling the builder estimator
-functions below returns two routines:
-1) a spike emission routine `spike(v, v_thr)`, 2) its corresponding surrogate
-derivative routine `spike(j, v, v_thr, params)`.
+functions below returns the following routines:
+1) a spike emission routine `spike_fx`;
+2) the surrogate function used to approximate spike emission `surr_fx`;
+3) the corresponding surrogate derivative routine `d_spike_fx`.
 """
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
