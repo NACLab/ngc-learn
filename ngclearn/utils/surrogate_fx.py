@@ -23,7 +23,8 @@ def straight_through_estimator(get_surr_fx=False):
     | computation." arXiv preprint arXiv:1308.3432 (2013).
 
     Returns:
-        spike_fx(x, thr), d_spike_fx(x, thr)
+        ( spike_fx(x, thr), d_spike_fx(x, thr) ) OR
+        ( spike_fx(x, thr), surr_fx(x, thr, args), d_spike_fx(x, thr, args) )
     """
     @jit
     def spike_fx(v, thr):
@@ -41,7 +42,8 @@ def triangular_estimator(get_surr_fx=False):
     The triangular surrogate gradient estimator for binary spike emission.
 
     Returns:
-        spike_fx(x, thr), d_spike_fx(x, thr)
+        ( spike_fx(x, thr), d_spike_fx(x, thr) ) OR
+        ( spike_fx(x, thr), surr_fx(x, thr, args), d_spike_fx(x, thr, args) )
     """
     @jit
     def spike_fx(v, thr):
