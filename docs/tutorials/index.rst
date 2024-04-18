@@ -32,6 +32,7 @@ simulation schema and design.
   :caption: Neurocognitive Modeling
 
   neurocog_modeling
+  neurocog/input_cells
   neurocog/simple_leaky_integrator
   neurocog/fitzhugh_nagumo_cell
   neurocog/izhikevich_cell

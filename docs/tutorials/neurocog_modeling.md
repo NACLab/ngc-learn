@@ -28,8 +28,8 @@ spiking systems to harmoniums.
 Lessons are specifically organized in the following manner.
 
 Input encoding cells are examined here:
-1. <b>1A</b>: Bernoulli and Poisson Spike Trains
-2. <b>1B</b>: Latency-coded Spike Train
+1. <b>1A</b>: [Bernoulli and Poisson Spike Trains](neurocog/input_cells.md)
+2. <b>1B</b>: Latency-coded Spike Trains
 
 Spiking cells are studied here:
 1. <b>2A</b>: [Simple Leaky Integrator](neurocog/simple_leaky_integrator.md)
