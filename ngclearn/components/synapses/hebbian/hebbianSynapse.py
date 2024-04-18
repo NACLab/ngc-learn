@@ -311,5 +311,5 @@ class HebbianSynapse(Component):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.weights = data['weights']
-        if data.get("biases") != None:
+        if "biases" in data.keys():
             self.biases = data['biases']
