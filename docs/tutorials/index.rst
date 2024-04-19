@@ -29,12 +29,6 @@ simulation schema and design.
 
 .. toctree::
   :maxdepth: 1
-  :caption: Neurocognitive Modeling
+  :caption: Neurocognitive Modeling Lessons
 
-  neurocog_modeling
-  neurocog/input_cells
-  neurocog/simple_leaky_integrator
-  neurocog/fitzhugh_nagumo_cell
-  neurocog/izhikevich_cell
-  neurocog/rate_cell
-  neurocog/error_cell
+  neurocog/index

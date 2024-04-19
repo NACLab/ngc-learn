@@ -53,6 +53,7 @@ def visualize(thetas, sizes, prefix, suffix='.jpg'):
 
     plt.subplots_adjust(top=0.9)
     plt.savefig(prefix+suffix, bbox_inches='tight')
+    plt.clf()
     plt.close()
 
 def visualize_labels(thetas, sizes, prefix, space_width=None, widths=None, suffix='.jpg'):

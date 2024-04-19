@@ -1,4 +1,4 @@
-# Lecture 1A: Input (Encoding) Cell Models
+# Lecture 1A: Distributional Spike Train (Encoding) Models
 
 In this small lesson, we will explore one of the simpler cell components
 that ngc-learn has to offer -- the input encoder cell. These are particularly
