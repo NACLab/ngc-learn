@@ -55,7 +55,8 @@ work towards more advanced concepts.
 
 .. toctree::
   :maxdepth: 1
-  :caption: Model Analysis Tools
+  :caption: Model Tools
 
   plotting
   metrics
+  integration
