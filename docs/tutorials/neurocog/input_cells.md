@@ -51,7 +51,7 @@ T = 100 ## number time steps to simulate
 
 ## create simple system with only one sLIF
 model = Controller() ## the simulation object / controller
-cell = model.add_component("bernoulli", name="z0", n_units=1, key=subkeys[0])
+cell = model.add_component("bernoulli", name="z0", n_units=10, key=subkeys[0])
 ## configure desired commands for simulation object
 model.add_command("reset", command_name="reset", component_names=[cell.name], reset_name="do_reset")
 model.add_command("advance", command_name="advance", component_names=[cell.name])
@@ -89,26 +89,6 @@ patterns. Crucially notice that the function ngc-learn offers for converting
 to spike trains does so on-the-fly, meaning that you can generate binary
 spike pattern vectors from a particular normalized real-valued vector whenever you
 need to (this facilitates online learning setups quite well).
-<!--If you examine the API for the `convert_to_spikes()` routine, you will also notice that you can
-also control the firing frequency further with the `gain` argument -- this is
-useful for recreating certain input spike settings report in certain computational
-neuroscience publications. For example, with MNIST, it is often desired that
-the input firing rates are within the approximate range of $0$ to $63.75$ Hertz (Hz)
-(as in [2]) and this can easily be recreated for data normalized to $[0,1]$ by setting
-the `gain` parameter to `0.25` (we will also do this for this walkthrough
-for the model we will build later).
-
-Note that another method offered by ngc-learn for converting your real-valued
-data vectors to Poisson spike trains is through the
-[SpNode_Enc](ngclearn.engine.nodes.spiking.spnode_enc). This node is a convenience node
-that effectively allows us to do the same thing as the code snippet above
-(for example, upon inspecting its API, you will see an argument to its constructor
-is the `gain` that you can set yourself). However, the `SpNode_Enc` conveniently allows
-the spike encoding process to be directly integrated into the `NGCGraph` simulation  
-object that you will ultimately want to create (as we will do later in this walkthrough).
-Furthermore, internally, this node provides you with some useful optional
-compartments that are calculated during simulation such as variable traces/filters.
--->
 
 ## Poisson Spike Trains
 
@@ -116,4 +96,60 @@ While the Bernoulli cell above can go a long way to providing you with useful
 input spike trains, there will be some instances, experimentally, where you
 might want to control the firing rate of the neurons a little bit more. This
 is where the [Poisson cell](ngclearn.components.input_encoders.poissonCell)
-comes into play...
+comes into play.
+
+For instance, with a database such as MNIST, it is often desired that the input
+firing rates (of the input encoding neurons you are trying to simulate) are
+within the approximate range of $0$ to $63.75$ Hertz (Hz) (as in [2]).
+To do this in ngc-learn, the Poisson cell is used instead, by modifying the
+code above like so:
+
+```python
+model = Controller() ## the simulation object / controller
+cell = model.add_component("poisson", name="z0", n_units=10, max_freq=63.75, key=subkeys[0])
+```
+
+Running the code with a Poisson cell instead of a Bernoulli one, under the same
+raw input pattern data shown above yields something like:
+
+<img src="../../images/tutorials/neurocog/poisson_raster.jpg" width="600" /> <br>
+
+The Poisson cell effectively ensures that, within the general time-scale
+of ngc-learn's integration over time (milliseconds), the spike trains
+iteratively produced over time will be approximately Poisson spike trains with
+a maximum frequency `max_freq`.
+
+To check that the Poisson rate approximately yields a frequency of `64` Hertz,
+you could write the following bit of code to estimate what the firing rate
+of the Poisson cell model is over a period of `1000` milliseconds like so:
+
+```python
+dt = 1. # ms
+T = 1000 ## T * dt = 1000 ms
+n_trials = 30
+mu = 0.
+for _ in range(n_trials):
+    model.reset(True)
+    spikes = []
+    for ts in range(T):
+        model.clamp_data(probs)
+        model.runCycle(t=ts*1., dt=dt)
+        s_t = model.components["z0"].outputCompartment
+        spikes.append(s_t)
+    count = jnp.sum(jnp.concatenate(spikes,axis=0))
+    mu += count
+    print(count)
+print("Mean firing rate = {} Hertz".format(mu/n_trials))
+```
+
+which should print to I/O the following:
+
+```console
+Mean firing rate = 63.833336 Hertz
+```
+
+You now have two very useful input encoding cells to convert real-valued
+data to spike trains. Note that both the Bernoulli and Poisson cell assume
+that the dimensions of your input sensory patterns lie in the range of `[0,1]`,
+so make sure that your data's values conform to this assumption (e.g., divide
+the pixel values in MNIST by `255`).
