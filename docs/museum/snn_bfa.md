@@ -338,7 +338,7 @@ neuronal unit threshold that adapts/decays with time; see the API of the
 [SLIF component](../tutorials/neurocog/simple_leaky_integrator.md) for details.
 This modeling decision was not used in the source work <b>[1]</b> that proposed the BFA-SNN.
 [^4]: Surrogate routines in ngc-learn take on the
-$f_{surr}(\mathbf{x}, \text{other args}) function format to create approximate
+$f_{surr}(\mathbf{x}, \text{other args})$ function format to create approximate
 derivatives; some functions, like the secant estimator use electrical current
 for $\mathbf{x}$ while others might use the voltage/membrane potential and/or
 voltage threshold.
