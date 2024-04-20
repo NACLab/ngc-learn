@@ -36,7 +36,7 @@ generally follows a message-passing scheme where local prediction errors  -- the
 error/mismatch activities associated with each layer's guess of the activities
 of the one above it -- are passed up and down via local feedback synaptic
 connections in order to produce updates to the neuronal activities themselves. Notice
-that this is much akin to the E-step of expectation-maximization (E-M) <b>[]</b. This
+that this is much akin to the E-step of expectation-maximization (E-M) <b>[2]</b>. This
 message-passing is done typically for several steps in time and, after these
 dynamics are iteratively run several times, the synaptic weight updates are computed for
 each layer's associated predictive synapses (`W1`, `W2`, and `W3`) using
@@ -314,10 +314,10 @@ to run "stateless dynamics" or, in other words, to just employ a simple forwardi
 operation that does not require integrating an ODE (this just reduces unused
 calculations of little interest to the modeler).   
 [^2]: Note that the bottom/input layer `z0`'s activation $\phi^0$ is set to the
-identity function in both ngc-learn and in <b>[1]</b. The same is done for the
+identity function in both ngc-learn and in <b>[1]</b>. The same is done for the
 PCN's top/layer `z1`'s activation $\phi^3$.
 [^3]: The most notable difference is that our PCN model works directly with
-the normalized pixel data whereas <b>[1]</b transforms the
+the normalized pixel data whereas <b>[1]</b> transforms the
 data with an inverse logistic transform. However, note that you can find this
 function implemented in ngc-learn as `inverse_logistic()` in
 `ngclearn.utils.model_utils` if you wanted to do this yourself.
