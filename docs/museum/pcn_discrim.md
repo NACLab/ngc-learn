@@ -155,7 +155,7 @@ model = PCN(subkeys[1], x_dim, y_dim, hid1_dim=512, hid2_dim=512, T=20,
 where the integration time constant for the Euler integration of the neuronal
 dynamics is set to `1` millisecond (ms) which are run for `T = 20` (E-)steps
 before synaptic weights are updated with the Hebbian ODE shown above. Also,
-much as in <b>[1]</b, the Adam adaptive learning rate (with global learning rate
+much as in <b>[1]</b>, the Adam adaptive learning rate (with global learning rate
 `eta = 0.001`) is used to apply the Hebbian adjustments to the synaptic weight values.
 
 Note that the `PCN` exhibit model constructor provides, among several model and
@@ -210,7 +210,7 @@ which should result in an output similar what is shown below:
 ```
 
 Desirably, our out-of-sample results on both the validation and
-test-set corroborate the measurements reported in (Whittington &amp; Bogacz, 2017) <b>[1]</b,
+test-set corroborate the measurements reported in (Whittington &amp; Bogacz, 2017) <b>[1]</b>,
 i.e., a range of `1.7`-`1.8`\% validation error was reported and our
 simulation yields a validation accuracy of `0.9824 * 100 = 98.24`\% (or `1.76`\% error)
 and a test accuracy of `0.9803 * 100 = 98.03`\% (or about `1.969`\% error),
