@@ -110,7 +110,7 @@ cell = model.add_component("poisson", name="z0", n_units=10, max_freq=63.75, key
 ```
 
 Running the code with a Poisson cell instead of a Bernoulli one, under the same
-raw input pattern data shown above yields something like:
+raw input pattern data shown above, yields something like:
 
 <img src="../../images/tutorials/neurocog/poisson_raster.jpg" width="450" /> <br>
 
