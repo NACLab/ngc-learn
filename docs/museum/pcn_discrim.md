@@ -98,7 +98,7 @@ activities described earlier.
 
 The last part for constructing an effective PCN for classification is simply
 determining how the initial conditions are set for the neurons in layers
-$\ell = 1$ and $\ell = 2$. Much as in <b>[1]</b, this is done by clamping the input
+$\ell = 1$ and $\ell = 2$. Much as in <b>[1]</b>, this is done by clamping the input
 layer to sensory data, i.e., $\mathbf{z}^0 = \mathbf{x}$, clamping
 the output layer to label data $\mathbf{z}^3 = \mathbf{y}$,
 and initializing $\mathbf{z}^1$ and $\mathbf{z}^2$ to values that are produced
