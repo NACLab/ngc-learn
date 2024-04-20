@@ -78,7 +78,7 @@ and the final dimension `[0,9]` set to fairly high spike probabilities. This
 code will produce and save locally to disk the following raster plot for
 visualizing the resulting spike trains:
 
-<img src="../../images/tutorials/neurocog/bernoulli_raster.jpg" width="450" /> <br>
+<img src="../../images/tutorials/neurocog/bernoulli_raster.jpg" width="400" /> <br>
 
 where we see that the first, middle/fifth, and tenth dimensions do indeed
 result in denser spike trains. A raster plots is a simple visualization tool in
@@ -112,7 +112,7 @@ cell = model.add_component("poisson", name="z0", n_units=10, max_freq=63.75, key
 Running the code with a Poisson cell instead of a Bernoulli one, under the same
 raw input pattern data shown above, yields something like:
 
-<img src="../../images/tutorials/neurocog/poisson_raster.jpg" width="450" /> <br>
+<img src="../../images/tutorials/neurocog/poisson_raster.jpg" width="400" /> <br>
 
 The Poisson cell effectively ensures that, within the general time-scale
 of ngc-learn's integration over time (milliseconds), the spike trains
