@@ -24,12 +24,27 @@ either for their own research or to contribute to the development of the main li
 
 ## Organization of Tutorials
 
+The core tutorials and lessons for using ngc-learn can be found [here, in the 
+tutorial table of contents](../tutorials/index.rst) and go through: the basic 
+configuration and use of ngc-learn and ngc-sim-lib to construct simulations 
+of dynamical systems, the essentials of neurocognitive modeling (such as 
+building and analyzing neuronal dynamics and synaptic plasticity), as well 
+as the coverage of some key foundational ideas/tools worth knowing about 
+ngc-learn (and its backend, ngc-sim-lib) particularly to facilitate easier 
+debugging, experimental configuration, and advanced model tools like `bundle rules`.
+
+<!--
 ### Setting Up and Modeling Basics
-These [tutorials](../tutorials/modeling_basics.md) go through the key steps
+These [tutorials](../tutorials/index.rst) go through the key steps
 and ideas of constructing a dynamical system in ngc-learn, including setting up a
 [JSON configuration](../tutorials/model_basics/json_modules.md),
 constructing a [basic model](../tutorials/model_basics/model_building.md),
 and setting up a basic [form of plasticity](../tutorials/model_basics/evolving_synapses.md).
+
+### Neurocognitve Modeling Essentials
+These [lessons](../tutorials/index.rst) go through how ngc-learn is used to 
+build basic biophyiscal models and conduct simulation with neurocognitive 
+systems.
 
 ### Foundational Elements of ngc-learn and ngcsimlib
 These [walkthroughs](../tutorials/foundations.md) go through the foundational
@@ -37,3 +52,4 @@ aspects of ngc-learn's simulation. Some current elements that walkthroughs are
 provided for include:
 [commands](../tutorials/foundations/commands.md) and
 [bundle_rules](../tutorials/foundations/bundle_rules.md).
+-->

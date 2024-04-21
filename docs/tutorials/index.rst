@@ -5,19 +5,26 @@
 Tutorial Contents
 =================
 
-Lessons go through the very basics of constructing a dynamical system in
-ngc-learn while foundations go through the fundamental aspects of ngc-learn's
-simulation schema and design.
+Lessons/tutorials go through the very basics of constructing a dynamical system in
+ngc-learn, core elements and tools of neurocognitive modeling using ngc-learn's 
+in-built components and simulation tools, and finally providing foundational insights 
+into how ngc-learn and its backend, ngc-sim-lib, work (particularly with respect 
+to configuration). 
 
 .. toctree::
   :maxdepth: 1
   :caption: Modeling Basics
 
-  modeling_basics
   model_basics/configuration
   model_basics/json_modules
   model_basics/model_building
   model_basics/evolving_synapses
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Neurocognitive Modeling Lessons
+
+  neurocog/index
 
 .. toctree::
   :maxdepth: 1
@@ -26,9 +33,3 @@ simulation schema and design.
   foundations
   foundations/commands
   foundations/bundle_rules
-
-.. toctree::
-  :maxdepth: 1
-  :caption: Neurocognitive Modeling Lessons
-
-  neurocog/index
