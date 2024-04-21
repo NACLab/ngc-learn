@@ -5,7 +5,7 @@
 Neurocognitive Modeling Lessons
 ===============================
 
-A central motivation for using ngc-learn is to flexibly build computational,
+A central motivation for using ngc-learn is to flexibly build computational 
 models of neuronal information processing, dynamics, and credit
 assignment (as well as design one's own custom instantiations of their
 mathematical formulations and ideas). In this set of tutorials, we will go
