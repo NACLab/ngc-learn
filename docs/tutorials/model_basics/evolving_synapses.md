@@ -1,4 +1,4 @@
-# Lesson 3: Evolving Synaptic Efficacies
+# Lesson 4: Evolving Synaptic Efficacies
 
 In this tutorial, we will extend a controller with three components,
 two cell components connected with a synaptic cable component, to incorporate a

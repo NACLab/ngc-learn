@@ -1,4 +1,4 @@
-# Lesson 2: Building a Model
+# Lesson 3: Building a Model
 
 In this tutorial, we will build a simple controller made up of three components:
 two simple graded cells that are connected by one synaptic cable.

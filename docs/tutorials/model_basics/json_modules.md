@@ -1,4 +1,4 @@
-# Lesson 1: Configuring with the modules.json File
+# Lesson 2: Configuring with the modules.json File
 
 ## Basic Usage:
 
