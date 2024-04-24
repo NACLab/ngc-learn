@@ -199,9 +199,8 @@ matter depending on the ODE(s) you use in modeling, particularly if you seek hig
 for more nonlinear dynamics like in our example above.
 
 [^1]: The format expected by ngc-learn's backend is that the differential equation
-      provides an functional API/form like so: for instance `dy/dt = diff_eqn(t, y(t), params)`,
+      provides a functional API/form like so: for instance `dy/dt = diff_eqn(t, y(t), params)`,
       representing $\frac{\partial \mathbf{y}(t, \text{params})}{\partial t}$,
-      noting that you can name your function and its arguments anything you like.
-      Your function does not need to use `t` or `y` or `params` (a tuple containing
-      fixed constants your equation might need) to produce its output. This function
-      should only return the value(s) for `dy/dt` (vectors/matrices of values).
+      noting that you can name your 3-argument function (and its arguments) anything you like.
+      Your function does not need to use all of the arguments (i.e., `t`, `y`, or `params`, the last of       which is a tuple containing any fixed constants your equation might need) to produce its output. 
+      Finally, this function should only return the value(s) for `dy/dt` (vectors/matrices of values).
