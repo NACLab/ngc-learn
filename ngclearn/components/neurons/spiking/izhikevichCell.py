@@ -30,7 +30,7 @@ def _dfv_internal(j, v, w, b, tau_m): ## raw voltage dynamics
     dv_dt = dv_dt * (1./tau_m)
     return dv_dt
 
-def _dfv(v, params): ## voltage dynamics wrapper
+def _dfv(t, v, params): ## voltage dynamics wrapper
     j, w, b, tau_m = params
     dv_dt = _dfv_internal(j, v, w, b, tau_m)
     return dv_dt
@@ -42,7 +42,7 @@ def _dfw_internal(j, v, w, b, tau_w): ## raw recovery dynamics
     dw_dt = dw_dt * (1./tau_w)
     return dw_dt
 
-def _dfw(w, params): ## recovery dynamics wrapper
+def _dfw(t, w, params): ## recovery dynamics wrapper
     j, v, b, tau_w = params
     dv_dt = _dfw_internal(j, v, w, b, tau_w)
     return dv_dt
@@ -112,14 +112,14 @@ def run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.
     ## for non-spikes, evolve according to dynamics
     if integType == 1:
         v_params = (_j, w, b, tau_m)
-        _v = step_rk2(v, v_params, _dfv, dt)
+        _, _v = step_rk2(0., v, _dfv, dt, v_params) #_v = step_rk2(v, v_params, _dfv, dt)
         w_params = (_j, v, b, tau_w)
-        _w = step_rk2(w, w_params, _dfw, dt)
+        _, _w = step_rk2(0., w, _dfw, dt, w_params) #_w = step_rk2(w, w_params, _dfw, dt)
     else: # integType == 0 (default -- Euler)
         v_params = (_j, w, b, tau_m)
-        _v = step_euler(v, v_params, _dfv, dt)
+        _, _v = step_euler(0., v, _dfv, dt, v_params) #_v = step_euler(v, v_params, _dfv, dt)
         w_params = (_j, v, b, tau_w)
-        _w = step_euler(w, w_params, _dfw, dt)
+        _, _w = step_euler(0., w, _dfw, dt, w_params) #_w = step_euler(w, w_params, _dfw, dt)
     ## for spikes, snap to particular states
     _v, _w = _post_process(s, _v, _w, v, w, c, d)
     return  _v, _w, s

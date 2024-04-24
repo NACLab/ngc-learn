@@ -29,7 +29,7 @@ def _dfv_internal(j, v, w, a, b, g, tau_m): ## raw voltage dynamics
     dv_dt = dv_dt * (1./tau_m)
     return dv_dt
 
-def _dfv(v, params): ## voltage dynamics wrapper
+def _dfv(t, v, params): ## voltage dynamics wrapper
     j, w, a, b, g, tau_m = params
     dv_dt = _dfv_internal(j, v, w, a, b, g, tau_m)
     return dv_dt
@@ -40,7 +40,7 @@ def _dfw_internal(j, v, w, a, b, g, tau_w): ## raw recovery dynamics
     dw_dt = dw_dt * (1./tau_w)
     return dw_dt
 
-def _dfw(w, params): ## recovery dynamics wrapper
+def _dfw(t, w, params): ## recovery dynamics wrapper
     j, v, a, b, g, tau_m = params
     dv_dt = _dfw_internal(j, v, w, a, b, g, tau_m)
     return dv_dt
@@ -83,14 +83,14 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     """
     if integType == 1:
         v_params = (j, w, a, b, g, tau_m)
-        _v = step_rk2(v, v_params, _dfv, dt)
+        _, _v = step_rk2(0., v, _dfv, dt, v_params) #_v = step_rk2(v, v_params, _dfv, dt)
         w_params = (j, v, a, b, g, tau_w)
-        _w = step_rk2(w, w_params, _dfw, dt)
+        _, _w = step_rk2(0., w, _dfw, dt, w_params) #_w = step_rk2(w, w_params, _dfw, dt)
     else: # integType == 0 (default -- Euler)
         v_params = (j, w, a, b, g, tau_m)
-        _v = step_euler(v, v_params, _dfv, dt)
+        _, _v = step_euler(0., v, _dfv, dt, v_params) #_v = step_euler(v, v_params, _dfv, dt)
         w_params = (j, v, a, b, g, tau_w)
-        _w = step_euler(w, w_params, _dfw, dt)
+        _, _w = step_euler(0., w, _dfw, dt, w_params) #_w = step_euler(w, w_params, _dfw, dt)
     #s = (_v > v_thr).astype(jnp.float32)
     s = _emit_spike(_v, v_thr)
     return _v, _w, s

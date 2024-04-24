@@ -2,6 +2,8 @@ from ngcsimlib.component import Component
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
+                                            step_euler, step_rk2
 from ngclearn.utils.surrogate_fx import secant_lif_estimator
 
 @jit
@@ -56,14 +58,27 @@ def modify_current(j, spikes, inh_weights, R_m, inh_R):
     return _j
 
 ## co-routines for run_cell
-@partial(jit, static_argnums=[4,5,6])
-def _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min=None):
+# @partial(jit, static_argnums=[4,5,6])
+# def _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min=None):
+#     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+#     _v = (v + (-v + j) * (dt / tau_m)) * mask
+#     if v_min is not None:
+#         _v = jnp.maximum(v_min, _v)
+#     #_v = v + (-v) * (dt / tau_m) + j * mask
+#     return _v, mask
+
+@jit
+def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
-    _v = (v + (-v + j) * (dt / tau_m)) * mask
-    if v_min is not None:
-        _v = jnp.maximum(v_min, _v)
-    #_v = v + (-v) * (dt / tau_m) + j * mask
-    return _v, mask
+    #dv_dt = ((-v + j) * (dt / tau_m)) * mask
+    dv_dt = (-v + j)
+    dv_dt = dv_dt * (1./tau_m) * mask
+    return dv_dt
+
+def _dfv(t, v, params): ## voltage dynamics wrapper
+    j, rfr, tau_m, refract_T = params
+    dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T)
+    return dv_dt
 
 @jit
 def _hyperpolarize(v, s):
@@ -83,7 +98,8 @@ def _update_threshold(dt, v_thr, spikes, thrGain=0.002, thrLeak=0.0005, rho_b = 
     return _v_thr
 
 @partial(jit, static_argnums=[4])
-def _update_refract_and_spikes(dt, rfr, s, mask, sticky_spikes=False):
+def _update_refract_and_spikes(dt, rfr, s, refract_T, sticky_spikes=False):
+    mask = (rfr >= refract_T).astype(jnp.float32) ## Note: wasted repeated compute
     ## update refractory variables
     _rfr = (rfr + dt) * (1. - s) + s * dt # set refract to dt
     _s = s
@@ -128,12 +144,16 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
     Returns:
         voltage(t+dt), spikes, threshold(t+dt), updated refactory variables
     """
-    new_voltage, mask = _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min)
-    spikes = spike_fx(new_voltage, v_thr)
-    new_voltage = _hyperpolarize(new_voltage, spikes)
+    #new_voltage, mask = _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min)
+    v_params = (j, rfr, tau_m, refract_T)
+    _, _v = step_euler(0., v, _dfv, dt, v_params) #_v = step_euler(v, v_params, _dfv, dt)
+    # if v_min is not None:
+    #     _v = jnp.maximum(v_min, _v)
+    spikes = spike_fx(_v, v_thr)
+    _v = _hyperpolarize(_v, spikes)
     new_thr = _update_threshold(dt, v_thr, spikes, thrGain, thrLeak, rho_b)
-    _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, mask, sticky_spikes)
-    return new_voltage, spikes, new_thr, _rfr
+    _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, refract_T, sticky_spikes)
+    return _v, spikes, new_thr, _rfr
 
 class SLIFCell(Component): ## leaky integrate-and-fire cell
     """
@@ -141,7 +161,8 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
     This neuronal cell notably contains functionality required by the computational
     model employed by (Samadi et al., 2017, i.e., a surrogate derivative function
     and "sticky spikes") as well as the additional incorporation of an adaptive
-    threshold (per unit) scheme.
+    threshold (per unit) scheme. (Note that this particular spiking cell only
+    supports Euler integration of its voltage dynamics.)
 
     | Reference:
     | Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep learning with
