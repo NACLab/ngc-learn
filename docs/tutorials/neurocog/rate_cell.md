@@ -153,10 +153,10 @@ fig.savefig("rate_cell_integration.jpg")
 
 which should yield a dynamics plot similar to the one below:
 
-<img src="../../images/tutorials/neurocog/rate_cell_integration.jpg" width="600" />
+<img src="../../images/tutorials/neurocog/rate_cell_integration.jpg" width="500" />
 
 <!-- footnotes -->
-[^1]: [error neurons](ngclearn.components.neurons.graded.gaussianErrorCell)
+[^1]: [Error neurons](ngclearn.components.neurons.graded.gaussianErrorCell)
 produce this kind of "top-down" value, which is technically the first derivative
 of a local cost function with respect to the target value. In the literature,
 this is sometimes referred to as a top-down expectation or "pressure".
