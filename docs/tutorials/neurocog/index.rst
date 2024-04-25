@@ -10,15 +10,18 @@ models of neuronal information processing, dynamics, and credit
 assignment (as well as design one's own custom instantiations of their
 mathematical formulations and ideas). In this set of tutorials, we will go
 through the central basics of using ngc-learn's in-built biophysical components,
-also called "cells", to craft and simulate adaptive neural systems.
+also called "cells" and "synapses", to craft and simulate adaptive neural systems.
 
-Usefully, ngc-learn starts with a central partitioning of cells -- those that are
-graded, real-valued (`ngclearn.components.neurons.graded`) and those that spike
-(`ngclearn.components.neurons.spiking`). With the in-built, standard cells in
-these two core partitions, you can readily construct a vast plethora of models,
-recovering many classical models previously proposed in research in computational
-neuroscience and brain-inspired computing (many of these models are available
-for external download in the Model Museum, i.e., `model_museum`).
+Usefully, ngc-learn starts with a collection of cells -- those that are partitioned into 
+those that are graded / real-valued (`ngclearn.components.neurons.graded`) and those that spike
+(`ngclearn.components.neurons.spiking`). In addition, ngc-learn supports another 
+collection called synapses -- generally, those that are learned with Hebbian schemes 
+(`ngclearn.components.synapses.hebbian`) such as spike-timing-dependent plasticity 
+and multi-factor rules. With the in-built, standard cells and synapses in these two 
+core collections, you can readily construct a wide variety of models, recovering 
+many classical ones previously proposed in research in computational neuroscience 
+and brain-inspired computing (many of these models are available for external 
+download in the `Model Museum <https://github.com/NACLab/ngc-museum>`_.
 
 While the reader is free to jump into any one self-contained tutorial in any
 order based on their needs, we organize, within each topic, the lessons starting

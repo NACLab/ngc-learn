@@ -13,7 +13,7 @@ to configuration).
 
 .. toctree::
   :maxdepth: 1
-  :caption: Modeling Basics
+  :caption: I. Modeling Basics
 
   model_basics/configuration
   model_basics/json_modules
@@ -22,13 +22,13 @@ to configuration).
 
 .. toctree::
   :maxdepth: 1
-  :caption: Neurocognitive Modeling Lessons
+  :caption: II. Neurocognitive Modeling Lessons
 
   neurocog/index
 
 .. toctree::
   :maxdepth: 1
-  :caption: Foundations
+  :caption: II. NGC-Learn/Sim-Lib Foundations
 
   foundations
   foundations/commands
