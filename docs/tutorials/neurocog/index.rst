@@ -39,6 +39,7 @@ work towards more advanced concepts.
   :caption: Spiking Neuronal Cells
 
   simple_leaky_integrator
+  lif
   fitzhugh_nagumo_cell
   izhikevich_cell
 
