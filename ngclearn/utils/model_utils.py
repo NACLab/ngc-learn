@@ -150,7 +150,7 @@ def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
     p_ = jnp.clip(p, offset, 1 - offset)
     return -jnp.sum(x * jnp.log(p_) + (1.0 - x) * jnp.log(1.0 - p_),axis=1, keepdims=True)
 
-def create_function(fun_name):
+def create_function(fun_name, args=None):
     """
     Activation function creation routine.
 
@@ -181,6 +181,12 @@ def create_function(fun_name):
     elif fun_name == "softplus":
         fx = softplus
         dfx = d_softplus
+    elif fun_name == "unit_threshold":
+        fx = threshold ## default threshold is 1 (thus unit)
+        dfx = d_threshold ## STE approximation
+    elif "heaviside" in fun_name:
+        fx = heaviside
+        dfx = d_heaviside ## STE approximation
     elif fun_name == "identity":
         fx = identity
         dfx = d_identity
@@ -515,6 +521,22 @@ def d_softplus(x):
     """
     ## d/dx of softplus = logistic sigmoid
     return nn.sigmoid(x)
+
+@jit
+def threshold(x, thr=1.):
+    return (x >= thr).astype(jnp.float32)
+
+@jit
+def d_threshold(x, thr=1.):
+    return x * 0. + 1. ## straight-thru estimator
+
+@jit
+def heaviside(x):
+    return (x >= 0.).astype(jnp.float32)
+
+@jit
+def d_heaviside(x):
+    return x * 0. + 1. ## straight-thru estimator
 
 @jit
 def sigmoid(x):
