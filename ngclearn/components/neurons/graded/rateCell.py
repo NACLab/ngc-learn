@@ -21,7 +21,7 @@ def _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType=None): ## raw dynamic
     dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
     return dz_dt
 
-def _dfz(z, params): ## diff-eq dynamics wrapper
+def _dfz(t, z, params): ## diff-eq dynamics wrapper
     j, j_td, tau_m, leak_gamma, priorType = params
     dz_dt = _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType)
     return dz_dt
@@ -70,10 +70,10 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
     """
     if integType == 1:
         params = (j, j_td, tau_m, leak_gamma, priorType)
-        _z = step_rk2(z, params, _dfz, dt)
+        _z = step_rk2(0., z, params, _dfz, dt)
     else:
         params = (j, j_td, tau_m, leak_gamma, priorType)
-        _z = step_euler(z, params, _dfz, dt)
+        _z = step_euler(0., z, params, _dfz, dt)
     return _z
 
 @jit
