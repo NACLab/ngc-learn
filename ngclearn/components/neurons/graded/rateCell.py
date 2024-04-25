@@ -70,10 +70,10 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
     """
     if integType == 1:
         params = (j, j_td, tau_m, leak_gamma, priorType)
-        _z = step_rk2(0., z, params, _dfz, dt)
+        _, _z = step_rk2(0., z, _dfz, dt, params)
     else:
         params = (j, j_td, tau_m, leak_gamma, priorType)
-        _z = step_euler(0., z, params, _dfz, dt)
+        _, _z = step_euler(0., z, _dfz, dt, params)
     return _z
 
 @jit
