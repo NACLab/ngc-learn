@@ -145,7 +145,7 @@ zLin = ax.plot(t_values, lin_out, '-.', color='C0')
 zNLin = ax.plot(t_values, nonlin_out, color='C1') #, alpha=.5)
 
 ax.set(xlabel='time (ms)', ylabel='Dynamics Output',
-       title='Integration of:  d\mathbf{z}/dt = $-\gamma \mathbf{z} + \mathbf{x}$')
+       title='Integration of:  dz/dt = $-\gamma z + x$')
 ax.legend([zLin[0],zNLin[0]],['z','phi(z)'])
 ax.grid()
 fig.savefig("rate_cell_integration.jpg")
