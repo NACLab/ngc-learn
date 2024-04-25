@@ -60,7 +60,7 @@ its name motivated by predictive coding literature).
 A good way to understand this equation is in the context of two examples:
 1. in a biophysically more realistic spiking network, $\mathbf{x}$ is the
 total electrical input into the cell from multiple injections produced
-by transmission across synapses ($\mathbf{x}_{td} = 0)) and the $\text{prior}$
+by transmission across synapses ($\mathbf{x}_{td} = 0$)) and the $\text{prior}$
 is set to `gaussian` ($\gamma = 1$), yielding the equation
 $\tau_m \frac{\partial \mathbf{z}}{\partial t} = -\mathbf{z} + \mathbf{x}$ for
 a simple model of synaptic conductance, and
