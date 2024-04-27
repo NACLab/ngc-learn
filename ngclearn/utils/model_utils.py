@@ -148,7 +148,10 @@ def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
         an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
     """
     p_ = jnp.clip(p, offset, 1 - offset)
-    return -jnp.sum(x * jnp.log(p_) + (1.0 - x) * jnp.log(1.0 - p_),axis=1, keepdims=True)
+    bce = -jnp.sum(x * jnp.log(p_) + (1.0 - x) * jnp.log(1.0 - p_),axis=1, keepdims=True)
+    if preserve_batch == False:
+        bce = jnp.mean(bce)
+    return bce
 
 def create_function(fun_name, args=None):
     """
