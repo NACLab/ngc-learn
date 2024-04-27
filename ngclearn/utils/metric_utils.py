@@ -103,7 +103,7 @@ def measure_CatNLL(p, x, offset=1e-7, preserve_batch=False):
     return nll #tf.reduce_mean(nll)
 
 @jit
-def measure_MSE(mu, x):
+def measure_MSE(mu, x, preserve_batch=False):
     """
     Measures mean squared error (MSE), or the negative Gaussian log likelihood
     with variance of 1.0. Note: If batch is preserved, this returns a column
@@ -121,9 +121,11 @@ def measure_MSE(mu, x):
         an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
     """
     diff = mu - x
-    se = jnp.square(diff) #diff * diff # squared error
-    # NLL = -( -se )
-    return jnp.sum(se, axis=1, keepdims=True) # tf.math.reduce_mean(se)
+    se = jnp.square(diff) ## squared error
+    mse = jnp.sum(se, axis=1, keepdims=True) # technically se at this point
+    if preserve_batch == False:
+        mse = jnp.mean(mse) # this is proper mse
+    return mse
 
 @jit
 def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
