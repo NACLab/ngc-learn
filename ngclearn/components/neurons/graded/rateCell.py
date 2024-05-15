@@ -132,8 +132,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         key: PRNG Key to control determinism of any underlying random values
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
     # Define Functions
@@ -141,18 +139,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
                  act_fx="identity", threshold=("none", 0.),
                  integration_type="euler", key=None):
         super().__init__(name)
-
-        # Compartment
-        self.j = Compartment(jnp.zeros((1, n_units))) # electrical current
-        self.zF = Compartment(jnp.zeros((1, n_units))) # rate-coded output - activity
-        self.j_td = Compartment(jnp.zeros((1, n_units))) # top-down electrical current - pressure
-        self.z = Compartment(jnp.zeros((1, n_units))) # rate activity
-
-
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
@@ -171,7 +157,13 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.n_units = n_units
         self.batch_size = 1
         self.fx, self.dfx = create_function(fun_name=act_fx)
-        self.reset()
+
+        # compartments (state of the cell, parameters, will be updated through stateless calls)
+        self.j = Compartment(jnp.zeros((1, n_units))) # electrical current
+        self.zF = Compartment(jnp.zeros((1, n_units))) # rate-coded output - activity
+        self.j_td = Compartment(jnp.zeros((1, n_units))) # top-down electrical current - pressure
+        self.z = Compartment(jnp.zeros((1, n_units))) # rate activity
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
 
     @staticmethod
