@@ -1,5 +1,7 @@
+from ngcsimlib.component import Component
+
 ## generic optimizer base/parent class
-class Opt():
+class Opt(Component):
     """
     A generic base-class for an optimizer.
 

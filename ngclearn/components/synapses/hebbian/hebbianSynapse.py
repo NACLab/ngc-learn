@@ -1,8 +1,11 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.model_utils import initialize_params
-from ngclearn.utils.optim import SGD, Adam
+from ngclearn.components.optim import SGD, Adam
 import time
 
 @partial(jit, static_argnums=[3,4,5,6,7,8])
@@ -144,8 +147,6 @@ class HebbianSynapse(Component):
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save synaptic parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
@@ -217,13 +218,8 @@ class HebbianSynapse(Component):
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
                  bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
                  signVal=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 Rscale=1., key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
-
-        ## random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+                 Rscale=1., key=None, directory=None):
+        super().__init__(name)
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
@@ -239,29 +235,36 @@ class HebbianSynapse(Component):
         self.signVal = signVal
 
         ## optimization / adjustment properties (given learning dynamics above)
-        self.opt = None
-        if optim_type == "adam":
-            self.opt = Adam(learning_rate=self.eta)
-        else: ## default is SGD
-            self.opt = SGD(learning_rate=self.eta)
+        # self.opt = None
+        # if optim_type == "adam":
+        #     self.opt = Adam(learning_rate=self.eta)
+        # else: ## default is SGD
+        #     self.opt = SGD(learning_rate=self.eta)
 
-        if directory is None:
-            self.key, subkey = random.split(self.key)
-            self.weights = initialize_params(subkey, wInit, shape)
-            if self.bInit is not None:
-                self.key, subkey = random.split(self.key)
-                self.biases = initialize_params(subkey, bInit, (1, shape[1]))
-        else:
-            self.load(directory)
+        # if directory is None:
+        #     self.key, subkey = random.split(self.key)
+        #     self.weights = initialize_params(subkey, wInit, shape)
+        #     if self.bInit is not None:
+        #         self.key, subkey = random.split(self.key)
+        #         self.biases = initialize_params(subkey, bInit, (1, shape[1]))
+        # else:
+        #     self.load(directory)
 
-        ##Reset to initialize stuff
-        self.reset()
+        # ##Reset to initialize stuff
+        # self.reset()
 
-        self.dW = None
-        self.db = None
+        # self.dW = None
+        # self.db = None
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        # compartments (state of the cell, parameters, will be updated through stateless calls)
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
+        self.inputs = Compartment(None)
+        self.outputs = Compartment(None)
+        self.trigger = Compartment(None)
+        self.pre = Compartment(None)
+        self.post = Compartment(None)
+        self.dW = Compartment(None)
+        self.db = Compartment(None)
 
     def advance_state(self, **kwargs):
         biases = 0.

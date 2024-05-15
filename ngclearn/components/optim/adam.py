@@ -1,4 +1,7 @@
-from ngclearn.utils.optim.opt import Opt
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
+from ngclearn.components.optim.opt import Opt
 import numpy as np
 from jax import jit, numpy as jnp, random, nn, lax
 from functools import partial
