@@ -1,4 +1,9 @@
+# %%
+
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
@@ -127,86 +132,13 @@ class RateCell(Component): ## Rate-coded/real-valued cell
 
         key: PRNG Key to control determinism of any underlying random values
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
-
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'j' ## electrical current
-
-    @classmethod
-    def outputCompartmentName(cls): # OR: activityName()
-        return 'zF' ## rate-coded output
-
-    @classmethod
-    def pressureName(cls):
-        return 'j_td'
-
-    @classmethod
-    def rateActivityName(cls):
-        return 'z'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, out):
-        self.compartments[self.inputCompartmentName()] = out
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def current(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @current.setter
-    def current(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def pressure(self):
-        return self.compartments.get(self.pressureName(), None)
-
-    @pressure.setter
-    def pressure(self, inp):
-        self.compartments[self.pressureName()] = inp
-
-    @property
-    def rateActivity(self):
-        return self.compartments.get(self.rateActivityName(), None)
-
-    @rateActivity.setter
-    def rateActivity(self, out):
-        self.compartments[self.rateActivityName()] = out
-
-    @property
-    def activity(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @activity.setter
-    def activity(self, out):
-        self.compartments[self.outputCompartmentName()] = out
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.),
                  act_fx="identity", threshold=("none", 0.),
-                 integration_type="euler", key=None, useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
-
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+                 integration_type="euler", key=None):
+        super().__init__(name)
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
@@ -225,41 +157,99 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.n_units = n_units
         self.batch_size = 1
         self.fx, self.dfx = create_function(fun_name=act_fx)
-        self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        # compartments (state of the cell, parameters, will be updated through stateless calls)
+        self.j = Compartment(jnp.zeros((1, n_units))) # electrical current
+        self.zF = Compartment(jnp.zeros((1, n_units))) # rate-coded output - activity
+        self.j_td = Compartment(jnp.zeros((1, n_units))) # top-down electrical current - pressure
+        self.z = Compartment(jnp.zeros((1, n_units))) # rate activity
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
-    def advance_state(self, t, dt, **kwargs):
-        if self.tau_m > 0.:
+
+    @staticmethod
+    def pure_advance(t, dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType, thresholdType,
+            thr_lmbda, j, j_td, z, zF):
+        if tau_m > 0.:
             ### run a step of integration over neuronal dynamics
             ## Notes:
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal
-            dfx_val = self.dfx(self.rateActivity)
-            self.current = modulate(self.current, dfx_val)
-            z = run_cell(dt, self.current, self.pressure, self.rateActivity,
-                         self.tau_m, leak_gamma=self.priorLeakRate,
-                         integType=self.intgFlag, priorType=self.priorType)
+            dfx_val = dfx(z)
+            j = modulate(j, dfx_val)
+            tmp_z = run_cell(dt, j, j_td, z,
+                         tau_m, leak_gamma=priorLeakRate,
+                         integType=intgFlag, priorType=priorType)
             ## apply optional thresholding sub-dynamics
-            if self.thresholdType == "soft_threshold":
-                z = threshold_soft(z, self.thr_lmbda)
-            elif self.thresholdType == "cauchy_threshold":
-                z = threshold_cauchy(z, self.thr_lmbda)
-            self.rateActivity = z
-            self.activity = self.fx(self.rateActivity)
-            self.current = None
+            if thresholdType == "soft_threshold":
+                tmp_z = threshold_soft(z, thr_lmbda)
+            elif thresholdType == "cauchy_threshold":
+                tmp_z = threshold_cauchy(z, thr_lmbda)
+            z = tmp_z
+            zF = fx(z)
         else:
             ## run in "stateless" mode (when no membrane time constant provided)
-            self.rateActivity = run_cell_stateless(self.current)
-            self.activity = self.fx(self.rateActivity)
-            #self.current = None
+            z = run_cell_stateless(j)
+            zF = fx(z)
+        return j, j_td, z, zF
 
-    def reset(self, **kwargs):
-        self.current = jnp.zeros((self.batch_size, self.n_units))
-        self.pressure = jnp.zeros((self.batch_size, self.n_units))
-        self.rateActivity = jnp.zeros((self.batch_size, self.n_units))
-        self.activity = jnp.zeros((self.batch_size, self.n_units))
+    @resolver(pure_advance, output_compartments=['j', 'j_td', 'z', 'zF'])
+    def advance(self, vals):
+        j, j_td, z, zF = vals
+        self.j.set(j)
+        self.j_td.set(j_td)
+        self.z.set(z)
+        self.zF.set(zF)
+
+    def reset(self):
+        self.j.set(jnp.zeros((1, self.n_units))) # electrical current
+        self.zF.set(jnp.zeros((1, self.n_units))) # rate-coded output - activity
+        self.j_td.set(jnp.zeros((1, self.n_units))) # top-down electrical current - pressure
+        self.z.set(jnp.zeros((1, self.n_units))) # rate activity
 
     def save(self, **kwargs):
         pass
+
+
+
+# Testing
+if __name__ == '__main__':
+    from ngcsimlib.compartment import All_compartments
+    from ngcsimlib.context import Context
+    from ngcsimlib.commands import Command
+
+    def wrapper(compiled_fn):
+        def _wrapped(*args):
+            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            for key, value in vals.items():
+                All_compartments[str(key)].set(value)
+            return vals
+        return _wrapped
+
+    class AdvanceCommand(Command):
+        compile_key = "advance"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.advance(t=t, dt=dt)
+
+    with Context("Bar") as bar:
+        a1 = RateCell("a1", 2, 0.01)
+        a2 = RateCell("a2", 2, 0.01)
+        a2.j << a1.zF
+        cmd = AdvanceCommand(components=[a1, a2], command_name="Advance")
+
+    compiled_cmd, arg_order = cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, 0.1])
+    wrapped_cmd = wrapper(compiled_cmd)
+
+    for i in range(3):
+        a1.j.set(10)
+        wrapped_cmd()
+        print(f"Step {i} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+        print(f"Step {i} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+    a1.reset()
+    a2.reset()
+    print(f"Reset: [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+    print(f"Reset: [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+
+

@@ -1,8 +1,11 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.model_utils import initialize_params
-from ngclearn.utils.optim import SGD, Adam
+from ngclearn.components.optim import SGD, Adam
 import time
 
 @partial(jit, static_argnums=[3,4,5,6,7,8])
@@ -144,8 +147,6 @@ class HebbianSynapse(Component):
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save synaptic parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
@@ -217,13 +218,8 @@ class HebbianSynapse(Component):
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
                  bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
                  signVal=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 Rscale=1., key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
-
-        ## random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+                 Rscale=1., key=None, directory=None):
+        super().__init__(name)
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
@@ -239,38 +235,52 @@ class HebbianSynapse(Component):
         self.signVal = signVal
 
         ## optimization / adjustment properties (given learning dynamics above)
-        self.opt = None
-        if optim_type == "adam":
-            self.opt = Adam(learning_rate=self.eta)
-        else: ## default is SGD
-            self.opt = SGD(learning_rate=self.eta)
+        # self.opt = None
+        # if optim_type == "adam":
+        #     self.opt = Adam(learning_rate=self.eta)
+        # else: ## default is SGD
+        #     self.opt = SGD(learning_rate=self.eta)
 
-        if directory is None:
-            self.key, subkey = random.split(self.key)
-            self.weights = initialize_params(subkey, wInit, shape)
-            if self.bInit is not None:
-                self.key, subkey = random.split(self.key)
-                self.biases = initialize_params(subkey, bInit, (1, shape[1]))
-        else:
-            self.load(directory)
+        # if directory is None:
+        #     self.key, subkey = random.split(self.key)
+        #     self.weights = initialize_params(subkey, wInit, shape)
+        #     if self.bInit is not None:
+        #         self.key, subkey = random.split(self.key)
+        #         self.biases = initialize_params(subkey, bInit, (1, shape[1]))
+        # else:
+        #     self.load(directory)
 
-        ##Reset to initialize stuff
-        self.reset()
+        # ##Reset to initialize stuff
+        # self.reset()
 
-        self.dW = None
-        self.db = None
+        # self.dW = None
+        # self.db = None
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        # compartments (state of the cell, parameters, will be updated through stateless calls)
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
+        self.inputs = Compartment(None)
+        self.outputs = Compartment(None)
+        self.trigger = Compartment(None)
+        self.pre = Compartment(None)
+        self.post = Compartment(None)
+        self.dW = Compartment(None)
+        self.db = Compartment(None)
+        self.key, subkey = random.split(self.key)
+        self.weights = Compartment(initialize_params(subkey, wInit, shape))
+        self.key, subkey = random.split(self.key)
+        self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
 
-    def advance_state(self, **kwargs):
-        biases = 0.
-        if self.bInit != None:
-            biases = self.biases
-        self.outputCompartment = compute_layer(self.inputCompartment, self.weights,
-                                               biases, self.Rscale)
+    @staticmethod
+    def pure_advance(t, dt, Rscale, inputs, weights, biases):
+        outputs = compute_layer(inputs, weights, biases, Rscale)
+        return outputs
 
-    def evolve(self, t, dt, **kwargs):
+    @resolver(pure_advance, output_compartments=["outputs"])
+    def advance(self, outputs):
+        self.outputs.set(outputs)
+
+    @staticmethod
+    def evolve(self, t, dt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght, post_wght, bInit, pre, post, weights, biases, dW, db):
         dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
                              signVal=self.signVal, w_decay=self.w_decay,
@@ -292,13 +302,20 @@ class HebbianSynapse(Component):
         self.weights = enforce_constraints(self.weights, self.w_bounds,
                                            is_nonnegative=self.is_nonnegative)
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = None
-        self.presynapticCompartment = None
-        self.postsynapticCompartment = None
-        self.dW = None
-        self.db = None
+    def reset(self):
+        self.inputs.set(None)
+        self.outputs.set(None)
+        self.trigger.set(None)
+        self.pre.set(None)
+        self.post.set(None)
+        self.dW.set(None)
+        self.db.set(None)
+        key, subkey = random.split(self.key.value)
+        self.key.set(key)
+        self.weights = Compartment(initialize_params(subkey, self.wInit, self.shape))
+        key, subkey = random.split(self.key.value)
+        self.key.set(key)
+        self.biases = Compartment(initialize_params(subkey, self.bInit, (1, self.shape[1])) if self.bInit else 0.0)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
