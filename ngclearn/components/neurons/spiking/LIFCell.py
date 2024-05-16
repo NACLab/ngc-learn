@@ -269,7 +269,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         return j, v, s, rfr, thr, thr_theta, tols
 
     @resolver(pure_reset, output_compartments=['j', 'v', 's', 'rfr', 'thr',
-        'thr_theta', 'tols', 'key'])
+        'thr_theta', 'tols'])
     def reset(self, vals):
         j, v, s, rfr, thr, thr_theta, tols = vals
         self.j.set(j)

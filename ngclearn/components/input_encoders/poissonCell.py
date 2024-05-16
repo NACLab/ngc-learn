@@ -116,6 +116,7 @@ class PoissonCell(Component):
     # def verify_connections(self):
     #     pass
 
+## testing
 if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
