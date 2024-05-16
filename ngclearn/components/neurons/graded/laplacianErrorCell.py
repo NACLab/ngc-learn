@@ -70,11 +70,6 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
                  useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ##Random Number setup
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
         ##Layer Size setup
         self.n_units = n_units
         self.batch_size = 1
