@@ -83,10 +83,15 @@ class BernoulliCell(Component):
         self.tols.set(tols)
         self.key.set(key)
 
-    def reset(self):
-        self.inputs.set(None)
-        self.outputs.set(jnp.zeros((self.batch_size, self.n_units))) #None
-        self.tols.set(jnp.zeros((self.batch_size, self.n_units)))
+    @staticmethod
+    def pure_reset(batch_size, n_units):
+        return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
+
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'tols'])
+    def reset(self, inputs, outputs, tols):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs) #None
+        self.tols.set(tols)
 
     def save(self, **kwargs):
         pass
@@ -115,23 +120,34 @@ if __name__ == '__main__':
                 component.gather()
                 component.advance(t=t, dt=dt)
 
+    class ResetCommand(Command):
+        compile_key = "reset"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.reset(t=t, dt=dt)
+
     with Context("Bar") as bar:
         b = BernoulliCell("b", 2)
         a = RateCell("a2", 2, 0.01)
         a.j << b.outputs
-        cmd = AdvanceCommand(components=[b, a], command_name="Advance")
+        advance_cmd = AdvanceCommand(components=[b, a], command_name="Advance")
+        reset_cmd = ResetCommand(components=[b, a], command_name="Reset")
 
-    compiled_cmd, arg_order = cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, 0.1])
-    wrapped_cmd = wrapper(compiled_cmd)
+    compiled_advance_cmd, _ = advance_cmd.compile()
+    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
 
-    for i in range(3):
-        b.inputs.set(jnp.asarray([[0.3, 0.7]]))
-        wrapped_cmd()
-        print(f"---[ Step {i} ]---")
+    compiled_reset_cmd, _ = reset_cmd.compile()
+    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+
+    dt = 0.01
+    for t in range(5):
+        b.inputs.set(jnp.asarray([[0.5, 0.5]]))
+        wrapped_advance_cmd(t, dt)
+        print(f"---[ Step {t} ]---")
         print(f"[b] inputs: {b.inputs.value}, outputs: {b.outputs.value}, time of last spike: {b.tols.value}")
         print(f"[a] j: {a.j.value}, j_td: {a.j_td.value}, z: {a.z.value}, zF: {a.zF.value}")
-    b.reset()
-    a.reset()
+    wrapped_reset_cmd()
     print(f"---[ After reset ]---")
     print(f"[b] inputs: {b.inputs.value}, outputs: {b.outputs.value}, time of last spike: {b.tols.value}")
     print(f"[a] j: {a.j.value}, j_td: {a.j_td.value}, z: {a.z.value}, zF: {a.zF.value}")

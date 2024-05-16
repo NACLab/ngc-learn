@@ -200,11 +200,16 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.z.set(z)
         self.zF.set(zF)
 
-    def reset(self):
-        self.j.set(jnp.zeros((1, self.n_units))) # electrical current
-        self.zF.set(jnp.zeros((1, self.n_units))) # rate-coded output - activity
-        self.j_td.set(jnp.zeros((1, self.n_units))) # top-down electrical current - pressure
-        self.z.set(jnp.zeros((1, self.n_units))) # rate activity
+    @staticmethod
+    def pure_reset(batch_size, n_units):
+        return tuple([jnp.zeros((batch_size, n_units)) for _ in range(4)])
+
+    @resolver(pure_reset, output_compartments=['j', 'zF', 'j_td', 'z'])
+    def reset(self, j, zF, j_td, z):
+        self.j.set(j) # electrical current
+        self.zF.set(zF) # rate-coded output - activity
+        self.j_td.set(j_td) # top-down electrical current - pressure
+        self.z.set(z) # rate activity
 
     def save(self, **kwargs):
         pass
@@ -233,22 +238,33 @@ if __name__ == '__main__':
                 component.gather()
                 component.advance(t=t, dt=dt)
 
+    class ResetCommand(Command):
+        compile_key = "reset"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.reset(t=t, dt=dt)
+
     with Context("Bar") as bar:
         a1 = RateCell("a1", 2, 0.01)
         a2 = RateCell("a2", 2, 0.01)
         a2.j << a1.zF
-        cmd = AdvanceCommand(components=[a1, a2], command_name="Advance")
+        advance_cmd = AdvanceCommand(components=[a1, a2], command_name="Advance")
+        reset_cmd = ResetCommand(components=[a1, a2], command_name="Reset")
 
-    compiled_cmd, arg_order = cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, 0.1])
-    wrapped_cmd = wrapper(compiled_cmd)
+    compiled_advance_cmd, _ = advance_cmd.compile()
+    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
 
-    for i in range(3):
+    compiled_reset_cmd, _ = reset_cmd.compile()
+    wrapped_reset_cmd = wrapper(compiled_reset_cmd)
+
+    dt = 0.01
+    for t in range(3):
         a1.j.set(10)
-        wrapped_cmd()
-        print(f"Step {i} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-        print(f"Step {i} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
-    a1.reset()
-    a2.reset()
+        wrapped_advance_cmd(t, dt)
+        print(f"Step {t} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+        print(f"Step {t} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+    wrapped_reset_cmd()
     print(f"Reset: [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
     print(f"Reset: [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
 
