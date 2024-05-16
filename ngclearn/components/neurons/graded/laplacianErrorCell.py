@@ -1,10 +1,11 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
 
 #@partial(jit, static_argnums=[3])
-def run_cell(dt, targ, mu, eType="gaussian"):
+def run_cell(dt, targ, mu):
     """
     Moves cell dynamics one step forward.
 
@@ -47,7 +48,7 @@ def run_laplacian_cell(dt, targ, mu):
 class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     """
     A simple (non-spiking) Laplacian error cell - this is a fixed-point solution
-    of a mismatch signal.
+    of a mismatch/error signal.
 
     Args:
         name: the string name of this cell
@@ -64,122 +65,65 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def lossName(cls):
-        return "L"
-
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'j' ## electrical current
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'e' ## rate-coded output
-
-    @classmethod
-    def meanName(cls):
-        return 'mu'
-
-    @classmethod
-    def derivMeanName(cls):
-        return 'dmu'
-
-    @classmethod
-    def targetName(cls):
-        return 'target'
-
-    @classmethod
-    def derivTargetName(cls):
-        return 'dtarget'
-
-    @classmethod
-    def modulatorName(cls):
-        return 'modulator'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def loss(self):
-        return self.compartments.get(self.lossName(), None)
-
-    @loss.setter
-    def loss(self, inp):
-        self.compartments[self.lossName()] = inp
-
-    @property
-    def mean(self):
-        return self.compartments.get(self.meanName(), None)
-
-    @mean.setter
-    def mean(self, inp):
-        self.compartments[self.meanName()] = inp
-
-    @property
-    def derivMean(self):
-        return self.compartments.get(self.derivMeanName(), None)
-
-    @derivMean.setter
-    def derivMean(self, inp):
-        self.compartments[self.derivMeanName()] = inp
-
-    @property
-    def target(self):
-        return self.compartments.get(self.targetName(), None)
-
-    @target.setter
-    def target(self, inp):
-        self.compartments[self.targetName()] = inp
-
-    @property
-    def derivTarget(self):
-        return self.compartments.get(self.derivTargetName(), None)
-
-    @derivTarget.setter
-    def derivTarget(self, inp):
-        self.compartments[self.derivTargetName()] = inp
-
-    @property
-    def modulator(self):
-        return self.compartments.get(self.modulatorName(), None)
-
-    @modulator.setter
-    def modulator(self, inp):
-        self.compartments[self.modulatorName()] = inp
-
     # Define Functions
     def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None,
                  useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ##Random Number Set up
+        ##Random Number setup
         self.key = key
         if self.key is None:
             self.key = random.PRNGKey(time.time_ns())
 
-        ##Layer Size Setup
+        ##Layer Size setup
         self.n_units = n_units
         self.batch_size = 1
+
+        ## Compartment setup
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.mean = Compartment(restVals)
+        self.target = Compartment(restVals)
+        self.derivMean = Compartment(restVals)
+        self.derivTarget = Compartment(restVals)
+        self.loss = Compartment(jnp.zeros((1,1)))
+        self.modulator = Compartment(jnp.ones((1,1)))
         self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
-        self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
-
-    def advance_state(self, t, dt, **kwargs):
+    @staticmethod
+    def pure_advance(t, dt, target, mean, derivTarget, derivMean, modulator):
         ## compute Laplacian/MAE error cell output
-        self.derivMean, self.derivTarget, self.loss = \
-            run_cell(dt, self.target, self.mean)
-        if self.modulator is not None:
-            self.derivMean = self.derivMean * self.modulator
-            self.derivTarget = self.derivTarget * self.modulator
-            self.modulator = None ## use and consume modulator
+        derivMean, derivTarget, loss = run_cell(dt, target, mean)
+        #if modulator is not None:
+        derivMean = derivMean * modulator
+        derivTarget = derivTarget * modulator
+        #modulator = None ## use and consume modulator
 
-    def reset(self, **kwargs):
-        self.derivMean = jnp.zeros((self.batch_size, self.n_units))
-        self.derivTarget = jnp.zeros((self.batch_size, self.n_units))
-        self.target = jnp.zeros((self.batch_size, self.n_units)) #None
-        self.mean = jnp.zeros((self.batch_size, self.n_units)) #None
-        self.modulator = None
+    @resolver(pure_advance, output_compartments=['target', 'mean', 'derivTarget', 'derivMean', 'modulator'])
+    def advance(self, vals):
+        target, mean, derivTarget, derivMean, modulator = vals
+        self.target.set(target)
+        self.mean.set(mean)
+        self.derivTarget.set(derivTarget)
+        self.derivMean.set(derivMean)
+        self.modulator.set(modulator)
 
-    def save(self, **kwargs):
-        pass
+    @staticmethod
+    def pure_reset(batch_size, n_units):
+        restVals = [jnp.zeros((batch_size, n_units)) for _ in range(4)] + [jnp.ones((batch_size, n_units))]
+        return restVals
+
+    @resolver(pure_reset, output_compartments=['target', 'mean', 'derivTarget', 'derivMean', 'modulator'])
+    def reset(self, vals):
+        target, mean, derivTarget, derivMean, modulator = vals
+        self.target.set(target)
+        self.mean.set(mean)
+        self.derivTarget.set(derivTarget)
+        self.derivMean.set(derivMean)
+        self.modulator.set(modulator)
+
+    # def save(self, **kwargs):
+    #     pass
+
+    # def verify_connections(self):
+    #     self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
+    #     self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
