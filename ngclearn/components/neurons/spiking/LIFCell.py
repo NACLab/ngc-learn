@@ -1,4 +1,6 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 import time, sys
@@ -75,7 +77,7 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset, r
     ## this is a spike post-processing step
     if skey is not None: ## FIXME: this would not work for mini-batches!!!!!!!
         m_switch = (jnp.sum(s) > 0.).astype(jnp.float32)
-        rS = random.choice(skey, s.shape[1], p=jnp.squeeze(s))
+        rS = random.choice(skey, s.shape[1], p=jnp.squeeze(s, axis=0))
         rS = nn.one_hot(rS, num_classes=s.shape[1], dtype=jnp.float32)
         s = s * (1. - m_switch) + rS * m_switch
     ############################################################################
@@ -153,90 +155,11 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'j' ## electrical current
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 's' ## spike/action potential
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols' ## time-of-last-spike (record vector)
-
-    @classmethod
-    def voltageCompartmentName(cls):
-        return 'v' ## membrane potential/voltage
-
-    @classmethod
-    def thresholdThetaName(cls):
-        return 'thrTheta' ## action potential threshold
-
-    @classmethod
-    def refractCompartmentName(cls):
-        return 'rfr' ## refractory variable(s)
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def current(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @current.setter
-    def current(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def spikes(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @spikes.setter
-    def spikes(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
-
-    @property
-    def voltage(self):
-        return self.compartments.get(self.voltageCompartmentName(), None)
-
-    @voltage.setter
-    def voltage(self, v):
-        self.compartments[self.voltageCompartmentName()] = v
-
-    @property
-    def refract(self):
-        return self.compartments.get(self.refractCompartmentName(), None)
-
-    @refract.setter
-    def refract(self, rfr):
-        self.compartments[self.refractCompartmentName()] = rfr
-
-    @property
-    def threshold_theta(self):
-        return self.compartments.get(self.thresholdThetaName(), None)
-
-    @threshold_theta.setter
-    def threshold_theta(self, thr):
-        self.compartments[self.thresholdThetaName()] = thr
-
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m, thr=-52., v_rest=-65., v_reset=60.,
+    def __init__(self, name, n_units, tau_m, R_m, thr=-52., v_rest=-65., v_reset=-60., # 60.
                  tau_theta=1e7, theta_plus=0.05, refract_T=5., key=None, one_spike=True,
                  useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
-
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant
@@ -251,49 +174,85 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
         ##Layer Size Setup
         self.n_units = n_units
+        self.batch_size = 1
 
-        self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
-        ## adaptive threshold setup
-        if directory is None:
-            self.threshold_theta = jnp.zeros((1, n_units))
-        else:
-            self.load(directory)
+        # self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
+        # ## adaptive threshold setup
+        # if directory is None:
+        #     self.threshold_theta = jnp.zeros((1, n_units))
+        # else:
+        #     self.load(directory)
 
-        self.reset()
+        ## Compartment setup
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.j = Compartment(restVals)
+        self.v = Compartment(restVals + self.v_rest)
+        self.s = Compartment(restVals)
+        self.rfr = Compartment(restVals + self.refract_T)
+        self.thr = Compartment(restVals + thr)
+        self.thr_theta = Compartment(restVals)
+        self.tols = Compartment(restVals) ## time-of-last-spike
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
+        self.clock_t = Compartment(0.) ## time-of-last-spike
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        #self.reset()
 
-    def advance_state(self, t, dt, **kwargs):
-        if self.spikes is None:
-            self.spikes = jnp.zeros((1, self.n_units))
-        if self.refract is None:
-            self.refract = jnp.zeros((1, self.n_units)) + self.refract_T
+    @staticmethod
+    def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
+                     theta_plus, one_spike, key, j, v, s, rfr, thr, thr_theta,
+                     tols, clock_t):
         skey = None ## this is an empty dkey if single_spike mode turned off
-        if self.one_spike is False:
-            self.key, *subkeys = random.split(self.key, 2)
+        if one_spike == True: ## old code ~> if self.one_spike is False:
+            key, *subkeys = random.split(key, 2)
             skey = subkeys[0]
-
-        ## run one step of Euler integration over neuronal dynamics
-        self.voltage, self.spikes, raw_spikes, self.refract = \
-            run_cell(dt, self.current, self.voltage, self.threshold,
-                     self.threshold_theta, self.refract, skey, self.tau_m,
-                     self.R_m, self.v_rest, self.v_reset, self.refract_T)
-        if self.tau_theta > 0.:
-            ## run one step of Euler integration over threshold dynamics
-            self.threshold_theta = update_theta(dt, self.threshold_theta, raw_spikes,
-                                                self.tau_theta, self.theta_plus)
+        ## run one integration step for neuronal dynamics
+        v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
+                                         tau_m, R_m, v_rest, v_reset, refract_T)
+        if tau_theta > 0.:
+            ## run one integration step for threshold dynamics
+            thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
-        self.timeOfLastSpike = update_times(t, self.spikes, self.timeOfLastSpike)
-        #self.timeOfLastSpike = (1 - self.spikes) * self.timeOfLastSpike + (self.spikes * t)
-        #self.current = None
+        tols = update_times(clock_t, s, tols) #update_times(t, s, tols)
+        return j, v, s, rfr, thr, thr_theta, tols, key
 
-    def reset(self, **kwargs):
-        self.voltage = jnp.zeros((1, self.n_units)) + self.v_rest
-        self.refract = jnp.zeros((1, self.n_units)) + self.refract_T
-        self.current = jnp.zeros((1, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((1, self.n_units))
-        self.spikes = jnp.zeros((1, self.n_units)) #None
+    @resolver(pure_advance, output_compartments=['j', 'v', 's', 'rfr', 'thr',
+        'thr_theta', 'tols', 'key'])
+    def advance(self, vals):
+        j, v, s, rfr, thr, thr_theta, tols, clock_t, key = vals
+        self.j.set(j)
+        self.v.set(v)
+        self.s.set(s)
+        self.rfr.set(rfr)
+        self.thr.set(thr)
+        self.thr_theta.set(thr_theta)
+        self.tols.set(tols)
+        self.key.set(key)
+
+    @staticmethod
+    def pure_reset(batch_size, n_units, v_rest, refract_T):
+        restVals = jnp.zeros((batch_size, n_units))
+        j = restVals #+ 0
+        v = restVals + v_rest
+        s = restVals #+ 0
+        rfr = restVals + refract_T
+        thr = restVals #+ 0
+        thr_theta = restVals
+        tols = restVals #+ 0
+        clock_t = 0.
+        return j, v, s, rfr, thr, thr_theta, tols, clock_t
+
+    @resolver(pure_reset, output_compartments=['j', 'v', 's', 'rfr', 'thr',
+        'thr_theta', 'tols', 'clock_t', 'key'])
+    def reset(self, vals):
+        j, v, s, rfr, thr, thr_theta, tols, clock_t = vals
+        self.j.set(j)
+        self.v.set(v)
+        self.s.set(s)
+        self.rfr.set(rfr)
+        self.thr.set(thr)
+        self.thr_theta.set(thr_theta)
+        self.tols.set(tols)
+        self.clock_t.set(clock_t)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -303,3 +262,57 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.threshold_theta = data['threshold_theta']
+
+    # def verify_connections(self):
+    #     self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+
+# Testing
+if __name__ == '__main__':
+    from ngcsimlib.compartment import All_compartments
+    from ngcsimlib.context import Context
+    from ngcsimlib.commands import Command
+    #from ngclearn.components.neurons.graded.rateCell import RateCell
+
+    def wrapper(compiled_fn):
+        def _wrapped(*args):
+            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            for key, value in vals.items():
+                All_compartments[str(key)].set(value)
+            return vals
+        return _wrapped
+
+    class AdvanceCommand(Command):
+        compile_key = "advance"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.advance(t=t, dt=dt)
+
+    with Context("Context") as context:
+        #b = BernoulliCell("b", 2)
+        #a = RateCell("a2", 2, 0.01)
+        #a.j << b.outputs
+        a = LIFCell("a1", n_units=1, tau_m=100., R_m=1.)
+        cmd = AdvanceCommand(components=[a], command_name="Advance")
+
+    T = 16
+    dt = 0.1
+    compiled_cmd, arg_order = cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, dt])
+    wrapped_cmd = wrapper(compiled_cmd)
+
+    t = 0.
+    for i in range(T): # i is "t"
+        a.clock_t.set(t)
+        a.j.set(jnp.asarray([[1.0]]))
+        wrapped_cmd()
+        t = t + dt
+        print(f"---[ Step {i} ]---")
+        print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
+              f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
+              f"tols: {a.tols.value}, clock: {a.clock_t.value}")
+    a.reset()
+    print(f"---[ After reset ]---")
+    print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
+          f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
+          f"tols: {a.tols.value}, clock: {a.clock_t.value}")
