@@ -1,7 +1,9 @@
+# %%
+
+from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 
-from ngclearn.components.optim.opt import Opt
 import numpy as np
 from jax import jit, numpy as jnp, random, nn, lax
 from functools import partial
@@ -51,7 +53,7 @@ def step_update(param, update, g1, g2, lr, beta1, beta2, time, eps):
     _param = param - lr * g1_unb/(jnp.sqrt(g2_unb) + eps)
     return _param, _g1, _g2
 
-class Adam(Opt):
+class Adam(Component):
     """
     Implements the adaptive moment estimation (Adam) algorithm as a decoupled
     update rule given adjustments produced by a credit assignment algorithm/process.
@@ -72,20 +74,91 @@ class Adam(Opt):
         self.beta2 = beta2
         self.eps = epsilon
 
-        self.g1 = []
-        self.g2 = []
-        #self.time = 0.
+        # Compartment
+        self.g1 = Compartment(None) # adam internal variable. Internal compartment
+        self.g2 = Compartment(None) # adam internal variable. Internal compartment
+        self.time_step = Compartment(0.0) # the time step. Internal compartment
+        self.updates = Compartment(None) # the update or gradient. External compartment, to be wired
+        self.theta = Compartment(None) # the current weight of other networks. External compartment, to be wired
 
-    def update(self, theta, updates):  ## apply adjustment to theta
-        if self.time <= 0.: ## init statistics
-            for i in range(len(theta)):
-                self.g1.append(jnp.zeros(theta[i].shape))
-                self.g2.append(jnp.zeros(theta[i].shape))
-        self.time += 1
+    @staticmethod
+    def pure_update(t, dt, eta, beta1, beta2, eps, g1, g2, time_step, theta, updates):  ## apply adjustment to theta
+        if time_step <= 0.: ## init statistics
+            g1 = [jnp.zeros(theta_item.shape) for theta_item in theta]
+            g2 = [jnp.zeros(theta_item.shape) for theta_item in theta]
+        time_step = time_step + 1
+        new_theta = []
+        new_g1 = []
+        new_g2 = []
         for i in range(len(theta)):
-            px_i, g1_i, g2_i = step_update(theta[i], updates[i], self.g1[i],
-                                           self.g2[i], self.eta, self.beta1,
-                                           self.beta2, self.time, self.eps)
-            theta[i] = px_i
-            self.g1[i] = g1_i
-            self.g2[i] = g2_i
+            px_i, g1_i, g2_i = step_update(theta[i], updates[i], g1[i],
+                                           g2[i], eta, beta1,
+                                           beta2, time_step, eps)
+            new_theta.append(px_i)
+            new_g1.append(g1_i)
+            new_g2.append(g2_i)
+        return new_g1, new_g2, time_step, new_theta
+
+    @resolver(pure_update, output_compartments=["g1", "g2", "time_step", "theta"])
+    def update(self, g1, g2, time_step, theta):
+        self.g1.set(g1)
+        self.g2.set(g2)
+        self.time_step.set(time_step)
+        self.theta.set(theta)
+
+if __name__ == '__main__':
+    from ngcsimlib.compartment import All_compartments
+    from ngcsimlib.context import Context
+    from ngcsimlib.commands import Command
+    from ngclearn.components.neurons.graded.rateCell import RateCell
+
+    def wrapper(compiled_fn):
+        def _wrapped(*args):
+            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            for key, value in vals.items():
+                All_compartments[str(key)].set(value)
+            return vals
+        return _wrapped
+
+    class AdvanceCommand(Command):
+        compile_key = "advance"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.advance(t=t, dt=dt)
+
+    class UpdateCommand(Command):
+        compile_key = "update"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.update(t=t, dt=dt)
+
+    with Context("Bar") as bar:
+        a1 = RateCell("a1", 2, 0.01)
+        a2 = RateCell("a2", 2, 0.01)
+        adam = Adam()
+        a2.j << a1.zF
+        adam.theta << a1.zF
+        adam.updates << a2.zF
+        cmd = AdvanceCommand(components=[a1, a2], command_name="Advance")
+        update_cmd = UpdateCommand(components=[adam], command_name="Update")
+
+    compiled_cmd, arg_order = cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, 0.1])
+    wrapped_cmd = wrapper(compiled_cmd)
+
+    compiled_update_cmd, _ = update_cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, 0.1])
+    wrapped_update_cmd = wrapper(compiled_update_cmd)
+
+    for i in range(3):
+        a1.j.set(10)
+        wrapped_cmd()
+        wrapped_update_cmd()
+        print(f"Step {i} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+        print(f"Step {i} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+        print(f"Step {i} - [adam] g1: {adam.g1.value}, g2: {adam.g2.value}, theta: {adam.theta.value}, updates: {adam.updates.value}, time_step: {adam.time_step.value}")
+    a1.reset()
+    a2.reset()
+    print(f"Reset: [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+    print(f"Reset: [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
