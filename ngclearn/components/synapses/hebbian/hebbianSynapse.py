@@ -265,15 +265,22 @@ class HebbianSynapse(Component):
         self.post = Compartment(None)
         self.dW = Compartment(None)
         self.db = Compartment(None)
+        self.key, subkey = random.split(self.key)
+        self.weights = Compartment(initialize_params(subkey, wInit, shape))
+        self.key, subkey = random.split(self.key)
+        self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
 
-    def advance_state(self, **kwargs):
-        biases = 0.
-        if self.bInit != None:
-            biases = self.biases
-        self.outputCompartment = compute_layer(self.inputCompartment, self.weights,
-                                               biases, self.Rscale)
+    @staticmethod
+    def pure_advance(t, dt, Rscale, inputs, weights, biases):
+        outputs = compute_layer(inputs, weights, biases, Rscale)
+        return outputs
 
-    def evolve(self, t, dt, **kwargs):
+    @resolver(pure_advance, output_compartments=["outputs"])
+    def advance(self, outputs):
+        self.outputs.set(outputs)
+
+    @staticmethod
+    def evolve(self, t, dt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght, post_wght, bInit, pre, post, weights, biases, dW, db):
         dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
                              self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
                              signVal=self.signVal, w_decay=self.w_decay,
@@ -295,13 +302,20 @@ class HebbianSynapse(Component):
         self.weights = enforce_constraints(self.weights, self.w_bounds,
                                            is_nonnegative=self.is_nonnegative)
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = None
-        self.presynapticCompartment = None
-        self.postsynapticCompartment = None
-        self.dW = None
-        self.db = None
+    def reset(self):
+        self.inputs.set(None)
+        self.outputs.set(None)
+        self.trigger.set(None)
+        self.pre.set(None)
+        self.post.set(None)
+        self.dW.set(None)
+        self.db.set(None)
+        key, subkey = random.split(self.key.value)
+        self.key.set(key)
+        self.weights = Compartment(initialize_params(subkey, self.wInit, self.shape))
+        key, subkey = random.split(self.key.value)
+        self.key.set(key)
+        self.biases = Compartment(initialize_params(subkey, self.bInit, (1, self.shape[1])) if self.bInit else 0.0)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
