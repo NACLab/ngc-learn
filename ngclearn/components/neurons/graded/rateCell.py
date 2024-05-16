@@ -253,7 +253,7 @@ if __name__ == '__main__':
         reset_cmd = ResetCommand(components=[a1, a2], command_name="Reset")
 
     compiled_advance_cmd, _ = advance_cmd.compile()
-    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
 
     compiled_reset_cmd, _ = reset_cmd.compile()
     wrapped_reset_cmd = wrapper(compiled_reset_cmd)

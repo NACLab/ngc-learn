@@ -135,10 +135,10 @@ if __name__ == '__main__':
         reset_cmd = ResetCommand(components=[b, a], command_name="Reset")
 
     compiled_advance_cmd, _ = advance_cmd.compile()
-    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
 
     compiled_reset_cmd, _ = reset_cmd.compile()
-    wrapped_reset_cmd = wrapper(compiled_reset_cmd)
+    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
 
     dt = 0.01
     for t in range(5):
