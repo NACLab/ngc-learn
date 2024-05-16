@@ -175,15 +175,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.refract_T = refract_T #5. # 2. ## refractory period  # ms
 
         ##Layer Size Setup
-        self.n_units = n_units
         self.batch_size = 1
-
-        # self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
-        # ## adaptive threshold setup
-        # if directory is None:
-        #     self.threshold_theta = jnp.zeros((1, n_units))
-        # else:
-        #     self.load(directory)
+        self.n_units = n_units
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -192,17 +185,22 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.s = Compartment(restVals)
         self.rfr = Compartment(restVals + self.refract_T)
         self.thr = Compartment(restVals + thr)
+        # self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
+        # ## adaptive threshold setup
+        # if directory is None:
+        #     self.threshold_theta = jnp.zeros((1, n_units))
+        # else:
+        #     self.load(directory)
         self.thr_theta = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
-        self.clock_t = Compartment(0.) ## time-of-last-spike
 
         #self.reset()
 
     @staticmethod
     def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
                      theta_plus, one_spike, key, j, v, s, rfr, thr, thr_theta,
-                     tols, clock_t):
+                     tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
             key, *subkeys = random.split(key, 2)
@@ -214,14 +212,13 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             ## run one integration step for threshold dynamics
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
-        # tols = update_times(clock_t, s, tols) #
         tols = update_times(t, s, tols)
         return j, v, s, rfr, thr, thr_theta, tols, key
 
     @resolver(pure_advance, output_compartments=['j', 'v', 's', 'rfr', 'thr',
         'thr_theta', 'tols', 'key'])
     def advance(self, vals):
-        j, v, s, rfr, thr, thr_theta, tols, clock_t, key = vals
+        j, v, s, rfr, thr, thr_theta, tols, key = vals
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)
@@ -241,13 +238,12 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         thr = restVals #+ 0
         thr_theta = restVals
         tols = restVals #+ 0
-        clock_t = 0.
-        return j, v, s, rfr, thr, thr_theta, tols, clock_t
+        return j, v, s, rfr, thr, thr_theta, tols
 
     @resolver(pure_reset, output_compartments=['j', 'v', 's', 'rfr', 'thr',
-        'thr_theta', 'tols', 'clock_t', 'key'])
+        'thr_theta', 'tols', 'key'])
     def reset(self, vals):
-        j, v, s, rfr, thr, thr_theta, tols, clock_t = vals
+        j, v, s, rfr, thr, thr_theta, tols = vals
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)
@@ -255,7 +251,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.thr.set(thr)
         self.thr_theta.set(thr_theta)
         self.tols.set(tols)
-        self.clock_t.set(clock_t)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -274,7 +269,6 @@ if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
     from ngcsimlib.commands import Command
-    #from ngclearn.components.neurons.graded.rateCell import RateCell
 
     def wrapper(compiled_fn):
         def _wrapped(*args):
@@ -293,29 +287,25 @@ if __name__ == '__main__':
                 component.advance(t=t, dt=dt)
 
     with Context("Context") as context:
-        #b = BernoulliCell("b", 2)
-        #a = RateCell("a2", 2, 0.01)
-        #a.j << b.outputs
         a = LIFCell("a1", n_units=1, tau_m=100., R_m=1.)
         cmd = AdvanceCommand(components=[a], command_name="Advance")
 
-    T = 16
-    dt = 0.1
+    T = 20 #16
+    dt = 1. # 0.1
     compiled_cmd, arg_order = cmd.compile()
     wrapped_cmd = wrapper(compiled_cmd)
 
     t = 0.
     for i in range(T): # i is "t"
-        # a.clock_t.set(t)
         a.j.set(jnp.asarray([[1.0]]))
-        wrapped_cmd(t, dt)
+        wrapped_cmd(t, dt) ## pass in t and dt and run step forward of simulation
         t = t + dt
         print(f"---[ Step {i} ]---")
         print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
               f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
-              f"tols: {a.tols.value}, clock: {a.clock_t.value}")
+              f"tols: {a.tols.value}")
     a.reset()
     print(f"---[ After reset ]---")
     print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
           f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
-          f"tols: {a.tols.value}, clock: {a.clock_t.value}")
+          f"tols: {a.tols.value}")
