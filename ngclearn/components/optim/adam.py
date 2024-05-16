@@ -85,7 +85,7 @@ class Adam(Component):
     def pure_update(eta, beta1, beta2, eps, g1, g2, time_step, theta, updates):  ## apply adjustment to theta
         ## init statistics in a jitted way
         g1 = [jnp.zeros(theta[i].shape) * (1 - jnp.sign(time_step)) + g1[i] * jnp.sign(time_step) for i in range(len(theta))]
-        g2 = [jnp.zeros(theta_item.shape) for theta_item in theta]
+        g2 = [jnp.zeros(theta[i].shape) * (1 - jnp.sign(time_step)) + g2[i] * jnp.sign(time_step) for i in range(len(theta))]
         time_step = time_step + 1
         new_theta = []
         new_g1 = []
