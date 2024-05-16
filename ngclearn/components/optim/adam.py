@@ -75,17 +75,17 @@ class Adam(Component):
         self.eps = epsilon
 
         # Compartment
-        self.g1 = Compartment(None) # adam internal variable. Internal compartment
-        self.g2 = Compartment(None) # adam internal variable. Internal compartment
+        self.g1 = Compartment([0.0, 0.0]) # adam internal variable. Internal compartment. # [NOTE] VN: This needs to be revised
+        self.g2 = Compartment([0.0, 0.0]) # adam internal variable. Internal compartment. # [NOTE] VN: This needs to be revised
         self.time_step = Compartment(0.0) # the time step. Internal compartment
         self.updates = Compartment(None) # the update or gradient. External compartment, to be wired
         self.theta = Compartment(None) # the current weight of other networks. External compartment, to be wired
 
     @staticmethod
-    def pure_update(t, dt, eta, beta1, beta2, eps, g1, g2, time_step, theta, updates):  ## apply adjustment to theta
-        if time_step <= 0.: ## init statistics
-            g1 = [jnp.zeros(theta_item.shape) for theta_item in theta]
-            g2 = [jnp.zeros(theta_item.shape) for theta_item in theta]
+    def pure_update(eta, beta1, beta2, eps, g1, g2, time_step, theta, updates):  ## apply adjustment to theta
+        ## init statistics in a jitted way
+        g1 = [jnp.zeros(theta[i].shape) * (1 - jnp.sign(time_step)) + g1[i] * jnp.sign(time_step) for i in range(len(theta))]
+        g2 = [jnp.zeros(theta_item.shape) for theta_item in theta]
         time_step = time_step + 1
         new_theta = []
         new_g1 = []
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         def __call__(self, t=None, dt=None, *args, **kwargs):
             for component in self.components:
                 component.gather()
-                component.update(t=t, dt=dt)
+                component.update()
 
     with Context("Bar") as bar:
         a1 = RateCell("a1", 2, 0.01)
@@ -145,20 +145,18 @@ if __name__ == '__main__':
         cmd = AdvanceCommand(components=[a1, a2], command_name="Advance")
         update_cmd = UpdateCommand(components=[adam], command_name="Update")
 
-    compiled_cmd, arg_order = cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, 0.1])
-    wrapped_cmd = wrapper(compiled_cmd)
+    compiled_cmd, arg_order = cmd.compile()
+    wrapped_cmd = wrapper(jit(compiled_cmd))
 
-    compiled_update_cmd, _ = update_cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, 0.1])
-    wrapped_update_cmd = wrapper(compiled_update_cmd)
+    compiled_update_cmd, _ = update_cmd.compile()
+    wrapped_update_cmd = wrapper(jit(compiled_update_cmd))
 
-    for i in range(3):
-        a1.j.set(10)
-        wrapped_cmd()
+    dt = 0.01
+    for t in range(3):
+        a1.j.set(jnp.asarray([[2.8, 9.3]]))
+        wrapped_cmd(t, dt)
         wrapped_update_cmd()
-        print(f"Step {i} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-        print(f"Step {i} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
-        print(f"Step {i} - [adam] g1: {adam.g1.value}, g2: {adam.g2.value}, theta: {adam.theta.value}, updates: {adam.updates.value}, time_step: {adam.time_step.value}")
-    a1.reset()
-    a2.reset()
-    print(f"Reset: [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-    print(f"Reset: [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+        print(f"Step {t} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+        print(f"Step {t} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+        print(f"Step {t} - [adam] g1: {adam.g1.value}, g2: {adam.g2.value}, theta: {adam.theta.value}, updates: {adam.updates.value}, time_step: {adam.time_step.value}")
+
