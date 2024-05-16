@@ -142,7 +142,6 @@ if __name__ == '__main__':
         compile_key = "reset"
         def __call__(self, t=None, dt=None, *args, **kwargs):
             for component in self.components:
-                component.gather()
                 component.reset(t=t, dt=dt)
 
     dkey = random.PRNGKey(1234)
