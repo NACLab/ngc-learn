@@ -1,3 +1,5 @@
+# %%
+
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
@@ -212,7 +214,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             ## run one integration step for threshold dynamics
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
-        tols = update_times(clock_t, s, tols) #update_times(t, s, tols)
+        # tols = update_times(clock_t, s, tols) #
+        tols = update_times(t, s, tols)
         return j, v, s, rfr, thr, thr_theta, tols, key
 
     @resolver(pure_advance, output_compartments=['j', 'v', 's', 'rfr', 'thr',
@@ -298,14 +301,14 @@ if __name__ == '__main__':
 
     T = 16
     dt = 0.1
-    compiled_cmd, arg_order = cmd.compile(loops=1, param_generator=lambda loop_id: [loop_id + 1, dt])
+    compiled_cmd, arg_order = cmd.compile()
     wrapped_cmd = wrapper(compiled_cmd)
 
     t = 0.
     for i in range(T): # i is "t"
-        a.clock_t.set(t)
+        # a.clock_t.set(t)
         a.j.set(jnp.asarray([[1.0]]))
-        wrapped_cmd()
+        wrapped_cmd(t, dt)
         t = t + dt
         print(f"---[ Step {i} ]---")
         print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
