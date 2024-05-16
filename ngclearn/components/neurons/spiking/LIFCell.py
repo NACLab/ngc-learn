@@ -6,6 +6,8 @@ from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 import time, sys
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
+                                            step_euler, step_rk2
 
 @jit
 def update_times(t, s, tols):
@@ -25,8 +27,27 @@ def update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
-@partial(jit, static_argnums=[7,8,9,10,11])
-def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset, refract_T):
+@jit
+def _modify_current(j, dt, tau_m): ## electrical current re-scaling co-routine
+    jScale = tau_m/dt
+    return j * jScale
+
+@jit
+def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest): ## raw voltage dynamics
+    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+    ## update voltage / membrane potential
+    dv_dt = (v_rest - v) + (j * mask)
+    dv_dt = dv_dt * (1./tau_m)
+    return dv_dt
+
+def _dfv(t, v, params): ## voltage dynamics wrapper
+    j, rfr, tau_m, refract_T, v_rest = params
+    dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest)
+    return dv_dt
+
+@partial(jit, static_argnums=[7,8,9,10,11,12])
+def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset,
+             refract_T, integType=0):
     """
     Runs leaky integrator neuronal dynamics
 
@@ -60,14 +81,20 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset, r
         refract_T: (relative) refractory time period (in ms; Default
             value is 1 ms)
 
+        integType: integer indicating type of integration to use
+
     Returns:
         voltage(t+dt), spikes, raw spikes, updated refactory variables
     """
     _v_thr = v_theta + v_thr ## calc present voltage threshold
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     ## update voltage / membrane potential
-    _v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
-    ## obtain action potentials
+    v_params = (j, rfr, tau_m, refract_T, v_rest)
+    if integType == 1:
+        _, _v = step_rk2(0., v, _dfv, dt, v_params)
+    else: #_v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
+        _, _v = step_euler(0., v, _dfv, dt, v_params)
+    ## obtain action potentials/spikes
     s = (_v > _v_thr).astype(jnp.float32)
     ## update refractory variables
     _rfr = (rfr + dt) * (1. - s)
@@ -88,7 +115,7 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset, r
 @partial(jit, static_argnums=[3,4])
 def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     """
-    Runs homeostatic threshold update dynamics one step.
+    Runs homeostatic threshold update dynamics one step (via Euler integration).
 
     Args:
         dt: integration time constant (milliseconds, or ms)
@@ -206,6 +233,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             key, *subkeys = random.split(key, 2)
             skey = subkeys[0]
         ## run one integration step for neuronal dynamics
+        j = _modify_current(j, dt, tau_m)
         v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
                                          tau_m, R_m, v_rest, v_reset, refract_T)
         if tau_theta > 0.:
