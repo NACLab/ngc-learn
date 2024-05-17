@@ -187,22 +187,32 @@ class LatencyCell(Component):
         key, *subkeys = random.split(key, 2)
         data = inputs ## get sensory pattern data / features
 
-        ## TODO: move this code block outside as this won't work in jit
-        if targ_sp_times == None: ## calc spike times if not called yet
-            if linearize == True: ## linearize spike time calculation
-                stimes = calc_spike_times_linear(data, tau, threshold,
-                                                 first_spike_time,
-                                                 num_steps, normalize)
-                targ_sp_times = stimes
-            else: ## standard nonlinear spike time calculation
-                stimes = calc_spike_times_nonlinear(data, tau, threshold,
-                                                    first_spike_time,
-                                                    num_steps=num_steps,
-                                                    normalize=normalize)
-                targ_sp_times = stimes
-        spk_mask = mask
-        spikes, spk_mask = extract_spike(target_spike_times, t, spk_mask) ## get spikes at t
-
+        calcEvent = (t == 0.) * 1.
+        if linearize == True: ## linearize spike time calculation
+            stimes = calc_spike_times_linear(data, tau, threshold,
+                                             first_spike_time,
+                                             num_steps, normalize)
+            targ_sp_times = stimes * calcEvent + targ_sp_times * (1. - calcEvent)
+        else: ## standard nonlinear spike time calculation
+            stimes = calc_spike_times_nonlinear(data, tau, threshold,
+                                                first_spike_time,
+                                                num_steps=num_steps,
+                                                normalize=normalize)
+            targ_sp_times = stimes * calcEvent + targ_sp_times * (1. - calcEvent)
+        # if targ_sp_times == None: ## calc spike times if not called yet
+        #     if linearize == True: ## linearize spike time calculation
+        #         stimes = calc_spike_times_linear(data, tau, threshold,
+        #                                          first_spike_time,
+        #                                          num_steps, normalize)
+        #         targ_sp_times = stimes
+        #     else: ## standard nonlinear spike time calculation
+        #         stimes = calc_spike_times_nonlinear(data, tau, threshold,
+        #                                             first_spike_time,
+        #                                             num_steps=num_steps,
+        #                                             normalize=normalize)
+        #         targ_sp_times = stimes
+        #spk_mask = mask
+        spikes, spk_mask = extract_spike(target_spike_times, t, mask) ## get spikes at t
         return spikes, tols, spk_mask, targ_sp_times, key
 
     @resolver(pure_advance, output_compartments=['outputs', 'tols', 'mask',
