@@ -197,6 +197,10 @@ class HebbianSynapse(Component):
         self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bInit else [self.weights.value]))
 
+        # loading weights
+        if directory is not None:
+            self.load(directory)
+
     @staticmethod
     def pure_advance(t, dt, Rscale, inputs, weights, biases):
         outputs = compute_layer(inputs, weights, biases, Rscale)
@@ -266,16 +270,16 @@ class HebbianSynapse(Component):
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         if self.bInit != None:
-            jnp.savez(file_name, weights=self.weights, biases=self.biases)
+            jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
         else:
-            jnp.savez(file_name, weights=self.weights)
+            jnp.savez(file_name, weights=self.weights.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.weights = data['weights']
+        self.weights.set(data['weights'])
         if "biases" in data.keys():
-            self.biases = data['biases']
+            self.biases.set(data['biases'])
 
 if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
@@ -341,4 +345,7 @@ if __name__ == '__main__':
         wrapped_evolve_cmd(t, dt)
         print(f"--- [Step {t}] After Evolve ---")
         print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+
+    Wab.save(".")
+    Wab.load(".")
 
