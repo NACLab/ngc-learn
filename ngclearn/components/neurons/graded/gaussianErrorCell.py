@@ -1,4 +1,7 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
@@ -60,119 +63,48 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
         key: PRNG Key to control determinism of any underlying synapses
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
-
-    ## Class Methods for Compartment Names
-    @classmethod
-    def lossName(cls):
-        return "L"
-
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'j' ## electrical current
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'e' ## rate-coded output
-
-    @classmethod
-    def meanName(cls):
-        return 'mu'
-
-    @classmethod
-    def derivMeanName(cls):
-        return 'dmu'
-
-    @classmethod
-    def targetName(cls):
-        return 'target'
-
-    @classmethod
-    def derivTargetName(cls):
-        return 'dtarget'
-
-    @classmethod
-    def modulatorName(cls):
-        return 'modulator'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def loss(self):
-        return self.compartments.get(self.lossName(), None)
-
-    @loss.setter
-    def loss(self, inp):
-        self.compartments[self.lossName()] = inp
-
-    @property
-    def mean(self):
-        return self.compartments.get(self.meanName(), None)
-
-    @mean.setter
-    def mean(self, inp):
-        self.compartments[self.meanName()] = inp
-
-    @property
-    def derivMean(self):
-        return self.compartments.get(self.derivMeanName(), None)
-
-    @derivMean.setter
-    def derivMean(self, inp):
-        self.compartments[self.derivMeanName()] = inp
-
-    @property
-    def target(self):
-        return self.compartments.get(self.targetName(), None)
-
-    @target.setter
-    def target(self, inp):
-        self.compartments[self.targetName()] = inp
-
-    @property
-    def derivTarget(self):
-        return self.compartments.get(self.derivTargetName(), None)
-
-    @derivTarget.setter
-    def derivTarget(self, inp):
-        self.compartments[self.derivTargetName()] = inp
-
-    @property
-    def modulator(self):
-        return self.compartments.get(self.modulatorName(), None)
-
-    @modulator.setter
-    def modulator(self, inp):
-        self.compartments[self.modulatorName()] = inp
-
-    # Define Functions
-    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None,
-                 useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None):
+        super().__init__(name)
 
         ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
+        self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
+        self.L = Compartment(None) # loss compartment
+        self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
+        self.mu = Compartment(jnp.zeros((self.batch_size, self.n_units))) # mean/mean name
+        self.dmu = Compartment(jnp.zeros((self.batch_size, self.n_units))) # derivative mean
+        self.target = Compartment(jnp.zeros((self.batch_size, self.n_units))) # target
+        self.dtarget = Compartment(jnp.zeros((self.batch_size, self.n_units))) # derivative target
+        self.modulator = Compartment(jnp.asarray(0.0)) # to be set/consumed
 
         ##Layer Size Setup
         self.n_units = n_units
         self.batch_size = 1
-        self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
-        self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
+    # def verify_connections(self):
+    #     self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
+    #     self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
 
-    def advance_state(self, t, dt, **kwargs):
+    @staticmethod
+    def pure_advance(t, dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
-        self.derivMean, self.derivTarget, self.loss = \
-            run_cell(dt, self.target, self.mean)
-        if self.modulator is not None:
-            self.derivMean = self.derivMean * self.modulator
-            self.derivTarget = self.derivTarget * self.modulator
-            self.modulator = None ## use and consume modulator
+        dmu, dtarget, L = run_cell(dt, target, mu)
+        modulator_mask = jnp.bool(modulator).astype(jnp.float32)
+        dmu = dmu * (1 - modulator_mask) + dmu * modulator * modulator_mask
+        dtarget = dtarget * (1 - modulator_mask) + dtarget * modulator * modulator_mask
+        modulator = jnp.asarray(0.0) ## use and consume modulator
+        return dmu, dtarget, L, modulator
+
+
+    @resolver(pure_advance, output_compartments=['dmu', 'dtarget', 'L', 'modulator'])
+    def advance(self, dmu, dtarget, L, modulator):
+        self.dmu.set(dmu)
+        self.dtarget.set(dtarget)
+        self.L.set(L)
+        self.modulator.set(modulator)
+
+
 
     def reset(self, **kwargs):
         self.derivMean = jnp.zeros((self.batch_size, self.n_units))
