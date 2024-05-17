@@ -2,6 +2,7 @@
 __pycache__/
 *.mp4
 *.npy
+*.npz
 *.agent
 *.ngc
 *.gmm
