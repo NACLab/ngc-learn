@@ -146,44 +146,6 @@ class LatencyCell(Component):
         useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
-
     # Define Functions
     def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
                  linearize=False, normalize=False, num_steps=1., key=None,
@@ -209,41 +171,65 @@ class LatencyCell(Component):
         ##Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
-        self.reset()
 
-    def verify_connections(self):
-        pass
+        ## Compartment setup
+        self.inputs = Compartment(None) # input compartment
+        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
+        self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
+        self.targ_sp_times = Compartment(jnp.zeros((self.batch_size, self.n_units)))
+        #self.reset()
 
-    def advance_state(self, t, dt, **kwargs):
-        self.key, *subkeys = random.split(self.key, 2)
-        tau = self.tau
-        data = self.inputCompartment ## get sensory pattern data / features
+    @staticmethod
+    def pure_advance(t, dt, tau, threshold, first_spike_time, num_steps,
+                     linearize, normalize, key, inputs, mask, targ_sp_times,
+                     tols):
+        key, *subkeys = random.split(key, 2)
+        data = inputs ## get sensory pattern data / features
 
-        if self.target_spike_times == None: ## calc spike times if not called yet
-            if self.linearize == True: ## linearize spike time calculation
-                stimes = calc_spike_times_linear(data, tau, self.threshold,
-                                                 self.first_spike_time,
-                                                 self.num_steps, self.normalize)
-                self.target_spike_times = stimes
+        ## TODO: move this code block outside as this won't work in jit
+        if targ_sp_times == None: ## calc spike times if not called yet
+            if linearize == True: ## linearize spike time calculation
+                stimes = calc_spike_times_linear(data, tau, threshold,
+                                                 first_spike_time,
+                                                 num_steps, normalize)
+                targ_sp_times = stimes
             else: ## standard nonlinear spike time calculation
-                stimes = calc_spike_times_nonlinear(data, tau, self.threshold,
-                                                    self.first_spike_time,
-                                                    num_steps=self.num_steps,
-                                                    normalize=self.normalize)
-                self.target_spike_times = stimes
-            #print(self.target_spike_times)
-            #sys.exit(0)
-        spk_mask = self._mask
-        spikes, spk_mask = extract_spike(self.target_spike_times, t, spk_mask) ## get spikes at t
-        self._mask = spk_mask
-        self.outputCompartment = spikes
-        self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
+                stimes = calc_spike_times_nonlinear(data, tau, threshold,
+                                                    first_spike_time,
+                                                    num_steps=num_steps,
+                                                    normalize=normalize)
+                targ_sp_times = stimes
+        spk_mask = mask
+        spikes, spk_mask = extract_spike(target_spike_times, t, spk_mask) ## get spikes at t
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
-        self._mask = jnp.zeros((self.batch_size, self.n_units))
+        return spikes, tols, spk_mask, targ_sp_times, key
+
+    @resolver(pure_advance, output_compartments=['outputs', 'tols', 'mask',
+        'targ_sp_times', 'key'])
+    def advance(self, vals):
+        outputs, tols, mask, targ_sp_times, key = vals
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+        self.mask.set(mask)
+        self.targ_sp_times.set(targ_sp_times)
+        self.key.set(key)
+
+    @staticmethod
+    def pure_reset(batch_size, n_units):
+        return None, jnp.zeros((batch_size, n_units)),
+               jnp.zeros((batch_size, n_units)),
+               jnp.zeros((batch_size, n_units)),
+               jnp.zeros((batch_size, n_units))
+
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'tols',
+        'mask', 'targ_sp_times',])
+    def reset(self, inputs, outputs, tols, mask):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+        self.mask.set(mask)
+        self.targ_sp_times.set(targ_sp_times)
 
     def save(self, **kwargs):
         pass
