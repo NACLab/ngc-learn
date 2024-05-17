@@ -6,12 +6,11 @@ from ngcsimlib.resolver import resolver
 from ngcsimlib.compartment import All_compartments
 from ngcsimlib.context import Context
 from ngcsimlib.commands import Command
-from ngcsimlib.operations import concat #, indexing
 
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.model_utils import initialize_params
-from ngclearn.components.optim import SGD, Adam
+from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 import time
 
 @partial(jit, static_argnums=[3,4,5,6,7,8])
@@ -179,20 +178,8 @@ class HebbianSynapse(Component):
         self.signVal = signVal
 
         ## optimization / adjustment properties (given learning dynamics above)
-        # self.opt = None
-        # if optim_type == "adam":
-        #     self.opt = Adam(learning_rate=self.eta)
-        # else: ## default is SGD
-        #     self.opt = SGD(learning_rate=self.eta)
-
-        # if directory is None:
-        #     self.key, subkey = random.split(self.key)
-        #     self.weights = initialize_params(subkey, wInit, shape)
-        #     if self.bInit is not None:
-        #         self.key, subkey = random.split(self.key)
-        #         self.biases = initialize_params(subkey, bInit, (1, shape[1]))
-        # else:
-        #     self.load(directory)
+        self.opt = get_opt_step_fn(optim_type, eta=self.eta)
+        
 
         # compartments (state of the cell, parameters, will be updated through stateless calls)
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
@@ -209,36 +196,10 @@ class HebbianSynapse(Component):
         key, subkey = random.split(self.key.value)
         self.key.set(key)
         self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
-        self.theta = Compartment([self.weights.value, self.biases.value])
-        self.updates = Compartment([self.dW.value, self.db.value])
-        self.new_theta = Compartment(None)
-
-        ## We create a optimizer component inside the class
-        # def wrapper(compiled_fn):
-        #     def _wrapped(*args):
-        #         # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-        #         vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-        #         for key, value in vals.items():
-        #             All_compartments[str(key)].set(value)
-        #         return vals
-        #     return _wrapped
-        # class UpdateCommand(Command):
-        #     compile_key = "update"
-        #     def __call__(self, t=None, dt=None, *args, **kwargs):
-        #         for component in self.components:
-        #             component.gather()
-        #             component.update(t=t, dt=dt)
-        # with Context("opt") as _:
-        #     self.opt = Adam(learning_rate=self.eta)
-        #     self.opt.theta << self.WandB
-        #     self.WandB << self.opt.theta
-        #     update_cmd = UpdateCommand(components=[self.opt], command_name="Update")
-        # compiled_update_cmd, _ = update_cmd.compile()
-        # self.wrapped_update_cmd = wrapper(compiled_update_cmd)
+        self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bInit else [self.weights.value]))
 
     @staticmethod
     def pure_advance(t, dt, Rscale, inputs, weights, biases):
-        print(f"[Wab/pure_advance] inputs: {inputs}")
         outputs = compute_layer(inputs, weights, biases, Rscale)
         return outputs
 
@@ -247,36 +208,29 @@ class HebbianSynapse(Component):
         self.outputs.set(outputs)
 
     @staticmethod
-    def pure_pre_evolve(t, dt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght, post_wght, bInit, pre, post, weights, biases, dW, db):
+    def pure_evolve(t, dt, opt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght, post_wght, bInit, pre, post, weights, biases, dW, db, opt_params):
         dW, db = calc_update(pre, post,
                              weights, w_bounds, is_nonnegative=is_nonnegative,
                              signVal=signVal, w_decay=w_decay,
                              pre_wght=pre_wght, post_wght=post_wght)
-        return weights, biases, [weights, biases], dW, db, [dW, db]
 
-    @resolver(pure_pre_evolve, output_compartments=['weights', 'biases', 'theta', 'dW', 'db', 'updates'])
-    def pre_evolve(self, weights, biases, theta, dW, db, updates):
-        self.weights.set(weights)
-        self.biases.set(biases)
-        self.theta.set(theta)
-        self.dW.set(dW)
-        self.db.set(db)
-        self.updates.set(updates)
-
-    @staticmethod
-    def pure_post_evolve(t, dt, w_bounds, is_nonnegative, new_theta):
-        # weights, biases = new_theta
-        weights, biases = 0, 0
+        ## conduct a step of optimization - get newly evolved synaptic weight value matrix
+        if bInit != None:
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dW, db])
+        else:
+            # ignore db since no biases configured
+            opt_params, [weights] = opt(opt_params, [weights], [dW])
         ## ensure synaptic efficacies adhere to constraints
         weights = enforce_constraints(weights, w_bounds,
                                            is_nonnegative=is_nonnegative)
-        return weights, biases, new_theta
+        return opt_params, weights, biases
 
-    @resolver(pure_post_evolve, output_compartments=['weights', 'biases', 'new_theta'])
-    def post_evolve(self, weights, biases, new_theta):
+    @resolver(pure_evolve, output_compartments=['opt_params', 'weights', 'biases'])
+    def evolve(self, opt_params, weights, biases):
+        self.opt_params.set(opt_params)
         self.weights.set(weights)
         self.biases.set(biases)
-        self.new_theta.set(new_theta)
+
 
     @staticmethod
     def pure_reset(batch_size, shape, wInit, bInit, key):
@@ -346,84 +300,46 @@ if __name__ == '__main__':
                 component.gather()
                 component.advance(t=t, dt=dt)
 
-    class PreEvolveCommand(Command):
-        compile_key = "pre_evolve"
+    class EvolveCommand(Command):
+        compile_key = "evolve"
         def __call__(self, t=None, dt=None, *args, **kwargs):
             for component in self.components:
                 component.gather()
-                component.pre_evolve(t=t, dt=dt)
-
-    class PostEvolveCommand(Command):
-        compile_key = "post_evolve"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.post_evolve(t=t, dt=dt)
-
-    class UpdateCommand(Command):
-        compile_key = "update"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.update()
+                component.evolve(t=t, dt=dt)
 
     with Context("Bar") as bar:
         a1 = RateCell("a1", 2, 0.01)
-        Wab = HebbianSynapse("Wab", (2, 2), 0.0004)
+        Wab = HebbianSynapse("Wab", (2, 2), 0.0004, optim_type='adam')
         a2 = RateCell("a2", 2, 0.01)
-        adam = Adam(learning_rate=100)
 
         # forward pass
         Wab.inputs << a1.zF
         a2.j << Wab.outputs
         advance_cmd = AdvanceCommand(components=[a1, Wab, a2], command_name="Advance") # forward
 
-        # pre_evolve and update adam
+        # evolve and update adam
         Wab.pre << a1.z
         Wab.post << a1.z
-        adam.theta << Wab.theta
-        adam.updates << Wab.updates
-        pre_evolve_cmd = PreEvolveCommand(components=[Wab], command_name="PreEvolve")
-        update_cmd = UpdateCommand(components=[adam], command_name="Update") # update to get new weights for Wab
-
-        # post evolve
-        # Wab.new_theta << adam.new_theta
-        post_evolve_cmd = PostEvolveCommand(components=[Wab], command_name="PostEvolve")
+        evolve_cmd = EvolveCommand(components=[Wab], command_name="Evolve")
 
     compiled_advance_cmd, _ = advance_cmd.compile()
     # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
     wrapped_advance_cmd = wrapper(compiled_advance_cmd)
 
-    compiled_update_cmd, _ = update_cmd.compile()
-    # wrapped_update_cmd = wrapper(jit(compiled_update_cmd))
-    wrapped_update_cmd = wrapper(compiled_update_cmd)
-
-    compiled_preevolve_cmd, _ = pre_evolve_cmd.compile()
+    compiled_evolve_cmd, _ = evolve_cmd.compile()
     # wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
-    wrapped_preevolve_cmd = wrapper(compiled_preevolve_cmd)
-
-    compiled_postevolve_cmd, _ = post_evolve_cmd.compile()
-    # wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
-    wrapped_postevolve_cmd = wrapper(compiled_postevolve_cmd)
+    wrapped_evolve_cmd = wrapper(compiled_evolve_cmd)
 
     dt = 0.01
-    for t in range(1):
+    for t in range(3):
         a1.j.set(jnp.asarray([[2.8, 9.3]]))
         wrapped_advance_cmd(t, dt)
         print(f"--- [Step {t}] After Advance ---")
         print(f"[a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, theta: {Wab.theta.value}, updates: {Wab.updates.value}, new_theta: {Wab.new_theta.value}")
+        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
         print(f"[a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
-        print(f"[adam] g1: {adam.g1.value}, g2: {adam.g2.value}, theta: {adam.theta.value}, updates: {adam.updates.value}, new_theta: {adam.new_theta.value}")
 
-        wrapped_preevolve_cmd(t, dt)
+        wrapped_evolve_cmd(t, dt)
         print(f"--- [Step {t}] After Evolve ---")
-        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, theta: {Wab.theta.value}, updates: {Wab.updates.value}, new_theta: {Wab.new_theta.value}")
-        print(f"[adam] g1: {adam.g1.value}, g2: {adam.g2.value}, theta: {adam.theta.value}, updates: {adam.updates.value}, new_theta: {adam.new_theta.value}")
-
-        wrapped_update_cmd()
-        wrapped_postevolve_cmd(t, dt)
-        print(f"--- [Step {t}] After Update ---")
-        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, theta: {Wab.theta.value}, updates: {Wab.updates.value}, new_theta: {Wab.new_theta.value}")
-        print(f"[adam] g1: {adam.g1.value}, g2: {adam.g2.value}, theta: {adam.theta.value}, updates: {adam.updates.value}, new_theta: {adam.new_theta.value}")
+        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
 
