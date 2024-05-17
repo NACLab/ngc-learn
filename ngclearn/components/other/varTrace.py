@@ -1,4 +1,6 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
@@ -63,82 +65,113 @@ class VarTrace(Component): ## low-pass filter
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def traceName(cls):
-        return 'trace'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-      return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-      self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def trace(self):
-        return self.compartments.get(self.traceName(), None)
-
-    @trace.setter
-    def trace(self, inp):
-        self.compartments[self.traceName()] = inp
-
     # Define Functions
     def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", key=None,
                  useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
-        ##TMP
-        self.key, subkey = random.split(self.key)
-
         ## trace control coefficients
         self.tau_tr = tau_tr ## trace time constant
         self.a_delta = a_delta ## trace increment (if spike occurred)
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
-        self.decayFactor = None
 
         ##Layer Size Setup
+        self.batch_size = 1
         self.n_units = n_units
-        self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(),
-                                                 min_connections=1)
+        self.inputs = Compartment(None) # input compartment
+        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
+        self.trace = Compartment(jnp.zeros((self.batch_size, self.n_units)))
 
-    def advance_state(self, t, dt, **kwargs):
-        if self.decayFactor is None: ## compute only once the decay factor
-            self.decayFactor = 0. ## <-- pulse filter decay
-            if "exp" in self.decay_type:
-                self.decayFactor = jnp.exp(-dt/self.tau_tr)
-            elif "lin" in self.decay_type:
-                self.decayFactor = (1. - dt/self.tau_tr)
-            ## else "step", yielding a step/pulse-like filter
-        if self.trace is None:
-            self.trace = jnp.zeros((1, self.n_units))
-        s = self.inputCompartment
-        self.trace = run_varfilter(dt, s, self.trace, self.decayFactor, self.a_delta)
-        self.outputCompartment = self.trace
-        #self.inputCompartment = None
+        #self.reset()
 
-    def reset(self, **kwargs):
-        self.trace = jnp.zeros((1, self.n_units))
-        self.outputCompartment = self.trace
-        self.inputCompartment = None
+    @staticmethod
+    def pure_advance(t, dt, decay_type, tau_tr, a_delta, inputs, trace):
+        ## compute the decay factor
+        decayFactor = 0. ## <-- pulse filter decay (default)
+        if "exp" in decay_type:
+            decayFactor = jnp.exp(-dt/tau_tr)
+        elif "lin" in decay_type:
+            decayFactor = (1. - dt/tau_tr)
+        ## else "step" == decay_type, yielding a step/pulse-like filter
+        trace = run_varfilter(dt, inputs, trace, decayFactor, a_delta)
+        outputs = trace
+        #inputs = None
+        return outputs, trace
+
+    @resolver(pure_advance, output_compartments=['outputs', 'trace'])
+    def advance(self, vals):
+        outputs, traceVal = vals
+        self.outputs.set(outputs)
+        self.trace.set(traceVal)
+
+    @staticmethod
+    def pure_reset(batch_size, n_units):
+        return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
+
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'trace'])
+    def reset(self, inputs, outputs, traceVal):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.trace.set(traceVal)
 
     def save(self, **kwargs):
         pass
+
+## testing
+if __name__ == '__main__':
+    from ngcsimlib.compartment import All_compartments
+    from ngcsimlib.context import Context
+    from ngcsimlib.commands import Command
+    from ngclearn.components.neurons.graded.rateCell import RateCell
+
+    def wrapper(compiled_fn):
+        def _wrapped(*args):
+            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            for key, value in vals.items():
+                All_compartments[str(key)].set(value)
+            return vals
+        return _wrapped
+
+    class AdvanceCommand(Command):
+        compile_key = "advance"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.advance(t=t, dt=dt)
+
+    class ResetCommand(Command):
+        compile_key = "reset"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.reset(t=t, dt=dt)
+
+    dkey = random.PRNGKey(1234)
+    with Context("Bar") as bar:
+        a = VarTrace("a", n_units=1, tau_tr=20., a_delta=0.02, decay_type="lin", key=dkey)
+        advance_cmd = AdvanceCommand(components=[a], command_name="Advance")
+        reset_cmd = ResetCommand(components=[a], command_name="Reset")
+
+    compiled_advance_cmd, _ = advance_cmd.compile()
+    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+
+    compiled_reset_cmd, _ = reset_cmd.compile()
+    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+
+    T = 30
+    dt = 1.
+
+    t = 0. ## global clock
+    for i in range(T):
+        val = 0.
+        if i % 5 == 0:
+            val = 1.
+        a.inputs.set(jnp.asarray([[val]]))
+        wrapped_advance_cmd(t, dt)
+        print(f"---[ Step {t} ]---")
+        print(f"[a] inputs: {a.inputs.value}, outputs: {a.outputs.value}, trace: {a.trace.value}")
+        t += dt
+    wrapped_reset_cmd()
+    print(f"---[ After reset ]---")
+    print(f"[a] inputs: {a.inputs.value}, outputs: {a.outputs.value}, trace: {a.trace.value}")
