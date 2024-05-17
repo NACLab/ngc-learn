@@ -198,8 +198,8 @@ class FitzhughNagumoCell(Component):
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, tau_m, tau_w, v_thr, v0, w0, alpha, beta, gamma, intgFlag, key,
-                     j, v, w, s, tols):
+    def pure_advance(t, dt, tau_m, tau_w, v_thr, alpha, beta, gamma, intgFlag,
+                     key, j, v, w, s, tols):
         key, *subkeys = random.split(key, 2)
         v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, alpha, beta, gamma, intgFlag)
         tols = update_times(t, s, tols)

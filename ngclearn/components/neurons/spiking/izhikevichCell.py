@@ -1,4 +1,6 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 import time, sys
@@ -194,68 +196,6 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def voltageName(cls):
-        return 'v'
-
-    @classmethod
-    def recoveryName(cls):
-        return 'w'
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def voltage(self):
-        return self.compartments.get(self.voltageName(), None)
-
-    @voltage.setter
-    def voltage(self, t):
-        self.compartments[self.voltageName()] = t
-
-    @property
-    def recovery(self):
-        return self.compartments.get(self.recoveryName(), None)
-
-    @recovery.setter
-    def recovery(self, t):
-        self.compartments[self.recoveryName()] = t
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
-
     # Define Functions
     def __init__(self, name, n_units, tau_m=1., R_m=1., v_thr=30., v_reset=-65.,
                  tau_w=50., w_reset=8., coupling_factor=0.2, v0=-65., w0=-14.,
@@ -278,39 +218,62 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         self.integrationType = integration_type
         self.intgFlag = get_integrator_code(self.integrationType)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
         ##Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
-        self.reset()
+        ## Compartment setup
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.j = Compartment(restVals)
+        self.v = Compartment(restVals + self.v0)
+        self.w = Compartment(restVals + self.w0)
+        self.s = Compartment(restVals)
+        self.tols = Compartment(restVals) ## time-of-last-spike
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        #self.reset()
 
-    def advance_state(self, t, dt, **kwargs):
-        j = self.inputCompartment
-        v = self.voltage
-        w = self.recovery
-        s = self.outputCompartment
-        #if self.integration_type == "euler":
-        v, w, s = run_cell(dt, j, v, s, w, v_thr=self.v_thr, tau_m=self.tau_m,
-                           tau_w=self.tau_w, b=self.coupling, c=self.v_reset,
-                           d=self.w_reset, R_m=self.R_m, integType=self.intgFlag)
-        self.voltage = v
-        self.recovery = w
-        self.outputCompartment = s
+    @staticmethod
+    def pure_advance(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
+                     intgFlag, key, j, v, w, s, tols):
+        key, *subkeys = random.split(key, 2)
+        v, w, s = run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
+                           b=coupling, c=v_reset, d=w_reset, R_m=R_m,
+                           integType=intgFlag)
+        tols = update_times(t, s, tols)
+        return j, v, w, s, tols, key
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.voltage = jnp.zeros((self.batch_size, self.n_units)) + self.v0
-        self.recovery = jnp.zeros((self.batch_size, self.n_units)) + self.w0
-        self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
+    @resolver(pure_advance, output_compartments=['j', 'v', 'w', 's', 'tols', 'key'])
+    def advance(self, vals):
+        j, v, w, s, tols, key = vals
+        self.j.set(j)
+        self.w.set(w)
+        self.v.set(v)
+        self.s.set(s)
+        self.tols.set(tols)
+        self.key.set(key)
 
-    def save(self, directory, **kwargs):
+    @staticmethod
+    def pure_reset(batch_size, n_units, v0, w0):
+        restVals = jnp.zeros((batch_size, n_units))
+        j = restVals # None
+        v = restVals + v0
+        w = restVals + w0
+        s = restVals #+ 0
+        tols = restVals #+ 0
+        return j, v, w, s, tols
+
+    @resolver(pure_reset, output_compartments=['j', 'v', 'w', 's', 'tols'])
+    def reset(self, vals):
+        j, v, w, s, tols = vals
+        self.j.set(j)
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+        self.tols.set(tols)
+
+    def save(self, **kwargs):
         pass
+
+    # def verify_connections(self):
+    #     pass
