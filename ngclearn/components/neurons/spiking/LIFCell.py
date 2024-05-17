@@ -280,12 +280,12 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, threshold_theta=self.threshold_theta)
+        jnp.savez(file_name, threshold_theta=self.thr_theta.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.threshold_theta = data['threshold_theta']
+        self.thr_theta.set( data['threshold_theta'] )
 
     # def verify_connections(self):
     #     self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)

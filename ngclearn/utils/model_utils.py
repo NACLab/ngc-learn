@@ -263,7 +263,7 @@ def initialize_params(dkey, initKernel, shape):
             )
     return params
 
-@partial(jit, static_argnums=[2, 3])
+#@partial(jit, static_argnums=[2, 3])
 def normalize_matrix(M, wnorm, order=1, axis=0):
     """
     Normalizes the values in matrix to have a particular norm across each vector span.
@@ -286,8 +286,7 @@ def normalize_matrix(M, wnorm, order=1, axis=0):
     else: ## denominator is L1 norm
         wOrdSum = jnp.sum(jnp.abs(M), axis=axis, keepdims=True)
     m = (wOrdSum == 0.).astype(dtype=jnp.float32)
-    wOrdSum = wOrdSum * (1. - m) + m
-    #wAbsSum[wAbsSum == 0.] = 1.
+    wOrdSum = wOrdSum * (1. - m) + m #wAbsSum[wAbsSum == 0.] = 1.
     _M = M * (wnorm/wOrdSum)
     return _M
 
