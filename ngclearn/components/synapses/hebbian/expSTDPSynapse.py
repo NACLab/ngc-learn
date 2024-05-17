@@ -1,6 +1,9 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import random, numpy as jnp, jit
 from functools import partial
+from ngclearn.utils.model_utils import initialize_params, normalize_matrix
 import time
 
 @partial(jit, static_argnums=[6,7,8,9,10,11,12])
@@ -36,7 +39,7 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
         w_norm: if not None, applies an L2 norm constraint to synapses
 
     Returns:
-        the newly evolved synaptic weight value matrix
+        the newly evolved synaptic weight value matrix, synaptic update matrix
     """
     ## equations 4 from Diehl and Cook - full exponential weight-dependent STDP
     ## calculate post-synaptic term
@@ -55,7 +58,7 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
     if w_norm is not None:
         _W = _W * (w_norm/(jnp.linalg.norm(_W, axis=1, keepdims=True) + 1e-5))
     _W = jnp.clip(_W, 0.01, w_bound) # not in source paper
-    return _W
+    return _W, dW
 
 @jit
 def compute_layer(inp, weight):
@@ -119,55 +122,6 @@ class ExpSTDPSynapse(Component):
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
     """
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def presynapticTraceName(cls):
-        return 'x_pre'
-
-    @classmethod
-    def postsynapticTraceName(cls):
-        return 'x_post'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, x):
-        self.compartments[self.inputCompartmentName()] = x
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, x):
-        self.compartments[self.outputCompartmentName()] = x
-
-    @property
-    def presynapticTrace(self):
-        return self.compartments.get(self.presynapticTraceName(), None)
-
-    @presynapticTrace.setter
-    def presynapticTrace(self, x):
-        self.compartments[self.presynapticTraceName()] = x
-
-    @property
-    def postsynapticTrace(self):
-        return self.compartments.get(self.postsynapticTraceName(), None)
-
-    @postsynapticTrace.setter
-    def postsynapticTrace(self, x):
-        self.compartments[self.postsynapticTraceName()] = x
 
     # Define Functions
     def __init__(self, name, shape, eta, exp_beta, Aplus, Aminus,
@@ -198,37 +152,79 @@ class ExpSTDPSynapse(Component):
         else:
             self.load(directory)
 
+        self.batch_size = 1
+        ## Compartment setup
+        #restVals = jnp.zeros((1, shape[1]))
+        self.input = Compartment(None)
+        self.output = Compartment(None)
+        self.preAct = Compartment(None)
+        self.postAct = Compartment(None)
+        self.preTrace = Compartment(None)
+        self.postTrace = Compartment(None)
+        self.weights = Compartment(weights)
+
         ##Reset to initialize core compartments
-        self.reset()
+        #self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
-
-    def advance_state(self, dt, t, **kwargs):
+    @staticmethod
+    def pure_advance(t, dt, input, weights):
         ## run signals across synapses
-        self.outputCompartment = compute_layer(self.inputCompartment, self.weights)
+        output = compute_layer(input, weights)
+        return output
 
-    def evolve(self, dt, t, **kwargs):
-        pre = self.inputCompartment
-        post = self.outputCompartment
-        x_pre = self.presynapticTrace
-        x_post = self.postsynapticTrace
-        self.weights = evolve(dt, pre, x_pre, post, x_post, self.weights,
-                              w_bound=self.w_bound, eta=self.eta,
-                              x_tar=self.preTrace_target, exp_beta=self.exp_beta,
-                              Aplus=self.Aplus, Aminus=self.Aminus)
+    @resolver(pure_advance, output_compartments=['output'])
+    def advance(self, output):
+        self.output.set(output)
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = None
-        self.presynapticTrace = None
-        self.postsynapticTrace = None
+    @staticmethod
+    def pure_evolve(t, dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus, w_norm, norm_T,
+                    preAct, postAct, preTrace, postTrace, weights
+                    ):
+        weights, dW = evolve(dt, preAct, preTrace, postAct, postTrace, weights,
+                             w_bound=w_bound, eta=eta, x_tar=preTrace_target,
+                             exp_beta=exp_beta, Aplus=Aplus, Aminus=Aminus)
+        ## decide if normalization is to be applied
+        if norm_T > 0 and w_norm != None:
+            normEventMask = jnp.asarray([[(t % (norm_T-1) == 0)]]).astype(jnp.float32)
+            #normEventMask = jnp.asarray([[(t % (norm_T-1) == 0) and t > 0.]]).astype(jnp.float32)
+            _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
+            weights = _weights * normEventMask + weights * (1. - normEventMask)
+        # if norm_T > 0:
+        #     if t % (norm_T-1) == 0: #t % self.norm_t == 0:
+        #         weights = normalize_matrix(weights, w_norm, order=1, axis=0)
+        return weights
+
+    @resolver(pure_evolve, output_compartments=['weights'])
+    def evolve(self, weights):
+        self.weights.set(weights)
+
+    @staticmethod
+    def pure_reset(batch_size, shape):
+        restVals = jnp.zeros((batch_size, shape[1]))
+        input = None
+        output = None
+        preAct = None
+        postAct = None
+        preTrace = None
+        postTrace = None
+        return input, output, preAct, postAct, preTrace, postTrace
+
+    @resolver(pure_reset, output_compartments=['input', 'output', 'preAct',
+        'postAct', 'preTrace', 'postTrace'])
+    def reset(self, vals):
+        input, output, preAct, postAct, preTrace, postTrace = vals
+        input.set(input)
+        output.set(output)
+        preAct.set(preAct)
+        postAct.set(postAct)
+        preTrace.set(preTrace)
+        postTrace.set(postTrace)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, weights=self.weights)
+        jnp.savez(file_name, weights=self.weights.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.weights = data['weights']
+        self.weights.set( data['weights'] )
