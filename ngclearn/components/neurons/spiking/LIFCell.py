@@ -1,5 +1,3 @@
-# %%
-
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver

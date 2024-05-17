@@ -1,7 +1,12 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+from LIFCell import LIFCell ## import parent cell class/component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 import time, sys
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
+                                            step_euler, step_rk2
 
 @jit
 def update_times(t, s, tols):
@@ -21,9 +26,27 @@ def update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
-@partial(jit, static_argnums=[7,8,9,10,11,12,13])
+@jit
+def _modify_current(j, dt, tau_m): ## electrical current re-scaling co-routine
+    jScale = tau_m/dt
+    return j * jScale
+
+@jit
+def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_c, a0): ## raw voltage dynamics
+    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+    ## update voltage / membrane potential
+    dv_dt = ((v_rest - v) * (v - v_c) * a0) + (j * mask)
+    dv_dt = dv_dt * (1./tau_m)
+    return dv_dt
+
+def _dfv(t, v, params): ## voltage dynamics wrapper
+    j, rfr, tau_m, refract_T, v_rest, v_c, a0 = params
+    dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_c, a0)
+    return dv_dt
+
+@partial(jit, static_argnums=[7,8,9,10,11,12,13,14])
 def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, R_m, v_rest,
-             v_reset, refract_T):
+             v_reset, refract_T, integType=0):
     """
     Runs quadratic leaky integrator neuronal dynamics
 
@@ -61,13 +84,20 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, R_m, v_rest,
         refract_T: (relative) refractory time period (in ms; Default
             value is 1 ms)
 
+        integType: integer indicating type of integration to use
+
     Returns:
         voltage(t+dt), spikes, raw spikes, updated refactory variables
     """
     _v_thr = v_theta + v_thr ## calc present voltage threshold
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     ## update voltage / membrane potential (v_c ~> 0.8?) (a0 usually <1?)
-    _v = v + ((v_rest - v) * (v - v_c) * a0) * (dt/tau_m) + (j * mask)
+    #_v = v + ((v_rest - v) * (v - v_c) * a0) * (dt/tau_m) + (j * mask)
+    v_params = (j, rfr, tau_m, refract_T, v_rest, v_c, a0)
+    if integType == 1:
+        _, _v = step_rk2(0., v, _dfv, dt, v_params)
+    else: #_v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
+        _, _v = step_euler(0., v, _dfv, dt, v_params)
     ## obtain action potentials
     s = (_v > _v_thr).astype(jnp.float32)
     ## update refractory variables
@@ -106,15 +136,11 @@ def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     Returns:
         updated homeostatic threshold variable
     """
-    #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
-    #theta_plus = 0.05
-    #_V_theta = V_theta * theta_decay + S * theta_plus
     theta_decay = jnp.exp(-dt/tau_theta)
     _v_theta = v_theta * theta_decay + s * theta_plus
-    #_V_theta = V_theta + -V_theta * (dt/tau_theta) + S * alpha
     return _v_theta
 
-class QuadLIFCell(Component): ## quadratic leaky integrate-and-fire cell
+class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     """
     A spiking cell based on quadratic leaky integrate-and-fire (LIF) neuronal
     dynamics.
@@ -172,156 +198,47 @@ class QuadLIFCell(Component): ## quadratic leaky integrate-and-fire cell
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'j' ## electrical current
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 's' ## spike/action potential
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols' ## time-of-last-spike (record vector)
-
-    @classmethod
-    def voltageCompartmentName(cls):
-        return 'v' ## membrane potential/voltage
-
-    @classmethod
-    def thresholdThetaName(cls):
-        return 'thrTheta' ## action potential threshold
-
-    @classmethod
-    def refractCompartmentName(cls):
-        return 'rfr' ## refractory variable(s)
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def current(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @current.setter
-    def current(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def spikes(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @spikes.setter
-    def spikes(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
-
-    @property
-    def voltage(self):
-        return self.compartments.get(self.voltageCompartmentName(), None)
-
-    @voltage.setter
-    def voltage(self, v):
-        self.compartments[self.voltageCompartmentName()] = v
-
-    @property
-    def refract(self):
-        return self.compartments.get(self.refractCompartmentName(), None)
-
-    @refract.setter
-    def refract(self, rfr):
-        self.compartments[self.refractCompartmentName()] = rfr
-
-    @property
-    def threshold_theta(self):
-        return self.compartments.get(self.thresholdThetaName(), None)
-
-    @threshold_theta.setter
-    def threshold_theta(self, thr):
-        self.compartments[self.thresholdThetaName()] = thr
-
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr=-52., v_rest=-65., v_reset=60.,
                  v_c=-41.6, a0=1., tau_theta=1e7, theta_plus=0.05, refract_T=5.,
                  key=None, one_spike=True, useVerboseDict=False, directory=None,
                  **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
-
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
-        ## membrane parameter setup (affects ODE integration)
-        self.tau_m = tau_m ## membrane time constant
-        self.R_m = R_m ## resistance value
-        self.one_spike = one_spike ## True => constrains system to simulate 1 spike per time step
-
-        self.v_rest = v_rest #-65. # mV
-        self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
-        self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
-        self.theta_plus = theta_plus #0.05 ## threshold increment
-        self.refract_T = refract_T #5. # 2. ## refractory period  # ms
+        super().__init__(name, n_units, tau_m, R_m, thr, v_rest, v_reset=,
+                     tau_theta, theta_plus, refract_T, key, one_spike,
+                     useVerboseDict, directory)
+        ## only two distinct constants distinguish the Quad-LIF cell
         self.v_c = v_scale
         self.a0 = critical_V
 
-        ##Layer Size Setup
-        self.n_units = n_units
-
-        self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
-        ## adaptive threshold setup
-        if directory is None:
-            self.threshold_theta = jnp.zeros((1, n_units))
-        else:
-            self.load(directory)
-
-        self.reset()
-
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
-
-    def advance_state(self, t, dt, **kwargs):
-        if self.spikes is None:
-            self.spikes = jnp.zeros((1, self.n_units))
-        if self.refract is None:
-            self.refract = jnp.zeros((1, self.n_units)) + self.refract_T
+    @staticmethod
+    def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
+                     theta_plus, one_spike, v_c, a0, key, j, v, s, rfr, thr,
+                     thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
-        if self.one_spike is False:
-            self.key, *subkeys = random.split(self.key, 2)
+        if one_spike == True: ## old code ~> if self.one_spike is False:
+            key, *subkeys = random.split(key, 2)
             skey = subkeys[0]
-
-        ## run one step of Euler integration over neuronal dynamics
-        self.voltage, self.spikes, raw_spikes, self.refract = \
-            run_cell(dt, self.current, self.voltage, self.threshold,
-                     self.threshold_theta, self.refract, skey, self.v_c, self.a0,
-                     self.tau_m, self.R_m, self.v_rest, self.v_reset, self.refract_T)
-        if self.tau_theta > 0.:
-            ## run one step of Euler integration over threshold dynamics
-            self.threshold_theta = update_theta(dt, self.threshold_theta, raw_spikes,
-                                                self.tau_theta, self.theta_plus)
+        ## run one integration step for neuronal dynamics
+        j = _modify_current(j, dt, tau_m)
+        v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
+                                         v_c, a0, tau_m, R_m, v_rest, v_reset,
+                                         refract_T)
+        if tau_theta > 0.:
+            ## run one integration step for threshold dynamics
+            thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
-        self.timeOfLastSpike = update_times(t, self.spikes, self.timeOfLastSpike)
-        #self.timeOfLastSpike = (1 - self.spikes) * self.timeOfLastSpike + (self.spikes * t)
-        #self.current = None
+        tols = update_times(t, s, tols)
+        return j, v, s, rfr, thr, thr_theta, tols, key
 
-    def reset(self, **kwargs):
-        self.voltage = jnp.zeros((1, self.n_units)) + self.v_rest
-        self.refract = jnp.zeros((1, self.n_units)) + self.refract_T
-        self.current = jnp.zeros((1, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((1, self.n_units))
-        self.spikes = jnp.zeros((1, self.n_units)) #None
-
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, threshold_theta=self.threshold_theta)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.threshold_theta = data['threshold_theta']
+    @resolver(pure_advance, output_compartments=['j', 'v', 's', 'rfr', 'thr',
+        'thr_theta', 'tols', 'key'])
+    def advance(self, vals):
+        j, v, s, rfr, thr, thr_theta, tols, key = vals
+        self.j.set(j)
+        self.v.set(v)
+        self.s.set(s)
+        self.rfr.set(rfr)
+        self.thr.set(thr)
+        self.thr_theta.set(thr_theta)
+        self.tols.set(tols)
+        self.key.set(key)
