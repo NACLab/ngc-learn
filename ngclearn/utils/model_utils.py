@@ -263,7 +263,7 @@ def initialize_params(dkey, initKernel, shape):
             )
     return params
 
-#@partial(jit, static_argnums=[2, 3])
+@partial(jit, static_argnums=[2, 3])
 def normalize_matrix(M, wnorm, order=1, axis=0):
     """
     Normalizes the values in matrix to have a particular norm across each vector span.
