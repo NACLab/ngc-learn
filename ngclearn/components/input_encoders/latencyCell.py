@@ -1,4 +1,6 @@
 from ngcsimlib.component import Component
+from ngcsimlib.resolver import resolver
+
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
 from functools import partial
@@ -227,10 +229,10 @@ class LatencyCell(Component):
 
     @staticmethod
     def pure_reset(batch_size, n_units):
-        return None, jnp.zeros((batch_size, n_units)),
+        return (None, jnp.zeros((batch_size, n_units)),
                jnp.zeros((batch_size, n_units)),
                jnp.zeros((batch_size, n_units)),
-               jnp.zeros((batch_size, n_units))
+               jnp.zeros((batch_size, n_units)))
 
     @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'tols',
         'mask', 'targ_sp_times',])

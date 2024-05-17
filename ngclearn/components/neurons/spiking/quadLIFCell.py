@@ -1,7 +1,7 @@
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
-from LIFCell import LIFCell ## import parent cell class/component
+from ngclearn.components.neurons.spiking.LIFCell import LIFCell ## import parent cell class/component
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 import time, sys
@@ -203,7 +203,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
                  v_c=-41.6, a0=1., tau_theta=1e7, theta_plus=0.05, refract_T=5.,
                  key=None, one_spike=True, useVerboseDict=False, directory=None,
                  **kwargs):
-        super().__init__(name, n_units, tau_m, R_m, thr, v_rest, v_reset=,
+        super().__init__(name, n_units, tau_m, R_m, thr, v_rest, v_reset,
                      tau_theta, theta_plus, refract_T, key, one_spike,
                      useVerboseDict, directory)
         ## only two distinct constants distinguish the Quad-LIF cell
