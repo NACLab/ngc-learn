@@ -26,26 +26,25 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def _dfv_internal(j, v, w, a, b, g, tau_m, v_rest, sharpness_v, v_intr, R_m): ## raw voltage dynamics
-    dv_dt = (v_rest - v) + sharpness_v * jnp.exp((v - v_intr)/sharpness_v) - \
-            R_m * w + R_m * j ## dv/dt
+def _dfv_internal(j, v, w, a, b, g, tau_m, v_rest, sharpV, vT, R_m): ## raw voltage dynamics
+    dv_dt = -(v_rest - v) + sharpV * jnp.exp((v - vT)/sharpV) - R_m * w + R_m * j ## dv/dt
     dv_dt = dv_dt * (1./tau_m)
     return dv_dt
 
 def _dfv(t, v, params): ## voltage dynamics wrapper
-    j, w, tau_m, v_rest, sharpness_v, v_intr, R_m = params
-    dv_dt = _dfv_internal(j, v, w, tau_m, v_rest, sharpness_v, v_intr, R_m)
+    j, w, tau_m, v_rest, sharpV, vT, R_m = params
+    dv_dt = _dfv_internal(j, v, w, tau_m, v_rest, sharpV, vT, R_m)
     return dv_dt
 
 @jit
-def _dfw_internal(j, v, w, a, b, tau_w, v_rest): ## raw recovery dynamics
-    dw_dt = (v_rest - v) * a - w + b * s * tau_w
+def _dfw_internal(j, v, w, a, tau_w, v_rest): ## raw recovery dynamics
+    dw_dt = -w + (v - v_rest) * a #+ b * s * tau_w
     dw_dt = dw_dt * (1./tau_w)
     return dw_dt
 
 def _dfw(t, w, params): ## recovery dynamics wrapper
-    j, v, a, b, tau_m, v_rest = params
-    dv_dt = _dfw_internal(j, v, w, a, b, g, tau_m, v_rest)
+    j, v, a, tau_m, v_rest = params
+    dv_dt = _dfw_internal(j, v, w, a, g, tau_m, v_rest)
     return dv_dt
 
 @jit
@@ -54,23 +53,23 @@ def _emit_spike(v, v_thr):
     return s
 
 #@partial(jit, static_argnums=[10])
-def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpness_v, v_intr,
+def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
              v_rest, v_reset, R_m, integType=0):
     if integType == 1: ## RK-2/midpoint
-        v_params = (j, w, tau_m, v_rest, sharpness_v, v_intr, R_m)
+        v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
         _, _v = step_rk2(0., v, _dfv, dt, v_params)
-        w_params = (j, v, a, b, tau_w, v_rest)
+        w_params = (j, v, a, tau_w, v_rest)
         _, _w = step_rk2(0., w, _dfw, dt, w_params)
     else: # integType == 0 (default -- Euler)
-        v_params = (j, w, tau_m, v_rest, sharpness_v, v_intr, R_m)
+        v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
         _, _v = step_euler(0., v, _dfv, dt, v_params)
-        w_params = (j, v, a, b, tau_w, v_rest)
+        w_params = (j, v, a, tau_w, v_rest)
         _, _w = step_euler(0., w, _dfw, dt, w_params)
     #s = (_v > v_thr).astype(jnp.float32)
     s = _emit_spike(_v, v_thr)
-    ## hyperpolarize/reset/snap
+    ## hyperpolarize/reset/snap variables
     _v = _v * (1. - s) + s * v_reset
-    ## do we reset w?
+    _w = _w * (1. - s) + s * (_w + b)
     return _v, _w, s
 
 class AdExCell(Component):
@@ -127,8 +126,9 @@ class AdExCell(Component):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m=1., R_m=1., tau_w=12.5,
-                 sharpness_v, v_intr, v_thr=0., a=1., b=1., v0=0., w0=0.,
+    def __init__(self, name, n_units, tau_m=15., R_m=1., tau_w=400.,
+                 sharpV=2., vT=-55., v_thr=5., v_rest=-72., v_reset=-75.,
+                 a=0.1, b=0.75, v0=-70., w0=0.,
                  integration_type="euler", key=None, useVerboseDict=False,
                  **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
@@ -145,10 +145,12 @@ class AdExCell(Component):
         ## Cell properties
         self.tau_m = tau_m
         self.tau_w = tau_w
-        self.sharpness_v = sharpness_v ## sharpness of action potential
-        self.v_intr = v_intr ## intrinsic membrane threshold
+        self.sharpV = sharpV ## sharpness of action potential
+        self.vT = vT ## intrinsic membrane threshold
         self.a = a
         self.b = b
+        self.v_rest = v_rest
+        self.v_reset = v_reset
 
         self.v0 = v0 ## initial membrane potential/voltage condition
         self.w0 = w0 ## initial w-parameter condition
@@ -170,10 +172,10 @@ class AdExCell(Component):
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, tau_m, tau_w, v_thr, a, b, sharpness_v, v_intr,
+    def pure_advance(t, dt, tau_m, tau_w, v_thr, a, b, sharpV, vT,
                      v_rest, v_reset, intgFlag, key, j, v, w, s, tols):
         key, *subkeys = random.split(key, 2)
-        v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpness_v, v_intr,
+        v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
                            v_rest, v_reset, R_m, intgFlag)
         tols = update_times(t, s, tols)
         return j, v, w, s, tols, key
@@ -212,3 +214,5 @@ class AdExCell(Component):
 
     # def verify_connections(self):
     #     pass
+
+## test over T = 1000, dt = 0.1
