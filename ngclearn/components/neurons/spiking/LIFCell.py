@@ -269,7 +269,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         return j, v, s, rfr, thr, thr_theta, tols
 
     @resolver(pure_reset, output_compartments=['j', 'v', 's', 'rfr', 'thr',
-        'thr_theta', 'tols', 'key'])
+        'thr_theta', 'tols'])
     def reset(self, vals):
         j, v, s, rfr, thr, thr_theta, tols = vals
         self.j.set(j)
@@ -314,25 +314,37 @@ if __name__ == '__main__':
                 component.gather()
                 component.advance(t=t, dt=dt)
 
+    class ResetCommand(Command):
+        compile_key = "reset"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.reset(t=t, dt=dt)
+
     with Context("Context") as context:
         a = LIFCell("a1", n_units=1, tau_m=100., R_m=1.)
-        cmd = AdvanceCommand(components=[a], command_name="Advance")
+        advance_cmd = AdvanceCommand(components=[a], command_name="Advance")
+        reset_cmd = ResetCommand(components=[a], command_name="Reset")
 
     T = 20 #16
     dt = 1. # 0.1
-    compiled_cmd, arg_order = cmd.compile()
-    wrapped_cmd = wrapper(compiled_cmd)
+
+    compiled_advance_cmd, _ = advance_cmd.compile()
+    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+
+    compiled_reset_cmd, _ = reset_cmd.compile()
+    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
 
     t = 0.
     for i in range(T): # i is "t"
         a.j.set(jnp.asarray([[1.0]]))
-        wrapped_cmd(t, dt) ## pass in t and dt and run step forward of simulation
+        wrapped_advance_cmd(t, dt) ## pass in t and dt and run step forward of simulation
         t = t + dt
         print(f"---[ Step {i} ]---")
         print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
               f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
               f"tols: {a.tols.value}")
-    a.reset()
+    #a.reset()
+    wrapped_reset_cmd()
     print(f"---[ After reset ]---")
     print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
           f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
