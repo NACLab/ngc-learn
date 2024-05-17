@@ -179,7 +179,6 @@ class HebbianSynapse(Component):
 
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = get_opt_step_fn(optim_type, eta=self.eta)
-        
 
         # compartments (state of the cell, parameters, will be updated through stateless calls)
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
@@ -308,9 +307,9 @@ if __name__ == '__main__':
                 component.evolve(t=t, dt=dt)
 
     with Context("Bar") as bar:
-        a1 = RateCell("a1", 2, 0.01)
-        Wab = HebbianSynapse("Wab", (2, 2), 0.0004, optim_type='adam')
-        a2 = RateCell("a2", 2, 0.01)
+        a1 = RateCell("a1", 1, 0.01)
+        Wab = HebbianSynapse("Wab", (1, 1), 0.0004, optim_type='adam', signVal=-1.0)
+        a2 = RateCell("a2", 1, 0.01)
 
         # forward pass
         Wab.inputs << a1.zF
@@ -323,16 +322,16 @@ if __name__ == '__main__':
         evolve_cmd = EvolveCommand(components=[Wab], command_name="Evolve")
 
     compiled_advance_cmd, _ = advance_cmd.compile()
-    # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
-    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+    # wrapped_advance_cmd = wrapper(compiled_advance_cmd)
 
     compiled_evolve_cmd, _ = evolve_cmd.compile()
-    # wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
-    wrapped_evolve_cmd = wrapper(compiled_evolve_cmd)
+    wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
+    # wrapped_evolve_cmd = wrapper(compiled_evolve_cmd)
 
     dt = 0.01
     for t in range(3):
-        a1.j.set(jnp.asarray([[2.8, 9.3]]))
+        a1.j.set(jnp.asarray([0.5]))
         wrapped_advance_cmd(t, dt)
         print(f"--- [Step {t}] After Advance ---")
         print(f"[a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
