@@ -1,3 +1,5 @@
+# %%
+
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
@@ -211,8 +213,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         key: PRNG key to control determinism of any underlying random values
             associated with this cell
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save sLIF parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
@@ -221,8 +221,8 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=0., thr_persist=False,
                  thrGain=0.0, thrLeak=0.0, rho_b=0., refract_T=0., sticky_spikes=False,
-                 thr_jitter=0.05, key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 thr_jitter=0.05, key=None, directory=None):
+        super().__init__(name)
 
         key = random.PRNGKey(time.time_ns()) if key is None else key
 
@@ -253,24 +253,25 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.thr_persist = thr_persist ## are adapted thresholds persistent? True (persistent)
         self.thrGain = thrGain #0.0005
         self.thrLeak = thrLeak #0.00005
+
         if directory is None:
-            self.thr_jitter =  thr_jitter ## some random jitter to ensure thresholds start off different
+            # thr_jitter: some random jitter to ensure thresholds start off different
             key, subkey = random.split(key)
             self.threshold0 = thr + random.uniform(subkey, (1, n_units),
-                                                  minval=-self.thr_jitter, maxval=self.thr_jitter,
+                                                  minval=-thr_jitter, maxval=thr_jitter,
                                                   dtype=jnp.float32)
         else:
             self.load(directory)
 
         ## Compartments
         self.key = Compartment(key)
-        self.j = Compartment() ## electrical current, input
+        self.j = Compartment(None) ## electrical current, input
         self.s = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## spike/action potential, output
-        self.tols = Compartment() ## time-of-last-spike (record vector)
+        self.tols = Compartment(jnp.zeros((self.batch_size, n_units))) ## time-of-last-spike (record vector)
         self.v = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## membrane potential/voltage
         self.thr = Compartment(self.threshold0 + 0) ## action potential threshold
         self.rfr = Compartment(jnp.zeros((self.batch_size, self.n_units)) + self.refract_T) ## refractory variable(s)
-        self.surrogate = Compartment() ## surrogate signal
+        self.surrogate = Compartment(None) ## surrogate signal
 
     # def verify_connections(self):
     #     self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
@@ -302,34 +303,87 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.surrogate.set(surrogate)
         self.v.set(v)
 
-    def reset(self, **kwargs):
-        self.voltage = jnp.zeros((self.batch_size, self.n_units))
-        self.refract = jnp.zeros((self.batch_size, self.n_units)) + self.refract_T
-        self.current = None
-        self.surrogate = None
-        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
-        self.spikes = jnp.zeros((self.batch_size, self.n_units))
-        if self.thr_persist == False: ## if thresh non-persistent, reset to base value
-            self.threshold = self.threshold0 + 0
+    @staticmethod
+    def pure_reset(refract_T, thr_persist, threshold0, batch_size, n_units, thr):
+        voltage = jnp.zeros((batch_size, n_units))
+        refract = jnp.zeros((batch_size, n_units)) + refract_T
+        current = None
+        surrogate = None
+        timeOfLastSpike = jnp.zeros((batch_size, n_units))
+        spikes = jnp.zeros((batch_size, n_units))
+        if not thr_persist: ## if thresh non-persistent, reset to base value
+            thr = threshold0 + 0
+        return current, spikes, timeOfLastSpike, voltage, thr, refract, surrogate
 
-
-
+    @resolver(pure_reset, output_compartments=['j', 's', 'tols', 'v', 'thr', 'rfr', 'surrogate'])
+    def reset(self, j, s, tols, v, thr, rfr, surrogate):
+        self.j.set(j)
+        self.s.set(s)
+        self.tols.set(tols)
+        self.thr.set(thr)
+        self.rfr.set(rfr)
+        self.surrogate.set(surrogate)
+        self.v.set(v)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         if self.thr_persist == False:
-            jnp.savez(file_name, threshold=self.threshold0)
+            jnp.savez(file_name, threshold=self.threshold0) # save threshold0
         else:
-            jnp.savez(file_name, threshold=self.thr.value)
+            jnp.savez(file_name, threshold=self.thr.value) # save the actual threshold param/compartment
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.thr.set(data['threshold'])
-        self.threshold0 = self.threshold + 0
+        self.threshold0 = self.thr.value + 0
 
 
+# Testing
 if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
     from ngcsimlib.commands import Command
+
+    def wrapper(compiled_fn):
+        def _wrapped(*args):
+            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+            for key, value in vals.items():
+                All_compartments[str(key)].set(value)
+            return vals
+        return _wrapped
+
+    class AdvanceCommand(Command):
+        compile_key = "advance"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.advance(t=t, dt=dt)
+
+    class ResetCommand(Command):
+        compile_key = "reset"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.reset()
+
+    with Context("Bar") as bar:
+        s1 = SLIFCell("s1", 2, 20.0, 1.0, 0.4, 0.1, True, 0.1, 0.002, 0.2, 0.3, True, 0.2)
+        advance_cmd = AdvanceCommand(components=[s1], command_name="Advance")
+        reset_cmd = ResetCommand(components=[s1], command_name="Reset")
+
+    compiled_advance_cmd, _ = advance_cmd.compile()
+    # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+
+    compiled_reset_cmd, _ = reset_cmd.compile()
+    wrapped_reset_cmd = wrapper(compiled_reset_cmd)
+
+    dt = 20.0
+    for t in range(4):
+        s1.j.set(jnp.asarray([[0.1, 0.9]]))
+        wrapped_advance_cmd(t, dt)
+        print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
+    wrapped_reset_cmd()
+    print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
