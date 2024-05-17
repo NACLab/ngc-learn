@@ -39,6 +39,7 @@ class SGD(Component):
         self.time_step = Compartment(0.0) # the time step. Internal compartment
         self.updates = Compartment(None) # the update or gradient. External compartment, to be wired
         self.theta = Compartment(None) # the current weight of other networks. External compartment, to be wired
+        self.new_theta = Compartment(None)
 
     @staticmethod
     def pure_update(t, dt, eta, time_step, theta, updates): ## apply adjustment to theta
@@ -49,10 +50,10 @@ class SGD(Component):
             new_theta.append(px_i)
         return time_step, new_theta
 
-    @resolver(pure_update, output_compartments=["time_step", "theta"])
-    def update(self, time_step, theta):
+    @resolver(pure_update, output_compartments=["time_step", "new_theta"])
+    def update(self, time_step, new_theta):
         self.time_step.set(time_step)
-        self.theta.set(theta)
+        self.new_theta.set(new_theta)
 
 if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments

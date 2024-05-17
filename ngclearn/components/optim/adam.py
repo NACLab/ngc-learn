@@ -80,6 +80,7 @@ class Adam(Component):
         self.time_step = Compartment(0.0) # the time step. Internal compartment
         self.updates = Compartment(None) # the update or gradient. External compartment, to be wired
         self.theta = Compartment(None) # the current weight of other networks. External compartment, to be wired
+        self.new_theta = Compartment(None) # the modified weight of other neural network, or the output of this component
 
     @staticmethod
     def pure_update(eta, beta1, beta2, eps, g1, g2, time_step, theta, updates):  ## apply adjustment to theta
@@ -99,12 +100,12 @@ class Adam(Component):
             new_g2.append(g2_i)
         return new_g1, new_g2, time_step, new_theta
 
-    @resolver(pure_update, output_compartments=["g1", "g2", "time_step", "theta"])
-    def update(self, g1, g2, time_step, theta):
+    @resolver(pure_update, output_compartments=["g1", "g2", "time_step", "new_theta"])
+    def update(self, g1, g2, time_step, new_theta):
         self.g1.set(g1)
         self.g2.set(g2)
         self.time_step.set(time_step)
-        self.theta.set(theta)
+        self.new_theta.set(new_theta)
 
 if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
