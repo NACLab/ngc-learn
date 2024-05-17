@@ -1,4 +1,6 @@
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
@@ -41,32 +43,6 @@ class ExpKernel(Component): ## Exponential spike kernel
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-      return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-      self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def epsp(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @epsp.setter
-    def epsp(self, inp):
-        self.compartments[self.outputCompartmentName()] = inp
-
     # Define Functions
     def __init__(self, name, n_units, tau_w=500., nu=4., key=None,
                  useVerboseDict=False, directory=None, **kwargs):
@@ -86,18 +62,15 @@ class ExpKernel(Component): ## Exponential spike kernel
         self.win_len = int(nu/dt) + 1 ## window length
         self.tf = None #[] ## window of spike times
 
-        # cell compartments
-        # self.comp["in"] = None
-        # self.comp["epsp"] = None ## this emits a numeric "pulse" ()
-        # self.comp["tf"] = [] # window of spike times
-
         ##Layer Size Setup
+        self.batch_size = 1
         self.n_units = n_units
-        self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(),
-                                                 min_connections=1)
+        # cell compartments
+        self.inputs = Compartment(None) # input compartment
+        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
+        self.epsp = Compartment(jnp.zeros((self.batch_size, self.n_units)))
+        #self.reset()
 
     def advance_state(self, t, dt, **kwargs):
         #self.t = self.t + self.dt
@@ -113,11 +86,40 @@ class ExpKernel(Component): ## Exponential spike kernel
         # self.comp["tf"] = _tf ## update spike time window
         #self.inputCompartment = None
 
-    def reset(self, **kwargs):
-        self.tf = jnp.zeros([self.win_len, batch_size, self.n_units])
-        #self.comp["tf"] = jnp.zeros([self.win_len, batch_size, self.n_units])
-        self.inputCompartment = None
-        self.outputCompartment = None
+    @staticmethod
+    def pure_advance(t, dt, decay_type, tau_w, win_len, inputs, epsp, tf):
+        #self.t = self.t + self.dt
+        #self.gather()
+        ## get incoming spike readout and current window/volume
+        s = inputs ## spike readout
+        #tf = self.tf ## current window/volume
+        ## update spike time window and corresponding window volume
+        tf, epsp = apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,
+                                krn_end=win_len-1) #0:win_len-1)
+        #self.tf = _tf ## get the corresponding 2D batch matrix
+        #self.epsp = epsp ## update spike time window
+        # self.comp["epsp"] = epsp ## get 2D batch matrix
+        # self.comp["tf"] = _tf ## update spike time window
+        #self.inputCompartment = None
+        return epsp, tf
+
+    @resolver(pure_advance, output_compartments=['epsp', 'tf'])
+    def advance(self, vals):
+        epsp, tf = vals
+        self.epsp.set(epsp)
+        self.tf.set(tf)
+
+    @staticmethod
+    def pure_reset(batch_size, n_units, win_len):
+        #self.tf = jnp.zeros([self.win_len, batch_size, self.n_units])
+        tf = jnp.zeros([win_len, batch_size, n_units])
+        return None, jnp.zeros((batch_size, n_units)), tf
+
+    @resolver(pure_reset, output_compartments=['inputs', 'epsp', 'tf'])
+    def reset(self, inputs, outputs, traceVal):
+        self.inputs.set(inputs)
+        self.epsp.set(epsp)
+        self.tf.set(tf)
 
     def save(self, **kwargs):
         pass
