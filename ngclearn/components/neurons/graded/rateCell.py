@@ -243,7 +243,7 @@ if __name__ == '__main__':
         def __call__(self, t=None, dt=None, *args, **kwargs):
             for component in self.components:
                 component.gather()
-                component.reset(t=t, dt=dt)
+                component.reset()
 
     with Context("Bar") as bar:
         a1 = RateCell("a1", 2, 0.01)
