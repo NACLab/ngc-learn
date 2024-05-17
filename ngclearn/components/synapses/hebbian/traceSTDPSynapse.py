@@ -284,7 +284,6 @@ if __name__ == '__main__':
         compile_key = "evolve"
         def __call__(self, t=None, dt=None, *args, **kwargs):
             for component in self.components:
-                #component.gather()
                 component.evolve(t=t, dt=dt)
 
     class ResetCommand(Command):
