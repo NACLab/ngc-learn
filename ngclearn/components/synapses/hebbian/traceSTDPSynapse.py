@@ -164,10 +164,10 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.batch_size = 1
         ## Compartment setup
         #restVals = jnp.zeros((1, shape[1]))
-        self.input = Compartment(None)
-        self.output = Compartment(None)
-        self.preAct = Compartment(None)
-        self.postAct = Compartment(None)
+        self.inputs = Compartment(None)
+        self.outputs = Compartment(None)
+        self.preSpike = Compartment(None)
+        self.postSpike = Compartment(None)
         self.preTrace = Compartment(None)
         self.postTrace = Compartment(None)
         self.weights = Compartment(weights)
@@ -176,20 +176,20 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, input, weights):
+    def pure_advance(t, dt, inputs, weights):
         ## run signals across synapses
-        output = compute_layer(input, weights)
-        return output
+        outputs = compute_layer(inputs, weights)
+        return outputs
 
-    @resolver(pure_advance, output_compartments=['output'])
-    def advance(self, output):
-        self.output.set(output)
+    @resolver(pure_advance, output_compartments=['outputs'])
+    def advance(self, outputs):
+        self.output.set(outputs)
 
     @staticmethod
     def pure_evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus, w_norm, norm_T,
-                    preAct, postAct, preTrace, postTrace, weights
+                    preSpike, postSpike, preTrace, postTrace, weights
                     ):
-        weights, dW = evolve(dt, preAct, preTrace, postAct, postTrace, weights,
+        weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                          w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
                          Aplus=Aplus, Aminus=Aminus)
         ## decide if normalization is to be applied
@@ -212,20 +212,20 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         restVals = jnp.zeros((batch_size, shape[1]))
         input = None
         output = None
-        preAct = None
-        postAct = None
+        preSpike = None
+        postSpike = None
         preTrace = None
         postTrace = None
-        return input, output, preAct, postAct, preTrace, postTrace
+        return input, output, preSpike, postSpike, preTrace, postTrace
 
-    @resolver(pure_reset, output_compartments=['input', 'output', 'preAct',
-        'postAct', 'preTrace', 'postTrace'])
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
+        'postSpike', 'preTrace', 'postTrace'])
     def reset(self, vals):
-        input, output, preAct, postAct, preTrace, postTrace = vals
+        input, output, preSpike, postSpike, preTrace, postTrace = vals
         input.set(input)
         output.set(output)
-        preAct.set(preAct)
-        postAct.set(postAct)
+        preSpike.set(preSpike)
+        postSpike.set(postSpike)
         preTrace.set(preTrace)
         postTrace.set(postTrace)
 
@@ -299,21 +299,21 @@ if __name__ == '__main__':
         pre_spk = jnp.asarray([[val]])
         post_spk = pre_spk
         pre_tr = post_tr = pre_spk
-        W.input.set(pre_spk)
-        W.preAct.set(pre_spk)
+        W.inputs.set(pre_spk)
+        W.preSpike.set(pre_spk)
         W.preTrace.set(pre_tr)
-        W.postAct.set(post_spk)
+        W.postSpike.set(post_spk)
         W.postTrace.set(post_tr)
         wrapped_advance_cmd(t, dt) ## pass in t and dt and run step forward of simulation
         wrapped_evolve_cmd(t, dt) ## pass in t and dt and run step forward of simulation
         t = t + dt
         print(f"---[ Step {i} ]---")
-        print(f"[W] in: {W.input.value}, out: {W.output.value}, preS: {W.preAct.value}, " \
-              f"preTr: {W.preTrace.value}, postS: {W.postAct.value}, postTr: {W.postTrace.value}," \
+        print(f"[W] in: {W.inputs.value}, out: {W.outputs.value}, preS: {W.preSpike.value}, " \
+              f"preTr: {W.preTrace.value}, postS: {W.postSpike.value}, postTr: {W.postTrace.value}," \
               f"W: {W.weights.value}")
     #a.reset()
     wrapped_reset_cmd()
     print(f"---[ After reset ]---")
-    print(f"[W] in: {W.input.value}, out: {W.output.value}, preS: {W.preAct.value}, " \
-          f"preTr: {W.preTrace.value}, postS: {W.postAct.value}, postTr: {W.postTrace.value}," \
+    print(f"[W] in: {W.inputs.value}, out: {W.outputs.value}, preS: {W.preSpike.value}, " \
+          f"preTr: {W.preTrace.value}, postS: {W.postSpike.value}, postTr: {W.postTrace.value}," \
           f"W: {W.weights.value}")
