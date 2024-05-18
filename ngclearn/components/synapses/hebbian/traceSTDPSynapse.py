@@ -166,10 +166,11 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         #restVals = jnp.zeros((1, shape[1]))
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
-        self.preSpike = Compartment(None)
-        self.postSpike = Compartment(None)
-        self.preTrace = Compartment(None)
-        self.postTrace = Compartment(None)
+        #self.preSpike = Compartment(None)
+        self.tmp = Compartment(None)
+        #self.postSpike = Compartment(None)
+        #self.preTrace = Compartment(None)
+        #self.postTrace = Compartment(None)
         self.weights = Compartment(weights)
 
         ##Reset to initialize core compartments
@@ -178,6 +179,9 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     @staticmethod
     def pure_advance(t, dt, inputs, weights):
         ## run signals across synapses
+        print("in: ",inputs.shape)
+        import sys
+        sys.exit(0)
         outputs = compute_layer(inputs, weights)
         return outputs
 
@@ -190,8 +194,8 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
                     preSpike, postSpike, preTrace, postTrace, weights
                     ):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
-                         w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
-                         Aplus=Aplus, Aminus=Aminus)
+                             w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
+                             Aplus=Aplus, Aminus=Aminus)
         ## decide if normalization is to be applied
         if norm_T > 0 and w_norm != None:
             normEventMask = jnp.asarray([[(t % (norm_T-1) == 0)]]).astype(jnp.float32)
@@ -209,21 +213,21 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @staticmethod
     def pure_reset(batch_size, shape):
-        restVals = jnp.zeros((batch_size, shape[1]))
-        input = None
-        output = None
+        #restVals = jnp.zeros((batch_size, shape[1]))
+        inputs = None
+        outputs = None
         preSpike = None
         postSpike = None
         preTrace = None
         postTrace = None
-        return input, output, preSpike, postSpike, preTrace, postTrace
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace
 
     @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
         'postSpike', 'preTrace', 'postTrace'])
     def reset(self, vals):
-        input, output, preSpike, postSpike, preTrace, postTrace = vals
-        input.set(input)
-        output.set(output)
+        inputs, outputs, preSpike, postSpike, preTrace, postTrace = vals
+        inputs.set(inputs)
+        outputs.set(outputs)
         preSpike.set(preSpike)
         postSpike.set(postSpike)
         preTrace.set(preTrace)
