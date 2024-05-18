@@ -184,7 +184,7 @@ class HebbianSynapse(Component):
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
-        self.trigger = Compartment(None) # NOTE: VN:This is never used
+        # self.trigger = Compartment(None) # NOTE: VN:This is never used
         self.pre = Compartment(None)
         self.post = Compartment(None)
         self.dW = Compartment(0.0)
@@ -205,7 +205,7 @@ class HebbianSynapse(Component):
 
     @staticmethod
     def pure_advance(t, dt, Rscale, inputs, weights, biases):
-        print(f"[pure advance] inputs: {inputs.shape}, weights: {weights.shape}, biases: {biases.shape}")
+        # print(f"[pure advance] inputs: {inputs.shape}, weights: {weights.shape}, biases: {biases.shape}")
         outputs = compute_layer(inputs, weights, biases, Rscale)
         return outputs
 
