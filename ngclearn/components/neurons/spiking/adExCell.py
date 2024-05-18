@@ -26,7 +26,7 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def _dfv_internal(j, v, w, a, b, g, tau_m, v_rest, sharpV, vT, R_m): ## raw voltage dynamics
+def _dfv_internal(j, v, w, tau_m, v_rest, sharpV, vT, R_m): ## raw voltage dynamics
     dv_dt = -(v_rest - v) + sharpV * jnp.exp((v - vT)/sharpV) - R_m * w + R_m * j ## dv/dt
     dv_dt = dv_dt * (1./tau_m)
     return dv_dt
@@ -44,7 +44,7 @@ def _dfw_internal(j, v, w, a, tau_w, v_rest): ## raw recovery dynamics
 
 def _dfw(t, w, params): ## recovery dynamics wrapper
     j, v, a, tau_m, v_rest = params
-    dv_dt = _dfw_internal(j, v, w, a, g, tau_m, v_rest)
+    dv_dt = _dfw_internal(j, v, w, a, tau_m, v_rest)
     return dv_dt
 
 @jit
@@ -144,6 +144,7 @@ class AdExCell(Component):
 
         ## Cell properties
         self.tau_m = tau_m
+        self.R_m = R_m
         self.tau_w = tau_w
         self.sharpV = sharpV ## sharpness of action potential
         self.vT = vT ## intrinsic membrane threshold
@@ -172,7 +173,7 @@ class AdExCell(Component):
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, tau_m, tau_w, v_thr, a, b, sharpV, vT,
+    def pure_advance(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,
                      v_rest, v_reset, intgFlag, key, j, v, w, s, tols):
         key, *subkeys = random.split(key, 2)
         v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
@@ -214,5 +215,3 @@ class AdExCell(Component):
 
     # def verify_connections(self):
     #     pass
-
-## test over T = 1000, dt = 0.1
