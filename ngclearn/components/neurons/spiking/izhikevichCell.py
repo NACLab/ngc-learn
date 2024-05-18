@@ -67,7 +67,6 @@ def _modify_current(j, R_m):
     _j = j * R_m
     return _j
 
-#@partial(jit, static_argnums=[12])
 def run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
              R_m=1., integType=0):
     """

@@ -75,10 +75,11 @@ class PoissonCell(Component):
         ## Poisson parameters
         self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
+        ## Compartment setup
         self.inputs = Compartment(None) # input compartment
         self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
         self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
@@ -121,7 +122,6 @@ if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
     from ngcsimlib.commands import Command
-    from ngclearn.components.neurons.graded.rateCell import RateCell
 
     def wrapper(compiled_fn):
         def _wrapped(*args):
