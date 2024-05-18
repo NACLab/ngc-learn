@@ -7,6 +7,8 @@ import time
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
+import sys
+
 @jit
 def update_times(t, s, tols):
     """
@@ -27,7 +29,7 @@ def update_times(t, s, tols):
 
 @jit
 def _dfv_internal(j, v, w, tau_m, v_rest, sharpV, vT, R_m): ## raw voltage dynamics
-    dv_dt = -(v_rest - v) + sharpV * jnp.exp((v - vT)/sharpV) - R_m * w + R_m * j ## dv/dt
+    dv_dt = -(v - v_rest) + sharpV * jnp.exp((v - vT)/sharpV) - R_m * w + R_m * j ## dv/dt
     dv_dt = dv_dt * (1./tau_m)
     return dv_dt
 
