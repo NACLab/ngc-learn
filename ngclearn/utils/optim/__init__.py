@@ -10,10 +10,11 @@ def get_opt_init_fn(opt='adam'):
     }[opt]
 
 
-def get_opt_step_fn(opt='adam', *args, **kwargs):
+def get_opt_step_fn(opt='adam', **kwargs):
+    # **kwargs here is the hyper parameters you want to pass in the optimization function
     return {
-        'adam': functools.partial(adam_step, *args, **kwargs),
-        'sgd': functools.partial(sgd_step, *args, **kwargs),
+        'adam': functools.partial(adam_step, **kwargs),
+        'sgd': functools.partial(sgd_step, **kwargs),
     }[opt]
 
 
