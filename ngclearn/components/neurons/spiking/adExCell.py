@@ -7,8 +7,6 @@ import time
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-import sys
-
 @jit
 def update_times(t, s, tols):
     """
@@ -76,8 +74,6 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
 
 class AdExCell(Component):
     """
-    UNTESTED
-
     The AdEx (adaptive exponential leaky integrate-and-fire) neuronal cell
     model; a two-variable model. This cell model iteratively evolves
     voltage "v" and recovery "w".
@@ -85,33 +81,43 @@ class AdExCell(Component):
     The specific pair of differential equations that characterize this cell
     are (for adjusting v and w, given current j, over time):
 
-    | XXX
-    | YYY
+    | tau_m * dv/dt = -(v - v_rest) + sharpV * exp((v - vT)/sharpV) - R_m * w + R_m * j
+    | tau_w * dw/dt =  -w + (v - v_rest) * a
+    | where w = w + s * (_w + b) [in the event of a spike]
+
 
     | References:
-    | XXXX
+    | Brette, Romain, and Wulfram Gerstner. "Adaptive exponential integrate-and-fire
+    | model as an effective description of neuronal activity." Journal of
+    | neurophysiology 94.5 (2005): 3637-3642.
 
     Args:
         name: the string name of this cell
 
         n_units: number of cellular entities (neural population size)
 
-        tau_m: membrane time constant
+        tau_m: membrane time constant (Default: 15 ms)
 
-        tau_w: recover variable time constant (Default: 12.5 ms)
+        R_m: membrane resistance (Default: 1 mega-Ohm)
 
-        alpha: dimensionless recovery variable shift factor "a" (Default: 0.7)
+        tau_w: recover variable time constant (Default: 400 ms)
 
-        beta: dimensionless recovery variable scale factor "b" (Default: 0.8)
+        sharpV: slope factor/sharpness constant (Default: 2)
 
-        gamma: power-term divisor (Default: 3.)
+        vT: intrinsic membrane threshold (Default: -55 mV)
 
         v_thr: voltage/membrane threshold (to obtain action potentials in terms
-            of binary spikes)
+            of binary spikes) (Default: 5 mV)
 
-        v0: initial condition / reset for voltage
+        v_rest: membrane resting potential (Default: -72 mV)
 
-        w0: initial condition / reset for recovery
+        a: adaptation coupling parameter (Default: 0.1)
+
+        b: adaption/recover increment value (Default: 0.75)
+
+        v0: initial condition / reset for voltage (Default: -70 mV)
+
+        w0: initial condition / reset for recovery (Default: 0 mV)
 
         integration_type: type of integration to use for this cell's dynamics;
             current supported forms include "euler" (Euler/RK-1 integration)
