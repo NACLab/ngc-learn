@@ -37,7 +37,7 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
         Aminus: strength of long-term depression (LTD)
 
     Returns:
-        the newly evolved synaptic weight value matrix
+        the newly evolved synaptic weight value matrix, synaptic update matrix
     """
     if mu > 0.:
         ## equations 3, 5, & 6 from Diehl and Cook - full power-law STDP
@@ -206,26 +206,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     @resolver(pure_evolve, output_compartments=['weights'])
     def evolve(self, weights):
         self.weights.set(weights)
-
-    # def evolve(self, dt, t, **kwargs):
-    #     pre = self.inputCompartment
-    #     post = self.outputCompartment
-    #     x_pre = self.presynapticTrace
-    #     x_post = self.postsynapticTrace
-    #     self.weights = evolve(dt, pre, x_pre, post, x_post, self.weights,
-    #                           w_bound=self.w_bound, eta=self.eta,
-    #                           x_tar=self.preTrace_target, mu=self.mu,
-    #                           Aplus=self.Aplus, Aminus=self.Aminus,
-    #                           w_norm=self.w_norm)
-    #     if self.norm_T > 0:
-    #         if t % (self.norm_T-1) == 0: #t % self.norm_t == 0:
-    #             self.weights = normalize_matrix(self.weights, self.w_norm, order=1, axis=0)
-
-    # def reset(self, **kwargs):
-    #     self.inputCompartment = None
-    #     self.outputCompartment = None
-    #     self.presynapticTrace = None
-    #     self.postsynapticTrace = None
 
     @staticmethod
     def pure_reset(batch_size, shape):
