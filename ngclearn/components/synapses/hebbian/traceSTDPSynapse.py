@@ -166,11 +166,11 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         #restVals = jnp.zeros((1, shape[1]))
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
-        #self.preSpike = Compartment(None)
-        self.tmp = Compartment(None)
-        #self.postSpike = Compartment(None)
-        #self.preTrace = Compartment(None)
-        #self.postTrace = Compartment(None)
+        self.preSpike = Compartment(None)
+        #self.tmp = Compartment(None)
+        self.postSpike = Compartment(None)
+        self.preTrace = Compartment(None)
+        self.postTrace = Compartment(None)
         self.weights = Compartment(weights)
 
         ##Reset to initialize core compartments
