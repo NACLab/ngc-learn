@@ -246,7 +246,6 @@ class HebbianSynapse(Component):
         return (
             None, # inputs
             None, # outputs
-            None, # trigger
             None, # pre
             None, # post
             None, # dW
@@ -256,11 +255,10 @@ class HebbianSynapse(Component):
             key # key
         )
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'trigger', 'pre', 'post', 'dW', 'db', 'weights', 'biases', 'key'])
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'pre', 'post', 'dW', 'db', 'weights', 'biases', 'key'])
     def reset(self, inputs, outputs, trigger, pre, post, dW, db, weights, biases, key):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
-        self.trigger.set(trigger)
         self.pre.set(pre)
         self.post.set(post)
         self.dW.set(dW)
