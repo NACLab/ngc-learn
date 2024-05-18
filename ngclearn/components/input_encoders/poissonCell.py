@@ -122,7 +122,6 @@ if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
     from ngcsimlib.commands import Command
-    from ngclearn.components.neurons.graded.poissonCell import PoissonCell
 
     def wrapper(compiled_fn):
         def _wrapped(*args):
