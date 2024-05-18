@@ -184,7 +184,7 @@ class HebbianSynapse(Component):
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
-        self.trigger = Compartment(None)
+        self.trigger = Compartment(None) # NOTE: VN:This is never used
         self.pre = Compartment(None)
         self.post = Compartment(None)
         self.dW = Compartment(0.0)
@@ -201,8 +201,11 @@ class HebbianSynapse(Component):
         if directory is not None:
             self.load(directory)
 
+        # print(f"[{self.name}] key: {self.key}")
+
     @staticmethod
     def pure_advance(t, dt, Rscale, inputs, weights, biases):
+        print(f"[pure advance] inputs: {inputs.shape}, weights: {weights.shape}, biases: {biases.shape}")
         outputs = compute_layer(inputs, weights, biases, Rscale)
         return outputs
 
@@ -285,7 +288,8 @@ if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
     from ngcsimlib.commands import Command
-    from ngclearn.components.neurons.graded.rateCell import RateCell
+    # from ngclearn.components.neurons.graded.rateCell import RateCell
+    from ngclearn.components import BernoulliCell, GaussianErrorCell
 
     def wrapper(compiled_fn):
         def _wrapped(*args):
@@ -311,23 +315,29 @@ if __name__ == '__main__':
                 component.evolve(t=t, dt=dt)
 
     with Context("Bar") as bar:
-        a1 = RateCell("a1", 1, 0.01)
-        Wab = HebbianSynapse("Wab", (1, 1), 0.0004, optim_type='adam', signVal=-1.0)
-        a2 = RateCell("a2", 1, 0.01)
+        # a1 = RateCell("a1", 2, 0.01)
+        a1 = BernoulliCell("a1", 2)
+        Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
+            signVal=-1.0, bInit=("constant", 0., 0.))
+        # a2 = RateCell("a2", 3, 0.01)
+        a2 = BernoulliCell("a2", 3)
 
         # forward pass
-        Wab.inputs << a1.zF
-        a2.j << Wab.outputs
+        # Wab.inputs << a1.zF
+        Wab.inputs << a1.outputs # NOTE: Bug: a1.outputs shape (1, 2) but the shape for Wab inputs is (1, 3)
+        # a2.j << Wab.outputs
         advance_cmd = AdvanceCommand(components=[a1, Wab, a2], command_name="Advance") # forward
 
         # evolve and update adam
-        Wab.pre << a1.z
-        Wab.post << a1.z
+        # Wab.pre << a1.z
+        # Wab.post << a2.z
+        Wab.pre << a1.outputs
+        Wab.post << a2.outputs
         evolve_cmd = EvolveCommand(components=[Wab], command_name="Evolve")
 
     compiled_advance_cmd, _ = advance_cmd.compile()
-    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
-    # wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+    # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
 
     compiled_evolve_cmd, _ = evolve_cmd.compile()
     wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
@@ -335,7 +345,9 @@ if __name__ == '__main__':
 
     dt = 0.01
     for t in range(3):
-        a1.j.set(jnp.asarray([0.5]))
+        # a1.j.set(jnp.asarray([[0.5, 0.2]]))
+        a1.inputs.set(jnp.asarray([[0.5, 0.2]]))
+        a2.inputs.set(jnp.asarray([[0.8, 0.1, 0.4]]))
         wrapped_advance_cmd(t, dt)
         print(f"--- [Step {t}] After Advance ---")
         print(f"[a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")

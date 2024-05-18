@@ -74,6 +74,7 @@ class BernoulliCell(Component):
         key, *subkeys = random.split(key, 2)
         outputs = sample_bernoulli(subkeys[0], data=inputs)
         timeOfLastSpike = update_times(t, outputs, tols)
+        print(f"[BernoulliCell] outputs: {outputs.shape}")
         return outputs, timeOfLastSpike, key
 
     @resolver(pure_advance, output_compartments=['outputs', 'tols', 'key'])
