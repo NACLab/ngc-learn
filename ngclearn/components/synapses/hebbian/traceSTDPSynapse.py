@@ -186,7 +186,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @resolver(pure_advance, output_compartments=['outputs'])
     def advance(self, outputs):
-        self.output.set(outputs)
+        self.outputs.set(outputs)
 
     @staticmethod
     def pure_evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus, w_norm, norm_T,

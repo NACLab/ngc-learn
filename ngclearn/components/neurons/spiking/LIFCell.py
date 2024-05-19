@@ -226,7 +226,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
     def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
                      theta_plus, one_spike, key, j, v, s, rfr, thr, thr_theta,
                      tols):
-        print("Curr: ",j)
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
             key, *subkeys = random.split(key, 2)
@@ -245,7 +244,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
     @resolver(pure_advance, output_compartments=['v', 's', 'rfr', 'thr',
         'thr_theta', 'tols', 'key'])
     def advance(self, vals):
-        v, s, rfr, thr, thr_theta, tols, key = vals
+        j, v, s, rfr, thr, thr_theta, tols, key = vals
         #self.j.set(j)
         self.v.set(v)
         self.s.set(s)
