@@ -167,7 +167,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
         self.preSpike = Compartment(None)
-        #self.tmp = Compartment(None)
         self.postSpike = Compartment(None)
         self.preTrace = Compartment(None)
         self.postTrace = Compartment(None)
@@ -179,9 +178,9 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     @staticmethod
     def pure_advance(t, dt, inputs, weights):
         ## run signals across synapses
-        print("in: ",inputs.shape)
-        import sys
-        sys.exit(0)
+        #print("in: ",inputs.shape)
+        #import sys
+        #sys.exit(0)
         outputs = compute_layer(inputs, weights)
         return outputs
 
