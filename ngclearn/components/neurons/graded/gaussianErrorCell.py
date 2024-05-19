@@ -122,7 +122,10 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.mu.set(mu)
         self.modulator.set(modulator)
 
-    def save(self, **kwargs):
+    def save(self, directory, **kwargs):
+        pass
+
+    def load(self, directory, **kwargs):
         pass
 
 # Testing

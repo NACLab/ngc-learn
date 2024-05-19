@@ -180,8 +180,9 @@ class HebbianSynapse(Component):
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
+        key = random.PRNGKey(time.time_ns()) if key is None else key
+
         # compartments (state of the cell, parameters, will be updated through stateless calls)
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
         self.trigger = Compartment(None) # NOTE: VN:This is never used
@@ -189,11 +190,9 @@ class HebbianSynapse(Component):
         self.post = Compartment(None)
         self.dW = Compartment(0.0)
         self.db = Compartment(0.0)
-        key, subkey = random.split(self.key.value)
-        self.key.set(key)
+        key, subkey = random.split(key)
         self.weights = Compartment(initialize_params(subkey, wInit, shape))
-        key, subkey = random.split(self.key.value)
-        self.key.set(key)
+        key, subkey = random.split(key)
         self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bInit else [self.weights.value]))
 
@@ -201,11 +200,11 @@ class HebbianSynapse(Component):
         if directory is not None:
             self.load(directory)
 
-        # print(f"[{self.name}] key: {self.key}")
+        self.batch_size = 1
 
     @staticmethod
     def pure_advance(t, dt, Rscale, inputs, weights, biases):
-        print(f"[pure advance] inputs: {inputs.shape}, weights: {weights.shape}, biases: {biases.shape}")
+        # print(f"[HebbianSynapse.pure_advance] inputs: {inputs.shape}, weights: {weights.shape}, biases: {biases.shape}")
         outputs = compute_layer(inputs, weights, biases, Rscale)
         return outputs
 
@@ -239,10 +238,7 @@ class HebbianSynapse(Component):
 
 
     @staticmethod
-    def pure_reset(batch_size, shape, wInit, bInit, key):
-        key, *subkeys = random.split(key, 3)
-        weights = initialize_params(subkeys[0], wInit, shape)
-        biases = initialize_params(subkeys[1], bInit, (batch_size, shape[1])) if bInit else 0.0
+    def pure_reset(batch_size, shape, wInit, bInit):
         return (
             None, # inputs
             None, # outputs
@@ -251,13 +247,10 @@ class HebbianSynapse(Component):
             None, # post
             None, # dW
             None, # db
-            weights, # weights
-            biases, # biases
-            key # key
         )
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'trigger', 'pre', 'post', 'dW', 'db', 'weights', 'biases', 'key'])
-    def reset(self, inputs, outputs, trigger, pre, post, dW, db, weights, biases, key):
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'trigger', 'pre', 'post', 'dW', 'db'])
+    def reset(self, inputs, outputs, trigger, pre, post, dW, db):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.trigger.set(trigger)
@@ -265,10 +258,6 @@ class HebbianSynapse(Component):
         self.post.set(post)
         self.dW.set(dW)
         self.db.set(db)
-        self.weights.set(weights)
-        self.biases.set(biases)
-        self.key.set(key)
-
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -288,8 +277,8 @@ if __name__ == '__main__':
     from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
     from ngcsimlib.commands import Command
-    # from ngclearn.components.neurons.graded.rateCell import RateCell
-    from ngclearn.components import BernoulliCell, GaussianErrorCell
+    from ngclearn.components.neurons.graded.rateCell import RateCell
+    # from ngclearn.components import BernoulliCell, GaussianErrorCell
 
     def wrapper(compiled_fn):
         def _wrapped(*args):
@@ -314,26 +303,35 @@ if __name__ == '__main__':
                 component.gather()
                 component.evolve(t=t, dt=dt)
 
+    class ResetCommand(Command):
+        compile_key = "reset"
+        def __call__(self, t=None, dt=None, *args, **kwargs):
+            for component in self.components:
+                component.gather()
+                component.reset(t=t, dt=dt)
+
     with Context("Bar") as bar:
-        # a1 = RateCell("a1", 2, 0.01)
-        a1 = BernoulliCell("a1", 2)
+        a1 = RateCell("a1", 2, 0.01)
+        # a1 = BernoulliCell("a1", 2)
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
             signVal=-1.0, bInit=("constant", 0., 0.))
-        # a2 = RateCell("a2", 3, 0.01)
-        a2 = BernoulliCell("a2", 3)
+        a2 = RateCell("a2", 3, 0.01)
+        # a2 = BernoulliCell("a2", 3)
 
         # forward pass
-        # Wab.inputs << a1.zF
-        Wab.inputs << a1.outputs # NOTE: Bug: a1.outputs shape (1, 2) but the shape for Wab inputs is (1, 3)
+        Wab.inputs << a1.zF
+        # Wab.inputs << a1.outputs # NOTE: Bug: a1.outputs shape (1, 2) but the shape for Wab inputs is (1, 3)
         # a2.j << Wab.outputs
         advance_cmd = AdvanceCommand(components=[a1, Wab, a2], command_name="Advance") # forward
 
         # evolve and update adam
-        # Wab.pre << a1.z
-        # Wab.post << a2.z
-        Wab.pre << a1.outputs
-        Wab.post << a2.outputs
+        Wab.pre << a1.z
+        Wab.post << a2.z
+        # Wab.pre << a1.outputs
+        # Wab.post << a2.outputs
         evolve_cmd = EvolveCommand(components=[Wab], command_name="Evolve")
+
+        reset_cmd = ResetCommand(components=[a1, Wab, a2], command_name="Reset")
 
     compiled_advance_cmd, _ = advance_cmd.compile()
     # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
@@ -343,11 +341,15 @@ if __name__ == '__main__':
     wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
     # wrapped_evolve_cmd = wrapper(compiled_evolve_cmd)
 
+    compiled_reset_cmd, _ = reset_cmd.compile()
+    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+
     dt = 0.01
     for t in range(3):
-        # a1.j.set(jnp.asarray([[0.5, 0.2]]))
-        a1.inputs.set(jnp.asarray([[0.5, 0.2]]))
-        a2.inputs.set(jnp.asarray([[0.8, 0.1, 0.4]]))
+        a1.j.set(jnp.asarray([[0.5, 0.2]]))
+        a2.j.set(jnp.asarray([[0.2, 0.7, 0.3]]))
+        # a1.inputs.set(jnp.asarray([[0.5, 0.2]]))
+        # a2.inputs.set(jnp.asarray([[0.8, 0.1, 0.4]]))
         wrapped_advance_cmd(t, dt)
         print(f"--- [Step {t}] After Advance ---")
         print(f"[a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
@@ -358,6 +360,10 @@ if __name__ == '__main__':
         print(f"--- [Step {t}] After Evolve ---")
         print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
 
+    wrapped_reset_cmd()
+    print(f"--- [Step {t}] After Reset ---")
+    print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+
+
     Wab.save(".")
     Wab.load(".")
-
