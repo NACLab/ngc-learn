@@ -94,7 +94,10 @@ class BernoulliCell(Component):
         self.outputs.set(outputs) #None
         self.tols.set(tols)
 
-    def save(self, **kwargs):
+    def save(self, directory, **kwargs):
+        pass
+
+    def load(self, directory, **kwargs):
         pass
 
 
