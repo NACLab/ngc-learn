@@ -10,6 +10,7 @@ import time, sys
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 from ngclearn.utils.surrogate_fx import secant_lif_estimator
+from ngclearn.utils import tensorstats
 
 @jit
 def update_times(t, s, tols):
@@ -264,7 +265,6 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
             self.load(directory)
 
         ## Compartments
-        self.key = Compartment(key)
         self.j = Compartment(None) ## electrical current, input
         self.s = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## spike/action potential, output
         self.tols = Compartment(jnp.zeros((self.batch_size, n_units))) ## time-of-last-spike (record vector)
@@ -338,6 +338,17 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.thr.set(data['threshold'])
         self.threshold0 = self.thr.value + 0
 
+    def __repr__(self):
+        comps = ['j', 's', 'tols', 'v', 'thr', 'rfr', 'surrogate']
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[sLIFCell] {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            line = [f"{k}: {v}" for k, v in stats.items()]
+            line = ", ".join(line)
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
 
 # Testing
 if __name__ == '__main__':
@@ -387,3 +398,5 @@ if __name__ == '__main__':
         print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
     wrapped_reset_cmd()
     print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
+
+    print(s1)

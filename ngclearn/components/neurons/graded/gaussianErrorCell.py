@@ -7,6 +7,7 @@ from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
+from ngclearn.utils import tensorstats
 
 #@partial(jit, static_argnums=[3])
 def run_cell(dt, targ, mu, eType="gaussian"):
@@ -74,7 +75,6 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.batch_size = 1
 
         ##Random Number Set up
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
         self.L = Compartment(None) # loss compartment
         self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
@@ -127,6 +127,18 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
     def load(self, directory, **kwargs):
         pass
+
+    def __repr__(self):
+        comps = ['j', 'L', 'e', 'mu', 'dmu', 'target', 'dtarget', 'modulator']
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[GaussianErrorCell] {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            line = [f"{k}: {v}" for k, v in stats.items()]
+            line = ", ".join(line)
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
 
 # Testing
 if __name__ == '__main__':
