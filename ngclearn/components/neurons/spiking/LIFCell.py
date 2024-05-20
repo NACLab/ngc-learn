@@ -239,12 +239,12 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
         tols = update_times(t, s, tols)
-        return j, v, s, rfr, thr, thr_theta, tols, key
+        return v, s, rfr, thr, thr_theta, tols, key
 
     @resolver(pure_advance, output_compartments=['v', 's', 'rfr', 'thr',
         'thr_theta', 'tols', 'key'])
     def advance(self, vals):
-        j, v, s, rfr, thr, thr_theta, tols, key = vals
+        v, s, rfr, thr, thr_theta, tols, key = vals
         #self.j.set(j)
         self.v.set(v)
         self.s.set(s)
