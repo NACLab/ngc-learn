@@ -198,6 +198,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
         self.theta_plus = theta_plus #0.05 ## threshold increment
         self.refract_T = refract_T #5. # 2. ## refractory period  # ms
+        self.thr = thr ## (fixed) base value for threshold  #-52 # -72. # mV
 
         ##Layer Size Setup
         self.batch_size = 1
@@ -209,8 +210,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.v = Compartment(restVals + self.v_rest)
         self.s = Compartment(restVals)
         self.rfr = Compartment(restVals + self.refract_T)
-        self.thr = Compartment(restVals + thr)
-        # self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
+        #self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
         # ## adaptive threshold setup
         # if directory is None:
         #     self.threshold_theta = jnp.zeros((1, n_units))
@@ -223,8 +223,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
-                     theta_plus, one_spike, key, j, v, s, rfr, thr, thr_theta,
+    def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr, tau_theta,
+                     theta_plus, one_spike, key, j, v, s, rfr, thr_theta,
                      tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
@@ -239,17 +239,16 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
         tols = update_times(t, s, tols)
-        return v, s, rfr, thr, thr_theta, tols, key
+        return v, s, rfr, thr_theta, tols, key
 
-    @resolver(pure_advance, output_compartments=['v', 's', 'rfr', 'thr',
-        'thr_theta', 'tols', 'key'])
+    @resolver(pure_advance, output_compartments=['v', 's', 'rfr', 'thr_theta', 
+        'tols', 'key'])
     def advance(self, vals):
-        v, s, rfr, thr, thr_theta, tols, key = vals
+        v, s, rfr, thr_theta, tols, key = vals
         #self.j.set(j)
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)
-        self.thr.set(thr)
         self.thr_theta.set(thr_theta)
         self.tols.set(tols)
         self.key.set(key)
@@ -261,21 +260,18 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         v = restVals + v_rest
         s = restVals #+ 0
         rfr = restVals + refract_T
-        thr = restVals #+ 0
-        thr_theta = restVals
+        #thr_theta = restVals ## do not reset thr_theta
         tols = restVals #+ 0
-        return j, v, s, rfr, thr, thr_theta, tols
+        return j, v, s, rfr, tols
 
-    @resolver(pure_reset, output_compartments=['j', 'v', 's', 'rfr', 'thr',
-        'thr_theta', 'tols'])
+    @resolver(pure_reset, output_compartments=['j', 'v', 's', 'rfr', 'tols'])
     def reset(self, vals):
-        j, v, s, rfr, thr, thr_theta, tols = vals
+        j, v, s, rfr, tols = vals
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)
-        self.thr.set(thr)
-        self.thr_theta.set(thr_theta)
+        #self.thr_theta.set(thr_theta)
         self.tols.set(tols)
 
     def save(self, directory, **kwargs):
