@@ -239,7 +239,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         tols = update_times(t, s, tols)
         return v, s, rfr, thr_theta, tols, key
 
-    @resolver(_advance)
+    @resolver(_advance_state)
     def advance_state(self, v, s, rfr, thr_theta, tols, key):
         #self.j.set(j)
         self.v.set(v)
