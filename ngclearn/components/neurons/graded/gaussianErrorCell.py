@@ -7,6 +7,7 @@ from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
+from ngclearn.utils import tensorstats
 
 #@partial(jit, static_argnums=[3])
 def run_cell(dt, targ, mu, eType="gaussian"):
@@ -74,7 +75,6 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.batch_size = 1
 
         ##Random Number Set up
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
         self.L = Compartment(None) # loss compartment
         self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
@@ -82,7 +82,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.dmu = Compartment(jnp.zeros((self.batch_size, self.n_units))) # derivative mean
         self.target = Compartment(jnp.zeros((self.batch_size, self.n_units))) # target. input wire
         self.dtarget = Compartment(jnp.zeros((self.batch_size, self.n_units))) # derivative target
-        self.modulator = Compartment(jnp.asarray(0.0)) # to be set/consumed
+        self.modulator = Compartment(1.0) # to be set/consumed
 
     # def verify_connections(self):
     #     self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
@@ -92,18 +92,21 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     def pure_advance(t, dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
         dmu, dtarget, L = run_cell(dt, target, mu)
-        modulator_mask = jnp.bool(modulator).astype(jnp.float32)
-        dmu = dmu * (1 - modulator_mask) + dmu * modulator * modulator_mask
-        dtarget = dtarget * (1 - modulator_mask) + dtarget * modulator * modulator_mask
-        modulator = jnp.asarray(0.0) ## use and consume modulator
-        return dmu, dtarget, L, modulator
+        # modulator_mask = jnp.bool(modulator).astype(jnp.float32) # is there any modulator or not
+        # dmu = dmu * (1 - modulator_mask) + dmu * modulator * modulator_mask
+        # dtarget = dtarget * (1 - modulator_mask) + dtarget * modulator * modulator_mask
+        dmu = dmu * modulator
+        dtarget = dtarget * modulator
+        # modulator = jnp.asarray(0.0) ## use and consume modulator
+        return dmu, dtarget, L #, modulator
 
-    @resolver(pure_advance, output_compartments=['dmu', 'dtarget', 'L', 'modulator'])
-    def advance(self, dmu, dtarget, L, modulator):
+    @resolver(pure_advance, output_compartments=['dmu', 'dtarget', 'L']) #, 'modulator'])
+    def advance(self, dmu, dtarget, L): #, modulator):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.L.set(L)
-        self.modulator.set(modulator)
+        # self.modulator.set(modulator)
+        self.modulator.set(1.0)
 
     @staticmethod
     def pure_reset(batch_size, n_units):
@@ -111,22 +114,33 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         dtarget = jnp.zeros((batch_size, n_units))
         target = jnp.zeros((batch_size, n_units)) #None
         mu = jnp.zeros((batch_size, n_units)) #None
-        modulator = jnp.asarray(0.0)
-        return dmu, dtarget, target, mu, modulator
+        return dmu, dtarget, target, mu
 
-    @resolver(pure_reset, output_compartments=['dmu', 'dtarget', 'target', 'mu', 'modulator'])
-    def reset(self, dmu, dtarget, target, mu, modulator):
+    @resolver(pure_reset, output_compartments=['dmu', 'dtarget', 'target', 'mu'])
+    def reset(self, dmu, dtarget, target, mu):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.target.set(target)
         self.mu.set(mu)
-        self.modulator.set(modulator)
+        self.modulator.set(1.0)
 
     def save(self, directory, **kwargs):
         pass
 
     def load(self, directory, **kwargs):
         pass
+
+    def __repr__(self):
+        comps = ['j', 'L', 'e', 'mu', 'dmu', 'target', 'dtarget', 'modulator']
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[GaussianErrorCell] {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            line = [f"{k}: {v}" for k, v in stats.items()]
+            line = ", ".join(line)
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
 
 # Testing
 if __name__ == '__main__':
@@ -159,6 +173,7 @@ if __name__ == '__main__':
 
     with Context("Bar") as bar:
         e = GaussianErrorCell("e", 2)
+        e.modulator << e.mu
         advance_cmd = AdvanceCommand(components=[e], command_name="Advance")
         reset_cmd = ResetCommand(components=[e], command_name="Reset")
 

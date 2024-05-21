@@ -7,6 +7,7 @@ from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time
+from ngclearn.utils import tensorstats
 
 @jit
 def update_times(t, s, tols):
@@ -100,6 +101,17 @@ class BernoulliCell(Component):
     def load(self, directory, **kwargs):
         pass
 
+    def __repr__(self):
+        comps = ['inputs', 'outputs', 'tols', 'key']
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[BernoulliCell] {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            line = [f"{k}: {v}" for k, v in stats.items()]
+            line = ", ".join(line)
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
 
 # Testing
 if __name__ == '__main__':
@@ -155,4 +167,6 @@ if __name__ == '__main__':
     print(f"---[ After reset ]---")
     print(f"[b] inputs: {b.inputs.value}, outputs: {b.outputs.value}, time of last spike: {b.tols.value}")
     print(f"[a] j: {a.j.value}, j_td: {a.j_td.value}, z: {a.z.value}, zF: {a.zF.value}")
+
+    print(b)
 
