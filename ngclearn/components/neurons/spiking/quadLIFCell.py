@@ -143,7 +143,8 @@ def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
 class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     """
     A spiking cell based on quadratic leaky integrate-and-fire (LIF) neuronal
-    dynamics.
+    dynamics. Note that QuadLIFCell is a child of LIFCell and inherits its
+    main set of routines, only overriding its dynamics in advance().
 
     Dynamics can be taken to be governed by the following ODE:
 
@@ -206,14 +207,14 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         super().__init__(name, n_units, tau_m, R_m, thr, v_rest, v_reset,
                      tau_theta, theta_plus, refract_T, key, one_spike,
                      useVerboseDict, directory)
-        ## only two distinct constants distinguish the Quad-LIF cell
+        ## only two distinct additional constants distinguish the Quad-LIF cell
         self.v_c = v_scale
         self.a0 = critical_V
 
     @staticmethod
-    def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
-                     theta_plus, one_spike, v_c, a0, key, j, v, s, rfr, thr,
-                     thr_theta, tols):
+    def _advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
+                 theta_plus, one_spike, v_c, a0, key, j, v, s, rfr, thr,
+                 thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
             key, *subkeys = random.split(key, 2)
@@ -230,10 +231,8 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         tols = update_times(t, s, tols)
         return j, v, s, rfr, thr, thr_theta, tols, key
 
-    @resolver(pure_advance, output_compartments=['j', 'v', 's', 'rfr', 'thr',
-        'thr_theta', 'tols', 'key'])
-    def advance(self, vals):
-        j, v, s, rfr, thr, thr_theta, tols, key = vals
+    @resolver(_advance])
+    def advance(self, j, v, s, rfr, thr, thr_theta, tols, key):
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)

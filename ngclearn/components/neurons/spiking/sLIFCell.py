@@ -265,20 +265,19 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
             self.load(directory)
 
         ## Compartments
-        self.j = Compartment(None) ## electrical current, input
-        self.s = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## spike/action potential, output
-        self.tols = Compartment(jnp.zeros((self.batch_size, n_units))) ## time-of-last-spike (record vector)
-        self.v = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## membrane potential/voltage
-        self.thr = Compartment(self.threshold0 + 0) ## action potential threshold
-        self.rfr = Compartment(jnp.zeros((self.batch_size, self.n_units)) + self.refract_T) ## refractory variable(s)
-        self.surrogate = Compartment(None) ## surrogate signal
-
-    # def verify_connections(self):
-    #     self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.j = Compartment(restVals) ## electrical current, input
+        self.s = Compartment(restVals) ## spike/action potential, output
+        self.tols = Compartment(restVals) ## time-of-last-spike (record vector)
+        self.v = Compartment(restVals) ## membrane potential/voltage
+        self.thr = Compartment(self.threshold0 + 0.) ## action potential threshold
+        self.rfr = Compartment(restVals + self.refract_T) ## refractory variable(s)
+        self.surrogate = Compartment(restVals + 1.) ## surrogate signal
 
     @staticmethod
-    def pure_advance(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx, refract_T,
-                    thrGain, thrLeak, rho_b, sticky_spikes, v_min,  j, s, v, thr, rfr, tols):
+    def _advance(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx,
+                 refract_T, thrGain, thrLeak, rho_b, sticky_spikes, v_min,
+                 j, s, v, thr, rfr, tols):
         ## run one step of Euler integration over neuronal dynamics
         j_curr = j
         ## apply simplified inhibitory pressure
@@ -293,7 +292,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         tols = update_times(t, s, tols)
         return j, s, tols, v, thr, rfr, surrogate
 
-    @resolver(pure_advance, output_compartments=['j', 's', 'tols', 'v', 'thr', 'rfr', 'surrogate'])
+    @resolver(_advance)
     def advance(self, j, s, tols, v, thr, rfr, surrogate):
         self.j.set(j)
         self.s.set(s)
@@ -304,18 +303,19 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.v.set(v)
 
     @staticmethod
-    def pure_reset(refract_T, thr_persist, threshold0, batch_size, n_units, thr):
-        voltage = jnp.zeros((batch_size, n_units))
-        refract = jnp.zeros((batch_size, n_units)) + refract_T
-        current = None
-        surrogate = None
-        timeOfLastSpike = jnp.zeros((batch_size, n_units))
-        spikes = jnp.zeros((batch_size, n_units))
+    def _reset(refract_T, thr_persist, threshold0, batch_size, n_units, thr):
+        restVals = jnp.zeros((batch_size, n_units))
+        voltage = restVals
+        refract = restVals + refract_T
+        current = restVals
+        surrogate = restVals + 1.
+        timeOfLastSpike = restVals
+        spikes = restVals
         if not thr_persist: ## if thresh non-persistent, reset to base value
             thr = threshold0 + 0
         return current, spikes, timeOfLastSpike, voltage, thr, refract, surrogate
 
-    @resolver(pure_reset, output_compartments=['j', 's', 'tols', 'v', 'thr', 'rfr', 'surrogate'])
+    @resolver(_reset)
     def reset(self, j, s, tols, v, thr, rfr, surrogate):
         self.j.set(j)
         self.s.set(s)
