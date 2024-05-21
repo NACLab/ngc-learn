@@ -109,10 +109,10 @@ class VarTrace(Component): ## low-pass filter
         return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, traceVal):
+    def reset(self, inputs, outputs, trace):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
-        self.trace.set(traceVal)
+        self.trace.set(trace)
 
 ## testing
 if __name__ == '__main__':
