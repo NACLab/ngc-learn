@@ -194,20 +194,18 @@ class FitzhughNagumoCell(Component):
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
-
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, tau_m, tau_w, v_thr, alpha, beta, gamma, intgFlag,
+    def _advance(t, dt, tau_m, tau_w, v_thr, alpha, beta, gamma, intgFlag,
                      key, j, v, w, s, tols):
         key, *subkeys = random.split(key, 2)
         v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, alpha, beta, gamma, intgFlag)
         tols = update_times(t, s, tols)
         return j, v, w, s, tols, key
 
-    @resolver(pure_advance, output_compartments=['j', 'v', 'w', 's', 'tols', 'key'])
-    def advance(self, vals):
-        j, v, w, s, tols, key = vals
+    @resolver(_advance)
+    def advance(self, j, v, w, s, tols, key):
         self.j.set(j)
         self.w.set(w)
         self.v.set(v)
@@ -216,7 +214,7 @@ class FitzhughNagumoCell(Component):
         self.key.set(key)
 
     @staticmethod
-    def pure_reset(batch_size, n_units, v0, w0):
+    def _reset(batch_size, n_units, v0, w0):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals # None
         v = restVals + v0
@@ -225,20 +223,13 @@ class FitzhughNagumoCell(Component):
         tols = restVals #+ 0
         return j, v, w, s, tols
 
-    @resolver(pure_reset, output_compartments=['j', 'v', 'w', 's', 'tols'])
-    def reset(self, vals):
-        j, v, w, s, tols = vals
+    @resolver(_reset)
+    def reset(self, j, v, w, s, tols):
         self.j.set(j)
         self.v.set(v)
         self.w.set(w)
         self.s.set(s)
         self.tols.set(tols)
-
-    def save(self, **kwargs):
-        pass
-
-    # def verify_connections(self):
-    #     pass
 
 ## Testing
 if __name__ == '__main__':
