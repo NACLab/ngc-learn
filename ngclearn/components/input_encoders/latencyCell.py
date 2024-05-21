@@ -155,11 +155,7 @@ class LatencyCell(Component):
                  useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
+        ## latency meta-parameters
         self.first_spike_time = first_spike_time
         self.tau = tau
         self.threshold = threshold
@@ -168,10 +164,7 @@ class LatencyCell(Component):
         self.normalize = normalize
         self.num_steps = num_steps
 
-        self.target_spike_times = None
-        self._mask = None
-
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
@@ -184,7 +177,7 @@ class LatencyCell(Component):
         #self.reset()
 
     @staticmethod
-    def pure_calc_spike_times(t, dt, linearize, tau, threshold, first_spike_time,
+    def _calc_spike_times(t, dt, linearize, tau, threshold, first_spike_time,
         num_steps, normalize, inputs):
         ## would call this function before processing a spike train (at start)
         data = inputs
@@ -201,13 +194,13 @@ class LatencyCell(Component):
             targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
         return targ_sp_times
 
-    @resolver(pure_calc_spike_times, output_compartments=['targ_sp_times'])
+    @resolver(_calc_spike_times, output_compartments=['targ_sp_times'])
     def calc_spike_times(self, vals):
         targ_sp_times = vals
         self.targ_sp_times.set(targ_sp_times)
 
     @staticmethod
-    def pure_advance(t, dt, key, inputs, mask, targ_sp_times, tols):
+    def _advance(t, dt, key, inputs, mask, targ_sp_times, tols):
         key, *subkeys = random.split(key, 2)
         data = inputs ## get sensory pattern data / features
         # if targ_sp_times == None: ## calc spike times if not called yet
@@ -226,7 +219,7 @@ class LatencyCell(Component):
         spikes, spk_mask = extract_spike(targ_sp_times, t, mask) ## get spikes at t
         return spikes, tols, spk_mask, targ_sp_times, key
 
-    @resolver(pure_advance, output_compartments=['outputs', 'tols', 'mask',
+    @resolver(_advance, output_compartments=['outputs', 'tols', 'mask',
         'targ_sp_times', 'key'])
     def advance(self, vals):
         outputs, tols, mask, targ_sp_times, key = vals
@@ -237,13 +230,13 @@ class LatencyCell(Component):
         self.key.set(key)
 
     @staticmethod
-    def pure_reset(batch_size, n_units):
+    def _reset(batch_size, n_units):
         return (None, jnp.zeros((batch_size, n_units)),
                jnp.zeros((batch_size, n_units)),
                jnp.zeros((batch_size, n_units)),
                jnp.zeros((batch_size, n_units)))
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'tols',
+    @resolver(_reset, output_compartments=['inputs', 'outputs', 'tols',
         'mask', 'targ_sp_times',])
     def reset(self, inputs, outputs, tols, mask):
         self.inputs.set(inputs)
@@ -251,6 +244,3 @@ class LatencyCell(Component):
         self.tols.set(tols)
         self.mask.set(mask)
         self.targ_sp_times.set(targ_sp_times)
-
-    def save(self, **kwargs):
-        pass

@@ -59,17 +59,23 @@ def adam_step(opt_params, theta, updates, eta=0.001, beta1=0.9, beta2=0.999, eps
         update rule given adjustments produced by a credit assignment algorithm/process.
 
     Args:
-        opt_params (ArrayLike): parameters of the optimization algorithm
-        theta (ArrayLike): the weights of neural networks
-        updates (ArrayLike): the updates of neural networks
-        eta (float, optional): step size coefficient for Adam update. Defaults to 0.001.
-        beta1 (float, optional): 1st moment control factor. Defaults to 0.9.
-        beta2 (float, optional): 2nd moment control factor. Defaults to 0.999.
-        eps (float, optional): numberical stability coefficient (for calculating final update). Defaults to 1e-8.
+        opt_params: (ArrayLike) parameters of the optimization algorithm
+
+        theta: (ArrayLike) the weights of neural network
+
+        updates: (ArrayLike) the updates of neural network
+
+        eta: (float, optional) step size coefficient for Adam update (Default: 0.001)
+
+        beta1: (float, optional) 1st moment control factor. (Default: 0.9)
+
+        beta2: (float, optional) 2nd moment control factor. (Default: 0.999)
+
+        eps: (float, optional) numberical stability coefficient (for calculating
+            final update). (Default: 1e-8)
 
     Returns:
-        ArrayLike: opt_params. New opt params
-        ArrayLike: theta. The updated weights
+        ArrayLike: opt_params. New opt params, ArrayLike: theta. The updated weights
     """
     g1, g2, time_step = opt_params
     time_step = time_step + 1
@@ -98,4 +104,3 @@ if __name__ == '__main__':
     opt_params = adam_init(weights)
     opt_params, theta = adam_step(opt_params, weights, updates)
     print(f"opt_params: {opt_params}, theta: {theta}")
-

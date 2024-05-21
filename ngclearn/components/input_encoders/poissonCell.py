@@ -67,12 +67,7 @@ class PoissonCell(Component):
                  useVerboseDict=False, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
-        ## Poisson parameters
+        ## Poisson meta-parameters
         self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
 
         ## Layer Size Setup
@@ -84,38 +79,30 @@ class PoissonCell(Component):
         self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
         self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
-
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, max_freq, key, inputs, tols):
+    def _advance(t, dt, max_freq, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
         outputs = sample_poisson(subkeys[0], data=inputs, dt=dt, fmax=max_freq)
         tols = update_times(t, outputs, tols)
         return outputs, tols, key
 
-    @resolver(pure_advance, output_compartments=['outputs', 'tols', 'key'])
-    def advance(self, vals):
-        outputs, tols, key = vals
+    @resolver(_advance)
+    def advance(self, outputs, tols, key):
         self.outputs.set(outputs)
         self.tols.set(tols)
         self.key.set(key)
 
     @staticmethod
-    def pure_reset(batch_size, n_units):
+    def _reset(batch_size, n_units):
         return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'tols'])
+    @resolver(_reset)
     def reset(self, inputs, outputs, tols):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.tols.set(tols)
-
-    def save(self, **kwargs):
-        pass
-
-    # def verify_connections(self):
-    #     pass
 
 ## testing
 if __name__ == '__main__':

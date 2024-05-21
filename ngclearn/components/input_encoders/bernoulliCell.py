@@ -60,46 +60,39 @@ class BernoulliCell(Component):
     def __init__(self, name, n_units, key=None):
         super().__init__(name)
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
-        # compartments (state of the cell, parameters, will be updated through stateless calls)
+        # Compartments (state of the cell, parameters, will be updated through stateless calls)
         self.inputs = Compartment(None) # input compartment
         self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
         self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
     @staticmethod
-    def pure_advance(t, dt, key, inputs, tols):
+    def _advance(t, dt, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
         outputs = sample_bernoulli(subkeys[0], data=inputs)
         timeOfLastSpike = update_times(t, outputs, tols)
         # print(f"[BernoulliCell.pure_advance] inputs: {inputs.shape}, outputs: {outputs.shape}")
         return outputs, timeOfLastSpike, key
 
-    @resolver(pure_advance, output_compartments=['outputs', 'tols', 'key'])
-    def advance(self, vals):
-        outputs, tols, key = vals
+    @resolver(_advance)
+    def advance(self, outputs, tols, key):
         self.outputs.set(outputs)
         self.tols.set(tols)
         self.key.set(key)
 
     @staticmethod
-    def pure_reset(batch_size, n_units):
+    def _reset(batch_size, n_units):
         return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'tols'])
+    @resolver(_reset)
     def reset(self, inputs, outputs, tols):
         self.inputs.set(inputs)
         self.outputs.set(outputs) #None
         self.tols.set(tols)
-
-    def save(self, directory, **kwargs):
-        pass
-
-    def load(self, directory, **kwargs):
-        pass
 
     def __repr__(self):
         comps = ['inputs', 'outputs', 'tols', 'key']
@@ -169,4 +162,3 @@ if __name__ == '__main__':
     print(f"[a] j: {a.j.value}, j_td: {a.j_td.value}, z: {a.z.value}, zF: {a.zF.value}")
 
     print(b)
-
