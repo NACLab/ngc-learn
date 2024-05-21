@@ -3,7 +3,7 @@ from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from jax import random, numpy as jnp, jit
 from functools import partial
-from ngclearn.utils.model_utils import initialize_params, normalize_matrix
+from ngclearn.utils.model_utils import initialize_params
 import time
 
 @partial(jit, static_argnums=[6,7,8,9,10,11])
@@ -112,10 +112,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
-        w_norm: if not None, applies an L1 norm constraint to synapses
-
-        norm_T: clocked time at which to apply L1 synaptic norm constraint
-
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
@@ -128,8 +124,8 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     # Define Functions
     def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
-                 preTrace_target=0., wInit=("uniform", 0.025, 0.8), w_norm=None,
-                 norm_T=250., key=None, useVerboseDict=False, directory=None, **kwargs):
+                 preTrace_target=0., wInit=("uniform", 0.025, 0.8), 
+                 key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         ##Random Number Set up
@@ -147,8 +143,8 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.Aminus = Aminus ## LTD strength
         self.shape = shape  # shape of synaptic matrix W
         self.w_bound = 1. ## soft weight constraint
-        self.w_norm = w_norm ## normalization constant for synaptic matrix after update
-        self.norm_T = norm_T ## scheduling time / checkpoint for synaptic normalization
+        #self.w_norm = w_norm ## normalization constant for synaptic matrix after update
+        #self.norm_T = norm_T ## scheduling time / checkpoint for synaptic normalization
 
         if directory is None:
             #self.key, subkey = random.split(self.key)
@@ -171,7 +167,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.preTrace = Compartment(None)
         self.postTrace = Compartment(None)
         self.weights = Compartment(weights)
-        self.normEvMsk = Compartment(0.) # default is 0 (no constraint)
+        #self.normEvMsk = Compartment(0.) # default is 0 (no constraint)
 
         ##Reset to initialize core compartments
         #self.reset()
@@ -190,21 +186,20 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.outputs.set(outputs)
 
     @staticmethod
-    def pure_evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus, w_norm, norm_T,
-                    preSpike, postSpike, preTrace, postTrace, weights, normEvMsk
+    def pure_evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus,
+                    preSpike, postSpike, preTrace, postTrace, weights
                     ):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
                              Aplus=Aplus, Aminus=Aminus)
+        
         ## decide if normalization is to be applied
-        if norm_T > 0 and w_norm != None:
-            #normEventMask = jnp.asarray([[(t % (norm_T-1.) == 0.) and t > 0.]]).astype(jnp.float32)
-            normEventMask = normEvMsk
-            _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
-            weights = _weights * normEventMask + weights * (1. - normEventMask)
-        # if norm_T > 0:
-        #     if t % (norm_T-1) == 0: #t % self.norm_t == 0:
-        #         weights = normalize_matrix(weights, w_norm, order=1, axis=0)
+        #if norm_T > 0 and w_norm != None:
+        #    #normEventMask = jnp.asarray([[(t % (norm_T-1.) == 0.) and t > 0.]]).astype(jnp.float32)
+        #    normEventMask = normEvMsk
+        #    _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
+        #    weights = _weights * normEventMask + weights * (1. - normEventMask)
+        
         return weights
 
     @resolver(pure_evolve, output_compartments=['weights'])
@@ -220,20 +215,18 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         postSpike = None
         preTrace = None
         postTrace = None
-        normEvMsk = 0.
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, normEvMsk
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace
 
     @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
-        'postSpike', 'preTrace', 'postTrace', 'normEvMsk'])
+        'postSpike', 'preTrace', 'postTrace'])
     def reset(self, vals):
-        inputs, outputs, preSpike, postSpike, preTrace, postTrace, normEvMsk = vals
+        inputs, outputs, preSpike, postSpike, preTrace, postTrace = vals
         inputs.set(inputs)
         outputs.set(outputs)
         preSpike.set(preSpike)
         postSpike.set(postSpike)
         preTrace.set(preTrace)
         postTrace.set(postTrace)
-        normEvMsk.set(normEvMsk)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -282,7 +275,7 @@ if __name__ == '__main__':
     with Context("Context") as context:
         W = TraceSTDPSynapse("W", shape=(1,1), eta=0.1, Aplus=1., Aminus=0.9, mu=0.,
                              preTrace_target=0.0, wInit=("uniform", 0.025, 0.8),
-                             w_norm=None, norm_T=250, key=dkey) #78.5, norm_T=250)
+                             key=dkey) #78.5, norm_T=250)
         advance_cmd = AdvanceCommand(components=[W], command_name="Advance")
         evolve_cmd = EvolveCommand(components=[W], command_name="Evolve")
         reset_cmd = ResetCommand(components=[W], command_name="Reset")
