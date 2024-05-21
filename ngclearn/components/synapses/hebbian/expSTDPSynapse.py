@@ -142,7 +142,8 @@ class ExpSTDPSynapse(Component):
         self.Aplus = Aplus ## LTP strength
         self.Aminus = Aminus ## LTD strength
         self.shape = shape  # shape of synaptic matrix W
-
+        self.w_bound = 1. ## soft weight constraint
+        
         if directory is None:
             self.key, subkey = random.split(self.key)
             lb, ub = wInit
