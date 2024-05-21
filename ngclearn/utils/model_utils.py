@@ -6,22 +6,6 @@ from ngcsimlib.compartment import Get_Compartment_Batch, Set_Compartment_Batch
 import os, sys
 from functools import partial
 
-def clamp(component, compartmentName, value):
-    """
-    Convenience utility routine for clamping a value to a compartment within
-    a particular component.
-
-    Args:
-        component: component to clamp value/signal to
-
-        compartmentName: compartment within component to clamp value/signal to
-
-        value: value/signal to insert/clamp
-    """
-    if hasattr(component, compartmentName) == True:
-        getattr(component, compartmentName).set(value)
-        #assert getattr(component, compartmentName).value == value, "Failed"
-
 def pull_equations(controller):
     """
     Extracts the dynamics string of this controller (model/system).
