@@ -5,7 +5,44 @@ import os, sys, pickle
 from functools import partial
 from sklearn.feature_extraction.image import extract_patches_2d
 
-def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True):
+def generate_patch_set(x_batch_, patch_size=(8,8), max_patches=50, center=True): ## scikit
+    """
+    Generates a set of patches from an array/list of image arrays (via
+    random sampling with replacement). This uses scikit-learn's patch creation
+    function to generate a set of (px x py) patches.
+    Note: this routine also subtracts each patch's mean from itself.
+
+    Args:
+        imgs: the array of image arrays to sample from
+
+        patch_size: a 2-tuple of the form (pH = patch height, pW = patch width)
+
+        max_patches: maximum number of patches to extract/generate from source images
+
+        center: centers each patch by subtracting the patch mean (per-patch)
+
+    Returns:
+        an array (D x (pH * pW)), where each row is a flattened patch sample
+    """
+    x_batch = np.array(x_batch_)
+    px = py = int(np.sqrt(x_batch.shape[1])) # get image shape of the data
+    p_batch = None
+    for s in range(x_batch.shape[0]):
+        xs = x_batch[s,:]
+        xs = xs.reshape(px, py)
+        patches = extract_patches_2d(xs, patch_size, max_patches=max_patches)#, random_state=69)
+        patches = np.reshape(patches, (len(patches), -1)) # flatten each patch in set
+        if s > 0:
+            p_batch = np.concatenate((p_batch,patches),axis=0)
+        else:
+            p_batch = patches
+    if center == True:
+        mu = np.mean(p_batch,axis=1,keepdims=True)
+        p_batch = p_batch - mu
+    return jnp.array(p_batch)
+
+def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True): ## patchify
+    ## this is a patchify-specific function (only use if you have patchify installed...)
     import patchify as ptch
     """
     Generates a set of patches from an array/list of image arrays (via
@@ -41,39 +78,3 @@ def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True)
         mu = np.mean(p_batch,axis=1,keepdims=True)
         p_batch = p_batch - mu
     return p_patch
-
-def generate_patch_set(x_batch_, patch_size=(8,8), max_patches=50, center=True):
-    """
-    Generates a set of patches from an array/list of image arrays (via
-    random sampling with replacement). This uses scikit-learn's patch creation
-    function to generate a set of (px x py) patches.
-    Note: this routine also subtracts each patch's mean from itself.
-
-    Args:
-        imgs: the array of image arrays to sample from
-
-        patch_size: a 2-tuple of the form (pH = patch height, pW = patch width)
-
-        max_patches: maximum number of patches to extract/generate from source images
-
-        center: centers each patch by subtracting the patch mean (per-patch)
-
-    Returns:
-        an array (D x (pH * pW)), where each row is a flattened patch sample
-    """
-    x_batch = np.array(x_batch_)
-    px = py = int(np.sqrt(x_batch.shape[1])) # get image shape of the data
-    p_batch = None
-    for s in range(x_batch.shape[0]):
-        xs = x_batch[s,:]
-        xs = xs.reshape(px, py)
-        patches = extract_patches_2d(xs, patch_size, max_patches=max_patches)#, random_state=69)
-        patches = np.reshape(patches, (len(patches), -1)) # flatten each patch in set
-        if s > 0:
-            p_batch = np.concatenate((p_batch,patches),axis=0)
-        else:
-            p_batch = patches
-    if center == True:
-        mu = np.mean(p_batch,axis=1,keepdims=True)
-        p_batch = p_batch - mu
-    return jnp.array(p_batch)
