@@ -1,5 +1,6 @@
 from ngcsimlib.component import Component
 from ngcsimlib.resolver import resolver
+from ngcsimlib.compartment import Compartment
 
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
@@ -200,7 +201,7 @@ class LatencyCell(Component):
             targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
         return targ_sp_times
 
-    @resolver(pure_advance, output_compartments=['targ_sp_times'])
+    @resolver(pure_calc_spike_times, output_compartments=['targ_sp_times'])
     def calc_spike_times(self, vals):
         targ_sp_times = vals
         self.targ_sp_times.set(targ_sp_times)

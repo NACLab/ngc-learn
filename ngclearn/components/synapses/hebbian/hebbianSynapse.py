@@ -3,9 +3,6 @@
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
-from ngcsimlib.compartment import All_compartments
-from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
 
 from jax import random, numpy as jnp, jit
 from functools import partial
@@ -289,7 +286,7 @@ class HebbianSynapse(Component):
         return lines
 
 if __name__ == '__main__':
-    from ngcsimlib.compartment import All_compartments
+    from ngcsimlib.compartment import Get_Compartment_Batch, Set_Compartment_Batch
     from ngcsimlib.context import Context
     from ngcsimlib.commands import Command
     from ngclearn.components.neurons.graded.rateCell import RateCell
@@ -297,10 +294,8 @@ if __name__ == '__main__':
 
     def wrapper(compiled_fn):
         def _wrapped(*args):
-            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            for key, value in vals.items():
-                All_compartments[str(key)].set(value)
+            vals = compiled_fn(*args, compartment_values=Get_Compartment_Batch())
+            Set_Compartment_Batch(vals)
             return vals
         return _wrapped
 

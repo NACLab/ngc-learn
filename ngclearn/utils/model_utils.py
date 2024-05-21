@@ -1,5 +1,8 @@
 import jax
 from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
+from jax.lax import scan as _scan
+from ngcsimlib.context import Context
+from ngcsimlib.compartment import Get_Compartment_Batch, Set_Compartment_Batch
 import os, sys
 from functools import partial
 
@@ -664,3 +667,14 @@ def drop_out(dkey, input, rate=0.0):
     mask = mask * (1.0 / (1.0 - rate)) ## apply inverted dropout scheme
     output = input * mask
     return output, mask
+
+
+def scanner(fn):
+    def _scanned(_xs):
+        vals, stacked = _scan(fn, init=Get_Compartment_Batch(), xs=_xs)
+        Set_Compartment_Batch(vals)
+        return stacked
+
+    if Context.get_current_context() is not None:
+        Context.get_current_context().__setattr__(fn.__name__, _scanned)
+    return _scanned
