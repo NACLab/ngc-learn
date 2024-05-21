@@ -219,7 +219,7 @@ class LatencyCell(Component):
         spikes, spk_mask = extract_spike(targ_sp_times, t, mask) ## get spikes at t
         return spikes, tols, spk_mask, targ_sp_times, key
 
-    @resolver(_advance, output_compartments=['outputs', 'tols', 'mask',
+    @resolver(_advance_state, output_compartments=['outputs', 'tols', 'mask',
         'targ_sp_times', 'key'])
     def advance_state(self, vals):
         outputs, tols, mask, targ_sp_times, key = vals

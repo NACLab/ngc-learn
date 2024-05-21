@@ -88,7 +88,7 @@ class PoissonCell(Component):
         tols = update_times(t, outputs, tols)
         return outputs, tols, key
 
-    @resolver(_advance)
+    @resolver(_advance_state)
     def advance_state(self, outputs, tols, key):
         self.outputs.set(outputs)
         self.tols.set(tols)

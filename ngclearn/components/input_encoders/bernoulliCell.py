@@ -78,7 +78,7 @@ class BernoulliCell(Component):
         # print(f"[BernoulliCell.pure_advance] inputs: {inputs.shape}, outputs: {outputs.shape}")
         return outputs, timeOfLastSpike, key
 
-    @resolver(_advance)
+    @resolver(_advance_state)
     def advance_state(self, outputs, tols, key):
         self.outputs.set(outputs)
         self.tols.set(tols)
