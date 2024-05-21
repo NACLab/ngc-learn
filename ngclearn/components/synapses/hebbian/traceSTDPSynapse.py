@@ -171,6 +171,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.preTrace = Compartment(None)
         self.postTrace = Compartment(None)
         self.weights = Compartment(weights)
+        self.normEvMsk = Compartment(0.) # default is 0 (no constraint)
 
         ##Reset to initialize core compartments
         #self.reset()
@@ -190,15 +191,15 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @staticmethod
     def pure_evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus, w_norm, norm_T,
-                    preSpike, postSpike, preTrace, postTrace, weights
+                    preSpike, postSpike, preTrace, postTrace, weights, normEvMsk
                     ):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
                              Aplus=Aplus, Aminus=Aminus)
         ## decide if normalization is to be applied
         if norm_T > 0 and w_norm != None:
-            normEventMask = jnp.asarray([[(t % (norm_T-1) == 0)]]).astype(jnp.float32)
-            #normEventMask = jnp.asarray([[(t % (norm_T-1) == 0) and t > 0.]]).astype(jnp.float32)
+            #normEventMask = jnp.asarray([[(t % (norm_T-1.) == 0.) and t > 0.]]).astype(jnp.float32)
+            normEventMask = normEvMsk
             _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
             weights = _weights * normEventMask + weights * (1. - normEventMask)
         # if norm_T > 0:
@@ -219,18 +220,20 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         postSpike = None
         preTrace = None
         postTrace = None
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace
+        normEvMsk = 0.
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, normEvMsk
 
     @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
-        'postSpike', 'preTrace', 'postTrace'])
+        'postSpike', 'preTrace', 'postTrace', 'normEvMsk'])
     def reset(self, vals):
-        inputs, outputs, preSpike, postSpike, preTrace, postTrace = vals
+        inputs, outputs, preSpike, postSpike, preTrace, postTrace, normEvMsk = vals
         inputs.set(inputs)
         outputs.set(outputs)
         preSpike.set(preSpike)
         postSpike.set(postSpike)
         preTrace.set(preTrace)
         postTrace.set(postTrace)
+        normEvMsk.set(normEvMsk)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
