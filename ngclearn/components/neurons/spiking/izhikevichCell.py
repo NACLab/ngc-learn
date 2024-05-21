@@ -241,7 +241,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         tols = update_times(t, s, tols)
         return j, v, w, s, tols, key
 
-    @resolver(_advance, output_compartments=['j', 'v', 'w', 's', 'tols', 'key'])
+    @resolver(_advance_state, output_compartments=['j', 'v', 'w', 's', 'tols', 'key'])
     def advance_state(self, vals):
         j, v, w, s, tols, key = vals
         self.j.set(j)

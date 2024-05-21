@@ -204,7 +204,7 @@ class FitzhughNagumoCell(Component):
         tols = update_times(t, s, tols)
         return j, v, w, s, tols, key
 
-    @resolver(_advance)
+    @resolver(_advance_state)
     def advance_state(self, j, v, w, s, tols, key):
         self.j.set(j)
         self.w.set(w)
