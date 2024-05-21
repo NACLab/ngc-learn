@@ -6,6 +6,7 @@ from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
 from .neurons.spiking.sLIFCell import SLIFCell
 from .neurons.spiking.LIFCell import LIFCell
 from .neurons.spiking.quadLIFCell import QuadLIFCell
+from .neurons.spiking.adExCell import AdExCell
 from .neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .neurons.spiking.izhikevichCell import IzhikevichCell
 ## point to transformer/operater component types

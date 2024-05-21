@@ -6,5 +6,6 @@ from .graded.laplacianErrorCell import LaplacianErrorCell
 from .spiking.sLIFCell import SLIFCell
 from .spiking.LIFCell import LIFCell
 from .spiking.quadLIFCell import QuadLIFCell
+from .spiking.adExCell import AdExCell
 from .spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .spiking.izhikevichCell import IzhikevichCell

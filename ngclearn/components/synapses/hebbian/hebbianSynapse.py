@@ -189,7 +189,6 @@ class HebbianSynapse(Component):
         self.postVals = jnp.zeros((self.batch_size, shape[1]))
         self.inputs = Compartment(self.preVals)
         self.outputs = Compartment(self.postVals)
-        self.trigger = Compartment(None) # NOTE: VN:This is never used
         self.pre = Compartment(self.preVals)
         self.post = Compartment(self.postVals)
         self.dW = Compartment(jnp.zeros(shape))
@@ -249,18 +248,16 @@ class HebbianSynapse(Component):
         return (
             preVals, # inputs
             postVals, # outputs
-            None, # trigger
             preVals, # pre
             postVals, # post
             jnp.zeros(shape), # dW
             jnp.zeros(shape[1]), # db
         )
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'trigger', 'pre', 'post', 'dW', 'db'])
-    def reset(self, inputs, outputs, trigger, pre, post, dW, db):
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'pre', 'post', 'dW', 'db'])
+    def reset(self, inputs, outputs, pre, post, dW, db):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
-        self.trigger.set(trigger)
         self.pre.set(pre)
         self.post.set(post)
         self.dW.set(dW)
@@ -371,16 +368,16 @@ if __name__ == '__main__':
         wrapped_advance_cmd(t, dt)
         print(f"--- [Step {t}] After Advance ---")
         print(f"[a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
         print(f"[a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
 
         wrapped_evolve_cmd(t, dt)
         print(f"--- [Step {t}] After Evolve ---")
-        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
 
     wrapped_reset_cmd()
     print(f"--- [Step {t}] After Reset ---")
-    print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, trigger: {Wab.trigger.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+    print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
 
 
     Wab.save(".")
