@@ -99,7 +99,7 @@ class VarTrace(Component): ## low-pass filter
         return inputs, outputs, trace
 
     @resolver(_advance_state)
-    def _advance_state(self, inputs, outputs, traceVal):
+    def advance_state(self, inputs, outputs, traceVal):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.trace.set(traceVal)
