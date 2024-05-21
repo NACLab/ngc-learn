@@ -200,7 +200,7 @@ class LatencyCell(Component):
         self.targ_sp_times.set(targ_sp_times)
 
     @staticmethod
-    def _advance(t, dt, key, inputs, mask, targ_sp_times, tols):
+    def _advance_state(t, dt, key, inputs, mask, targ_sp_times, tols):
         key, *subkeys = random.split(key, 2)
         data = inputs ## get sensory pattern data / features
         # if targ_sp_times == None: ## calc spike times if not called yet
@@ -221,7 +221,7 @@ class LatencyCell(Component):
 
     @resolver(_advance, output_compartments=['outputs', 'tols', 'mask',
         'targ_sp_times', 'key'])
-    def advance(self, vals):
+    def advance_state(self, vals):
         outputs, tols, mask, targ_sp_times, key = vals
         self.outputs.set(outputs)
         self.tols.set(tols)

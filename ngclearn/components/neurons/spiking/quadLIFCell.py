@@ -212,7 +212,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         self.a0 = critical_V
 
     @staticmethod
-    def _advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
+    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
                  theta_plus, one_spike, v_c, a0, key, j, v, s, rfr, thr,
                  thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
@@ -232,7 +232,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         return j, v, s, rfr, thr, thr_theta, tols, key
 
     @resolver(_advance])
-    def advance(self, j, v, s, rfr, thr, thr_theta, tols, key):
+    def advance_state(self, j, v, s, rfr, thr, thr_theta, tols, key):
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)

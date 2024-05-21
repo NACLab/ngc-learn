@@ -232,7 +232,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         #self.reset()
 
     @staticmethod
-    def _advance(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
+    def _advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
                      intgFlag, key, j, v, w, s, tols):
         key, *subkeys = random.split(key, 2)
         v, w, s = run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
@@ -242,7 +242,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         return j, v, w, s, tols, key
 
     @resolver(_advance, output_compartments=['j', 'v', 'w', 's', 'tols', 'key'])
-    def advance(self, vals):
+    def advance_state(self, vals):
         j, v, w, s, tols, key = vals
         self.j.set(j)
         self.w.set(w)

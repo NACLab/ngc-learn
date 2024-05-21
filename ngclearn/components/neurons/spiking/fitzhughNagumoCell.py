@@ -197,7 +197,7 @@ class FitzhughNagumoCell(Component):
         #self.reset()
 
     @staticmethod
-    def _advance(t, dt, tau_m, tau_w, v_thr, alpha, beta, gamma, intgFlag,
+    def _advance_state(t, dt, tau_m, tau_w, v_thr, alpha, beta, gamma, intgFlag,
                      key, j, v, w, s, tols):
         key, *subkeys = random.split(key, 2)
         v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, alpha, beta, gamma, intgFlag)
@@ -205,7 +205,7 @@ class FitzhughNagumoCell(Component):
         return j, v, w, s, tols, key
 
     @resolver(_advance)
-    def advance(self, j, v, w, s, tols, key):
+    def advance_state(self, j, v, w, s, tols, key):
         self.j.set(j)
         self.w.set(w)
         self.v.set(v)

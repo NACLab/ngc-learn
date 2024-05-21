@@ -222,7 +222,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         #self.reset()
 
     @staticmethod
-    def _advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr, tau_theta,
+    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr, tau_theta,
                  theta_plus, one_spike, key, j, v, s, rfr, thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
@@ -240,7 +240,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         return v, s, rfr, thr_theta, tols, key
 
     @resolver(_advance)
-    def advance(self, v, s, rfr, thr_theta, tols, key):
+    def advance_state(self, v, s, rfr, thr_theta, tols, key):
         #self.j.set(j)
         self.v.set(v)
         self.s.set(s)

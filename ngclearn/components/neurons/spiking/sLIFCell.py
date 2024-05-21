@@ -275,7 +275,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.surrogate = Compartment(restVals + 1.) ## surrogate signal
 
     @staticmethod
-    def _advance(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx,
+    def _advance_state(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx,
                  refract_T, thrGain, thrLeak, rho_b, sticky_spikes, v_min,
                  j, s, v, thr, rfr, tols):
         ## run one step of Euler integration over neuronal dynamics
@@ -293,7 +293,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         return j, s, tols, v, thr, rfr, surrogate
 
     @resolver(_advance)
-    def advance(self, j, s, tols, v, thr, rfr, surrogate):
+    def advance_state(self, j, s, tols, v, thr, rfr, surrogate):
         self.j.set(j)
         self.s.set(s)
         self.tols.set(tols)

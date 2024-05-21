@@ -180,7 +180,7 @@ class AdExCell(Component):
         #self.reset()
 
     @staticmethod
-    def _advance(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,
+    def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,
                      v_rest, v_reset, intgFlag, key, j, v, w, s, tols):
         key, *subkeys = random.split(key, 2)
         v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
@@ -189,7 +189,7 @@ class AdExCell(Component):
         return j, v, w, s, tols, key
 
     @resolver(_advance)
-    def advance(self, j, v, w, s, tols, key):
+    def advance_state(self, j, v, w, s, tols, key):
         self.j.set(j)
         self.w.set(w)
         self.v.set(v)

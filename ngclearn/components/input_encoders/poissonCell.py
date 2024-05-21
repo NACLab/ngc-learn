@@ -82,14 +82,14 @@ class PoissonCell(Component):
         #self.reset()
 
     @staticmethod
-    def _advance(t, dt, max_freq, key, inputs, tols):
+    def _advance_state(t, dt, max_freq, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
         outputs = sample_poisson(subkeys[0], data=inputs, dt=dt, fmax=max_freq)
         tols = update_times(t, outputs, tols)
         return outputs, tols, key
 
     @resolver(_advance)
-    def advance(self, outputs, tols, key):
+    def advance_state(self, outputs, tols, key):
         self.outputs.set(outputs)
         self.tols.set(tols)
         self.key.set(key)
