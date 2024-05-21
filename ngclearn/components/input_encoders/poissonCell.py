@@ -91,7 +91,7 @@ class PoissonCell(Component):
     def pure_advance(t, dt, max_freq, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
         outputs = sample_poisson(subkeys[0], data=inputs, dt=dt, fmax=max_freq)
-        tol1s = update_times(t, outputs, tols)
+        tols = update_times(t, outputs, tols)
         return outputs, tols, key
 
     @resolver(pure_advance, output_compartments=['outputs', 'tols', 'key'])

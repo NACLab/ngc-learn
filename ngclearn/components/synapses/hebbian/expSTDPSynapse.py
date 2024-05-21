@@ -142,8 +142,6 @@ class ExpSTDPSynapse(Component):
         self.Aplus = Aplus ## LTP strength
         self.Aminus = Aminus ## LTD strength
         self.shape = shape  # shape of synaptic matrix W
-        self.w_bound = 1. ## soft weight constraint
-        self.w_norm = None ## normalization constant for synaptic matrix after update
 
         if directory is None:
             self.key, subkey = random.split(self.key)
@@ -154,17 +152,15 @@ class ExpSTDPSynapse(Component):
 
         self.batch_size = 1
         ## Compartment setup
-        #restVals = jnp.zeros((1, shape[1]))
-        self.input = Compartment(None)
-        self.output = Compartment(None)
-        self.preAct = Compartment(None)
-        self.postAct = Compartment(None)
-        self.preTrace = Compartment(None)
-        self.postTrace = Compartment(None)
+        preVals = jnp.zeros((self.batch_size, shape[0]))
+        postVals = jnp.zeros((self.batch_size, shape[1]))
+        self.inputs = Compartment(preVals)
+        self.outputs = Compartment(postVals)
+        self.preSpike = Compartment(preVals)
+        self.postSpike = Compartment(postVals)
+        self.preTrace = Compartment(preVals)
+        self.postTrace = Compartment(postVals)
         self.weights = Compartment(weights)
-
-        ##Reset to initialize core compartments
-        #self.reset()
 
     @staticmethod
     def pure_advance(t, dt, input, weights):
@@ -177,18 +173,13 @@ class ExpSTDPSynapse(Component):
         self.output.set(output)
 
     @staticmethod
-    def pure_evolve(t, dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus, w_norm, norm_T,
-                    preAct, postAct, preTrace, postTrace, weights
+    def pure_evolve(t, dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
+                    preSpike, postSpike, preTrace, postTrace, weights
                     ):
-        weights, dW = evolve(dt, preAct, preTrace, postAct, postTrace, weights,
+        weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target,
                              exp_beta=exp_beta, Aplus=Aplus, Aminus=Aminus)
         ## decide if normalization is to be applied
-        if norm_T > 0 and w_norm != None:
-            normEventMask = jnp.asarray([[(t % (norm_T-1) == 0)]]).astype(jnp.float32)
-            #normEventMask = jnp.asarray([[(t % (norm_T-1) == 0) and t > 0.]]).astype(jnp.float32)
-            _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
-            weights = _weights * normEventMask + weights * (1. - normEventMask)
         # if norm_T > 0:
         #     if t % (norm_T-1) == 0: #t % self.norm_t == 0:
         #         weights = normalize_matrix(weights, w_norm, order=1, axis=0)
@@ -200,23 +191,24 @@ class ExpSTDPSynapse(Component):
 
     @staticmethod
     def pure_reset(batch_size, shape):
-        restVals = jnp.zeros((batch_size, shape[1]))
-        input = None
-        output = None
-        preAct = None
-        postAct = None
-        preTrace = None
-        postTrace = None
-        return input, output, preAct, postAct, preTrace, postTrace
+        preVals = jnp.zeros((batch_size, shape[0]))
+        postVals = jnp.zeros((batch_size, shape[1]))
+        inputs = preVals
+        outputs = postVals
+        preSpike = preVals
+        postSpike = postVals
+        preTrace = preVals
+        postTrace = postVals
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace
 
-    @resolver(pure_reset, output_compartments=['input', 'output', 'preAct',
-        'postAct', 'preTrace', 'postTrace'])
+    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
+        'postSpike', 'preTrace', 'postTrace'])
     def reset(self, vals):
-        input, output, preAct, postAct, preTrace, postTrace = vals
-        input.set(input)
-        output.set(output)
-        preAct.set(preAct)
-        postAct.set(postAct)
+        inputs, outputs, preSpike, postSpike, preTrace, postTrace = vals
+        inputs.set(inputs)
+        outputs.set(outputs)
+        preSpike.set(preSpike)
+        postSpike.set(postSpike)
         preTrace.set(preTrace)
         postTrace.set(postTrace)
 
