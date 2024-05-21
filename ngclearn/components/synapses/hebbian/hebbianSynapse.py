@@ -178,19 +178,23 @@ class HebbianSynapse(Component):
         self.is_nonnegative = is_nonnegative
         self.signVal = signVal
 
+        self.batch_size = 1
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
         key = random.PRNGKey(time.time_ns()) if key is None else key
 
         # compartments (state of the cell, parameters, will be updated through stateless calls)
-        self.inputs = Compartment(None)
-        self.outputs = Compartment(None)
+        self.preVals = jnp.zeros((self.batch_size, shape[0]))
+        self.postVals = jnp.zeros((self.batch_size, shape[1]))
+        self.inputs = Compartment(self.preVals)
+        self.outputs = Compartment(self.postVals)
         self.trigger = Compartment(None) # NOTE: VN:This is never used
-        self.pre = Compartment(None)
-        self.post = Compartment(None)
-        self.dW = Compartment(0.0)
-        self.db = Compartment(0.0)
+        self.pre = Compartment(self.preVals)
+        self.post = Compartment(self.postVals)
+        self.dW = Compartment(jnp.zeros(shape))
+        self.db = Compartment(jnp.zeros(shape[1]))
+
         key, subkey = random.split(key)
         self.weights = Compartment(initialize_params(subkey, wInit, shape))
         key, subkey = random.split(key)
@@ -240,14 +244,16 @@ class HebbianSynapse(Component):
 
     @staticmethod
     def pure_reset(batch_size, shape, wInit, bInit):
+        preVals = jnp.zeros((batch_size, shape[0]))
+        postVals = jnp.zeros((batch_size, shape[1]))
         return (
-            None, # inputs
-            None, # outputs
+            preVals, # inputs
+            postVals, # outputs
             None, # trigger
-            None, # pre
-            None, # post
-            None, # dW
-            None, # db
+            preVals, # pre
+            postVals, # post
+            jnp.zeros(shape), # dW
+            jnp.zeros(shape[1]), # db
         )
 
     @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'trigger', 'pre', 'post', 'dW', 'db'])

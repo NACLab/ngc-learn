@@ -159,13 +159,14 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
         self.batch_size = 1
         ## Compartment setup
-        #restVals = jnp.zeros((1, shape[1]))
-        self.inputs = Compartment(None)
-        self.outputs = Compartment(None)
-        self.preSpike = Compartment(None)
-        self.postSpike = Compartment(None)
-        self.preTrace = Compartment(None)
-        self.postTrace = Compartment(None)
+        preVals = jnp.zeros((1, shape[0]))
+        postVals = jnp.zeros((1, shape[1]))
+        self.inputs = Compartment(preVals)
+        self.outputs = Compartment(postVals)
+        self.preSpike = Compartment(preVals)
+        self.postSpike = Compartment(postVals)
+        self.preTrace = Compartment(preVals)
+        self.postTrace = Compartment(postVals)
         self.weights = Compartment(weights)
         #self.normEvMsk = Compartment(0.) # default is 0 (no constraint)
 
@@ -208,13 +209,14 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     @staticmethod
     def pure_reset(batch_size, shape):
-        #restVals = jnp.zeros((batch_size, shape[1]))
-        inputs = None
-        outputs = None
-        preSpike = None
-        postSpike = None
-        preTrace = None
-        postTrace = None
+        preVals = jnp.zeros((batch_size, shape[0]))
+        postVals = jnp.zeros((batch_size, shape[1]))
+        inputs = preVals
+        outputs = postVals
+        preSpike = preVals
+        postSpike = postVals
+        preTrace = preVals
+        postTrace = postVals
         return inputs, outputs, preSpike, postSpike, preTrace, postTrace
 
     @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
