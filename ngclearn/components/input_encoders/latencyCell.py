@@ -183,24 +183,32 @@ class LatencyCell(Component):
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, tau, threshold, first_spike_time, num_steps,
-                     linearize, normalize, key, inputs, mask, targ_sp_times,
-                     tols):
-        key, *subkeys = random.split(key, 2)
-        data = inputs ## get sensory pattern data / features
-
-        calcEvent = (t == 0.) * 1.
+    def pure_calc_spike_times(t, dt, linearize, tau, threshold, first_spike_time,
+        num_steps, normalize, inputs):
+        ## would call this function before processing a spike train (at start)
+        data = inputs
         if linearize == True: ## linearize spike time calculation
             stimes = calc_spike_times_linear(data, tau, threshold,
                                              first_spike_time,
                                              num_steps, normalize)
-            targ_sp_times = stimes * calcEvent + targ_sp_times * (1. - calcEvent)
+            targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
         else: ## standard nonlinear spike time calculation
             stimes = calc_spike_times_nonlinear(data, tau, threshold,
                                                 first_spike_time,
                                                 num_steps=num_steps,
                                                 normalize=normalize)
-            targ_sp_times = stimes * calcEvent + targ_sp_times * (1. - calcEvent)
+            targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
+        return targ_sp_times
+
+    @resolver(pure_advance, output_compartments=['targ_sp_times'])
+    def calc_spike_times(self, vals):
+        targ_sp_times = vals
+        self.targ_sp_times.set(targ_sp_times)
+
+    @staticmethod
+    def pure_advance(t, dt, key, inputs, mask, targ_sp_times, tols):
+        key, *subkeys = random.split(key, 2)
+        data = inputs ## get sensory pattern data / features
         # if targ_sp_times == None: ## calc spike times if not called yet
         #     if linearize == True: ## linearize spike time calculation
         #         stimes = calc_spike_times_linear(data, tau, threshold,
@@ -214,7 +222,7 @@ class LatencyCell(Component):
         #                                             normalize=normalize)
         #         targ_sp_times = stimes
         #spk_mask = mask
-        spikes, spk_mask = extract_spike(target_spike_times, t, mask) ## get spikes at t
+        spikes, spk_mask = extract_spike(targ_sp_times, t, mask) ## get spikes at t
         return spikes, tols, spk_mask, targ_sp_times, key
 
     @resolver(pure_advance, output_compartments=['outputs', 'tols', 'mask',
