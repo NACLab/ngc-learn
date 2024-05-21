@@ -82,11 +82,10 @@ class VarTrace(Component): ## low-pass filter
         self.inputs = Compartment(None) # input compartment
         self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
         self.trace = Compartment(jnp.zeros((self.batch_size, self.n_units)))
-
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, decay_type, tau_tr, a_delta, inputs, trace):
+    def _advance_state(t, dt, decay_type, tau_tr, a_delta, inputs, trace):
         ## compute the decay factor
         decayFactor = 0. ## <-- pulse filter decay (default)
         if "exp" in decay_type:
@@ -99,25 +98,21 @@ class VarTrace(Component): ## low-pass filter
         inputs = None
         return inputs, outputs, trace
 
-    @resolver(pure_advance, output_compartments=['inputs', 'outputs', 'trace'])
-    def advance(self, vals):
-        inputs, outputs, traceVal = vals
+    @resolver(_advance_state)
+    def _advance_state(self, inputs, outputs, traceVal):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.trace.set(traceVal)
 
     @staticmethod
-    def pure_reset(batch_size, n_units):
+    def _reset(batch_size, n_units):
         return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'trace'])
+    @resolver(_reset)
     def reset(self, inputs, outputs, traceVal):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.trace.set(traceVal)
-
-    def save(self, **kwargs):
-        pass
 
 ## testing
 if __name__ == '__main__':

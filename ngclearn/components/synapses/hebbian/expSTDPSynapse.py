@@ -128,13 +128,7 @@ class ExpSTDPSynapse(Component):
                  preTrace_target, wInit=(0.025, 0.8), key=None, useVerboseDict=False,
                  directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
-
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
-        ##parms
+        ## Exp-STDP meta-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
         self.eta = eta ## global learning rate governing plasticity
         self.exp_beta = exp_beta ## if not None, will trigger exp-depend STPD rule
@@ -143,13 +137,17 @@ class ExpSTDPSynapse(Component):
         self.Aminus = Aminus ## LTD strength
         self.shape = shape  # shape of synaptic matrix W
         self.w_bound = 1. ## soft weight constraint
-        
+
         if directory is None:
-            self.key, subkey = random.split(self.key)
-            lb, ub = wInit
-            self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
+            #self.key, subkey = random.split(self.key)
+            tmp_key, subkey = random.split(tmp_key)
+            #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
+            weights = initialize_params(subkey, wInit, shape)
         else:
-            self.load(directory)
+            ## TODO: check if this works??
+            #self.load(directory)
+            weights = None
+            print(">> ERROR: loading parameters not implemented!")
 
         self.batch_size = 1
         ## Compartment setup
@@ -164,19 +162,18 @@ class ExpSTDPSynapse(Component):
         self.weights = Compartment(weights)
 
     @staticmethod
-    def pure_advance(t, dt, input, weights):
+    def _advance_state(t, dt, input, weights):
         ## run signals across synapses
-        output = compute_layer(input, weights)
-        return output
+        outputs = compute_layer(input, weights)
+        return outputs
 
-    @resolver(pure_advance, output_compartments=['output'])
-    def advance(self, output):
-        self.output.set(output)
+    @resolver(_advance_state)
+    def advance_state(self, outputs):
+        self.outputs.set(outputs)
 
     @staticmethod
-    def pure_evolve(t, dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
-                    preSpike, postSpike, preTrace, postTrace, weights
-                    ):
+    def _evolve(t, dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
+                    preSpike, postSpike, preTrace, postTrace, weights):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target,
                              exp_beta=exp_beta, Aplus=Aplus, Aminus=Aminus)
@@ -186,12 +183,12 @@ class ExpSTDPSynapse(Component):
         #         weights = normalize_matrix(weights, w_norm, order=1, axis=0)
         return weights
 
-    @resolver(pure_evolve, output_compartments=['weights'])
+    @resolver(_evolve)
     def evolve(self, weights):
         self.weights.set(weights)
 
     @staticmethod
-    def pure_reset(batch_size, shape):
+    def _reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
@@ -202,10 +199,8 @@ class ExpSTDPSynapse(Component):
         postTrace = postVals
         return inputs, outputs, preSpike, postSpike, preTrace, postTrace
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
-        'postSpike', 'preTrace', 'postTrace'])
-    def reset(self, vals):
-        inputs, outputs, preSpike, postSpike, preTrace, postTrace = vals
+    @resolver(_reset)
+    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace):
         inputs.set(inputs)
         outputs.set(outputs)
         preSpike.set(preSpike)

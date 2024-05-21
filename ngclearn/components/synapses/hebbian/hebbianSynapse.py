@@ -204,17 +204,17 @@ class HebbianSynapse(Component):
         self.batch_size = 1
 
     @staticmethod
-    def pure_advance(t, dt, Rscale, inputs, weights, biases):
-        # print(f"[HebbianSynapse.pure_advance] inputs: {inputs.shape}, weights: {weights.shape}, biases: {biases.shape}")
+    def _advance_state(t, dt, Rscale, inputs, weights, biases):
         outputs = compute_layer(inputs, weights, biases, Rscale)
         return outputs
 
-    @resolver(pure_advance, output_compartments=["outputs"])
-    def advance(self, outputs):
+    @resolver(_advance_state)
+    def advance_state(self, outputs):
         self.outputs.set(outputs)
 
     @staticmethod
-    def pure_evolve(t, dt, opt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght, post_wght, bInit, pre, post, weights, biases, dW, db, opt_params):
+    def _evolve(t, dt, opt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght,
+                post_wght, bInit, pre, post, weights, biases, dW, db, opt_params):
         dW, db = calc_update(pre, post,
                              weights, w_bounds, is_nonnegative=is_nonnegative,
                              signVal=signVal, w_decay=w_decay,
@@ -231,15 +231,14 @@ class HebbianSynapse(Component):
                                            is_nonnegative=is_nonnegative)
         return opt_params, weights, biases
 
-    @resolver(pure_evolve, output_compartments=['opt_params', 'weights', 'biases'])
+    @resolver(_evolve)
     def evolve(self, opt_params, weights, biases):
         self.opt_params.set(opt_params)
         self.weights.set(weights)
         self.biases.set(biases)
 
-
     @staticmethod
-    def pure_reset(batch_size, shape, wInit, bInit):
+    def _reset(batch_size, shape, wInit, bInit):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         return (
@@ -251,7 +250,7 @@ class HebbianSynapse(Component):
             jnp.zeros(shape[1]), # db
         )
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'pre', 'post', 'dW', 'db'])
+    @resolver(_reset)
     def reset(self, inputs, outputs, pre, post, dW, db):
         self.inputs.set(inputs)
         self.outputs.set(outputs)

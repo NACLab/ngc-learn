@@ -72,22 +72,8 @@ class ExpKernel(Component): ## Exponential spike kernel
         self.epsp = Compartment(jnp.zeros((self.batch_size, self.n_units)))
         #self.reset()
 
-    def advance_state(self, t, dt, **kwargs):
-        #self.t = self.t + self.dt
-        self.gather()
-        s = self.inputCompartment #self.comp["in"] ## get incoming spike readout
-        tf = self.tf #self.comp["tf"] ## get current window/volume
-
-        _tf, epsp = apply_kernel(tf, s, self.t, self.tau_w, self.win_len,
-                                 krn_start=0, krn_end=self.win_len-1) #0:win_len-1)
-        self.tf = _tf ## get 2D batch matrix
-        self.epsp = epsp ## update spike time window
-        # self.comp["epsp"] = epsp ## get 2D batch matrix
-        # self.comp["tf"] = _tf ## update spike time window
-        #self.inputCompartment = None
-
     @staticmethod
-    def pure_advance(t, dt, decay_type, tau_w, win_len, inputs, epsp, tf):
+    def _advance_state(t, dt, decay_type, tau_w, win_len, inputs, epsp, tf):
         #self.t = self.t + self.dt
         #self.gather()
         ## get incoming spike readout and current window/volume
@@ -103,23 +89,19 @@ class ExpKernel(Component): ## Exponential spike kernel
         #self.inputCompartment = None
         return epsp, tf
 
-    @resolver(pure_advance, output_compartments=['epsp', 'tf'])
-    def advance(self, vals):
-        epsp, tf = vals
+    @resolver(_advance_state)
+    def advance_state(self, epsp, tf):
         self.epsp.set(epsp)
         self.tf.set(tf)
 
     @staticmethod
-    def pure_reset(batch_size, n_units, win_len):
+    def _reset(batch_size, n_units, win_len):
         #self.tf = jnp.zeros([self.win_len, batch_size, self.n_units])
         tf = jnp.zeros([win_len, batch_size, n_units])
         return None, jnp.zeros((batch_size, n_units)), tf
 
-    @resolver(pure_reset, output_compartments=['inputs', 'epsp', 'tf'])
-    def reset(self, inputs, outputs, traceVal):
+    @resolver(_reset)
+    def reset(self, inputs, outputs, tf):
         self.inputs.set(inputs)
         self.epsp.set(epsp)
         self.tf.set(tf)
-
-    def save(self, **kwargs):
-        pass

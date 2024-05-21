@@ -168,47 +168,38 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
         self.weights = Compartment(weights)
-        #self.normEvMsk = Compartment(0.) # default is 0 (no constraint)
-
-        ##Reset to initialize core compartments
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, inputs, weights):
+    def _advance_state(t, dt, inputs, weights):
         ## run signals across synapses
-        #print("in: ",inputs.shape)
-        #import sys
-        #sys.exit(0)
         outputs = compute_layer(inputs, weights)
         return outputs
 
-    @resolver(pure_advance, output_compartments=['outputs'])
-    def advance(self, outputs):
+    @resolver(_advance_state)
+    def advance_state(self, outputs):
         self.outputs.set(outputs)
 
     @staticmethod
-    def pure_evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus,
-                    preSpike, postSpike, preTrace, postTrace, weights
-                    ):
+    def _evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus,
+                preSpike, postSpike, preTrace, postTrace, weights):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
                              Aplus=Aplus, Aminus=Aminus)
-
         ## decide if normalization is to be applied
         #if norm_T > 0 and w_norm != None:
         #    #normEventMask = jnp.asarray([[(t % (norm_T-1.) == 0.) and t > 0.]]).astype(jnp.float32)
         #    normEventMask = normEvMsk
         #    _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
         #    weights = _weights * normEventMask + weights * (1. - normEventMask)
-
         return weights
 
-    @resolver(pure_evolve, output_compartments=['weights'])
+    @resolver(_evolve, output_compartments=['weights'])
     def evolve(self, weights):
         self.weights.set(weights)
 
     @staticmethod
-    def pure_reset(batch_size, shape):
+    def _reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
@@ -219,10 +210,8 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         postTrace = postVals
         return inputs, outputs, preSpike, postSpike, preTrace, postTrace
 
-    @resolver(pure_reset, output_compartments=['inputs', 'outputs', 'preSpike',
-        'postSpike', 'preTrace', 'postTrace'])
-    def reset(self, vals):
-        inputs, outputs, preSpike, postSpike, preTrace, postTrace = vals
+    @resolver(_reset)
+    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace):
         inputs.set(inputs)
         outputs.set(outputs)
         preSpike.set(preSpike)
