@@ -219,13 +219,11 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.thr_theta = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
-
         #self.reset()
 
     @staticmethod
-    def pure_advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr, tau_theta,
-                     theta_plus, one_spike, key, j, v, s, rfr, thr_theta,
-                     tols):
+    def _advance(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr, tau_theta,
+                 theta_plus, one_spike, key, j, v, s, rfr, thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
             key, *subkeys = random.split(key, 2)
@@ -241,10 +239,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         tols = update_times(t, s, tols)
         return v, s, rfr, thr_theta, tols, key
 
-    @resolver(pure_advance, output_compartments=['v', 's', 'rfr', 'thr_theta', 
-        'tols', 'key'])
-    def advance(self, vals):
-        v, s, rfr, thr_theta, tols, key = vals
+    @resolver(_advance)
+    def advance(self, v, s, rfr, thr_theta, tols, key):
         #self.j.set(j)
         self.v.set(v)
         self.s.set(s)
@@ -254,7 +250,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.key.set(key)
 
     @staticmethod
-    def pure_reset(batch_size, n_units, v_rest, refract_T):
+    def _reset(batch_size, n_units, v_rest, refract_T):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals #+ 0
         v = restVals + v_rest
@@ -264,9 +260,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         tols = restVals #+ 0
         return j, v, s, rfr, tols
 
-    @resolver(pure_reset, output_compartments=['j', 'v', 's', 'rfr', 'tols'])
-    def reset(self, vals):
-        j, v, s, rfr, tols = vals
+    @resolver(_reset)
+    def reset(self, j, v, s, rfr, tols):
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)
@@ -282,9 +277,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.thr_theta.set( data['threshold_theta'] )
-
-    # def verify_connections(self):
-    #     self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
 
 # Testing
 if __name__ == '__main__':
