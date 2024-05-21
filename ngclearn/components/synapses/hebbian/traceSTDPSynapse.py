@@ -194,7 +194,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         #    weights = _weights * normEventMask + weights * (1. - normEventMask)
         return weights
 
-    @resolver(_evolve, output_compartments=['weights'])
+    @resolver(_evolve)
     def evolve(self, weights):
         self.weights.set(weights)
 
