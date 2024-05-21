@@ -292,7 +292,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         tols = update_times(t, s, tols)
         return j, s, tols, v, thr, rfr, surrogate
 
-    @resolver(_advance)
+    @resolver(_advance_state)
     def advance_state(self, j, s, tols, v, thr, rfr, surrogate):
         self.j.set(j)
         self.s.set(s)
