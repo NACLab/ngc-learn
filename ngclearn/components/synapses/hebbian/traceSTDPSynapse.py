@@ -124,7 +124,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     # Define Functions
     def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
-                 preTrace_target=0., wInit=("uniform", 0.025, 0.8), 
+                 preTrace_target=0., wInit=("uniform", 0.025, 0.8),
                  key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
@@ -159,8 +159,8 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
         self.batch_size = 1
         ## Compartment setup
-        preVals = jnp.zeros((1, shape[0]))
-        postVals = jnp.zeros((1, shape[1]))
+        preVals = jnp.zeros((self.batch_size, shape[0]))
+        postVals = jnp.zeros((self.batch_size, shape[1]))
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
         self.preSpike = Compartment(preVals)
@@ -193,14 +193,14 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
                              Aplus=Aplus, Aminus=Aminus)
-        
+
         ## decide if normalization is to be applied
         #if norm_T > 0 and w_norm != None:
         #    #normEventMask = jnp.asarray([[(t % (norm_T-1.) == 0.) and t > 0.]]).astype(jnp.float32)
         #    normEventMask = normEvMsk
         #    _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
         #    weights = _weights * normEventMask + weights * (1. - normEventMask)
-        
+
         return weights
 
     @resolver(pure_evolve, output_compartments=['weights'])
