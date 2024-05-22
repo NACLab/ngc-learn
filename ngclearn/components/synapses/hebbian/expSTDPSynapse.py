@@ -128,6 +128,9 @@ class ExpSTDPSynapse(Component):
                  preTrace_target, wInit=(0.025, 0.8), key=None, useVerboseDict=False,
                  directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
+
+        tmp_key = random.PRNGKey(time.time_ns()) if key is None else key
+
         ## Exp-STDP meta-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
         self.eta = eta ## global learning rate governing plasticity
@@ -139,7 +142,6 @@ class ExpSTDPSynapse(Component):
         self.w_bound = 1. ## soft weight constraint
 
         if directory is None:
-            #self.key, subkey = random.split(self.key)
             tmp_key, subkey = random.split(tmp_key)
             #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
             weights = initialize_params(subkey, wInit, shape)
