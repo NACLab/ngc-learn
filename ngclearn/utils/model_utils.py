@@ -1,8 +1,7 @@
 import jax
 from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 from jax.lax import scan as _scan
-from ngcsimlib.context import Context
-from ngcsimlib.compartment import Get_Compartment_Batch, Set_Compartment_Batch
+from ngcsimlib.utils import Get_Compartment_Batch, Set_Compartment_Batch, get_current_context
 import os, sys
 from functools import partial
 
@@ -659,6 +658,6 @@ def scanner(fn):
         Set_Compartment_Batch(vals)
         return stacked
 
-    if Context.get_current_context() is not None:
-        Context.get_current_context().__setattr__(fn.__name__, _scanned)
+    if get_current_context() is not None:
+        get_current_context().__setattr__(fn.__name__, _scanned)
     return _scanned

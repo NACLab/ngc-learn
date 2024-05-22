@@ -159,8 +159,8 @@ class HebbianSynapse(Component):
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
                  bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
                  signVal=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 Rscale=1., key=None, directory=None):
-        super().__init__(name)
+                 Rscale=1., key=None, directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
