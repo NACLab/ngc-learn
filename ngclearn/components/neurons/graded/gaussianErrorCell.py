@@ -85,7 +85,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.modulator = Compartment(1.0) # to be set/consumed
 
     @staticmethod
-    def _advance(t, dt, mu, dmu, target, dtarget, modulator):
+    def _advance_state(t, dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
         dmu, dtarget, L = run_cell(dt, target, mu)
         # modulator_mask = jnp.bool(modulator).astype(jnp.float32) # is there any modulator or not
@@ -96,8 +96,8 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         # modulator = jnp.asarray(0.0) ## use and consume modulator
         return dmu, dtarget, L #, modulator
 
-    @resolver(_advance)
-    def advance(self, dmu, dtarget, L): #, modulator):
+    @resolver(_advance_state)
+    def advance_state(self, dmu, dtarget, L): #, modulator):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.L.set(L)

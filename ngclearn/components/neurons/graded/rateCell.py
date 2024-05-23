@@ -166,8 +166,8 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
     @staticmethod
-    def pure_advance(t, dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType, thresholdType,
-            thr_lmbda, j, j_td, z, zF):
+    def _advance_state(t, dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
+                       thresholdType, thr_lmbda, j, j_td, z, zF):
         if tau_m > 0.:
             ### run a step of integration over neuronal dynamics
             ## Notes:
@@ -191,19 +191,18 @@ class RateCell(Component): ## Rate-coded/real-valued cell
             zF = fx(z)
         return j, j_td, z, zF
 
-    @resolver(pure_advance, output_compartments=['j', 'j_td', 'z', 'zF'])
-    def advance(self, vals):
-        j, j_td, z, zF = vals
+    @resolver(_advance_state)
+    def advance_state(self, j, j_td, z, zF):
         self.j.set(j)
         self.j_td.set(j_td)
         self.z.set(z)
         self.zF.set(zF)
 
     @staticmethod
-    def pure_reset(batch_size, n_units):
+    def _reset(batch_size, n_units):
         return tuple([jnp.zeros((batch_size, n_units)) for _ in range(4)])
 
-    @resolver(pure_reset, output_compartments=['j', 'zF', 'j_td', 'z'])
+    @resolver(_reset)
     def reset(self, j, zF, j_td, z):
         self.j.set(j) # electrical current
         self.zF.set(zF) # rate-coded output - activity
@@ -263,5 +262,3 @@ if __name__ == '__main__':
     wrapped_reset_cmd()
     print(f"Reset: [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
     print(f"Reset: [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
-
-
