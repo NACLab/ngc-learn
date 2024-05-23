@@ -276,11 +276,12 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
                   threshold_theta=self.thr_theta.value, 
                   key=self.key.value)
 
-    def load(self, directory, **kwargs):
+    def load(self, directory, seeded=False, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.thr_theta.set( data['threshold_theta'] )
-        self.key.set( data['key'] )
+        if seeded == True:
+            self.key.set( data['key'] )
 
 # Testing
 if __name__ == '__main__':
