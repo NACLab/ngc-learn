@@ -112,7 +112,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         mu = jnp.zeros((batch_size, n_units)) #None
         return dmu, dtarget, target, mu
 
-    @resolver(_reset])
+    @resolver(_reset)
     def reset(self, dmu, dtarget, target, mu):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
