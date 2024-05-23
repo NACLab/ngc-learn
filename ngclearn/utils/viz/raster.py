@@ -10,46 +10,6 @@ import numpy as np
 import imageio.v3 as iio
 import jax.numpy as jnp
 
-#suffix = '.jpg' #.png
-
-def _create_raster_plot(spike_train, ax=None, s=1.5, c="black", marker="|",
-                       plot_fname=None, indices=None, suffix='.jpg'):
-    spk_ = spike_train
-    # Process spikes and create the binary coordinate grid
-    if len(spk_.shape) == 1:
-        spk_ = jnp.expand_dims(spk_,axis=1)
-    n_units = spk_.shape[1]
-    if indices is not None and indices.shape[0] < spk_.shape[1]:
-        spk_ = spk_[:,indices] # access specific neurons if requested
-        if len(spk_.shape) > 1:
-            n_units = spk_.shape[1]
-        else:
-            n_units = spk_.shape[0]
-    coords = spk_.nonzero() #jnp.where(spk_) #tf.where(spk_).numpy()
-    spk_x = coords[0] #coords[:,0]
-    spk_y = coords[1] #coords[:,1]
-    if ax is not None:
-        ax.scatter(spk_x, spk_y, s=s, c=c, marker=marker,linewidths=4)
-        yint = range(0, n_units)
-        ax.set_yticks(yint)
-        ax.set_yticklabels(yint, fontsize=12)
-        return ax
-    else:
-        if plot_fname is None:
-            plot_fname = "raster_plot" + suffix
-        fig = plt.figure(facecolor="w", figsize=(10, 5))
-        ax = fig.add_subplot(111)
-        ax.scatter(spk_x, spk_y, s=s, c=c, marker=marker)
-        yint = range(0, n_units)
-        ax.set_yticks(yint)
-        ax.set_yticklabels(yint, fontsize=12)
-        plt.title("Spike Train Raster Plot")
-        plt.xlabel("Time Step")
-        plt.ylabel("Neuron Index")
-        plt.savefig(plot_fname)
-        plt.clf()
-        plt.close()
-
 def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
                        plot_fname=None, indices=None, tag="", suffix='.jpg'):
     """
@@ -57,7 +17,8 @@ def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
     corresponds to the discrete time dimension).
 
     Args:
-        spike_train: a numpy binary array of shape (T x number_neurons)
+        spike_train: a numpy binary array of shape (number_neurons x 1 x T) OR
+            shape (number_neurons x T)
 
         ax: a hook/pointer to a currently external plot that this raster plot
             should be made a sub-figure of
@@ -76,6 +37,11 @@ def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
 
         suffix: output plot file suffix name to append
     """
+    if len(spike_train.shape) == 3 and spike_train[1] == 1:
+        spike_train = jnp.transpose(spike_train, [2,0,1])
+    elif len(spike_train.shape) == 2:
+        spike_train = spike_train.T
+
     n_count = spike_train.shape[0]
     step_count = spike_train.shape[1]
     save = False
