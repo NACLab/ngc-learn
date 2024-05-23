@@ -61,7 +61,7 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
     return _W, dW
 
 @jit
-def compute_layer(inp, weight):
+def compute_layer(inp, weight, scale=1.):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -71,10 +71,13 @@ def compute_layer(inp, weight):
 
         weight: this cable's synaptic value matrix
 
+        scale: scale factor to apply to synapses before transform applied
+            to input values
+
     Returns:
         a projection/transformation of input "inp"
     """
-    return jnp.matmul(inp, weight)
+    return jnp.matmul(inp, weight * scale)
 
 class ExpSTDPSynapse(Component):
     """
@@ -113,6 +116,9 @@ class ExpSTDPSynapse(Component):
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
+        Rscale: a fixed scaling (resistance) factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
@@ -125,8 +131,8 @@ class ExpSTDPSynapse(Component):
 
     # Define Functions
     def __init__(self, name, shape, eta, exp_beta, Aplus, Aminus,
-                 preTrace_target, wInit=(0.025, 0.8), key=None, useVerboseDict=False,
-                 directory=None, **kwargs):
+                 preTrace_target, wInit=(0.025, 0.8), Rscale=1., 
+                 key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
         tmp_key = random.PRNGKey(time.time_ns()) if key is None else key
@@ -138,18 +144,13 @@ class ExpSTDPSynapse(Component):
         self.preTrace_target = preTrace_target ## target (pre-synaptic) trace activity value # 0.7
         self.Aplus = Aplus ## LTP strength
         self.Aminus = Aminus ## LTD strength
-        self.shape = shape  # shape of synaptic matrix W
+        self.shape = shape  ## shape of synaptic matrix W
+        self.Rscale = Rscale ## post-transformation scale factor
         self.w_bound = 1. ## soft weight constraint
 
-        if directory is None:
-            tmp_key, subkey = random.split(tmp_key)
-            #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
-            weights = initialize_params(subkey, wInit, shape)
-        else:
-            ## TODO: check if this works??
-            #self.load(directory)
-            weights = None
-            print(">> ERROR: loading parameters not implemented!")
+        tmp_key, subkey = random.split(tmp_key)
+        #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
+        weights = initialize_params(subkey, wInit, shape)
 
         self.batch_size = 1
         ## Compartment setup
@@ -164,9 +165,9 @@ class ExpSTDPSynapse(Component):
         self.weights = Compartment(weights)
 
     @staticmethod
-    def _advance_state(t, dt, input, weights):
+    def _advance_state(t, dt, Rscale, inputs, weights):
         ## run signals across synapses
-        outputs = compute_layer(input, weights)
+        outputs = compute_layer(inputs, weights, Rscale)
         return outputs
 
     @resolver(_advance_state)
@@ -179,10 +180,6 @@ class ExpSTDPSynapse(Component):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target,
                              exp_beta=exp_beta, Aplus=Aplus, Aminus=Aminus)
-        ## decide if normalization is to be applied
-        # if norm_T > 0:
-        #     if t % (norm_T-1) == 0: #t % self.norm_t == 0:
-        #         weights = normalize_matrix(weights, w_norm, order=1, axis=0)
         return weights
 
     @resolver(_evolve)

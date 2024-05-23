@@ -26,9 +26,10 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def _modify_current(j, dt, tau_m): ## electrical current re-scaling co-routine
-    jScale = tau_m/dt
-    return j * jScale
+def _modify_current(j, dt, tau_m, R_m): 
+    ## electrical current re-scaling co-routine
+    jScale = tau_m/dt ## <-- this anti-scale counter-balances form of ODE used in this cell
+    return (j * R_m) * jScale
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest): ## raw voltage dynamics
@@ -43,8 +44,8 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest)
     return dv_dt
 
-@partial(jit, static_argnums=[7,8,9,10,11,12])
-def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset,
+@partial(jit, static_argnums=[7,8,9,10,11])
+def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
              refract_T, integType=0):
     """
     Runs leaky integrator neuronal dynamics
@@ -68,8 +69,6 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, R_m, v_rest, v_reset,
             potentials to be an emitted spike
 
         tau_m: cell membrane time constant
-
-        R_m: membrane resistance value
 
         v_rest: membrane resting potential (in mV)
 
@@ -149,7 +148,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
         tau_m: membrane time constant
 
-        R_m: membrane resistance value
+        R_m: membrane resistance value (Default: 1)
 
         thr: base value for adaptive thresholds that govern short-term
             plasticity (in milliVolts, or mV)
@@ -183,7 +182,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m, thr=-52., v_rest=-65., v_reset=-60., # 60.
+    def __init__(self, name, n_units, tau_m, R_m=1., thr=-52., v_rest=-65., v_reset=-60., # 60.
                  tau_theta=1e7, theta_plus=0.05, refract_T=5., key=None, one_spike=True,
                  useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
@@ -229,9 +228,9 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             key, *subkeys = random.split(key, 2)
             skey = subkeys[0]
         ## run one integration step for neuronal dynamics
-        j = _modify_current(j, dt, tau_m)
+        j = _modify_current(j, dt, tau_m, R_m) ## re-scale current in prep for volt ODE
         v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-                                         tau_m, R_m, v_rest, v_reset, refract_T)
+                                         tau_m, v_rest, v_reset, refract_T)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
@@ -241,7 +240,6 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     @resolver(_advance_state)
     def advance_state(self, v, s, rfr, thr_theta, tols, key):
-        #self.j.set(j)
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)

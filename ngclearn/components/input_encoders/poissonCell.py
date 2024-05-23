@@ -79,7 +79,6 @@ class PoissonCell(Component):
         self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
         self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
-        #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, max_freq, key, inputs, tols):
@@ -103,6 +102,9 @@ class PoissonCell(Component):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.tols.set(tols)
+
+    def load(self, directory, **kwargs):
+        pass
 
 ## testing
 if __name__ == '__main__':

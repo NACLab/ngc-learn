@@ -6,7 +6,7 @@ from functools import partial
 from ngclearn.utils.model_utils import initialize_params
 import time
 
-@partial(jit, static_argnums=[6,7,8,9,10,11])
+#@partial(jit, static_argnums=[6,7,8,9,10,11])
 def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
            mu=0., Aplus=1., Aminus=0.):
     """
@@ -44,6 +44,7 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
         post_shift = jnp.power(w_bound - W, mu)
         pre_shift = jnp.power(W, mu)
         dWpost = (post_shift * jnp.matmul((x_pre - x_tar).T, post)) * Aplus
+        dWpre = 0.
         if Aminus > 0.:
             dWpre = -(pre_shift * jnp.matmul(pre.T, x_post)) * Aminus
     else:
@@ -56,11 +57,13 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
     ## calc final weighted adjustment
     dW = (dWpost + dWpre) * eta
     _W = W + dW # do a gradient ascent update/shift
-    _W = jnp.clip(_W, 0.001, w_bound) # 0.01, w_bound) ## enforce non-negativity
+    eps = 0.01 # 0.001
+    _W = jnp.clip(_W, eps, 1. - eps) #jnp.abs(w_bound)) # 0.01, w_bound) ## enforce non-negativity
+    #print(_W)
     return _W, dW
 
 @jit
-def compute_layer(inp, weight):
+def compute_layer(inp, weight, scale=1.):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -70,10 +73,13 @@ def compute_layer(inp, weight):
 
         weight: this cable's synaptic value matrix
 
+        scale: scale factor to apply to synapses before transform applied
+            to input values
+
     Returns:
         a projection/transformation of input "inp"
     """
-    return jnp.matmul(inp, weight)
+    return jnp.matmul(inp, weight * scale)
 
 class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     """
@@ -112,6 +118,9 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
+        Rscale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
@@ -124,14 +133,11 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     # Define Functions
     def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
-                 preTrace_target=0., wInit=("uniform", 0.025, 0.8),
+                 preTrace_target=0., wInit=("uniform", 0.025, 0.8), Rscale=1., 
                  key=None, useVerboseDict=False, directory=None, **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ##Random Number Set up
-        # self.key = key
-        # if self.key is None:
-        #     self.key = random.PRNGKey(time.time_ns())
+        ## constructor-only rng setup
         tmp_key = random.PRNGKey(time.time_ns()) if key is None else key
 
         ##parms
@@ -141,21 +147,13 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.preTrace_target = preTrace_target ## target (pre-synaptic) trace activity value # 0.7
         self.Aplus = Aplus ## LTP strength
         self.Aminus = Aminus ## LTD strength
-        self.shape = shape  # shape of synaptic matrix W
+        self.shape = shape  ## shape of synaptic matrix W
+        self.Rscale = Rscale ## post-transformation scale factor
         self.w_bound = 1. ## soft weight constraint
-        #self.w_norm = w_norm ## normalization constant for synaptic matrix after update
-        #self.norm_T = norm_T ## scheduling time / checkpoint for synaptic normalization
 
-        if directory is None:
-            #self.key, subkey = random.split(self.key)
-            tmp_key, subkey = random.split(tmp_key)
-            #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
-            weights = initialize_params(subkey, wInit, shape)
-        else:
-            ## TODO: check if this works??
-            #self.load(directory)
-            weights = None
-            print(">> ERROR: loading parameters not implemented!")
+        tmp_key, subkey = random.split(tmp_key)
+        #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
+        weights = initialize_params(subkey, wInit, shape)
 
         self.batch_size = 1
         ## Compartment setup
@@ -171,9 +169,9 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         #self.reset()
 
     @staticmethod
-    def _advance_state(t, dt, inputs, weights):
+    def _advance_state(t, dt, Rscale, inputs, weights):
         ## run signals across synapses
-        outputs = compute_layer(inputs, weights)
+        outputs = compute_layer(inputs, weights, Rscale)
         return outputs
 
     @resolver(_advance_state)
@@ -186,12 +184,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
                              Aplus=Aplus, Aminus=Aminus)
-        ## decide if normalization is to be applied
-        #if norm_T > 0 and w_norm != None:
-        #    #normEventMask = jnp.asarray([[(t % (norm_T-1.) == 0.) and t > 0.]]).astype(jnp.float32)
-        #    normEventMask = normEvMsk
-        #    _weights = normalize_matrix(weights, w_norm, order=1, axis=0)
-        #    weights = _weights * normEventMask + weights * (1. - normEventMask)
         return weights
 
     @resolver(_evolve)
