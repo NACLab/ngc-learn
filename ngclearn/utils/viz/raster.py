@@ -37,7 +37,7 @@ def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
 
         suffix: output plot file suffix name to append
     """
-    if len(spike_train.shape) == 3 and spike_train[1] == 1:
+    if len(spike_train.shape) == 3 and spike_train.shape[1] == 1:
         spike_train = jnp.transpose(spike_train, [2,0,1])
     elif len(spike_train.shape) == 2:
         spike_train = spike_train.T
