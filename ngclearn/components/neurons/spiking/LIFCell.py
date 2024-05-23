@@ -208,6 +208,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.j = Compartment(restVals)
         self.v = Compartment(restVals + self.v_rest)
         self.s = Compartment(restVals)
+        self.s_raw = Compartment(restVals)
         self.rfr = Compartment(restVals + self.refract_T)
         #self.threshold = thr ## (fixed) base value for threshold  #-52 # -72. # mV
         # ## adaptive threshold setup
@@ -222,11 +223,10 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr, tau_theta,
-                 theta_plus, one_spike, key, j, v, s, rfr, thr_theta, tols):
+                       theta_plus, one_spike, key, j, v, s, rfr, thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
-            key, *subkeys = random.split(key, 2)
-            skey = subkeys[0]
+            key, skey = random.split(key, 2)
         ## run one integration step for neuronal dynamics
         j = _modify_current(j, dt, tau_m, R_m) ## re-scale current in prep for volt ODE
         v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
@@ -236,12 +236,13 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
         tols = update_times(t, s, tols)
-        return v, s, rfr, thr_theta, tols, key
+        return v, s, raw_spikes, rfr, thr_theta, tols, key
 
     @resolver(_advance_state)
-    def advance_state(self, v, s, rfr, thr_theta, tols, key):
+    def advance_state(self, v, s, s_raw, rfr, thr_theta, tols, key):
         self.v.set(v)
         self.s.set(s)
+        self.s_raw.set(s_raw)
         self.rfr.set(rfr)
         self.thr_theta.set(thr_theta)
         self.tols.set(tols)
@@ -253,28 +254,33 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         j = restVals #+ 0
         v = restVals + v_rest
         s = restVals #+ 0
+        s_raw = restVals
         rfr = restVals + refract_T
         #thr_theta = restVals ## do not reset thr_theta
         tols = restVals #+ 0
-        return j, v, s, rfr, tols
+        return j, v, s, s_raw, rfr, tols
 
     @resolver(_reset)
-    def reset(self, j, v, s, rfr, tols):
+    def reset(self, j, v, s, s_raw, rfr, tols):
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)
+        self.s_raw.set(s_raw)
         self.rfr.set(rfr)
         #self.thr_theta.set(thr_theta)
         self.tols.set(tols)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, threshold_theta=self.thr_theta.value)
+        jnp.savez(file_name, 
+                  threshold_theta=self.thr_theta.value, 
+                  key=self.key.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.thr_theta.set( data['threshold_theta'] )
+        self.key.set( data['key'] )
 
 # Testing
 if __name__ == '__main__':
