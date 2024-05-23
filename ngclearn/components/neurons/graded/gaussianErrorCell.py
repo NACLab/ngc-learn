@@ -84,12 +84,8 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.dtarget = Compartment(jnp.zeros((self.batch_size, self.n_units))) # derivative target
         self.modulator = Compartment(1.0) # to be set/consumed
 
-    # def verify_connections(self):
-    #     self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
-    #     self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
-
     @staticmethod
-    def pure_advance(t, dt, mu, dmu, target, dtarget, modulator):
+    def _advance(t, dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
         dmu, dtarget, L = run_cell(dt, target, mu)
         # modulator_mask = jnp.bool(modulator).astype(jnp.float32) # is there any modulator or not
@@ -100,7 +96,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         # modulator = jnp.asarray(0.0) ## use and consume modulator
         return dmu, dtarget, L #, modulator
 
-    @resolver(pure_advance, output_compartments=['dmu', 'dtarget', 'L']) #, 'modulator'])
+    @resolver(_advance)
     def advance(self, dmu, dtarget, L): #, modulator):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
@@ -109,14 +105,14 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.modulator.set(1.0)
 
     @staticmethod
-    def pure_reset(batch_size, n_units):
+    def _reset(batch_size, n_units):
         dmu = jnp.zeros((batch_size, n_units))
         dtarget = jnp.zeros((batch_size, n_units))
         target = jnp.zeros((batch_size, n_units)) #None
         mu = jnp.zeros((batch_size, n_units)) #None
         return dmu, dtarget, target, mu
 
-    @resolver(pure_reset, output_compartments=['dmu', 'dtarget', 'target', 'mu'])
+    @resolver(_reset])
     def reset(self, dmu, dtarget, target, mu):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
@@ -192,4 +188,3 @@ if __name__ == '__main__':
         print(f"Step {t} - [e] mu: {e.mu.value}, target: {e.target.value}, dmu: {e.dmu.value}, dtarget: {e.dtarget.value}, L: {e.L.value}, modulator: {e.modulator.value}")
     wrapped_reset_cmd()
     print(f"Step {t} - [e] mu: {e.mu.value}, target: {e.target.value}, dmu: {e.dmu.value}, dtarget: {e.dtarget.value}, L: {e.L.value}, modulator: {e.modulator.value}")
-
