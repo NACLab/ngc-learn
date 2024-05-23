@@ -228,28 +228,25 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         self.w = Compartment(restVals + self.w0)
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
-                     intgFlag, key, j, v, w, s, tols):
-        key, *subkeys = random.split(key, 2)
+                     intgFlag, j, v, w, s, tols):
         v, w, s = run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
                            b=coupling, c=v_reset, d=w_reset, R_m=R_m,
                            integType=intgFlag)
         tols = update_times(t, s, tols)
-        return j, v, w, s, tols, key
+        return j, v, w, s, tols
 
-    @resolver(_advance_state, output_compartments=['j', 'v', 'w', 's', 'tols', 'key'])
+    @resolver(_advance_state, output_compartments=['j', 'v', 'w', 's', 'tols'])
     def advance_state(self, vals):
-        j, v, w, s, tols, key = vals
+        j, v, w, s, tols = vals
         self.j.set(j)
         self.w.set(w)
         self.v.set(v)
         self.s.set(s)
         self.tols.set(tols)
-        self.key.set(key)
 
     @staticmethod
     def _reset(batch_size, n_units, v0, w0):

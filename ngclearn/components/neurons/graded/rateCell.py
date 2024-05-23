@@ -165,7 +165,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.z = Compartment(jnp.zeros((1, n_units))) # rate activity
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
-
     @staticmethod
     def pure_advance(t, dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType, thresholdType,
             thr_lmbda, j, j_td, z, zF):
@@ -210,9 +209,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.zF.set(zF) # rate-coded output - activity
         self.j_td.set(j_td) # top-down electrical current - pressure
         self.z.set(z) # rate activity
-
-    def save(self, **kwargs):
-        pass
 
 
 

@@ -93,6 +93,15 @@ class BernoulliCell(Component):
         self.outputs.set(outputs) #None
         self.tols.set(tols)
 
+    def save(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        jnp.savez(file_name, key=self.key.value)
+
+    def load(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        self.key.set( data['key'] )
+
     def __repr__(self):
         comps = ['inputs', 'outputs', 'tols', 'key']
         maxlen = max(len(c) for c in comps) + 5

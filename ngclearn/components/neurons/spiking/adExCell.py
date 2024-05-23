@@ -141,11 +141,6 @@ class AdExCell(Component):
                  **kwargs):
         super().__init__(name, useVerboseDict, **kwargs)
 
-        ## Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
         ## Integration properties
         self.integrationType = integration_type
         self.intgFlag = get_integrator_code(self.integrationType)
@@ -176,26 +171,23 @@ class AdExCell(Component):
         self.w = Compartment(restVals + self.w0)
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,
-                     v_rest, v_reset, intgFlag, key, j, v, w, s, tols):
-        key, *subkeys = random.split(key, 2)
+                     v_rest, v_reset, intgFlag, j, v, w, s, tols):
         v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
                            v_rest, v_reset, R_m, intgFlag)
         tols = update_times(t, s, tols)
-        return j, v, w, s, tols, key
+        return j, v, w, s, tols
 
     @resolver(_advance_state)
-    def advance_state(self, j, v, w, s, tols, key):
+    def advance_state(self, j, v, w, s, tols):
         self.j.set(j)
         self.w.set(w)
         self.v.set(v)
         self.s.set(s)
         self.tols.set(tols)
-        self.key.set(key)
 
     @staticmethod
     def _reset(batch_size, n_units, v0, w0):

@@ -213,7 +213,8 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, weights=self.weights.value)
+        jnp.savez(file_name, 
+                  weights=self.weights.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
