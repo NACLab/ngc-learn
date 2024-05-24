@@ -12,25 +12,6 @@ Subpackages
    ngclearn.components.other
    ngclearn.components.synapses
 
-Submodules
-----------
-
-ngclearn.components.baseComponentTemplate module
-------------------------------------------------
-
-.. automodule:: ngclearn.components.baseComponentTemplate
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.components.wrappers module
------------------------------------
-
-.. automodule:: ngclearn.components.wrappers
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 

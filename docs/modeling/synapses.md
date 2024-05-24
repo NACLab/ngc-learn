@@ -36,8 +36,6 @@ values, which can contain any type of vector/matrix statistics.
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -76,8 +74,6 @@ form of STDP (via the hyper-parameter `mu`).
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -94,8 +90,6 @@ described above.
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:

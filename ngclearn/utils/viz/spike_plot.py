@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 cmap = plt.cm.jet
 import jax.numpy as jnp
 import numpy as np
-from ngclearn.utils.viz.raster import _create_raster_plot
+from ngclearn.utils.viz.raster import create_raster_plot
 
 def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
                     title=False, min_mem_val=0.0, max_mem_val=1.25, fname=None):
@@ -64,7 +64,7 @@ def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
     spk_ = spk_ * (1.0 - mask)
 
     # Plot output spike using spikeplot
-    _create_raster_plot(spk_, ax[2], s=100, c="black")
+    create_raster_plot(spk_, ax[2], s=100, c="black")
     plt.ylabel("Output Spikes")
     plt.yticks([])
     if fname is None:

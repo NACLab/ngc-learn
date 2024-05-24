@@ -12,14 +12,6 @@ ngclearn.utils.optim.adam module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.utils.optim.opt module
--------------------------------
-
-.. automodule:: ngclearn.utils.optim.opt
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.utils.optim.sgd module
 -------------------------------
 

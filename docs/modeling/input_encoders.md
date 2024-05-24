@@ -33,8 +33,6 @@ real-valued pattern vector is normalized between `[0,1]`.
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -53,8 +51,6 @@ normalized between `[0,1]` (otherwise, results may not be as expected).
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -71,8 +67,6 @@ whereas lower intensity values yield later firing times.
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:

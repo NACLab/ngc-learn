@@ -31,8 +31,6 @@ the user.
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -63,8 +61,6 @@ and `dmu` is the first derivative with respect to the mean parameter.
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -85,8 +81,6 @@ and `dmu` is the first derivative with respect to the mean parameter.
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -119,8 +113,6 @@ negative pressure on the membrane potential values at `t`).
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -138,8 +130,6 @@ threshold is: `thr + thrTheta(t)`).
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -160,8 +150,6 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -180,8 +168,6 @@ cell supports either Euler or midpoint method / RK-2 integration.)
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -203,8 +189,6 @@ fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:
