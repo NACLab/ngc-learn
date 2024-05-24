@@ -255,14 +255,11 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.thrGain = thrGain #0.0005
         self.thrLeak = thrLeak #0.00005
 
-        if directory is None:
-            # thr_jitter: some random jitter to ensure thresholds start off different
-            key, subkey = random.split(key)
-            self.threshold0 = thr + random.uniform(subkey, (1, n_units),
-                                                  minval=-thr_jitter, maxval=thr_jitter,
-                                                  dtype=jnp.float32)
-        else:
-            self.load(directory)
+        # thr_jitter: some random jitter to ensure thresholds start off different
+        key, subkey = random.split(key)
+        self.threshold0 = thr + random.uniform(subkey, (1, n_units),
+                                               minval=-thr_jitter, maxval=thr_jitter,
+                                               dtype=jnp.float32) 
 
         ## Compartments
         restVals = jnp.zeros((self.batch_size, self.n_units))

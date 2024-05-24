@@ -241,3 +241,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         self.thr_theta.set(thr_theta)
         self.tols.set(tols)
         self.key.set(key)
+
+    #@resolver(LIFCell._reset)
+    #def reset(self, j, v, s, rfr, tols):
+    #    super.reset(j, v, s, rfr, tols)
