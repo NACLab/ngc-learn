@@ -198,8 +198,8 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     # Define Functions
     def __init__(self, name, n_units, tau_m=1., R_m=1., v_thr=30., v_reset=-65.,
                  tau_w=50., w_reset=8., coupling_factor=0.2, v0=-65., w0=-14.,
-                 integration_type="euler", key=None, useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 integration_type="euler", key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## Cell properties
         self.R_m = R_m

@@ -132,8 +132,8 @@ class ExpSTDPSynapse(Component):
     # Define Functions
     def __init__(self, name, shape, eta, exp_beta, Aplus, Aminus,
                  preTrace_target, wInit=(0.025, 0.8), Rscale=1., 
-                 key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 key=None, directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         tmp_key = random.PRNGKey(time.time_ns()) if key is None else key
 

@@ -67,8 +67,8 @@ class VarTrace(Component): ## low-pass filter
 
     # Define Functions
     def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", key=None,
-                 useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## trace control coefficients
         self.tau_tr = tau_tr ## trace time constant

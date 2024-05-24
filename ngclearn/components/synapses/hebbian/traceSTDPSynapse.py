@@ -134,8 +134,8 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     # Define Functions
     def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
                  preTrace_target=0., wInit=("uniform", 0.025, 0.8), Rscale=1., 
-                 key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 key=None, directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## constructor-only rng setup
         tmp_key = random.PRNGKey(time.time_ns()) if key is None else key

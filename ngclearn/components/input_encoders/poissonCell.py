@@ -63,9 +63,8 @@ class PoissonCell(Component):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, max_freq=63.75, key=None,
-                 useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+    def __init__(self, name, n_units, max_freq=63.75, key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## Poisson meta-parameters
         self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)

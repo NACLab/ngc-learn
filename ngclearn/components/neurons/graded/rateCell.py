@@ -137,8 +137,8 @@ class RateCell(Component): ## Rate-coded/real-valued cell
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.),
                  act_fx="identity", threshold=("none", 0.),
-                 integration_type="euler", key=None):
-        super().__init__(name)
+                 integration_type="euler", key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode

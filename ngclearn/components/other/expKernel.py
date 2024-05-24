@@ -45,8 +45,8 @@ class ExpKernel(Component): ## Exponential spike kernel
 
     # Define Functions
     def __init__(self, name, n_units, tau_w=500., nu=4., key=None,
-                 useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ##Random Number Set up
         self.key = key

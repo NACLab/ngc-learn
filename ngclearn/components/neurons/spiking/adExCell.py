@@ -137,9 +137,8 @@ class AdExCell(Component):
     def __init__(self, name, n_units, tau_m=15., R_m=1., tau_w=400.,
                  sharpV=2., vT=-55., v_thr=5., v_rest=-72., v_reset=-75.,
                  a=0.1, b=0.75, v0=-70., w0=0.,
-                 integration_type="euler", key=None, useVerboseDict=False,
-                 **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 integration_type="euler", key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## Integration properties
         self.integrationType = integration_type

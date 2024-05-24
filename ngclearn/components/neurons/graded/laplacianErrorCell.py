@@ -68,9 +68,8 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None,
-                 useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ##Layer Size setup
         self.n_units = n_units

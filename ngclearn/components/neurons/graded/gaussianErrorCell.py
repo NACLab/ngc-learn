@@ -67,8 +67,8 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         key: PRNG Key to control determinism of any underlying synapses
             associated with this cell
     """
-    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None):
-        super().__init__(name)
+    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ##Layer Size Setup
         self.n_units = n_units

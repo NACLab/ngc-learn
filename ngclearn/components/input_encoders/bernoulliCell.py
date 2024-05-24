@@ -57,8 +57,8 @@ class BernoulliCell(Component):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, key=None):
-        super().__init__(name)
+    def __init__(self, name, n_units, key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## Layer Size Setup
         self.batch_size = 1

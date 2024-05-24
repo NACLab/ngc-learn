@@ -158,9 +158,8 @@ class FitzhughNagumoCell(Component):
     # Define Functions
     def __init__(self, name, n_units, tau_m=1., tau_w=12.5, alpha=0.7,
                  beta=0.8, gamma=3., v_thr=1.07, v0=0., w0=0.,
-                 integration_type="euler", key=None, useVerboseDict=False,
-                 **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 integration_type="euler", key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## Integration properties
         self.integrationType = integration_type

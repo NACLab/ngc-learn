@@ -184,8 +184,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m=1., thr=-52., v_rest=-65., v_reset=-60., # 60.
                  tau_theta=1e7, theta_plus=0.05, refract_T=5., key=None, one_spike=True,
-                 useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant
