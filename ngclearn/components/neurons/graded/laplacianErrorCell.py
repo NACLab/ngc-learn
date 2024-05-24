@@ -77,49 +77,41 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.mean = Compartment(restVals)
-        self.target = Compartment(restVals)
-        self.derivMean = Compartment(restVals)
-        self.derivTarget = Compartment(restVals)
-        self.loss = Compartment(jnp.zeros((1,1)))
-        self.modulator = Compartment(jnp.ones((1,1)))
-        self.reset()
+        self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
+        self.L = Compartment(None) # loss compartment
+        self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
+        self.mu = Compartment(restVals) # mean/mean name. input wire
+        self.dmu = Compartment(restVals) # derivative mean
+        self.target = Compartment(restVals) # target. input wire
+        self.dtarget = Compartment(restVals) # derivative target
+        self.modulator = Compartment(restVals + 1.0) # to be set/consumed
 
     @staticmethod
-    def pure_advance(t, dt, target, mean, derivTarget, derivMean, modulator):
-        ## compute Laplacian/MAE error cell output
-        derivMean, derivTarget, loss = run_cell(dt, target, mean)
-        #if modulator is not None:
-        derivMean = derivMean * modulator
-        derivTarget = derivTarget * modulator
-        #modulator = None ## use and consume modulator
+    def _advance_state(t, dt, mu, dmu, target, dtarget, modulator):
+        ## compute Laplacian error cell output
+        dmu, dtarget, L = run_cell(dt, target, mu)
+        dmu = dmu * modulator
+        dtarget = dtarget * modulator
+        return dmu, dtarget, L
 
-    @resolver(pure_advance, output_compartments=['target', 'mean', 'derivTarget', 'derivMean', 'modulator'])
-    def advance(self, vals):
-        target, mean, derivTarget, derivMean, modulator = vals
-        self.target.set(target)
-        self.mean.set(mean)
-        self.derivTarget.set(derivTarget)
-        self.derivMean.set(derivMean)
-        self.modulator.set(modulator)
+    @resolver(_advance_state)
+    def advance_state(self, dmu, dtarget, L):
+        self.dmu.set(dmu)
+        self.dtarget.set(dtarget)
+        self.L.set(L)
 
     @staticmethod
-    def pure_reset(batch_size, n_units):
-        restVals = [jnp.zeros((batch_size, n_units)) for _ in range(4)] + [jnp.ones((batch_size, n_units))]
-        return restVals
+    def _reset(batch_size, n_units):
+        dmu = jnp.zeros((batch_size, n_units))
+        dtarget = jnp.zeros((batch_size, n_units))
+        target = jnp.zeros((batch_size, n_units)) #None
+        mu = jnp.zeros((batch_size, n_units)) #None
+        return dmu, dtarget, target, mu
 
-    @resolver(pure_reset, output_compartments=['target', 'mean', 'derivTarget', 'derivMean', 'modulator'])
-    def reset(self, vals):
-        target, mean, derivTarget, derivMean, modulator = vals
+    @resolver(_reset)
+    def reset(self, dmu, dtarget, target, mu):
+        self.dmu.set(dmu)
+        self.dtarget.set(dtarget)
         self.target.set(target)
-        self.mean.set(mean)
-        self.derivTarget.set(derivTarget)
-        self.derivMean.set(derivMean)
-        self.modulator.set(modulator)
-
-    # def save(self, **kwargs):
-    #     pass
-
-    # def verify_connections(self):
-    #     self.metadata.check_incoming_connections(self.meanName(), min_connections=1)
-    #     self.metadata.check_incoming_connections(self.targetName(), min_connections=1)
+        self.mu.set(mu)
+        self.modulator.set(mu + 1.)

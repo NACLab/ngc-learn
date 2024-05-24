@@ -1,5 +1,3 @@
-# %%
-
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
@@ -75,34 +73,29 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.batch_size = 1
 
         ##Random Number Set up
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
         self.L = Compartment(None) # loss compartment
         self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
-        self.mu = Compartment(jnp.zeros((self.batch_size, self.n_units))) # mean/mean name. input wire
-        self.dmu = Compartment(jnp.zeros((self.batch_size, self.n_units))) # derivative mean
-        self.target = Compartment(jnp.zeros((self.batch_size, self.n_units))) # target. input wire
-        self.dtarget = Compartment(jnp.zeros((self.batch_size, self.n_units))) # derivative target
-        self.modulator = Compartment(1.0) # to be set/consumed
+        self.mu = Compartment(restVals) # mean/mean name. input wire
+        self.dmu = Compartment(restVals) # derivative mean
+        self.target = Compartment(restVals) # target. input wire
+        self.dtarget = Compartment(restVals) # derivative target
+        self.modulator = Compartment(restVals + 1.0) # to be set/consumed
 
     @staticmethod
     def _advance_state(t, dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
         dmu, dtarget, L = run_cell(dt, target, mu)
-        # modulator_mask = jnp.bool(modulator).astype(jnp.float32) # is there any modulator or not
-        # dmu = dmu * (1 - modulator_mask) + dmu * modulator * modulator_mask
-        # dtarget = dtarget * (1 - modulator_mask) + dtarget * modulator * modulator_mask
         dmu = dmu * modulator
         dtarget = dtarget * modulator
-        # modulator = jnp.asarray(0.0) ## use and consume modulator
-        return dmu, dtarget, L #, modulator
+        return dmu, dtarget, L
 
     @resolver(_advance_state)
-    def advance_state(self, dmu, dtarget, L): #, modulator):
+    def advance_state(self, dmu, dtarget, L):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.L.set(L)
-        # self.modulator.set(modulator)
-        self.modulator.set(1.0)
 
     @staticmethod
     def _reset(batch_size, n_units):
@@ -118,13 +111,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.dtarget.set(dtarget)
         self.target.set(target)
         self.mu.set(mu)
-        self.modulator.set(1.0)
-
-    def save(self, directory, **kwargs):
-        pass
-
-    def load(self, directory, **kwargs):
-        pass
+        self.modulator.set(mu + 1.)
 
     def __repr__(self):
         comps = ['j', 'L', 'e', 'mu', 'dmu', 'target', 'dtarget', 'modulator']
