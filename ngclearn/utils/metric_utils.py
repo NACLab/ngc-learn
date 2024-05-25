@@ -70,20 +70,28 @@ def measure_sparsity(codes, tolerance=0.):
     return rho
 
 @jit
-def measure_ACC(mu, y): ## measures/calculates accuracy
+def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
     """
     Calculates the accuracy (ACC) given a matrix of predictions and matrix of targets.
 
     Args:
-        mu: prediction (design) matrix
+        mu: prediction (design) matrix; shape is (N x C) where C is number of classes
+            and N is the number of patterns examined
 
-        y: target / ground-truth (design) matrix
+        y: target / ground-truth (design) matrix; shape is (N x C) OR an array
+            of class integers of length N (with "extract_label_indx = True")
+
+        extract_label_indx: run an argmax to pull class integer indices from
+            "y", assuming y is a one-hot binary encoding matrix (Default: True),
+            otherwise, this assumes "y" is an array of class integer indices
+            of length N
 
     Returns:
         scalar accuracy score
     """
     guess = jnp.argmax(mu, axis=1)
-    lab = jnp.argmax(y, axis=1)
+    if extract_label_indx == True:
+        lab = jnp.argmax(y, axis=1)
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
