@@ -4,6 +4,53 @@ import os, sys
 from functools import partial
 
 @jit
+def measure_fanoFactor(spikes, preserve_batch=False):
+    """
+    Calculates the Fano factor, i.e., a secondary statistics that probes the
+    variability of a spike train within a particular time interval.
+
+    Args:
+        spikes: full spike train matrix; shape is (T x D) where D is number of
+            neurons in a group/cluster
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar average score
+
+    Returns:
+        a 1 x D Fano factor vector (one factor per neuron) OR a single
+        average Fano factor across the neuronal group
+    """
+    mu = jnp.mean(spikes, axis=0, keepdims=True)
+    sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
+    fano = sigSqr/mu
+    if preserve_batch == True:
+        fano = jnp.mean(fano)
+    return fano
+
+@jit
+def measure_firingRate(spikes, preserve_batch=False):
+    """
+    Calculates the firing rate(s) of a group of neurons given full spike train.(s)
+
+    Args:
+        spikes: full spike train matrix; shape is (T x D) where D is number of
+            neurons in a group/cluster
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar average score
+
+    Returns:
+        a 1 x D firing rate vector (one firing rate per neuron) OR a single
+        average firing rate across the neuronal group
+    """
+    counts = jnp.sum(spikes, axis=0, keepdims=True)
+    T = spikes.shape[0] * 1.
+    fireRates = counts/T
+    if preserve_batch == True:
+        fireRates = jnp.mean(fireRates)
+    return fireRates
+
+@jit
 def measure_sparsity(codes, tolerance=0.):
     """
     Calculates the sparsity (ratio) of an input matrix, assuming each row within
