@@ -57,7 +57,7 @@ dt = 1. # ms # integration time constant
 T = 100 ## number time steps to simulate
 
 with Context("Model") as model:
-    z0 = BernoulliCell("z0", n_units=10, key=subkeys[0])
+    cell = BernoulliCell("z0", n_units=10, key=subkeys[0])
 
     reset_cmd, reset_args = model.compile_command_key(z0, compile_key="reset")
     advance_cmd, advance_args = model.compile_command_key(z0, compile_key="advance_state")
@@ -67,7 +67,7 @@ with Context("Model") as model:
 
     @Context.dynamicCommand
     def clamp(x):
-        z0.inputs.set(x)
+        cell.inputs.set(x)
 
 probs = jnp.asarray([[0.8, 0.2, 0., 0.55, 0.9, 0, 0.15, 0., 0.6, 0.77]],dtype=jnp.float32)
 spikes = []
@@ -76,7 +76,7 @@ for ts in range(T):
     model.clamp(probs)
     model.advance(ts*1., dt)
 
-    s_t = z0.outputs.value
+    s_t = cell.outputs.value
     spikes.append(s_t)
 spikes = jnp.concatenate(spikes,axis=0)
 create_raster_plot(spikes, plot_fname="bernoulli_raster.jpg")
@@ -111,15 +111,22 @@ For instance, with a database such as MNIST, it is often desired that the input
 firing rates (of the input encoding neurons you are trying to simulate) are
 within the approximate range of $0$ to $63.75$ Hertz (Hz) (as in [2]).
 To do this in ngc-learn, the Poisson cell is used instead, by modifying the
-code above like so:
+header of the code above to have the following import statement:
 
 ```python
-model = Controller() ## the simulation object / controller
-cell = model.add_component("poisson", name="z0", n_units=10, max_freq=63.75, key=subkeys[0])
+from ngclearn.components.input_encoders.poissonCell import PoissonCell
 ```
 
-Running the code with a Poisson cell instead of a Bernoulli one, under the same
-raw input pattern data shown above, yields something like:
+and by replacing the line that has the `BernoulliCell` call with the
+following line instead:
+
+```python
+cell = PoissonCell("z0", n_units=10, max_freq=63.75, key=subkeys[0])
+```
+
+Running the code with the two above small modifications will
+simulate a Poisson cell instead of a Bernoulli one, under the same
+raw input probabilities. This should yield a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/poisson_raster.jpg" width="350" /> <br>
 
