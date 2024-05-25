@@ -129,7 +129,7 @@ Notice that if we play with the value of `ref_T` (the refactory period $T_{ref}$
 and change it to something like `ref_T = 10 * dt` (ten times the integration time
 constant), we get the following neuronal dynamics plot:
 
-<img src="../../images/tutorials/neurocog/slif_refract_plot.png" width="600" />
+<img src="../../images/tutorials/neurocog/slif_refract_plot.jpg" width="600" />
 
 where we see that after the LIF neuron fires, it remains stuck at its resting
 potential for a period of $0.01$ ms (the short flat periods in the red curve
