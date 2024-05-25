@@ -168,7 +168,7 @@ You should get a plot that depicts the evolution of the voltage and recovery of
 the Izhikevich cell, i.e., saved as `izhcell_plot.jpg` locally to disk, much
 like the one below:
 
-<img src="../../images/tutorials/neurocog/rs_izhcell.jpg" width="400" />
+<img src="../../images/tutorials/neurocog/rs_izhcell.png" width="400" />
 
 The plot above, which you can modify slightly yourself to include the neuronal
 type tag "RS" like we do, actually depicts the dynamics for a specific type of spiking
@@ -192,7 +192,7 @@ coupling_factor = 0.2  ## ngc-learn default
 to obtain a voltage/recovery dynamics plot like so (if you also modify the
 plot title of the plotting code accordingly):
 
-<img src="../../images/tutorials/neurocog/fs_izhcell.jpg" width="400" />
+<img src="../../images/tutorials/neurocog/fs_izhcell.png" width="400" />
 
 Three other well-known classes of neural behaviors are possible to easily simulate
 under the following hyper-parameter configurations (which produce the array
@@ -231,7 +231,7 @@ plots shown below (from left-to-right):
    :align: center
 
    +-------------------------------------------------------+-------------------------------------------------------+--------------------------------------------------------+
-   | .. image:: ../../images/tutorials/neurocog/ch_izh.jpg | .. image:: ../../images/tutorials/neurocog/ib_izh.jpg | .. image:: ../../images/tutorials/neurocog/lts_izh.jpg |
+   | .. image:: ../../images/tutorials/neurocog/ch_izh.png | .. image:: ../../images/tutorials/neurocog/ib_izh.png | .. image:: ../../images/tutorials/neurocog/lts_izh.png |
    |   :scale: 40%                                         |   :scale: 40%                                         |   :scale: 40%                                          |
    |   :align: center                                      |   :align: center                                      |   :align: center                                       |
    +-------------------------------------------------------+-------------------------------------------------------+--------------------------------------------------------+
