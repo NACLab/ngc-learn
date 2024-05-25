@@ -1,7 +1,10 @@
+# %%
+
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
+from ngclearn.utils import tensorstats
 from functools import partial
 import time, sys
 
@@ -105,3 +108,25 @@ class ExpKernel(Component): ## Exponential spike kernel
         self.inputs.set(inputs)
         self.epsp.set(epsp)
         self.tf.set(tf)
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    # NOTE: VN: currently have error: dt is not defined.
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = ExpKernel("X", 9)
+    print(X)
+

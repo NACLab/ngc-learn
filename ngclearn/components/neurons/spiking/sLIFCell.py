@@ -1,5 +1,4 @@
 # %%
-
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
@@ -336,64 +335,73 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.threshold0 = self.thr.value + 0
 
     def __repr__(self):
-        comps = ['j', 's', 'tols', 'v', 'thr', 'rfr', 'surrogate']
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
-        lines = f"[sLIFCell] {self.name}\n"
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
             stats = tensorstats(getattr(self, c).value)
-            line = [f"{k}: {v}" for k, v in stats.items()]
-            line = ", ".join(line)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
 
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = SLIFCell("X", 9, 0.0004, 3, 0.3)
+    print(X)
+
 
 # Testing
-if __name__ == '__main__':
-    from ngcsimlib.compartment import All_compartments
-    from ngcsimlib.context import Context
-    from ngcsimlib.commands import Command
+# if __name__ == '__main__':
+#     from ngcsimlib.compartment import All_compartments
+#     from ngcsimlib.context import Context
+#     from ngcsimlib.commands import Command
 
-    def wrapper(compiled_fn):
-        def _wrapped(*args):
-            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            for key, value in vals.items():
-                All_compartments[str(key)].set(value)
-            return vals
-        return _wrapped
+#     def wrapper(compiled_fn):
+#         def _wrapped(*args):
+#             # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             for key, value in vals.items():
+#                 All_compartments[str(key)].set(value)
+#             return vals
+#         return _wrapped
 
-    class AdvanceCommand(Command):
-        compile_key = "advance"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.advance(t=t, dt=dt)
+#     class AdvanceCommand(Command):
+#         compile_key = "advance"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.advance(t=t, dt=dt)
 
-    class ResetCommand(Command):
-        compile_key = "reset"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.reset()
+#     class ResetCommand(Command):
+#         compile_key = "reset"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.reset()
 
-    with Context("Bar") as bar:
-        s1 = SLIFCell("s1", 2, 20.0, 1.0, 0.4, 0.1, True, 0.1, 0.002, 0.2, 0.3, True, 0.2)
-        advance_cmd = AdvanceCommand(components=[s1], command_name="Advance")
-        reset_cmd = ResetCommand(components=[s1], command_name="Reset")
+#     with Context("Bar") as bar:
+#         s1 = SLIFCell("s1", 2, 20.0, 1.0, 0.4, 0.1, True, 0.1, 0.002, 0.2, 0.3, True, 0.2)
+#         advance_cmd = AdvanceCommand(components=[s1], command_name="Advance")
+#         reset_cmd = ResetCommand(components=[s1], command_name="Reset")
 
-    compiled_advance_cmd, _ = advance_cmd.compile()
-    # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
-    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+#     compiled_advance_cmd, _ = advance_cmd.compile()
+#     # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+#     wrapped_advance_cmd = wrapper(compiled_advance_cmd)
 
-    compiled_reset_cmd, _ = reset_cmd.compile()
-    wrapped_reset_cmd = wrapper(compiled_reset_cmd)
+#     compiled_reset_cmd, _ = reset_cmd.compile()
+#     wrapped_reset_cmd = wrapper(compiled_reset_cmd)
 
-    dt = 20.0
-    for t in range(4):
-        s1.j.set(jnp.asarray([[0.1, 0.9]]))
-        wrapped_advance_cmd(t, dt)
-        print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
-    wrapped_reset_cmd()
-    print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
+#     dt = 20.0
+#     for t in range(4):
+#         s1.j.set(jnp.asarray([[0.1, 0.9]]))
+#         wrapped_advance_cmd(t, dt)
+#         print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
+#     wrapped_reset_cmd()
+#     print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
 
-    print(s1)
+#     print(s1)

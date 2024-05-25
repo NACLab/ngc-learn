@@ -8,6 +8,7 @@ from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy
+from ngclearn.utils import tensorstats
 import time, sys
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
@@ -209,56 +210,75 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.j_td.set(j_td) # top-down electrical current - pressure
         self.z.set(z) # rate activity
 
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = RateCell("X", 9, 0.03)
+    print(X)
 
 
 # Testing
-if __name__ == '__main__':
-    from ngcsimlib.compartment import All_compartments
-    from ngcsimlib.context import Context
-    from ngcsimlib.commands import Command
+# if __name__ == '__main__':
+#     from ngcsimlib.compartment import All_compartments
+#     from ngcsimlib.context import Context
+#     from ngcsimlib.commands import Command
 
-    def wrapper(compiled_fn):
-        def _wrapped(*args):
-            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            for key, value in vals.items():
-                All_compartments[str(key)].set(value)
-            return vals
-        return _wrapped
+#     def wrapper(compiled_fn):
+#         def _wrapped(*args):
+#             # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             for key, value in vals.items():
+#                 All_compartments[str(key)].set(value)
+#             return vals
+#         return _wrapped
 
-    class AdvanceCommand(Command):
-        compile_key = "advance"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.advance(t=t, dt=dt)
+#     class AdvanceCommand(Command):
+#         compile_key = "advance"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.advance(t=t, dt=dt)
 
-    class ResetCommand(Command):
-        compile_key = "reset"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.reset()
+#     class ResetCommand(Command):
+#         compile_key = "reset"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.reset()
 
-    with Context("Bar") as bar:
-        a1 = RateCell("a1", 2, 0.01)
-        a2 = RateCell("a2", 2, 0.01)
-        a2.j << a1.zF
-        advance_cmd = AdvanceCommand(components=[a1, a2], command_name="Advance")
-        reset_cmd = ResetCommand(components=[a1, a2], command_name="Reset")
+#     with Context("Bar") as bar:
+#         a1 = RateCell("a1", 2, 0.01)
+#         a2 = RateCell("a2", 2, 0.01)
+#         a2.j << a1.zF
+#         advance_cmd = AdvanceCommand(components=[a1, a2], command_name="Advance")
+#         reset_cmd = ResetCommand(components=[a1, a2], command_name="Reset")
 
-    compiled_advance_cmd, _ = advance_cmd.compile()
-    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+#     compiled_advance_cmd, _ = advance_cmd.compile()
+#     wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
 
-    compiled_reset_cmd, _ = reset_cmd.compile()
-    wrapped_reset_cmd = wrapper(compiled_reset_cmd)
+#     compiled_reset_cmd, _ = reset_cmd.compile()
+#     wrapped_reset_cmd = wrapper(compiled_reset_cmd)
 
-    dt = 0.01
-    for t in range(3):
-        a1.j.set(10)
-        wrapped_advance_cmd(t, dt)
-        print(f"Step {t} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-        print(f"Step {t} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
-    wrapped_reset_cmd()
-    print(f"Reset: [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-    print(f"Reset: [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+#     dt = 0.01
+#     for t in range(3):
+#         a1.j.set(10)
+#         wrapped_advance_cmd(t, dt)
+#         print(f"Step {t} - [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+#         print(f"Step {t} - [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+#     wrapped_reset_cmd()
+#     print(f"Reset: [a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+#     print(f"Reset: [a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
