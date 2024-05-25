@@ -83,7 +83,7 @@ class AdExCell(Component):
 
     | tau_m * dv/dt = -(v - v_rest) + sharpV * exp((v - vT)/sharpV) - R_m * w + R_m * j
     | tau_w * dw/dt =  -w + (v - v_rest) * a
-    | where w = w + s * (_w + b) [in the event of a spike]
+    | where w = w + s * (w + b) [in the event of a spike]
 
 
     | References:

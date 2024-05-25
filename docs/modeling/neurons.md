@@ -154,13 +154,31 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
     :noindex:
 ```
 
+### The Adaptive Exponential (AdEx) Integrator Cell
+
+This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
+governs the behavior of the action potential of a spiking neuronal cell). In
+effect, the adaptive exponential (AdEx) integrate-and-fire model evolves as a
+result of two coupled differential equations. (Note that this
+cell supports either Euler or midpoint method / RK-2 integration.)
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.AdEx
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### The FitzHugh–Nagumo Cell
 
 This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
 governs the behavior of the action potential of a spiking neuronal cell). In
 effect, the FitzHugh-Nagumo model is a set of two coupled differential equations
 that simplify the four differential equation Hodgkin-Huxley (squid axon) model.
-A voltage `v_thr` can be used to extract binary spike pulses. (Note that this 
+A voltage `v_thr` can be used to extract binary spike pulses. (Note that this
 cell supports either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
@@ -181,7 +199,7 @@ effect, the Izhikevich model is a set of two coupled differential equations
 that simplify the more complex dynamics of the Hodgkin-Huxley model. Note that
 this Izhikevich model can be configured to model particular classes of neurons,
 including regular spiking (RS), intrinsically bursting (IB), chattering (CH),
-fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons. 
+fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
 (Note that this cell supports either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
