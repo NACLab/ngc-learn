@@ -1,4 +1,4 @@
-# Trace Variables and Filtering
+# Lesson 1B: Trace Variables and Filtering
 
 Traces represent one very important component tool in ngc-learn as these are
 often, in biophysical model simulations, used to produce real-valued
