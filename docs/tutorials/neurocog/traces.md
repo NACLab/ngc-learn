@@ -128,7 +128,7 @@ trace = VarTrace("tr0", n_units=1, tau_tr=30., a_delta=0., decay_type="exp")
 Running the same code from before but with the above alteration would yield the
 plot below:
 
-<img src="../../images/tutorials/neurocog/poisson_trace_gated.jpg" width="400" />
+<img src="../../images/tutorials/neurocog/poisson_trace_gate.jpg" width="400" />
 
 Notice that, this time, when a spike is emitted from the Poisson cell, the trace
 is "clamped" to the value of one and then exponentially decays. Such a trace
