@@ -70,7 +70,7 @@ Formally, the core dynamics of the AdEx cell can be written out as follows:
 
 $$
 \tau_m \frac{\partial \mathbf{v}_t}{\partial t} &=
--(\mathbf{v}_t - v_{rest}) + s_v \exp(\frac{\mathbf{v}_t - v_{intr}}{s_v}) - R \mathbf{w}_t + R \mathbf{j}_t \\
+-(\mathbf{v}_t - v_{rest}) + s_v \exp\Big(\frac{\mathbf{v}_t - v_{intr}}{s_v}\Big) - R \mathbf{w}_t + R \mathbf{j}_t \\
 \tau_w \frac{\partial \mathbf{w}_t}{\partial t} &= -\mathbf{w}_t + (\mathbf{v}_t - v_{rest}) * a
 $$
 
@@ -177,7 +177,7 @@ disk, like the ones below:
 
    +------------------------------------------------------------+------------------------------------------------------------+
    | .. image:: ../../images/tutorials/neurocog/adex_v_plot.jpg | .. image:: ../../images/tutorials/neurocog/adex_w_plot.jpg |
-   |   :scale: 50%                                              |   :scale: 50%                                              |
+   |   :scale: 60%                                              |   :scale: 60%                                              |
    |   :align: center                                           |   :align: center                                           |
    +------------------------------------------------------------+------------------------------------------------------------+
 ```
