@@ -17,44 +17,54 @@ compute a simple Hebbian adjustment.
 We do this specifically as follows:
 
 ```python
-from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random, nn, jit
+from ngcsimlib.compilers import compile_command, wrap_command
+from ngcsimlib.context import Context
+from ngcsimlib.commands import Command
+
+from ngclearn.components import HebbianSynapse, RateCell
+
+from jax import numpy as jnp, random, jit
+import numpy as np
 
 ## create seeding keys
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 6)
 
-## create simple dynamical system: a --> w_ab --> b
-model = Controller()
-a = model.add_component("rate", name="a", n_units=1, tau_m=0.,
-                        act_fx="identity", key=subkeys[0])
-b = model.add_component("rate", name="b", n_units=1, tau_m=0.,
-                        act_fx="identity", key=subkeys[1])
-Wab = model.add_component("hebbian", name="Wab", shape=(1, 1),
-                          eta=1., signVal=-1., wInit=("constant", 1., None),
-                          w_bound=0., key=subkeys[3])
-## wire a to w_ab and wire w_ab to b
-model.connect(a.name, a.outputCompartmentName(), Wab.name, Wab.inputCompartmentName())
-model.connect(Wab.name, Wab.outputCompartmentName(), b.name, b.inputCompartmentName())
+## create simple system with only one F-N cell
+with Context("Circuit") as circuit:
+  a = RateCell(name="a", n_units=1, tau_m=0.,
+    act_fx="identity", key=subkeys[0])
+  b = RateCell(name="b", n_units=1, tau_m=0.,
+    act_fx="identity", key=subkeys[1])
 
-model.connect(a.name, a.outputCompartmentName(), Wab.name, Wab.presynapticCompartmentName())
-model.connect(b.name, b.outputCompartmentName(), Wab.name, Wab.postsynapticCompartmentName())
+  Wab = HebbianSynapse(name="Wab", shape=(1, 1), eta=1.,
+    signVal=-1., wInit=("constant", 1., None),
+    w_bound=0., key=subkeys[3])
 
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset",
-                  component_names=[a.name, Wab.name, b.name],
-                  reset_name="do_reset")
-model.add_command(
-    "advance", command_name="advance",
-    component_names=[a.name, Wab.name, b.name]
-)
-model.add_command("evolve", command_name="evolve", component_names=[Wab.name])
-model.add_command("clamp", command_name="clamp_data",
-                  component_names=[a.name], compartment=a.inputCompartmentName(),
-                  clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
-model.add_step("evolve")
+  # wire output compartment (rate-coded output zF) of RateCell `a` to input compartment of HebbianSynapse `Wab`
+  Wab.inputs << a.zF
+  # wire output compartment of HebbianSynapse `Wab` to input compartment (electrical current j) RateCell `b`
+  b.j << Wab.outputs
+
+  # wire output compartment (rate-coded output zF) of RateCell `a` to presynaptic compartment of HebbianSynapse `Wab`
+  Wab.pre << a.zF
+  # wire output compartment (rate-coded output zF) of RateCell `b` to postsynaptic compartment of HebbianSynapse `Wab`
+  Wab.post << b.zF
+
+  ## create and compile core simulation commands
+  reset_cmd, reset_args = circuit.compile_command_key(a, Wab, b, compile_key="reset")
+  circuit.add_command(wrap_command(jit(circuit.reset)), name="reset")
+
+  advance_cmd, advance_args = circuit.compile_command_key(a, Wab, b, compile_key="advance_state")
+  circuit.add_command(wrap_command(jit(circuit.advance_state)), name="advance")
+
+  evolve_cmd, evolve_args = circuit.compile_command_key(Wab, compile_key="evolve")
+  circuit.add_command(wrap_command(jit(circuit.evolve)), name="evolve")
+
+  ## set up non-compiled utility commands
+  @Context.dynamicCommand
+  def clamp(x):
+    a.j.set(x)
 ```
 
 Now with our simple system above created, we will now run a simple sequence
@@ -65,13 +75,15 @@ step like so:
 ## run some data through the dynamical system
 x_seq = jnp.asarray([[1, 1, 0, 0, 1]], dtype=jnp.float32)
 
-model.reset(do_reset=True)
-print("{}: Wab = {}".format(-1, model.components["Wab"].weights))
+circuit.reset()
+print("{}: Wab = {}".format(-1, Wab.weights.value))
 for ts in range(x_seq.shape[1]):
   x_t = jnp.expand_dims(x_seq[0,ts], axis=0) ## get data at time t
-  model.clamp_data(x=x_t)
-  model.runCycle(t=ts*1., dt=1.)
-  print(" {}: input = {} ~> Wab = {}".format(ts, x_t, model.components["Wab"].weights))
+  circuit.clamp(x_t)
+  circuit.advance(ts*1., 1.)
+  circuit.evolve(ts*1., 1.)
+  print(" {}: input = {} ~> Wab = {}".format(ts, x_t, Wab.weights.value))
+
 ```
 
 Your code should produce the same output (towards the bottom):
