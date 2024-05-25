@@ -3,7 +3,7 @@ from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 import os, sys
 from functools import partial
 
-@jit
+@partial(jit, static_argnums=[1])
 def measure_fanoFactor(spikes, preserve_batch=False):
     """
     Calculates the Fano factor, i.e., a secondary statistics that probes the
@@ -23,11 +23,11 @@ def measure_fanoFactor(spikes, preserve_batch=False):
     mu = jnp.mean(spikes, axis=0, keepdims=True)
     sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
     fano = sigSqr/mu
-    if preserve_batch == True:
+    if preserve_batch == False:
         fano = jnp.mean(fano)
     return fano
 
-@jit
+@partial(jit, static_argnums=[1])
 def measure_firingRate(spikes, preserve_batch=False):
     """
     Calculates the firing rate(s) of a group of neurons given full spike train.(s)
@@ -46,7 +46,7 @@ def measure_firingRate(spikes, preserve_batch=False):
     counts = jnp.sum(spikes, axis=0, keepdims=True)
     T = spikes.shape[0] * 1.
     fireRates = counts/T
-    if preserve_batch == True:
+    if preserve_batch == False:
         fireRates = jnp.mean(fireRates)
     return fireRates
 
@@ -69,7 +69,7 @@ def measure_sparsity(codes, tolerance=0.):
     rho = jnp.sum(m, axis=1, keepdims=True)/(codes.shape[1] * 1.)
     return rho
 
-@jit
+@partial(jit, static_argnums=[2])
 def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
     """
     Calculates the accuracy (ACC) given a matrix of predictions and matrix of targets.
@@ -95,6 +95,7 @@ def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
+@partial(jit, static_argnums=[2])
 def measure_KLD(p_xHat, p_x, preserve_batch=False):
     """
     Measures the (raw) Kullback-Leibler divergence (KLD), assuming that the two
