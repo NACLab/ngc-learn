@@ -25,10 +25,9 @@ specifically the rate-cell (RateCell). Let's start with the file's header
 from jax import numpy as jnp, random, jit
 import time
 
-from ngclearn.utils.model_utils import scanner
-from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
 from ngcsimlib.commands import Command
+from ngcsimlib.compilers import compile_command, wrap_command
 ## import model-specific elements
 from ngcsimlib.operations import summation
 from ngclearn.components.neurons.graded.rateCell import RateCell
@@ -119,7 +118,7 @@ lin_out = []
 nonlin_out = []
 t_values = []
 
-model.reset(True)
+model.reset()
 t = 0.
 for ts in range(current.shape[1]):
    j_t = jnp.expand_dims(current[0,ts], axis=0) ## get data at time ts

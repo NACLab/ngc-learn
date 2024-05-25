@@ -38,39 +38,48 @@ shape `1 x 10`) with values in the range of $[0,1]$, we can convert it to a
 spike train over $100$ steps in time as follows:
 
 ```python
-from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random
+from jax import numpy as jnp, random, jit
+import time
+
+from ngcsimlib.context import Context
+from ngcsimlib.commands import Command
+from ngcsimlib.compilers import compile_command, wrap_command
 from ngclearn.utils.viz.raster import create_raster_plot
+## import model-specific mechanisms
+from ngcsimlib.operations import summation
+from ngclearn.components.input_encoders.bernoulliCell import BernoulliCell
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 2)
 
-dt = 1. ## integration time constant
+dt = 1. # ms # integration time constant
 T = 100 ## number time steps to simulate
 
-## create simple system with only one sLIF
-model = Controller() ## the simulation object / controller
-cell = model.add_component("bernoulli", name="z0", n_units=10, key=subkeys[0])
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset", component_names=[cell.name], reset_name="do_reset")
-model.add_command("advance", command_name="advance", component_names=[cell.name])
-model.add_command("clamp", command_name="clamp_data", component_names=[cell.name],
-                  compartment=cell.inputCompartmentName(), clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
+with Context("Model") as model:
+    z0 = BernoulliCell("z0", n_units=10, key=subkeys[0])
+
+    reset_cmd, reset_args = model.compile_command_key(z0, compile_key="reset")
+    advance_cmd, advance_args = model.compile_command_key(z0, compile_key="advance_state")
+
+    model.add_command(wrap_command(jit(model.reset)), name="reset")
+    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
+    @Context.dynamicCommand
+    def clamp(x):
+        z0.inputs.set(x)
 
 probs = jnp.asarray([[0.8, 0.2, 0., 0.55, 0.9, 0, 0.15, 0., 0.6, 0.77]],dtype=jnp.float32)
-
 spikes = []
-model.reset(True)
+model.reset()
 for ts in range(T):
-    model.clamp_data(probs)
-    model.runCycle(t=ts*1., dt=dt)
-    s_t = model.components["z0"].outputCompartment
+    model.clamp(probs)
+    model.advance(ts*1., dt)
+
+    s_t = z0.outputs.value
     spikes.append(s_t)
 spikes = jnp.concatenate(spikes,axis=0)
-create_raster_plot(spikes.T, plot_fname="bernoulli_raster.jpg")
+create_raster_plot(spikes, plot_fname="bernoulli_raster.jpg")
 ```
 
 where we notice that in the first dimension `[0,0]`, fifth dimension `[0,4]`,
