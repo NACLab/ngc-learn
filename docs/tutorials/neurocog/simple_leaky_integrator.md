@@ -240,37 +240,22 @@ such as adaptive threshold functionality and fast approximate lateral inhibition
 
 ## Optional: Setting Up The Components with a JSON Configuration
 
-Create a new folder for this study and further create within it a
-sub-directory for your JSON configuration and create the configuration
-file, i.e., `json_files/modules.json`.
-Inside the JSON file, write the following:
+While you are not required to create a JSON configuration file for ngc-learn,
+to get rid of the warning that ngc-learn will throw at the start of your
+program's execution (indicating that you do not have a configuration set up yet),
+all you need to do is create a sub-directory for your JSON configuration
+inside of your project code's directory, i.e., `json_files/modules.json`.
+Inside the JSON file, you would write the following:
 
 ```json
 [
-  {
-    "absolute_path": "ngcsimlib.commands",
-    "attributes": [
-      {
-        "name": "AdvanceState",
-        "keywords": ["advance"]
-      },
-      {
-        "name": "Clamp",
-        "keywords": ["clamp"]
-      },
-      {
-        "name": "Reset",
-        "keywords": ["reset"]
-      }
-    ]
-  },
-  {
-    "absolute_path": "ngclearn.components",
-    "attributes": [
-      {"name": "SLIFCell",
-       "keywords": ["sLIF"]
-      }
-    ]
-  }
+    {"absolute_path": "ngclearn.components",
+        "attributes": [
+            {"name": "SLIFCell"}]
+    },
+    {"absolute_path": "ngcsimlib.operations",
+        "attributes": [
+            {"name": "overwrite"}]
+    }
 ]
 ```
