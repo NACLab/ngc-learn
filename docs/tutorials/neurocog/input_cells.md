@@ -59,8 +59,8 @@ T = 100 ## number time steps to simulate
 with Context("Model") as model:
     cell = BernoulliCell("z0", n_units=10, key=subkeys[0])
 
-    reset_cmd, reset_args = model.compile_command_key(z0, compile_key="reset")
-    advance_cmd, advance_args = model.compile_command_key(z0, compile_key="advance_state")
+    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
 
     model.add_command(wrap_command(jit(model.reset)), name="reset")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
@@ -79,7 +79,7 @@ for ts in range(T):
     s_t = cell.outputs.value
     spikes.append(s_t)
 spikes = jnp.concatenate(spikes,axis=0)
-create_raster_plot(spikes, plot_fname="bernoulli_raster.jpg")
+create_raster_plot(spikes, plot_fname="input_cell_raster.jpg")
 ```
 
 where we notice that in the first dimension `[0,0]`, fifth dimension `[0,4]`,
@@ -145,14 +145,15 @@ T = 1000 ## T * dt = 1000 ms
 n_trials = 30
 mu = 0.
 for _ in range(n_trials):
-    model.reset(True)
     spikes = []
+    model.reset()
     for ts in range(T):
-        model.clamp_data(probs)
-        model.runCycle(t=ts*1., dt=dt)
-        s_t = model.components["z0"].outputCompartment
+        model.clamp(probs)
+        model.advance(ts*1., dt)
+
+        s_t = cell.outputs.value
         spikes.append(s_t)
-    count = jnp.sum(jnp.concatenate(spikes,axis=0))
+    count = jnp.sum(jnp.concatenate(spikes, axis=0))
     mu += count
     print(count)
 print("Mean firing rate = {} Hertz".format(mu/n_trials))
