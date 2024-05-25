@@ -163,7 +163,7 @@ result of two coupled differential equations. (Note that this
 cell supports either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
-.. autoclass:: ngclearn.components.AdEx
+.. autoclass:: ngclearn.components.AdExCell
   :noindex:
 
   .. automethod:: advance_state
