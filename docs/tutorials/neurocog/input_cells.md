@@ -136,8 +136,10 @@ iteratively produced over time will be approximately Poisson spike trains with
 a maximum frequency `max_freq`.
 
 To check that the Poisson rate approximately yields a frequency of `64` Hertz,
-you could write the following bit of code to estimate what the firing rate
-of the Poisson cell model is over a period of `1000` milliseconds like so:
+you could adapt the above model creation code to create a single Poisson cell
+(set the `n_units = 1`) and then write the following bit of code to estimate
+what the firing rate of the Poisson cell model is over a period of
+`1000` milliseconds like so:
 
 ```python
 dt = 1. # ms
@@ -155,7 +157,6 @@ for _ in range(n_trials):
         spikes.append(s_t)
     count = jnp.sum(jnp.concatenate(spikes, axis=0))
     mu += count
-    print(count)
 print("Mean firing rate = {} Hertz".format(mu/n_trials))
 ```
 
@@ -167,6 +168,6 @@ Mean firing rate = 63.833336 Hertz
 
 You now have two very useful input encoding cells to convert real-valued
 data to spike trains. Note that both the Bernoulli and Poisson cell assume
-that the dimensions of your input sensory patterns lie in the range of `[0,1]`,
-so make sure that your data's values conform to this assumption (e.g., divide
-the pixel values in MNIST by `255`).
+that the each feature in your input sensory pattern vectors lie in the range of
+`[0,1]`, so it is important to make sure that your data's values conform to
+this assumption (e.g., divide the pixel values in MNIST by `255`).
