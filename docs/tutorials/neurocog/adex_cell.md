@@ -201,7 +201,7 @@ Inside the JSON file, you would write the following:
 [
     {"absolute_path": "ngclearn.components",
         "attributes": [
-            {"name": "FitzHughNagumoCell"}]
+            {"name": "AdExCell"}]
     },
     {"absolute_path": "ngcsimlib.operations",
         "attributes": [
