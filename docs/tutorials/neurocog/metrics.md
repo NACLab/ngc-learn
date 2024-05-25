@@ -60,7 +60,7 @@ Notice that we imported the utility function `softmax` from
 probability values so that using `measure_CatNLL()` makes sense (as this
 assumes the model scores are normalized probability values).
 
-## Measuring Spiking Model Statistics
+## Measuring Some Model Statistics
 
 In some cases, you might be interested in measuring certain statistics
 related to aspects of a model that you construct. For example, you might have
