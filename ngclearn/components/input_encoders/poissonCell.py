@@ -1,6 +1,8 @@
+# %%
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
+from ngclearn.utils import tensorstats
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time
@@ -111,56 +113,76 @@ class PoissonCell(Component):
         data = jnp.load(file_name)
         self.key.set( data['key'] )
 
-## testing
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
 if __name__ == '__main__':
-    from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
-    from ngcsimlib.commands import Command
-
-    def wrapper(compiled_fn):
-        def _wrapped(*args):
-            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            for key, value in vals.items():
-                All_compartments[str(key)].set(value)
-            return vals
-        return _wrapped
-
-    class AdvanceCommand(Command):
-        compile_key = "advance"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.advance(t=t, dt=dt)
-
-    class ResetCommand(Command):
-        compile_key = "reset"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.reset(t=t, dt=dt)
-
-    dkey = random.PRNGKey(1234)
     with Context("Bar") as bar:
-        a = PoissonCell("a", n_units=1, max_freq=63.75, key=dkey)
-        advance_cmd = AdvanceCommand(components=[a], command_name="Advance")
-        reset_cmd = ResetCommand(components=[a], command_name="Reset")
+        X = PoissonCell("X", 9)
+    print(X)
 
-    compiled_advance_cmd, _ = advance_cmd.compile()
-    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+## testing
+# if __name__ == '__main__':
+#     from ngcsimlib.compartment import All_compartments
+#     from ngcsimlib.context import Context
+#     from ngcsimlib.commands import Command
 
-    compiled_reset_cmd, _ = reset_cmd.compile()
-    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+#     def wrapper(compiled_fn):
+#         def _wrapped(*args):
+#             # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             for key, value in vals.items():
+#                 All_compartments[str(key)].set(value)
+#             return vals
+#         return _wrapped
 
-    T = 50
-    dt = 1.
+#     class AdvanceCommand(Command):
+#         compile_key = "advance"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.advance(t=t, dt=dt)
 
-    t = 0. ## global clock
-    for i in range(T):
-        a.inputs.set(jnp.asarray([[0.5]]))
-        wrapped_advance_cmd(t, dt)
-        print(f"---[ Step {t} ]---")
-        print(f"[a] inputs: {a.inputs.value}, outputs: {a.outputs.value}, time-of-last-spike: {a.tols.value}")
-        t += dt
-    wrapped_reset_cmd()
-    print(f"---[ After reset ]---")
-    print(f"[a] inputs: {a.inputs.value}, outputs: {a.outputs.value}, time-of-last-spike: {a.tols.value}")
+#     class ResetCommand(Command):
+#         compile_key = "reset"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.reset(t=t, dt=dt)
+
+#     dkey = random.PRNGKey(1234)
+#     with Context("Bar") as bar:
+#         a = PoissonCell("a", n_units=1, max_freq=63.75, key=dkey)
+#         advance_cmd = AdvanceCommand(components=[a], command_name="Advance")
+#         reset_cmd = ResetCommand(components=[a], command_name="Reset")
+
+#     compiled_advance_cmd, _ = advance_cmd.compile()
+#     wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+
+#     compiled_reset_cmd, _ = reset_cmd.compile()
+#     wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+
+#     T = 50
+#     dt = 1.
+
+#     t = 0. ## global clock
+#     for i in range(T):
+#         a.inputs.set(jnp.asarray([[0.5]]))
+#         wrapped_advance_cmd(t, dt)
+#         print(f"---[ Step {t} ]---")
+#         print(f"[a] inputs: {a.inputs.value}, outputs: {a.outputs.value}, time-of-last-spike: {a.tols.value}")
+#         t += dt
+#     wrapped_reset_cmd()
+#     print(f"---[ After reset ]---")
+#     print(f"[a] inputs: {a.inputs.value}, outputs: {a.outputs.value}, time-of-last-spike: {a.tols.value}")

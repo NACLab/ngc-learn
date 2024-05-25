@@ -1,7 +1,9 @@
+# %%
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit, nn
+from ngclearn.utils import tensorstats
 from functools import partial
 import time, sys
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
@@ -283,60 +285,81 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         if seeded == True:
             self.key.set( data['key'] )
 
-# Testing
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
 if __name__ == '__main__':
-    from ngcsimlib.compartment import All_compartments
     from ngcsimlib.context import Context
-    from ngcsimlib.commands import Command
+    with Context("Bar") as bar:
+        X = LIFCell("X", 9, 0.0004, 3)
+    print(X)
 
-    def wrapper(compiled_fn):
-        def _wrapped(*args):
-            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            for key, value in vals.items():
-                All_compartments[str(key)].set(value)
-            return vals
-        return _wrapped
 
-    class AdvanceCommand(Command):
-        compile_key = "advance"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.advance(t=t, dt=dt)
+# Testing
+# if __name__ == '__main__':
+#     from ngcsimlib.compartment import All_compartments
+#     from ngcsimlib.context import Context
+#     from ngcsimlib.commands import Command
 
-    class ResetCommand(Command):
-        compile_key = "reset"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.reset(t=t, dt=dt)
+#     def wrapper(compiled_fn):
+#         def _wrapped(*args):
+#             # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             for key, value in vals.items():
+#                 All_compartments[str(key)].set(value)
+#             return vals
+#         return _wrapped
 
-    with Context("Context") as context:
-        a = LIFCell("a1", n_units=1, tau_m=100., R_m=1.)
-        advance_cmd = AdvanceCommand(components=[a], command_name="Advance")
-        reset_cmd = ResetCommand(components=[a], command_name="Reset")
+#     class AdvanceCommand(Command):
+#         compile_key = "advance"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.advance(t=t, dt=dt)
 
-    T = 20 #16
-    dt = 1. # 0.1
+#     class ResetCommand(Command):
+#         compile_key = "reset"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.reset(t=t, dt=dt)
 
-    compiled_advance_cmd, _ = advance_cmd.compile()
-    wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+#     with Context("Context") as context:
+#         a = LIFCell("a1", n_units=1, tau_m=100., R_m=1.)
+#         advance_cmd = AdvanceCommand(components=[a], command_name="Advance")
+#         reset_cmd = ResetCommand(components=[a], command_name="Reset")
 
-    compiled_reset_cmd, _ = reset_cmd.compile()
-    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+#     T = 20 #16
+#     dt = 1. # 0.1
 
-    t = 0.
-    for i in range(T): # i is "t"
-        a.j.set(jnp.asarray([[1.0]]))
-        wrapped_advance_cmd(t, dt) ## pass in t and dt and run step forward of simulation
-        t = t + dt
-        print(f"---[ Step {i} ]---")
-        print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
-              f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
-              f"tols: {a.tols.value}")
-    #a.reset()
-    wrapped_reset_cmd()
-    print(f"---[ After reset ]---")
-    print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
-          f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
-          f"tols: {a.tols.value}")
+#     compiled_advance_cmd, _ = advance_cmd.compile()
+#     wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+
+#     compiled_reset_cmd, _ = reset_cmd.compile()
+#     wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+
+#     t = 0.
+#     for i in range(T): # i is "t"
+#         a.j.set(jnp.asarray([[1.0]]))
+#         wrapped_advance_cmd(t, dt) ## pass in t and dt and run step forward of simulation
+#         t = t + dt
+#         print(f"---[ Step {i} ]---")
+#         print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
+#               f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
+#               f"tols: {a.tols.value}")
+#     #a.reset()
+#     wrapped_reset_cmd()
+#     print(f"---[ After reset ]---")
+#     print(f"[a] j: {a.j.value}, v: {a.v.value}, s: {a.s.value}, " \
+#           f"rfr: {a.rfr.value}, thr: {a.thr.value}, theta: {a.thr_theta.value}, " \
+#           f"tols: {a.tols.value}")

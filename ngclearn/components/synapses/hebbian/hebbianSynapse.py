@@ -274,105 +274,116 @@ class HebbianSynapse(Component):
             self.biases.set(data['biases'])
 
     def __repr__(self):
-        comps = ['inputs', 'outputs', 'pre', 'post', 'weights', 'biases', 'opt_params']
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
-        lines = f"[HebbianSynapse] {self.name}\n"
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
             stats = tensorstats(getattr(self, c).value)
-            line = [f"{k}: {v}" for k, v in stats.items()]
-            line = ", ".join(line)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
 
 if __name__ == '__main__':
-    from ngcsimlib.compartment import Get_Compartment_Batch, Set_Compartment_Batch
     from ngcsimlib.context import Context
-    from ngcsimlib.commands import Command
-    from ngclearn.components.neurons.graded.rateCell import RateCell
-    # from ngclearn.components import BernoulliCell, GaussianErrorCell
-
-    def wrapper(compiled_fn):
-        def _wrapped(*args):
-            vals = compiled_fn(*args, compartment_values=Get_Compartment_Batch())
-            Set_Compartment_Batch(vals)
-            return vals
-        return _wrapped
-
-    class AdvanceCommand(Command):
-        compile_key = "advance"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.advance(t=t, dt=dt)
-
-    class EvolveCommand(Command):
-        compile_key = "evolve"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.evolve(t=t, dt=dt)
-
-    class ResetCommand(Command):
-        compile_key = "reset"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.reset(t=t, dt=dt)
-
     with Context("Bar") as bar:
-        a1 = RateCell("a1", 2, 0.01)
-        # a1 = BernoulliCell("a1", 2)
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
             signVal=-1.0, bInit=("constant", 0., 0.))
-        a2 = RateCell("a2", 3, 0.01)
-        # a2 = BernoulliCell("a2", 3)
-
-        # forward pass
-        Wab.inputs << a1.zF
-        # Wab.inputs << a1.outputs # NOTE: Bug: a1.outputs shape (1, 2) but the shape for Wab inputs is (1, 3)
-        # a2.j << Wab.outputs
-        advance_cmd = AdvanceCommand(components=[a1, Wab, a2], command_name="Advance") # forward
-
-        # evolve and update adam
-        Wab.pre << a1.z
-        Wab.post << a2.z
-        # Wab.pre << a1.outputs
-        # Wab.post << a2.outputs
-        evolve_cmd = EvolveCommand(components=[Wab], command_name="Evolve")
-
-        reset_cmd = ResetCommand(components=[a1, Wab, a2], command_name="Reset")
-
-    compiled_advance_cmd, _ = advance_cmd.compile()
-    # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
-    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
-
-    compiled_evolve_cmd, _ = evolve_cmd.compile()
-    wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
-    # wrapped_evolve_cmd = wrapper(compiled_evolve_cmd)
-
-    compiled_reset_cmd, _ = reset_cmd.compile()
-    wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
-
-    dt = 0.01
-    for t in range(3):
-        a1.j.set(jnp.asarray([[0.5, 0.2]]))
-        a2.j.set(jnp.asarray([[0.2, 0.7, 0.3]]))
-        # a1.inputs.set(jnp.asarray([[0.5, 0.2]]))
-        # a2.inputs.set(jnp.asarray([[0.8, 0.1, 0.4]]))
-        wrapped_advance_cmd(t, dt)
-        print(f"--- [Step {t}] After Advance ---")
-        print(f"[a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
-        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
-        print(f"[a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
-
-        wrapped_evolve_cmd(t, dt)
-        print(f"--- [Step {t}] After Evolve ---")
-        print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
-
-    wrapped_reset_cmd()
-    print(f"--- [Step {t}] After Reset ---")
-    print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+    print(Wab)
 
 
-    Wab.save(".")
-    Wab.load(".")
+# if __name__ == '__main__':
+#     from ngcsimlib.compartment import Get_Compartment_Batch, Set_Compartment_Batch
+#     from ngcsimlib.context import Context
+#     from ngcsimlib.commands import Command
+#     from ngclearn.components.neurons.graded.rateCell import RateCell
+#     # from ngclearn.components import BernoulliCell, GaussianErrorCell
+
+#     def wrapper(compiled_fn):
+#         def _wrapped(*args):
+#             vals = compiled_fn(*args, compartment_values=Get_Compartment_Batch())
+#             Set_Compartment_Batch(vals)
+#             return vals
+#         return _wrapped
+
+#     class AdvanceCommand(Command):
+#         compile_key = "advance"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.advance(t=t, dt=dt)
+
+#     class EvolveCommand(Command):
+#         compile_key = "evolve"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.evolve(t=t, dt=dt)
+
+#     class ResetCommand(Command):
+#         compile_key = "reset"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.reset(t=t, dt=dt)
+
+#     with Context("Bar") as bar:
+#         a1 = RateCell("a1", 2, 0.01)
+#         # a1 = BernoulliCell("a1", 2)
+#         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
+#             signVal=-1.0, bInit=("constant", 0., 0.))
+#         a2 = RateCell("a2", 3, 0.01)
+#         # a2 = BernoulliCell("a2", 3)
+
+#         # forward pass
+#         Wab.inputs << a1.zF
+#         # Wab.inputs << a1.outputs # NOTE: Bug: a1.outputs shape (1, 2) but the shape for Wab inputs is (1, 3)
+#         # a2.j << Wab.outputs
+#         advance_cmd = AdvanceCommand(components=[a1, Wab, a2], command_name="Advance") # forward
+
+#         # evolve and update adam
+#         Wab.pre << a1.z
+#         Wab.post << a2.z
+#         # Wab.pre << a1.outputs
+#         # Wab.post << a2.outputs
+#         evolve_cmd = EvolveCommand(components=[Wab], command_name="Evolve")
+
+#         reset_cmd = ResetCommand(components=[a1, Wab, a2], command_name="Reset")
+
+#     compiled_advance_cmd, _ = advance_cmd.compile()
+#     # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+#     wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+
+#     compiled_evolve_cmd, _ = evolve_cmd.compile()
+#     wrapped_evolve_cmd = wrapper(jit(compiled_evolve_cmd))
+#     # wrapped_evolve_cmd = wrapper(compiled_evolve_cmd)
+
+#     compiled_reset_cmd, _ = reset_cmd.compile()
+#     wrapped_reset_cmd = wrapper(jit(compiled_reset_cmd))
+
+#     dt = 0.01
+#     for t in range(3):
+#         a1.j.set(jnp.asarray([[0.5, 0.2]]))
+#         a2.j.set(jnp.asarray([[0.2, 0.7, 0.3]]))
+#         # a1.inputs.set(jnp.asarray([[0.5, 0.2]]))
+#         # a2.inputs.set(jnp.asarray([[0.8, 0.1, 0.4]]))
+#         wrapped_advance_cmd(t, dt)
+#         print(f"--- [Step {t}] After Advance ---")
+#         print(f"[a1] j: {a1.j.value}, j_td: {a1.j_td.value}, z: {a1.z.value}, zF: {a1.zF.value}")
+#         print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+#         print(f"[a2] j: {a2.j.value}, j_td: {a2.j_td.value}, z: {a2.z.value}, zF: {a2.zF.value}")
+
+#         wrapped_evolve_cmd(t, dt)
+#         print(f"--- [Step {t}] After Evolve ---")
+#         print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+
+#     wrapped_reset_cmd()
+#     print(f"--- [Step {t}] After Reset ---")
+#     print(f"[Wab] inputs: {Wab.inputs.value}, outputs: {Wab.outputs.value}, pre: {Wab.pre.value}, post: {Wab.post.value}, weights: {Wab.weights.value}, biases: {Wab.biases.value}, dW: {Wab.dW.value}, db: {Wab.db.value}, opt_params: {Wab.opt_params.value}")
+
+
+#     Wab.save(".")
+#     Wab.load(".")

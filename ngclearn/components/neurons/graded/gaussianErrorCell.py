@@ -1,3 +1,4 @@
+# %%
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
@@ -114,64 +115,73 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.modulator.set(mu + 1.)
 
     def __repr__(self):
-        comps = ['j', 'L', 'e', 'mu', 'dmu', 'target', 'dtarget', 'modulator']
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
-        lines = f"[GaussianErrorCell] {self.name}\n"
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
             stats = tensorstats(getattr(self, c).value)
-            line = [f"{k}: {v}" for k, v in stats.items()]
-            line = ", ".join(line)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
 
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = GaussianErrorCell("X", 9)
+    print(X)
+
 
 # Testing
-if __name__ == '__main__':
-    from ngcsimlib.compartment import All_compartments
-    from ngcsimlib.context import Context
-    from ngcsimlib.commands import Command
+# if __name__ == '__main__':
+#     from ngcsimlib.compartment import All_compartments
+#     from ngcsimlib.context import Context
+#     from ngcsimlib.commands import Command
 
-    def wrapper(compiled_fn):
-        def _wrapped(*args):
-            # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-            for key, value in vals.items():
-                All_compartments[str(key)].set(value)
-            return vals
-        return _wrapped
+#     def wrapper(compiled_fn):
+#         def _wrapped(*args):
+#             # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
+#             for key, value in vals.items():
+#                 All_compartments[str(key)].set(value)
+#             return vals
+#         return _wrapped
 
-    class AdvanceCommand(Command):
-        compile_key = "advance"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.advance(t=t, dt=dt)
+#     class AdvanceCommand(Command):
+#         compile_key = "advance"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.advance(t=t, dt=dt)
 
-    class ResetCommand(Command):
-        compile_key = "reset"
-        def __call__(self, t=None, dt=None, *args, **kwargs):
-            for component in self.components:
-                component.gather()
-                component.reset()
+#     class ResetCommand(Command):
+#         compile_key = "reset"
+#         def __call__(self, t=None, dt=None, *args, **kwargs):
+#             for component in self.components:
+#                 component.gather()
+#                 component.reset()
 
-    with Context("Bar") as bar:
-        e = GaussianErrorCell("e", 2)
-        e.modulator << e.mu
-        advance_cmd = AdvanceCommand(components=[e], command_name="Advance")
-        reset_cmd = ResetCommand(components=[e], command_name="Reset")
+#     with Context("Bar") as bar:
+#         e = GaussianErrorCell("e", 2)
+#         e.modulator << e.mu
+#         advance_cmd = AdvanceCommand(components=[e], command_name="Advance")
+#         reset_cmd = ResetCommand(components=[e], command_name="Reset")
 
-    compiled_advance_cmd, _ = advance_cmd.compile()
-    # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
-    wrapped_advance_cmd = wrapper(compiled_advance_cmd)
+#     compiled_advance_cmd, _ = advance_cmd.compile()
+#     # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
+#     wrapped_advance_cmd = wrapper(compiled_advance_cmd)
 
-    compiled_reset_cmd, _ = reset_cmd.compile()
-    wrapped_reset_cmd = wrapper(compiled_reset_cmd)
+#     compiled_reset_cmd, _ = reset_cmd.compile()
+#     wrapped_reset_cmd = wrapper(compiled_reset_cmd)
 
-    dt = 20.0
-    for t in range(4):
-        e.mu.set(jnp.asarray([[0.1, 0.9]]))
-        e.target.set(jnp.asarray([[1.0, -1.0]]))
-        wrapped_advance_cmd(t, dt)
-        print(f"Step {t} - [e] mu: {e.mu.value}, target: {e.target.value}, dmu: {e.dmu.value}, dtarget: {e.dtarget.value}, L: {e.L.value}, modulator: {e.modulator.value}")
-    wrapped_reset_cmd()
-    print(f"Step {t} - [e] mu: {e.mu.value}, target: {e.target.value}, dmu: {e.dmu.value}, dtarget: {e.dtarget.value}, L: {e.L.value}, modulator: {e.modulator.value}")
+#     dt = 20.0
+#     for t in range(4):
+#         e.mu.set(jnp.asarray([[0.1, 0.9]]))
+#         e.target.set(jnp.asarray([[1.0, -1.0]]))
+#         wrapped_advance_cmd(t, dt)
+#         print(f"Step {t} - [e] mu: {e.mu.value}, target: {e.target.value}, dmu: {e.dmu.value}, dtarget: {e.dtarget.value}, L: {e.L.value}, modulator: {e.modulator.value}")
+#     wrapped_reset_cmd()
+#     print(f"Step {t} - [e] mu: {e.mu.value}, target: {e.target.value}, dmu: {e.dmu.value}, dtarget: {e.dtarget.value}, L: {e.L.value}, modulator: {e.modulator.value}")

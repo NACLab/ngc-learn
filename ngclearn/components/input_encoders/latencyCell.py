@@ -1,7 +1,9 @@
+# %%
+
 from ngcsimlib.component import Component
 from ngcsimlib.resolver import resolver
 from ngcsimlib.compartment import Compartment
-
+from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
 from functools import partial
@@ -253,3 +255,23 @@ class LatencyCell(Component):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.key.set( data['key'] )
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = LatencyCell("X", 9)
+    print(X)

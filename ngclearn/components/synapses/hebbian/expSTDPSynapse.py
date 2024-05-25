@@ -1,8 +1,11 @@
+# %%
+
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from jax import random, numpy as jnp, jit
 from functools import partial
+from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import initialize_params, normalize_matrix
 import time
 
@@ -131,7 +134,7 @@ class ExpSTDPSynapse(Component):
 
     # Define Functions
     def __init__(self, name, shape, eta, exp_beta, Aplus, Aminus,
-                 preTrace_target, wInit=(0.025, 0.8), Rscale=1., 
+                 preTrace_target, wInit=("uniform", 0.025, 0.8), Rscale=1.,
                  key=None, directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -215,3 +218,23 @@ class ExpSTDPSynapse(Component):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.weights.set( data['weights'] )
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        Wab = ExpSTDPSynapse("Wab", (2, 3), 0.0004, 1, 1, 1, 1)
+    print(Wab)

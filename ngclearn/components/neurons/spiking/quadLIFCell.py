@@ -1,8 +1,10 @@
+# %%
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from ngclearn.components.neurons.spiking.LIFCell import LIFCell ## import parent cell class/component
 from jax import numpy as jnp, random, jit, nn
+from ngclearn.utils import tensorstats
 from functools import partial
 import time, sys
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
@@ -244,3 +246,26 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     #@resolver(LIFCell._reset)
     #def reset(self, j, v, s, rfr, tols):
     #    super.reset(j, v, s, rfr, tols)
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    # NOTE: VN: currently error in init function
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = QuadLIFCell("X", 9, 0.0004, 3)
+    print(X)
+
+
