@@ -33,6 +33,7 @@ work towards more advanced concepts.
   :caption: Sensory Input Encoding / Transformation
 
   input_cells
+  traces
 
 .. toctree::
   :maxdepth: 1
