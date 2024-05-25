@@ -41,6 +41,7 @@ tau_m = R_m * C ## membrane time constant
 with Context("Model") as model:
     cell = SLIFCell("z0", n_units=1, tau_m=tau_m, R_m=R_m, thr=V_thr,
                     refract_T=ref_T, key=subkeys[0])
+                    
     ## set up core commands that drive the simulation
     reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")

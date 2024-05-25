@@ -3,64 +3,27 @@
 In this tutorial, we will study one of ngc-learn's more complex spiking components,
 the FitzHugh–Nagumo (FN) biophysical neuronal cell model.
 
-## Setting/Configuring Up The Components
-
-Create a new folder for this study, further creating within it a
-sub-directory for your JSON configuration and create the configuration
-file, i.e., `json_files/modules.json`.
-Inside the JSON file, write the following:
-
-```json
-[
-  {
-    "absolute_path": "ngcsimlib.commands",
-    "attributes": [
-      {
-        "name": "AdvanceState",
-        "keywords": ["advance"]
-      },
-      {
-        "name": "Clamp",
-        "keywords": ["clamp"]
-      },
-      {
-        "name": "Reset",
-        "keywords": ["reset"]
-      }
-    ]
-  },
-  {
-    "absolute_path": "ngclearn.components",
-    "attributes": [
-      {
-        "name": "FitzhughNagumoCell",
-        "keywords": ["fncell"]
-      }
-    ]
-  }
-]
-```
-
 ## Using and Probing a FitzHugh–Nagumo Cell
 
 ### Instantiating the FitzHugh–Nagumo Neuronal Cell
 
-With our JSON configuration now created, go ahead and create a Python script,
+Go ahead and make a new folder for this study and create a Python script,
 i.e., `run_fncell.py`, to write your code for this part of the tutorial.
 
 Now let's set up the controller for this lesson's simulation and construct a
 single component system made up of the Fitzhugh-Nagumo (`F-N`) cell.
 
 ```python
-from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random, nn, jit
+from jax import numpy as jnp, random, jit
 import numpy as np
 
-import matplotlib #.pyplot as plt
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-cmap = plt.cm.jet
-import matplotlib.patches as mpatches #used to write custom legends
+from ngclearn.utils.model_utils import scanner
+from ngcsimlib.compilers import compile_command, wrap_command
+from ngcsimlib.context import Context
+from ngcsimlib.commands import Command
+## import model-specific mechanisms
+from ngcsimlib.operations import summation
+from ngclearn.components.neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
@@ -74,24 +37,21 @@ tau_w = 20. ## recovery variable time constant
 v0 = -0.63605838 ## initial membrane potential (for reset condition)
 w0 = -0.16983366 ## initial recovery value (for reset condition)
 
-## create 1-node system with F-N cell
-model = Controller() ## the simulation object
-a = model.add_component("fncell", name="a", n_units=1, tau_w=tau_w, alpha=alpha,
-                        beta=beta, gamma=gamma, v0=v0, w0=w0, key=subkeys[0])
+## create simple system with only one F-N cell
+with Context("Model") as model:
+    cell = FitzhughNagumoCell("z0", n_units=1, tau_w=tau_w, alpha=alpha, beta=beta,
+                              gamma=gamma, v0=v0, w0=w0, integration_type="euler")
 
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset",
-                  component_names=[a.name],
-                  reset_name="do_reset")
-model.add_command(
-    "advance", command_name="advance",
-    component_names=[a.name]
-)
-model.add_command("clamp", command_name="clamp_data",
-                  component_names=[a.name], compartment=a.inputCompartmentName(),
-                  clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
+    ## create and compile core simulation commands
+    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    model.add_command(wrap_command(jit(model.reset)), name="reset")
+    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
+    ## set up non-compiled utility commands
+    @Context.dynamicCommand
+    def clamp(x):
+        cell.j.set(x)
 ```
 
 In effect, the FitzHugh–Nagumo `F-N` two-dimensional differential
@@ -158,25 +118,36 @@ time_span = np.linspace(0, 200, num=T)
 ## compute integration time constant
 dt = time_span[1] - time_span[0] # ~ 0.13342228152101404 ms
 
-model.reset(do_reset=True)
+time_span = []
+model.reset()
+t = 0.
 for ts in range(T):
     x_t = data
-    model.clamp_data(x=x_t)
-    model.runCycle(t=ts*1., dt=dt)
+    ## pass in t and dt and run step forward of simulation
+    model.clamp(x_t)
+    model.advance(t, dt)
+    t = t + dt
 
     ## naively extract simple statistics at time ts and print them to I/O
-    v = model.components["a"].voltage
-    w = model.components["a"].recovery
-    s = model.components["a"].outputCompartment
+    v = cell.v.value
+    w = cell.w.value
+    s = cell.s.value
     curr_in.append(data)
     mem_rec.append(v)
     recov_rec.append(w)
     spk_rec.append(s)
     ## print stats to I/O (overriding previous print-outs to reduce clutter)
     print("\r {}: s {} ; v {} ; w {}".format(ts, s, v, w), end="")
+    time_span.append((ts)*dt)
 print()
 
-## Post-process statistics and create plot
+import matplotlib #.pyplot as plt
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+cmap = plt.cm.jet
+import matplotlib.patches as mpatches #used to write custom legends
+
+## Post-process statistics (convert to arrays) and create plot
 curr_in = np.squeeze(np.asarray(curr_in))
 mem_rec = np.squeeze(np.asarray(mem_rec))
 recov_rec = np.squeeze(np.asarray(recov_rec))
@@ -187,7 +158,7 @@ n_plots = 1
 fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 
 ax_ptr = ax
-ax_ptr.set(xlabel='Time', ylabel='voltage (v), recovery (w)',
+ax_ptr.set(xlabel='Time', ylabel='Voltage (v), Recovery (w)',
            title='Fitzhugh-Nagumo Voltage/Recovery Dynamics')
 
 v = ax_ptr.plot(time_span, mem_rec, color='C0')
@@ -195,19 +166,41 @@ w = ax_ptr.plot(time_span, recov_rec, color='C1', alpha=.5)
 ax_ptr.legend([v[0],w[0]],['v','w'])
 
 plt.tight_layout()
-plt.savefig("{0}".format("fncell_plot.png"))
+plt.savefig("{0}".format("fncell_plot.jpg"))
 ```
 
 You should get a plot that depicts the evolution of the voltage and recovery,
-i.e., saved as `fncell_plot.png` locally to disk, like the one below:
+i.e., saved as `fncell_plot.jpg` locally to disk, like the one below:
 
-<img src="../../images/tutorials/neurocog/fncell_plot.png" width="400" />
+<img src="../../images/tutorials/neurocog/fncell_plot.jpg" width="400" />
 
 A useful note is that the `F-N` above used Euler integration to step through its
 dynamics (this is the default/base routine for all cell components in ngc-learn);
 however, one could configure it to use the midpoint method for integration
 by setting its argument `integration_type = rk2` in cases where more
 accuracy in the dynamics is needed (at the cost of additional computational time).
+
+## Optional: Setting Up The Components with a JSON Configuration
+
+While you are not required to create a JSON configuration file for ngc-learn,
+to get rid of the warning that ngc-learn will throw at the start of your
+program's execution (indicating that you do not have a configuration set up yet),
+all you need to do is create a sub-directory for your JSON configuration
+inside of your project code's directory, i.e., `json_files/modules.json`.
+Inside the JSON file, you would write the following:
+
+```json
+[
+    {"absolute_path": "ngclearn.components",
+        "attributes": [
+            {"name": "FitzHughNagumoCell"}]
+    },
+    {"absolute_path": "ngcsimlib.operations",
+        "attributes": [
+            {"name": "overwrite"}]
+    }
+]
+```
 
 ## References
 
