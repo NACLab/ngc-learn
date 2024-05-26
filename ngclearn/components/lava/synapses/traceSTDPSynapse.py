@@ -50,6 +50,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
                 post, x_post, weights):
         dWpost = jnp.matmul((x_pre - x_tar).T, post * Aplus)
         dWpre = -jnp.matmul(pre.T, x_post * Aminus)
+        dW = dWpost + dWpre
         ## reformulated bounding flag to be linear algebraic
         flag = (w_bounds > 0.) * 1.
         dW = (dW * (w_bounds - jnp.abs(W))) * flag + (dW) * (1. - flag)
