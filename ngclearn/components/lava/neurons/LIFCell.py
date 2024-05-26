@@ -64,13 +64,12 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         return v, s, rfr, thr_theta, tols
 
     @resolver(_advance_state)
-    def advance_state(self, v, s, rfr, thr_theta, tols, key):
+    def advance_state(self, v, s, rfr, thr_theta, tols):
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)
         self.thr_theta.set(thr_theta)
         self.tols.set(tols)
-        self.key.set(key)
 
     @staticmethod
     def _reset(batch_size, n_units, v_rest, refract_T):
@@ -95,15 +94,12 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         jnp.savez(file_name,
-                  threshold_theta=self.thr_theta.value,
-                  key=self.key.value)
+                  threshold_theta=self.thr_theta.value)
 
     def load(self, directory, seeded=False, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.thr_theta.set( data['threshold_theta'] )
-        if seeded == True:
-            self.key.set( data['key'] )
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

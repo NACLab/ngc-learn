@@ -28,7 +28,7 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def _modify_current(j, dt, tau_m, R_m): 
+def _modify_current(j, dt, tau_m, R_m):
     ## electrical current re-scaling co-routine
     jScale = tau_m/dt ## <-- this anti-scale counter-balances form of ODE used in this cell
     return (j * R_m) * jScale
@@ -86,7 +86,7 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
         voltage(t+dt), spikes, raw spikes, updated refactory variables
     """
     _v_thr = v_theta + v_thr ## calc present voltage threshold
-    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+    #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     ## update voltage / membrane potential
     v_params = (j, rfr, tau_m, refract_T, v_rest)
     if integType == 1:
@@ -274,8 +274,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, 
-                  threshold_theta=self.thr_theta.value, 
+        jnp.savez(file_name,
+                  threshold_theta=self.thr_theta.value,
                   key=self.key.value)
 
     def load(self, directory, seeded=False, **kwargs):
