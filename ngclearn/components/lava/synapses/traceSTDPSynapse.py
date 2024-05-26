@@ -57,7 +57,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
         ## add small amount of synaptic decay
         dW = dW - weights * w_decay
         ## physically adjust synapses
-        weights = weights + dW * eta
+        weights = weights + dW #* eta
         #weights = weights + (dW - weights * w_decay) * dt/tau_w
         #weights = jnp.clip(weights, 0., w_bounds)
         return weights
