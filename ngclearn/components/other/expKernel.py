@@ -32,6 +32,8 @@ class ExpKernel(Component): ## Exponential spike kernel
 
         n_units: number of calculating entities or units
 
+        dt: integration time constant (the kernel needs access to this value)
+
         nu: (ms, spike time interval for window)
 
         tau_w: spike window time constant (in micro-secs, or nano-s)
@@ -47,7 +49,7 @@ class ExpKernel(Component): ## Exponential spike kernel
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_w=500., nu=4., key=None,
+    def __init__(self, name, n_units, dt, tau_w=500., nu=4., key=None,
                  directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -127,6 +129,6 @@ if __name__ == '__main__':
     # NOTE: VN: currently have error: dt is not defined.
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        X = ExpKernel("X", 9)
+        X = ExpKernel("X", 9, dt=0.25)
     print(X)
 
