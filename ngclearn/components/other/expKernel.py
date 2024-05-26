@@ -1,11 +1,9 @@
-# %%
-
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
-from ngclearn.utils import tensorstats
 from functools import partial
+from ngclearn.utils import tensorstats
 import time, sys
 
 @partial(jit, static_argnums=[5,6])
@@ -22,7 +20,7 @@ def apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
     epsp = jnp.sum( jnp.exp( -(t - _tf)/tau_w ) * mask, axis=0 )
     return tf, epsp
 
-class ExpKernel(Component): ## Exponential spike kernel
+class ExpKernel(Component): ## exponential kernel
     """
     A spiking function based on an exponential kernel applied to
     a moving window of spike times.
@@ -53,45 +51,26 @@ class ExpKernel(Component): ## Exponential spike kernel
                  directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
-        ##TMP
-        self.key, subkey = random.split(self.key)
-
-        ## trace control coefficients
         self.tau_w = tau_w ## kernel window time constant
         self.nu = nu
         self.win_len = int(nu/dt) + 1 ## window length
-        self.tf = None #[] ## window of spike times
+        #tf ## window of spike times
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
-        # cell compartments
-        self.inputs = Compartment(None) # input compartment
-        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
-        self.epsp = Compartment(jnp.zeros((self.batch_size, self.n_units)))
+        self.inputs = Compartment(None) # input comp
+        self.epsp = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## output comp
+        self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units))) ## window comp
         #self.reset()
 
     @staticmethod
-    def _advance_state(t, dt, decay_type, tau_w, win_len, inputs, epsp, tf):
-        #self.t = self.t + self.dt
-        #self.gather()
-        ## get incoming spike readout and current window/volume
-        s = inputs ## spike readout
-        #tf = self.tf ## current window/volume
+    def _advance_state(t, dt, tau_w, win_len, inputs, epsp, tf):
+        s = inputs
         ## update spike time window and corresponding window volume
         tf, epsp = apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,
                                 krn_end=win_len-1) #0:win_len-1)
-        #self.tf = _tf ## get the corresponding 2D batch matrix
-        #self.epsp = epsp ## update spike time window
-        # self.comp["epsp"] = epsp ## get 2D batch matrix
-        # self.comp["tf"] = _tf ## update spike time window
-        #self.inputCompartment = None
         return epsp, tf
 
     @resolver(_advance_state)
@@ -102,11 +81,11 @@ class ExpKernel(Component): ## Exponential spike kernel
     @staticmethod
     def _reset(batch_size, n_units, win_len):
         #self.tf = jnp.zeros([self.win_len, batch_size, self.n_units])
-        tf = jnp.zeros([win_len, batch_size, n_units])
-        return None, jnp.zeros((batch_size, n_units)), tf
+        tf = jnp.zeros([win_len, batch_size, n_units], jnp.float32)
+        return None, jnp.zeros((batch_size, n_units), jnp.float32), tf
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, tf):
+    def reset(self, inputs, epsp, tf):
         self.inputs.set(inputs)
         self.epsp.set(epsp)
         self.tf.set(tf)
@@ -126,10 +105,8 @@ class ExpKernel(Component): ## Exponential spike kernel
         return lines
 
 if __name__ == '__main__':
-    # NOTE: VN: currently have error: dt is not defined.
     from ngcsimlib.context import Context
-    dt = 0.25
     with Context("Bar") as bar:
-        X = ExpKernel("X", n_units=1, dt=dt)
+        X = VarTrace("X", 9, 0.0004, 3)
     print(X)
 
