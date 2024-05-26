@@ -20,3 +20,6 @@ from .input_encoders.latencyCell import LatencyCell
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
+## point to lava-compliant component types
+from .lava.neurons.LIFCell import LIFCell
+from .lava.synapses.hebbianSynapse import HebbianSynapse
