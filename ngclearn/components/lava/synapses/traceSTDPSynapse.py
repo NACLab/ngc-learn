@@ -25,8 +25,8 @@ class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
         self.x_tar = preTrace_target
 
         ## pre-computed empty zero pads
-        preVals = jnp.zeros((self.batch_size, shape[0]))
-        postVals = jnp.zeros((self.batch_size, shape[1]))
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
         ## Compartments
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)

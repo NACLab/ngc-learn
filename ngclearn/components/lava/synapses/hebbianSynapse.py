@@ -23,8 +23,8 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.eta = eta
 
         ## pre-computed empty zero pads
-        preVals = jnp.zeros((self.batch_size, shape[0]))
-        postVals = jnp.zeros((self.batch_size, shape[1]))
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
         ## Compartments
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
@@ -49,7 +49,7 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         flag = (w_bounds > 0.) * 1.
         dW = (dW * (w_bounds - jnp.abs(W))) * flag + (dW) * (1. - flag)
         ## add small amount of synaptic decay
-        dW = dW - W * w_decay 
+        dW = dW - W * w_decay
         weights = weights + dW * eta
         #weights = jnp.clip(weights, 0., w_bounds)
         return weights
