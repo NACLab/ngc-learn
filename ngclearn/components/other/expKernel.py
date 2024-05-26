@@ -128,7 +128,8 @@ class ExpKernel(Component): ## Exponential spike kernel
 if __name__ == '__main__':
     # NOTE: VN: currently have error: dt is not defined.
     from ngcsimlib.context import Context
+    dt = 0.25
     with Context("Bar") as bar:
-        X = ExpKernel("X", 9, dt=0.25)
+        X = ExpKernel("X", n_units=1, dt=dt)
     print(X)
 
