@@ -7,11 +7,11 @@ from jax import numpy as jnp, jit
 from functools import partial
 import time
 
-class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
+class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
 
     # Define Functions
-    def __init__(self, name, weights, Rscale=1., eta=0., w_decay=0., w_bound=1.,
-                 **kwargs):
+    def __init__(self, name, weights, Rscale=1., Aplus=0.01, Aminus=0.001,
+                 w_decay=0., w_bound=1., preTrace_target=0., **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
@@ -20,7 +20,9 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.Rscale = Rscale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
-        self.eta = eta
+        self.Aplus = Aplus
+        self.Aminus = Aminus
+        self.x_tar = preTrace_target
 
         ## pre-computed empty zero pads
         preVals = jnp.zeros((self.batch_size, shape[0]))
@@ -28,8 +30,10 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         ## Compartments
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
-        self.pre = Compartment(preVals)
-        self.post = Compartment(postVals)
+        self.pre = Compartment(preVals) ## pre-synaptic spike
+        self.x_pre = Compartment(preVals) ## pre-synaptic trace
+        self.post = Compartment(postVals) ## post-synaptic spike
+        self.x_post = Compartment(postVals) ## post-synaptic trace
         self.weights = Compartment(weights)
 
     @staticmethod
@@ -42,15 +46,18 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.outputs.set(outputs)
 
     @staticmethod
-    def _evolve(t, dt, eta, w_bounds, w_decay, pre, post, weights):
-        dW = jnp.matmul(pre.T, post)
-        #db = jnp.sum(_post, axis=0, keepdims=True)
+    def _evolve(t, dt, Aplus, Aminus, w_bounds, w_decay, x_tar, pre, x_pre,
+                post, x_post, weights):
+        dWpost = jnp.matmul((x_pre - x_tar).T, post * Aplus)
+        dWpre = -jnp.matmul(pre.T, x_post * Aminus)
         ## reformulated bounding flag to be linear algebraic
         flag = (w_bounds > 0.) * 1.
         dW = (dW * (w_bounds - jnp.abs(W))) * flag + (dW) * (1. - flag)
         ## add small amount of synaptic decay
-        dW = dW - W * w_decay 
+        dW = dW - W * w_decay
+        ## physically adjust synapses
         weights = weights + dW * eta
+        #weights = weights + (dW - W * w_decay) * dt/tau_w
         #weights = jnp.clip(weights, 0., w_bounds)
         return weights
 
