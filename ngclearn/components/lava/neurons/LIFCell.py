@@ -52,7 +52,6 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         v = v + dv_dt ### hard-coded Euler integration
         ## obtain action potentials/spikes
         s = (v > (thr + thr_theta)) * 1. ### <- this creates non-boolean spikes
-
         ## update refractory variables
         rfr = (rfr + dt) * (1. - s)
         ## perform hyper-polarization of neuronal cells
