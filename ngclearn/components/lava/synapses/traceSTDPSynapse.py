@@ -53,12 +53,12 @@ class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
         dW = dWpost + dWpre
         ## reformulated bounding flag to be linear algebraic
         flag = (w_bounds > 0.) * 1.
-        dW = (dW * (w_bounds - jnp.abs(W))) * flag + (dW) * (1. - flag)
+        dW = (dW * (w_bounds - jnp.abs(weights))) * flag + (dW) * (1. - flag)
         ## add small amount of synaptic decay
-        dW = dW - W * w_decay
+        dW = dW - weights * w_decay
         ## physically adjust synapses
         weights = weights + dW * eta
-        #weights = weights + (dW - W * w_decay) * dt/tau_w
+        #weights = weights + (dW - weights * w_decay) * dt/tau_w
         #weights = jnp.clip(weights, 0., w_bounds)
         return weights
 
