@@ -6,7 +6,8 @@ import jax.numpy as jnp
 import numpy as np
 
 def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
-                    title=False, min_mem_val=0.0, max_mem_val=1.25, fname=None):
+                    title=False, min_mem_val=0.0, max_mem_val=1.25, 
+                    spike_loc=1., spike_spr=0.05, fname=None):
     import matplotlib #.pyplot as plt
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -62,7 +63,7 @@ def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
 
     # plot membrane potential
     ax[1].plot(mem, c="tab:red")
-    ax[1].vlines(x=indx, ymin=0.95, ymax=1.05,
+    ax[1].vlines(x=indx, ymin=spike_loc-spike_spr, ymax=spike_loc+spike_spr,
                  colors='black', ls='--', lw=5)
     ax[1].set_ylim([min_mem_val, max_mem_val])
     ax[1].set_ylabel("Membrane Potential ($V_t$)")
