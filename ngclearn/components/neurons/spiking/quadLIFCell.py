@@ -92,13 +92,13 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, R_m, v_rest,
         voltage(t+dt), spikes, raw spikes, updated refactory variables
     """
     _v_thr = v_theta + v_thr ## calc present voltage threshold
-    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+    #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     ## update voltage / membrane potential (v_c ~> 0.8?) (a0 usually <1?)
     #_v = v + ((v_rest - v) * (v - v_c) * a0) * (dt/tau_m) + (j * mask)
     v_params = (j, rfr, tau_m, refract_T, v_rest, v_c, a0)
     if integType == 1:
         _, _v = step_rk2(0., v, _dfv, dt, v_params)
-    else: #_v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
+    else:
         _, _v = step_euler(0., v, _dfv, dt, v_params)
     ## obtain action potentials
     s = (_v > _v_thr).astype(jnp.float32)
@@ -247,6 +247,26 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     #def reset(self, j, v, s, rfr, tols):
     #    super.reset(j, v, s, rfr, tols)
 
+    @staticmethod
+    def _reset(batch_size, n_units, v_rest, refract_T):
+        restVals = jnp.zeros((batch_size, n_units))
+        j = restVals #+ 0
+        v = restVals + v_rest
+        s = restVals #+ 0
+        s_raw = restVals
+        rfr = restVals + refract_T
+        tols = restVals #+ 0
+        return j, v, s, s_raw, rfr, tols
+
+    @resolver(_reset)
+    def reset(self, j, v, s, s_raw, rfr, tols):
+        self.j.set(j)
+        self.v.set(v)
+        self.s.set(s)
+        self.s_raw.set(s_raw)
+        self.rfr.set(rfr)
+        self.tols.set(tols)
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
@@ -267,5 +287,3 @@ if __name__ == '__main__':
     with Context("Bar") as bar:
         X = QuadLIFCell("X", 9, 0.0004, 3)
     print(X)
-
-
