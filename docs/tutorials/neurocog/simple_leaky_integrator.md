@@ -41,7 +41,7 @@ tau_m = R_m * C ## membrane time constant
 with Context("Model") as model:
     cell = SLIFCell("z0", n_units=1, tau_m=tau_m, R_m=R_m, thr=V_thr,
                     refract_T=ref_T, key=subkeys[0])
-                    
+
     ## set up core commands that drive the simulation
     reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
@@ -114,7 +114,7 @@ curr_in = np.squeeze(np.asarray(curr_in))
 mem_rec = np.squeeze(np.asarray(mem_rec))
 spk_rec = np.squeeze(np.asarray(spk_rec))
 plot_spiking_neuron(curr_in, mem_rec, spk_rec, None, dt, thr_line=V_thr, min_mem_val=0.,
-                    max_mem_val=1.3, title="FN-Node: Constant Electrical Input",
+                    max_mem_val=1.3, title="SLIF-Node: Constant Electrical Input",
                     fname="lif_plot.jpg")
 ```
 

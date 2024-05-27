@@ -15,6 +15,9 @@ single component system made up of an AdEx cell.
 
 ### Instantiating the AdEx Neuronal Cell
 
+Constructing/setting up a dynamical system made up of only a single
+AdEx cell amounts to the following:
+
 ```python
 from jax import numpy as jnp, random, jit
 import numpy as np
