@@ -130,10 +130,10 @@ finding local minima or maxima.)
 ## References
 <b>[1]</b> Ororbia, Alexander G. "Brain-inspired machine intelligence: A survey
 of neurobiologically-plausible credit assignment."
-arXiv preprint arXiv:2312.09257 (2023).
+arXiv preprint arXiv:2312.09257 (2023). <br>
 <b>[2]</b> Rao, Rajesh PN, and Dana H. Ballard. "Predictive coding in the visual
 cortex: a functional interpretation of some extra-classical receptive-field
-effects." Nature neuroscience 2.1 (1999).
+effects." Nature neuroscience 2.1 (1999). <br>
 <b>[3]</b> Bogacz, Rafal. "A tutorial on the free-energy framework for modelling
 perception and learning." Journal of mathematical psychology 76 (2017).
 
