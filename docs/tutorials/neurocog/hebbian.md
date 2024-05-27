@@ -6,7 +6,7 @@ adaptation might occur at various time-scales in biomimetic systems such as
 those composed of neurons. One of the simplest and most useful ways that one
 may implement plasticity is through a scheme that embodies principles of
 Hebbian learning -- characterized by the well-known popularized phrase
-"neurons that fire together, wire together"[^1].
+"neurons that fire together, wire together" <b>[1]</b>[^1].
 
 In the [evolving synapse lesson](../model_basics/evolving_synapses.md) under
 "Model Basics", we cover how one would construct a basic two-factor Hebbian rule
