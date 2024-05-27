@@ -62,16 +62,6 @@ def modify_current(j, spikes, inh_weights, R_m, inh_R):
         _j = _j - (jnp.matmul(spikes, inh_weights) * inh_R)
     return _j
 
-## co-routines for run_cell
-# @partial(jit, static_argnums=[4,5,6])
-# def _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min=None):
-#     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
-#     _v = (v + (-v + j) * (dt / tau_m)) * mask
-#     if v_min is not None:
-#         _v = jnp.maximum(v_min, _v)
-#     #_v = v + (-v) * (dt / tau_m) + j * mask
-#     return _v, mask
-
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
@@ -258,7 +248,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         key, subkey = random.split(key)
         self.threshold0 = thr + random.uniform(subkey, (1, n_units),
                                                minval=-thr_jitter, maxval=thr_jitter,
-                                               dtype=jnp.float32) 
+                                               dtype=jnp.float32)
 
         ## Compartments
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -353,55 +343,3 @@ if __name__ == '__main__':
     with Context("Bar") as bar:
         X = SLIFCell("X", 9, 0.0004, 3, 0.3)
     print(X)
-
-
-# Testing
-# if __name__ == '__main__':
-#     from ngcsimlib.compartment import All_compartments
-#     from ngcsimlib.context import Context
-#     from ngcsimlib.commands import Command
-
-#     def wrapper(compiled_fn):
-#         def _wrapped(*args):
-#             # vals = jax.jit(compiled_fn)(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-#             vals = compiled_fn(*args, compartment_values={key: c.value for key, c in All_compartments.items()})
-#             for key, value in vals.items():
-#                 All_compartments[str(key)].set(value)
-#             return vals
-#         return _wrapped
-
-#     class AdvanceCommand(Command):
-#         compile_key = "advance"
-#         def __call__(self, t=None, dt=None, *args, **kwargs):
-#             for component in self.components:
-#                 component.gather()
-#                 component.advance(t=t, dt=dt)
-
-#     class ResetCommand(Command):
-#         compile_key = "reset"
-#         def __call__(self, t=None, dt=None, *args, **kwargs):
-#             for component in self.components:
-#                 component.gather()
-#                 component.reset()
-
-#     with Context("Bar") as bar:
-#         s1 = SLIFCell("s1", 2, 20.0, 1.0, 0.4, 0.1, True, 0.1, 0.002, 0.2, 0.3, True, 0.2)
-#         advance_cmd = AdvanceCommand(components=[s1], command_name="Advance")
-#         reset_cmd = ResetCommand(components=[s1], command_name="Reset")
-
-#     compiled_advance_cmd, _ = advance_cmd.compile()
-#     # wrapped_advance_cmd = wrapper(jit(compiled_advance_cmd))
-#     wrapped_advance_cmd = wrapper(compiled_advance_cmd)
-
-#     compiled_reset_cmd, _ = reset_cmd.compile()
-#     wrapped_reset_cmd = wrapper(compiled_reset_cmd)
-
-#     dt = 20.0
-#     for t in range(4):
-#         s1.j.set(jnp.asarray([[0.1, 0.9]]))
-#         wrapped_advance_cmd(t, dt)
-#         print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
-#     wrapped_reset_cmd()
-#     print(f"Step {t} - [s1] j: {s1.j.value}, s: {s1.s.value}, tols: {s1.tols.value}, v: {s1.v.value}, thr: {s1.thr.value}, rfr: {s1.rfr.value}, surrogate: {s1.surrogate.value}")
-
-#     print(s1)
