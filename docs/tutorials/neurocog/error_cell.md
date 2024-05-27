@@ -11,7 +11,7 @@ ranging from predictive coding circuitry to error-driven learning in spiking
 neural networks (see the [ngc-museum](https://github.com/NACLab/ngc-museum) for
 key examples of where error neurons come into play). In this lesson, we will
 briefly review one of the most commonly used ones -- the
-[Gaussian error cell](ngclearn.components.neurons.graded.GaussianErrorCell).
+[Gaussian error cell](ngclearn.components.neurons.graded.gaussianErrorCell).
 
 ## Calculating Mismatch Values with the Gaussian Error Cell
 
