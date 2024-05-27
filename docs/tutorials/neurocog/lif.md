@@ -2,7 +2,7 @@
 
 The leaky integrate-and-fire (LIF) cell component in ngc-learn is a stepping
 stone towards working with more biophysical intricate cell components when crafting
-your neuronal circuit models. This 
+your neuronal circuit models. This
 [cell](ngclearn.components.neurons.spiking.LIFCell) is markedly different from the
 [simplified LIF](ngclearn.components.neurons.spiking.sLIFCell) in both its
 implemented dynamics as well as what modeling routines that it offers, including
@@ -16,7 +16,7 @@ biophysically more accurate neuronal models such as the
 or the
 [Izhikevich cell](ngclearn.components.neurons.spiking.izhikevichCell).
 
-### Instantiating the LIF Neuronal Cell
+## Instantiating the LIF Neuronal Cell
 
 To implement a single-component dynamical system made up of a single LIF
 cell, you would write code akin to the following:
@@ -61,7 +61,7 @@ with Context("Model") as model:
         cell.j.set(x)
 ```
 
-### Simulating the LIF on Stepped Constant Electrical Current
+## Simulating the LIF on Stepped Constant Electrical Current
 
 Given our single-LIF dynamical system above, let us write some code to use
 our `LIF` node and visualize the resultant spiking pattern super-imposed
