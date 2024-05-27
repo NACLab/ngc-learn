@@ -1,9 +1,8 @@
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
-from jax import numpy as jnp, random, jit
-from functools import partial
 from ngclearn.utils import tensorstats
+from jax import numpy as jnp
 import time, sys
 
 

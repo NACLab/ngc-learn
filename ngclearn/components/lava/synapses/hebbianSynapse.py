@@ -3,8 +3,7 @@ from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from ngclearn.utils import tensorstats
 
-from jax import numpy as jnp, jit
-from functools import partial
+from jax import numpy as jnp
 import time
 
 class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse

@@ -3,8 +3,7 @@ from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from ngclearn.utils import tensorstats
 
-from jax import numpy as jnp, random, jit, nn
-from functools import partial
+from jax import numpy as jnp
 import time, sys
 
 class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
@@ -45,13 +44,13 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
                        theta_plus, j, v, s, rfr, thr_theta, tols):
         #j = j * (tau_m/dt) ## scale electrical current
-        mask = (rfr >= refract_T) * 1.
+        mask = (rfr >= refract_T) * 1. #numpy.greater_equal(rfr, refract_T) * 1.
         ## update voltage / membrane potential
         ### note: the ODE is a bit differently formulated here than usual
         dv_dt = (v_rest - v) * v_decay * (dt/tau_m) + ((j * R_m) * mask)
         v = v + dv_dt ### hard-coded Euler integration
         ## obtain action potentials/spikes
-        s = (v > (thr + thr_theta)) * 1. ### <- this creates non-boolean spikes
+        s = (v > (thr + thr_theta)) * 1. #numpy.greater_equal(v, thr + thr_theta) * 1.
         ## update refractory variables
         rfr = (rfr + dt) * (1. - s)
         ## perform hyper-polarization of neuronal cells
