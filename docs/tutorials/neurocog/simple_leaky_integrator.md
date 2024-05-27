@@ -83,7 +83,7 @@ to illustrate some of its dynamics.
 Now that we understand the key compartments and constants inherent to an `sLIF`
 node, we can start simulating one.-->
 Given our single-cell dynamical system above, let us write some code to use
-our `sLIF` node and visualize its spiking pattern of our LIF node by feeding
+our `sLIF` node and visualize its spiking pattern by feeding
 into it a step current, where the electrical current `j` starts at $0$ then
 switches to $0.3$ at $t = 10$ (ms). Specifically, we can plot the input current,
 the neuron's voltage `v`, and its output spikes as follows:
