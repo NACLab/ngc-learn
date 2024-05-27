@@ -56,7 +56,7 @@ work towards more advanced concepts.
   :maxdepth: 1
   :caption: Forms of Plasticity
 
-  plasticity
+  hebbian
   stdp
 
 .. toctree::
