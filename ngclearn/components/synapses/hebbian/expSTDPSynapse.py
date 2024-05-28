@@ -11,7 +11,7 @@ import time
 
 @partial(jit, static_argnums=[6,7,8,9,10,11,12])
 def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
-            x_tar=0.7, exp_beta=1., Aplus=1., Aminus=0., w_norm=None):
+            x_tar=0.7, exp_beta=1., Aplus=1., Aminus=0.):
     """
     Evolves/changes the synpatic value matrix underlying this synaptic cable,
     given relevant statistics.
@@ -38,8 +38,6 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
         Aplus: strength of long-term potentiation (LTP)
 
         Aminus: strength of long-term depression (LTD)
-
-        w_norm: if not None, applies an L2 norm constraint to synapses
 
     Returns:
         the newly evolved synaptic weight value matrix, synaptic update matrix
