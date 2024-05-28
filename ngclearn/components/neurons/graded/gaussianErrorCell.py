@@ -79,7 +79,6 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         # NOTE: VN: if we set L to initially None, it raise an error when running the reset(). Other compartment
         # can be set to None initially because it will be clamped anyway.
         self.L = Compartment(0.0) # loss compartment
-        self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
         self.mu = Compartment(restVals) # mean/mean name. input wire
         self.dmu = Compartment(restVals) # derivative mean
         self.target = Compartment(restVals) # target. input wire
@@ -115,6 +114,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         self.target.set(target)
         self.mu.set(mu)
         self.modulator.set(mu + 1.)
+        self.L.set(self.L.value * 0.)
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
