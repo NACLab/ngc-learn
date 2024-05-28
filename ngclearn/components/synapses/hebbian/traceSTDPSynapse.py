@@ -169,6 +169,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
         self.weights = Compartment(weights)
+        self.dWeights = Compartment(weights * 0)
         #self.reset()
 
     @staticmethod
@@ -187,11 +188,12 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
                              Aplus=Aplus, Aminus=Aminus)
-        return weights
+        return weights, dW
 
     @resolver(_evolve)
-    def evolve(self, weights):
+    def evolve(self, weights, dWeights):
         self.weights.set(weights)
+        self.dWeights.set(dWeights)
 
     @staticmethod
     def _reset(batch_size, shape):
@@ -203,16 +205,18 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         postSpike = postVals
         preTrace = preVals
         postTrace = postVals
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace
+        dWeights = jnp.zeros(shape)
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace):
-        inputs.set(inputs)
-        outputs.set(outputs)
-        preSpike.set(preSpike)
-        postSpike.set(postSpike)
-        preTrace.set(preTrace)
-        postTrace.set(postTrace)
+    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.preSpike.set(preSpike)
+        self.postSpike.set(postSpike)
+        self.preTrace.set(preTrace)
+        self.postTrace.set(postTrace)
+        self.dWeights.set(dWeights)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

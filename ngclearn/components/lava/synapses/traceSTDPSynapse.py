@@ -76,15 +76,19 @@ class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
             preVals, # inputs
             postVals, # outputs
             preVals, # pre
-            postVals # post
+            postVals, # post
+            preVals, # x_pre
+            postVals # x_post
         )
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post):
+    def reset(self, inputs, outputs, pre, post, x_pre, x_post):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
+        self.x_pre.set(x_pre)
+        self.x_post.set(x_post)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
