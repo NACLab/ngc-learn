@@ -11,7 +11,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     # Define Functions
     def __init__(self, name, n_units, thr_theta0, dt, tau_m, R_m=1., thr=-52.,
                  v_rest=-65., v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
-                 refract_T=5. **kwargs):
+                 refract_T=5., **kwargs):
         super().__init__(name, **kwargs)
 
         ## Cell dynamics setup
