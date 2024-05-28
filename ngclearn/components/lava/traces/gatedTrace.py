@@ -8,10 +8,11 @@ import time, sys
 
 class GatedTrace(Component): ## gated/piecewise low-pass filter
     # Define Functions
-    def __init__(self, name, n_units, tau_tr, **kwargs):
+    def __init__(self, name, n_units, dt, tau_tr, **kwargs):
         super().__init__(name, **kwargs)
 
         ## trace control coefficients
+        self.dt = dt
         self.tau_tr = tau_tr ## trace time constant
 
         ## Layer size setup
@@ -23,7 +24,7 @@ class GatedTrace(Component): ## gated/piecewise low-pass filter
         #self.reset()
 
     @staticmethod
-    def _advance_state(t, dt, tau_tr, inputs, trace):
+    def _advance_state(dt, tau_tr, inputs, trace):
         trace = (trace * (1. - dt/tau_tr)) * (1. - inputs) + inputs
         return trace
 

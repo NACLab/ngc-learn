@@ -9,12 +9,13 @@ import time, sys
 class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
 
     # Define Functions
-    def __init__(self, name, n_units, thr_theta0, tau_m, R_m=1., thr=-52.,
+    def __init__(self, name, n_units, thr_theta0, dt, tau_m, R_m=1., thr=-52.,
                  v_rest=-65., v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
-                 refract_T=5., **kwargs):
+                 refract_T=5. **kwargs):
         super().__init__(name, **kwargs)
 
         ## Cell dynamics setup
+        self.dt = dt
         self.tau_m = tau_m ## membrane time constant
         self.R_m = R_m ## resistance value
         self.v_rest = v_rest # mV
@@ -26,7 +27,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         self.thr = thr ## (fixed) base value for threshold # mV
         self.thr_theta0 = thr_theta0 ## initial jittered adaptive threshold values
 
-        ## Layer size setup
+        ## Component size setup
         self.batch_size = 1
         self.n_units = n_units
 
@@ -41,7 +42,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         #self.reset()
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
+    def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
                        theta_plus, j, v, s, rfr, thr_theta, tols):
         #j = j * (tau_m/dt) ## scale electrical current
         mask = (rfr >= refract_T) * 1. #numpy.greater_equal(rfr, refract_T) * 1.

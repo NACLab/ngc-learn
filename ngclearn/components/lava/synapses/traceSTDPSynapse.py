@@ -9,19 +9,22 @@ import time, sys
 class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
 
     # Define Functions
-    def __init__(self, name, weights, Rscale=1., Aplus=0.01, Aminus=0.001,
+    def __init__(self, name, weights, dt, Rscale=1., Aplus=0.01, Aminus=0.001,
                  w_decay=0., w_bound=1., preTrace_target=0., **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
-        self.batch_size = 1
-        self.shape = weights.shape
+        self.dt = dt
         self.Rscale = Rscale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.Aplus = Aplus
         self.Aminus = Aminus
         self.x_tar = preTrace_target
+
+        ## Component size setup
+        self.batch_size = 1
+        self.shape = weights.shape
 
         ## pre-computed empty zero pads
         preVals = jnp.zeros((self.batch_size, self.shape[0]))
@@ -36,7 +39,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
         self.weights = Compartment(weights)
 
     @staticmethod
-    def _advance_state(t, dt, Rscale, inputs, weights):
+    def _advance_state(dt, Rscale, inputs, weights):
         outputs = jnp.matmul(inputs, weights) * Rscale
         return outputs
 
@@ -45,7 +48,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
         self.outputs.set(outputs)
 
     @staticmethod
-    def _evolve(t, dt, Aplus, Aminus, w_bounds, w_decay, x_tar, pre, x_pre,
+    def _evolve(dt, Aplus, Aminus, w_bounds, w_decay, x_tar, pre, x_pre,
                 post, x_post, weights):
         dWpost = jnp.matmul((x_pre - x_tar).T, post * Aplus)
         dWpre = -jnp.matmul(pre.T, x_post * Aminus)
