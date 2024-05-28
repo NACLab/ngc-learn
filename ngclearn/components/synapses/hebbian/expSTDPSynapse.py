@@ -9,7 +9,7 @@ from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import initialize_params, normalize_matrix
 import time
 
-@partial(jit, static_argnums=[6,7,8,9,10,11,12])
+#@partial(jit, static_argnums=[6,7,8,9,10,11])
 def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
             x_tar=0.7, exp_beta=1., Aplus=1., Aminus=0.):
     """
