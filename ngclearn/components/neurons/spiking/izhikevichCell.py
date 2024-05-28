@@ -193,8 +193,6 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
     # Define Functions

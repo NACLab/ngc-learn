@@ -61,8 +61,6 @@ class VarTrace(Component): ## low-pass filter
         key: PRNG key to control determinism of any underlying random values
             associated with this cell
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save sLIF parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)

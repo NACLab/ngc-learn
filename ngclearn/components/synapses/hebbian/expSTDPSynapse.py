@@ -125,8 +125,6 @@ class ExpSTDPSynapse(Component):
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save synaptic parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)

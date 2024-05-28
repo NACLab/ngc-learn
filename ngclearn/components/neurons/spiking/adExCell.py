@@ -131,8 +131,6 @@ class AdExCell(Component):
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
     # Define Functions

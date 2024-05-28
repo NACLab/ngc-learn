@@ -147,15 +147,12 @@ class LatencyCell(Component):
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
     # Define Functions
     def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
-                 linearize=False, normalize=False, num_steps=1., key=None,
-                 useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 linearize=False, normalize=False, num_steps=1., key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## latency meta-parameters
         self.first_spike_time = first_spike_time
