@@ -56,11 +56,11 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
         dWpre = -jnp.exp(-exp_beta * W) * jnp.matmul(pre.T, x_post) * Aminus
 
     ## calc final weighted adjustment
-    dW = (dWpost + dWpre) * eta
-    _W = W + dW
-    if w_norm is not None:
-        _W = _W * (w_norm/(jnp.linalg.norm(_W, axis=1, keepdims=True) + 1e-5))
-    _W = jnp.clip(_W, 0.01, w_bound) # not in source paper
+    dW = (dWpost + dWpre)
+    _W = W + dW * eta
+    ## enforce non-negativity
+    eps = 0.01 # 0.001
+    _W = jnp.clip(_W, eps, w_bound - eps)
     return _W, dW
 
 @jit

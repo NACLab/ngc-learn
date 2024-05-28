@@ -58,10 +58,12 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
             ## calculate pre-synaptic term
             dWpre = -jnp.matmul(pre.T, x_post * Aminus)
     ## calc final weighted adjustment
-    dW = (dWpost + dWpre) * eta
-    _W = W + dW # do a gradient ascent update/shift
+    dW = (dWpost + dWpre)
+    ## do a gradient ascent update/shift
+    _W = W + dW * eta
+    ## enforce non-negativity
     eps = 0.01 # 0.001
-    _W = jnp.clip(_W, eps, 1. - eps) #jnp.abs(w_bound)) # 0.01, w_bound) ## enforce non-negativity
+    _W = jnp.clip(_W, eps, w_bound - eps) #jnp.abs(w_bound)) # 0.01, w_bound)
     #print(_W)
     return _W, dW
 
