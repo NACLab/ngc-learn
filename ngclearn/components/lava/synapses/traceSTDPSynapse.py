@@ -6,7 +6,7 @@ from ngclearn.utils import tensorstats
 from jax import numpy as jnp
 import time, sys
 
-class TraceSTDPSynapse(Component): ## Lava-compliant Hebbian synapse
+class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
 
     # Define Functions
     def __init__(self, name, weights, dt, Rscale=1., Aplus=0.01, Aminus=0.001,
