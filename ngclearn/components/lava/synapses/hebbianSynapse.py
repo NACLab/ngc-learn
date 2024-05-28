@@ -9,13 +9,14 @@ import time
 class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
 
     # Define Functions
-    def __init__(self, name, weights, Rscale=1., eta=0., w_decay=0., w_bound=1.,
-                 **kwargs):
+    def __init__(self, name, weights, dt, Rscale=1., eta=0., w_decay=0., 
+                 w_bound=1., **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
         self.batch_size = 1
         self.shape = weights.shape
+        self.dt = dt
         self.Rscale = Rscale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
@@ -32,7 +33,7 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.weights = Compartment(weights)
 
     @staticmethod
-    def _advance_state(t, dt, Rscale, inputs, weights):
+    def _advance_state(dt, Rscale, inputs, weights):
         outputs = jnp.matmul(inputs, weights) * Rscale
         return outputs
 
@@ -41,7 +42,7 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.outputs.set(outputs)
 
     @staticmethod
-    def _evolve(t, dt, eta, w_bounds, w_decay, pre, post, weights):
+    def _evolve(dt, eta, w_bounds, w_decay, pre, post, weights):
         dW = jnp.matmul(pre.T, post)
         #db = jnp.sum(_post, axis=0, keepdims=True)
         ## reformulated bounding flag to be linear algebraic

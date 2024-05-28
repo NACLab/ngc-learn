@@ -38,12 +38,12 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         self.s = Compartment(restVals)
         self.rfr = Compartment(restVals + self.refract_T)
         self.thr_theta = Compartment(thr_theta0)
-        self.tols = Compartment(restVals) ## time-of-last-spike
+        #self.tols = Compartment(restVals) ## time-of-last-spike
         #self.reset()
 
     @staticmethod
     def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
-                       theta_plus, j, v, s, rfr, thr_theta, tols):
+                       theta_plus, j, v, s, rfr, thr_theta): #, tols):
         #j = j * (tau_m/dt) ## scale electrical current
         mask = (rfr >= refract_T) * 1. #numpy.greater_equal(rfr, refract_T) * 1.
         ## update voltage / membrane potential
@@ -60,16 +60,16 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         theta_decay = jnp.exp(-dt/tau_theta)
         thr_theta = thr_theta * theta_decay + s * theta_plus
         ## update time-of-last-spike
-        tols = (1. - s) * tols + (s * t)
-        return v, s, rfr, thr_theta, tols
+        #tols = (1. - s) * tols + (s * t)
+        return v, s, rfr, thr_theta #, tols
 
     @resolver(_advance_state)
-    def advance_state(self, v, s, rfr, thr_theta, tols):
+    def advance_state(self, v, s, rfr, thr_theta): #, tols):
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)
         self.thr_theta.set(thr_theta)
-        self.tols.set(tols)
+        #self.tols.set(tols)
 
     @staticmethod
     def _reset(batch_size, n_units, v_rest, refract_T):
@@ -79,17 +79,17 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         s = restVals #+ 0
         rfr = restVals + refract_T
         #thr_theta = thr_theta0 ## do not reset thr_theta
-        tols = restVals #+ 0
-        return j, v, s, rfr, tols
+        #tols = restVals #+ 0
+        return j, v, s, rfr #, tols
 
     @resolver(_reset)
-    def reset(self, j, v, s, rfr, tols):
+    def reset(self, j, v, s, rfr):#, tols):
         self.j.set(j)
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)
         #self.thr_theta.set(thr_theta)
-        self.tols.set(tols)
+        #self.tols.set(tols)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
