@@ -33,7 +33,8 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.j = Compartment(restVals)
+        self.j_exc = Compartment(restVals)
+        self.j_inh = Compartment(restVals)
         self.v = Compartment(restVals + self.v_rest)
         self.s = Compartment(restVals)
         self.rfr = Compartment(restVals + self.refract_T)
@@ -43,8 +44,9 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
 
     @staticmethod
     def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
-                       theta_plus, j, v, s, rfr, thr_theta): #, tols):
+                       theta_plus, j_exc, j_inh, v, s, rfr, thr_theta): #, tols):
         #j = j * (tau_m/dt) ## scale electrical current
+        j = j_exc - j_inh ## sum the excitatory and inhibitory input channels
         mask = (rfr >= refract_T) * 1. #numpy.greater_equal(rfr, refract_T) * 1.
         ## update voltage / membrane potential
         ### note: the ODE is a bit differently formulated here than usual
@@ -74,17 +76,19 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     @staticmethod
     def _reset(batch_size, n_units, v_rest, refract_T):
         restVals = jnp.zeros((batch_size, n_units))
-        j = restVals #+ 0
+        j_exc = restVals #+ 0
+        j_inh = restVals #+ 0
         v = restVals + v_rest
         s = restVals #+ 0
         rfr = restVals + refract_T
         #thr_theta = thr_theta0 ## do not reset thr_theta
         #tols = restVals #+ 0
-        return j, v, s, rfr #, tols
+        return j_exc, j_inh, v, s, rfr #, tols
 
     @resolver(_reset)
-    def reset(self, j, v, s, rfr):#, tols):
-        self.j.set(j)
+    def reset(self, j_exc, j_inh, v, s, rfr):#, tols):
+        self.j_exc.set(j_exc)
+        self.j_inh.set(j_inh)
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)
