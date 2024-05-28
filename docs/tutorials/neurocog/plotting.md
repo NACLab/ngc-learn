@@ -43,6 +43,7 @@ def gen_data(dkey, N): ## artificial data generator (or proxy model)
     y2 = jnp.ones((N, 3)) * jnp.asarray([[0., 1., 0.]])
     y3 = jnp.ones((N, 3)) * jnp.asarray([[0., 0., 1.]])
     lab = jnp.concatenate((y1, y2, y3), axis=0) ## one-hot codes
+    return X, lab
 
 ## generate data or theoretical "model outputs"
 data, lab = gen_data(dkey, 400)

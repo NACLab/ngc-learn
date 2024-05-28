@@ -76,7 +76,9 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         ##Random Number Set up
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
-        self.L = Compartment(None) # loss compartment
+        # NOTE: VN: if we set L to initially None, it raise an error when running the reset(). Other compartment
+        # can be set to None initially because it will be clamped anyway.
+        self.L = Compartment(0.0) # loss compartment
         self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
         self.mu = Compartment(restVals) # mean/mean name. input wire
         self.dmu = Compartment(restVals) # derivative mean
