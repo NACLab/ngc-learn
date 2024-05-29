@@ -78,14 +78,14 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         )
 
     @resolver(_reset)
-    def reset(self, eta0, inputs, outputs, pre, post, x_pre, x_post):
+    def reset(self, inputs, outputs, pre, post, x_pre, x_post):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
         self.x_pre.set(x_pre)
         self.x_post.set(x_post)
-        self.eta.set(jnp.ones((1,1)) * eta0)
+        #self.eta.set(jnp.ones((1,1)) * eta0)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
