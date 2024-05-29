@@ -19,8 +19,9 @@ class GatedTrace(Component): ## gated/piecewise low-pass filter
         self.batch_size = 1
         self.n_units = n_units
 
-        self.inputs = Compartment(None) # input compartment
-        self.trace = Compartment(jnp.zeros((self.batch_size, self.n_units)))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.trace = Compartment(restVals)
         #self.reset()
 
     @staticmethod
@@ -34,7 +35,8 @@ class GatedTrace(Component): ## gated/piecewise low-pass filter
 
     @staticmethod
     def _reset(batch_size, n_units):
-        return None, jnp.zeros((batch_size, n_units))
+        restVals = jnp.zeros((batch_size, n_units))
+        return restVals, restVals
 
     @resolver(_reset)
     def reset(self, inputs, trace):

@@ -10,7 +10,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
 
     # Define Functions
     def __init__(self, name, weights, dt, Rscale=1., Aplus=0.01, Aminus=0.001,
-                 w_decay=0., w_bound=1., preTrace_target=0., **kwargs):
+                 eta=1., w_decay=0., w_bound=1., preTrace_target=0., **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
@@ -18,6 +18,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.Rscale = Rscale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
+        self.eta0 = eta
         self.Aplus = Aplus
         self.Aminus = Aminus
         self.x_tar = preTrace_target
@@ -37,35 +38,30 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.post = Compartment(postVals) ## post-synaptic spike
         self.x_post = Compartment(postVals) ## post-synaptic trace
         self.weights = Compartment(weights)
+        self.eta = Compartment(eta)
 
     @staticmethod
-    def _advance_state(dt, Rscale, inputs, weights):
+    def _advance_state(dt, Rscale, Aplus, Aminus, w_bounds, w_decay, x_tar,
+                       inputs, weights, pre, x_pre, post, x_post, eta):
         outputs = jnp.matmul(inputs, weights) * Rscale
-        return outputs
-
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
-
-    @staticmethod
-    def _evolve(dt, Aplus, Aminus, w_bounds, w_decay, x_tar, pre, x_pre,
-                post, x_post, weights):
+        ########################################################################
+        ## Run one step of STDP online
         dWpost = jnp.matmul((x_pre - x_tar).T, post * Aplus)
         dWpre = -jnp.matmul(pre.T, x_post * Aminus)
         dW = dWpost + dWpre
         ## reformulated bounding flag to be linear algebraic
         flag = (w_bounds > 0.) * 1.
         dW = (dW * (w_bounds - jnp.abs(weights))) * flag + (dW) * (1. - flag)
-        ## add small amount of synaptic decay
-        dW = dW - weights * w_decay
         ## physically adjust synapses
-        weights = weights + dW #* eta
-        #weights = weights + (dW - weights * w_decay) * dt/tau_w
+        weights = weights + dW * eta - weights * w_decay
+        #weights = weights + (dW - weights * w_decay) * dt/tau_w ## ODE format
         weights = jnp.clip(weights, 0., w_bounds)
-        return weights
+        ########################################################################
+        return outputs, weights
 
-    @resolver(_evolve)
-    def evolve(self, weights):
+    @resolver(_advance_state)
+    def advance_state(self, outputs, weights):
+        self.outputs.set(outputs)
         self.weights.set(weights)
 
     @staticmethod
@@ -82,13 +78,14 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         )
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, x_pre, x_post):
+    def reset(self, eta0, inputs, outputs, pre, post, x_pre, x_post):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
         self.x_pre.set(x_pre)
         self.x_post.set(x_post)
+        self.eta.set(eta0)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
