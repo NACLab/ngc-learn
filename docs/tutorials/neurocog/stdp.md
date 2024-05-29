@@ -151,7 +151,7 @@ which should produce a plot similar to the one in the left-hand side below:
 
    +------------------------------------------------------------+----------------------------------------------------------------+
    | .. image:: ../../images/tutorials/neurocog/stdp_curve.jpg  | .. image:: ../../images/tutorials/neurocog/stdp_bi_and_poo.png |
-   |   :scale: 60%                                              |   :scale: 51%                                                  |
+   |   :scale: 60%                                              |   :scale: 50%                                                  |
    |   :align: center                                           |   :align: center                                               |
    +------------------------------------------------------------+----------------------------------------------------------------+
 ```
