@@ -9,7 +9,7 @@ import time
 class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
 
     # Define Functions
-    def __init__(self, name, weights, dt, Rscale=1., eta=0., w_decay=0., 
+    def __init__(self, name, weights, dt, Rscale=1., eta=0., w_decay=0.,
                  w_bound=1., **kwargs):
         super().__init__(name, **kwargs)
 
@@ -47,9 +47,9 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         #db = jnp.sum(_post, axis=0, keepdims=True)
         ## reformulated bounding flag to be linear algebraic
         flag = (w_bounds > 0.) * 1.
-        dW = (dW * (w_bounds - jnp.abs(W))) * flag + (dW) * (1. - flag)
+        dW = (dW * (w_bounds - jnp.abs(weights))) * flag + (dW) * (1. - flag)
         ## add small amount of synaptic decay
-        dW = dW - W * w_decay
+        dW = dW - weights * w_decay
         weights = weights + dW * eta
         #weights = jnp.clip(weights, 0., w_bounds)
         return weights
