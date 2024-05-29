@@ -38,7 +38,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.post = Compartment(postVals) ## post-synaptic spike
         self.x_post = Compartment(postVals) ## post-synaptic trace
         self.weights = Compartment(weights)
-        self.eta = Compartment(eta)
+        self.eta = Compartment(jnp.ones((1,1)) * eta)
 
     @staticmethod
     def _advance_state(dt, Rscale, Aplus, Aminus, w_bounds, w_decay, x_tar,
@@ -85,7 +85,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.post.set(post)
         self.x_pre.set(x_pre)
         self.x_post.set(x_post)
-        self.eta.set(eta0)
+        self.eta.set(jnp.ones((1,1)) * eta0)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
