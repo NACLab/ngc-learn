@@ -60,7 +60,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         return outputs, weights
 
     @resolver(_advance_state)
-    def advance_state(self, outputs, weights, pre, x_pre, post, x_post, eta):
+    def advance_state(self, outputs, weights):
         self.outputs.set(outputs)
         self.weights.set(weights)
 
