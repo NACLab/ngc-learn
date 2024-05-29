@@ -2,9 +2,9 @@ from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from ngclearn.utils import tensorstats
-from jax import numpy as jnp
-import time, sys
 
+from ngclearn import numpy as jnp
+import time, sys
 
 class GatedTrace(Component): ## gated/piecewise low-pass filter
     # Define Functions

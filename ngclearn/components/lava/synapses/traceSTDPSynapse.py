@@ -3,7 +3,7 @@ from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from ngclearn.utils import tensorstats
 
-from jax import numpy as jnp
+from ngclearn import numpy as jnp
 import time, sys
 
 class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
