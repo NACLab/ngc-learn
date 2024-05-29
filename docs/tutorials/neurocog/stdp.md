@@ -150,7 +150,7 @@ which should produce a plot similar to the one in the left-hand side below:
    :align: center
 
    +------------------------------------------------------------+----------------------------------------------------------------+
-   | .. image:: ../../images/tutorials/neurocog/stdp_curve.jpg  | .. image:: ../../images/tutorials/neurocog/bi_and_poo_stdp.png |
+   | .. image:: ../../images/tutorials/neurocog/stdp_curve.jpg  | .. image:: ../../images/tutorials/neurocog/stdp_bi_and_poo.png |
    |   :scale: 60%                                              |   :scale: 60%                                                  |
    |   :align: center                                           |   :align: center                                               |
    +------------------------------------------------------------+----------------------------------------------------------------+
