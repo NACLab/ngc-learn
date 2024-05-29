@@ -65,7 +65,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.weights.set(weights)
 
     @staticmethod
-    def _reset(batch_size, shape):
+    def _reset(batch_size, shape, eta0):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         return (
@@ -74,18 +74,19 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
             preVals, # pre
             postVals, # post
             preVals, # x_pre
-            postVals # x_post
+            postVals, # x_post
+            jnp.ones((1,1)) * eta0
         )
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, x_pre, x_post, eta0):
+    def reset(self, inputs, outputs, pre, post, x_pre, x_post, eta):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
         self.x_pre.set(x_pre)
         self.x_post.set(x_post)
-        self.eta.set(jnp.ones((1,1)) * eta0)
+        self.eta.set(eta)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
