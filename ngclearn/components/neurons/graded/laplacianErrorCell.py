@@ -77,7 +77,7 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.L = Compartment(jnp.zeros((1,1))) # loss compartment
+        self.L = Compartment(0.) # loss compartment
         self.mu = Compartment(restVals) # mean/mean name. input wire
         self.dmu = Compartment(restVals) # derivative mean
         self.target = Compartment(restVals) # target. input wire
@@ -105,7 +105,7 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         target = jnp.zeros((batch_size, n_units)) #None
         mu = jnp.zeros((batch_size, n_units)) #None
         modulator = mu + 1.
-        L = jnp.zeros((1,1))
+        L = 0.
         return dmu, dtarget, target, mu, modulator, L
 
     @resolver(_reset)
