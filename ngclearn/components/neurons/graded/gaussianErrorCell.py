@@ -75,10 +75,7 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
         ##Random Number Set up
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
-        # NOTE: VN: if we set L to initially None, it raise an error when running the reset(). Other compartment
-        # can be set to None initially because it will be clamped anyway.
-        self.L = Compartment(0.0) # loss compartment
+        self.L = Compartment(jnp.zeros((1,1))) # loss compartment
         self.mu = Compartment(restVals) # mean/mean name. input wire
         self.dmu = Compartment(restVals) # derivative mean
         self.target = Compartment(restVals) # target. input wire
@@ -105,16 +102,18 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         dtarget = jnp.zeros((batch_size, n_units))
         target = jnp.zeros((batch_size, n_units)) #None
         mu = jnp.zeros((batch_size, n_units)) #None
-        return dmu, dtarget, target, mu
+        modulator = mu + 1.
+        L = jnp.zeros((1,1))
+        return dmu, dtarget, target, mu, modulator, L
 
     @resolver(_reset)
-    def reset(self, dmu, dtarget, target, mu):
+    def reset(self, dmu, dtarget, target, mu, modulator, L):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.target.set(target)
         self.mu.set(mu)
-        self.modulator.set(mu + 1.)
-        self.L.set(self.L.value * 0.)
+        self.modulator.set(modulator)
+        self.L.set(L)
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

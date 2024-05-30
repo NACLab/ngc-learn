@@ -80,9 +80,10 @@ class VarTrace(Component): ## low-pass filter
         self.batch_size = 1
         self.n_units = n_units
 
-        self.inputs = Compartment(None) # input compartment
-        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
-        self.trace = Compartment(jnp.zeros((self.batch_size, self.n_units)))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.outputs = Compartment(restVals) # output compartment
+        self.trace = Compartment(restVals)
         #self.reset()
 
     @staticmethod
@@ -107,7 +108,8 @@ class VarTrace(Component): ## low-pass filter
 
     @staticmethod
     def _reset(batch_size, n_units):
-        return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
+        restVals = jnp.zeros((batch_size, n_units))
+        return restVals, restVals, restVals
 
     @resolver(_reset)
     def reset(self, inputs, outputs, trace):

@@ -74,9 +74,10 @@ class PoissonCell(Component):
         self.n_units = n_units
 
         ## Compartment setup
-        self.inputs = Compartment(None) # input compartment
-        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
-        self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.outputs = Compartment(restVals) # output compartment
+        self.tols = Compartment(restVals) # time of last spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
     @staticmethod
@@ -94,7 +95,8 @@ class PoissonCell(Component):
 
     @staticmethod
     def _reset(batch_size, n_units):
-        return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
+        restVals = jnp.zeros((batch_size, n_units))
+        return restVals, restVals, restVals
 
     @resolver(_reset)
     def reset(self, inputs, outputs, tols):

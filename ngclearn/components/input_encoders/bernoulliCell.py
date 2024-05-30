@@ -64,9 +64,10 @@ class BernoulliCell(Component):
         self.n_units = n_units
 
         # Compartments (state of the cell, parameters, will be updated through stateless calls)
-        self.inputs = Compartment(None) # input compartment
-        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
-        self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.outputs = Compartment(restVals) # output compartment
+        self.tols = Compartment(restVals) # time of last spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
     @staticmethod

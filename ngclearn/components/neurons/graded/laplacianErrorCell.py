@@ -77,9 +77,7 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.j = Compartment(None) # ## electrical current/ input compartment/to be wired/set. # NOTE: VN: This is never used
-        self.L = Compartment(None) # loss compartment
-        self.e = Compartment(None) # rate-coded output/ output compartment/to be wired/set. # NOTE: VN: This is never used
+        self.L = Compartment(jnp.zeros((1,1))) # loss compartment
         self.mu = Compartment(restVals) # mean/mean name. input wire
         self.dmu = Compartment(restVals) # derivative mean
         self.target = Compartment(restVals) # target. input wire
@@ -106,15 +104,18 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         dtarget = jnp.zeros((batch_size, n_units))
         target = jnp.zeros((batch_size, n_units)) #None
         mu = jnp.zeros((batch_size, n_units)) #None
-        return dmu, dtarget, target, mu
+        modulator = mu + 1.
+        L = jnp.zeros((1,1))
+        return dmu, dtarget, target, mu, modulator, L
 
     @resolver(_reset)
-    def reset(self, dmu, dtarget, target, mu):
+    def reset(self, dmu, dtarget, target, mu, modulator, L):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.target.set(target)
         self.mu.set(mu)
-        self.modulator.set(mu + 1.)
+        self.modulator.set(modulator)
+        self.L.set(L)
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

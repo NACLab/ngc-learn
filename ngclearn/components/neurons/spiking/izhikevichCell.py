@@ -232,16 +232,14 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
 
     @staticmethod
     def _advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
-                     intgFlag, j, v, w, s, tols):
+                       intgFlag, j, v, w, s, tols):
         v, w, s = run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
-                           b=coupling, c=v_reset, d=w_reset, R_m=R_m,
-                           integType=intgFlag)
+                           b=coupling, c=v_reset, d=w_reset, R_m=R_m, integType=intgFlag)
         tols = update_times(t, s, tols)
         return j, v, w, s, tols
 
-    @resolver(_advance_state, output_compartments=['j', 'v', 'w', 's', 'tols'])
-    def advance_state(self, vals):
-        j, v, w, s, tols = vals
+    @resolver(_advance_state)
+    def advance_state(self, j, v, w, s, tols):
         self.j.set(j)
         self.w.set(w)
         self.v.set(v)
@@ -285,4 +283,3 @@ if __name__ == '__main__':
     with Context("Bar") as bar:
         X = IzhikevichCell("X", 9)
     print(X)
-

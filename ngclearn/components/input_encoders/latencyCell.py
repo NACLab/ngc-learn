@@ -168,11 +168,12 @@ class LatencyCell(Component):
         self.n_units = n_units
 
         ## Compartment setup
-        self.inputs = Compartment(None) # input compartment
-        self.outputs = Compartment(jnp.zeros((self.batch_size, self.n_units))) # output compartment
-        self.tols = Compartment(jnp.zeros((self.batch_size, self.n_units))) # time of last spike
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.outputs = Compartment(restVals) # output compartment
+        self.tols = Compartment(restVals) # time of last spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
-        self.targ_sp_times = Compartment(jnp.zeros((self.batch_size, self.n_units)))
+        self.targ_sp_times = Compartment(restVals)
         #self.reset()
 
     @staticmethod
@@ -193,35 +194,19 @@ class LatencyCell(Component):
             targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
         return targ_sp_times
 
-    @resolver(_calc_spike_times, output_compartments=['targ_sp_times'])
-    def calc_spike_times(self, vals):
-        targ_sp_times = vals
+    @resolver(_calc_spike_times)
+    def calc_spike_times(self, targ_sp_times):
         self.targ_sp_times.set(targ_sp_times)
 
     @staticmethod
     def _advance_state(t, dt, key, inputs, mask, targ_sp_times, tols):
         key, *subkeys = random.split(key, 2)
         data = inputs ## get sensory pattern data / features
-        # if targ_sp_times == None: ## calc spike times if not called yet
-        #     if linearize == True: ## linearize spike time calculation
-        #         stimes = calc_spike_times_linear(data, tau, threshold,
-        #                                          first_spike_time,
-        #                                          num_steps, normalize)
-        #         targ_sp_times = stimes
-        #     else: ## standard nonlinear spike time calculation
-        #         stimes = calc_spike_times_nonlinear(data, tau, threshold,
-        #                                             first_spike_time,
-        #                                             num_steps=num_steps,
-        #                                             normalize=normalize)
-        #         targ_sp_times = stimes
-        #spk_mask = mask
         spikes, spk_mask = extract_spike(targ_sp_times, t, mask) ## get spikes at t
         return spikes, tols, spk_mask, targ_sp_times, key
 
-    @resolver(_advance_state, output_compartments=['outputs', 'tols', 'mask',
-        'targ_sp_times', 'key'])
-    def advance_state(self, vals):
-        outputs, tols, mask, targ_sp_times, key = vals
+    @resolver(_advance_state)
+    def advance_state(self, outputs, tols, mask, targ_sp_times, key):
         self.outputs.set(outputs)
         self.tols.set(tols)
         self.mask.set(mask)
@@ -230,14 +215,11 @@ class LatencyCell(Component):
 
     @staticmethod
     def _reset(batch_size, n_units):
-        return (None, jnp.zeros((batch_size, n_units)),
-               jnp.zeros((batch_size, n_units)),
-               jnp.zeros((batch_size, n_units)),
-               jnp.zeros((batch_size, n_units)))
+        restVals = jnp.zeros((batch_size, n_units))
+        return (restVals, restVals, restVals, restVals, restVals)
 
-    @resolver(_reset, output_compartments=['inputs', 'outputs', 'tols',
-        'mask', 'targ_sp_times',])
-    def reset(self, inputs, outputs, tols, mask):
+    @resolver(_reset)
+    def reset(self, inputs, outputs, tols, mask, targ_sp_times):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.tols.set(tols)
