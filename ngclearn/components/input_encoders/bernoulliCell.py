@@ -85,7 +85,8 @@ class BernoulliCell(Component):
 
     @staticmethod
     def _reset(batch_size, n_units):
-        return None, jnp.zeros((batch_size, n_units)), jnp.zeros((batch_size, n_units))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        return restVals, restVals, restVals
 
     @resolver(_reset)
     def reset(self, inputs, outputs, tols):
