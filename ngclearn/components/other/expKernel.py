@@ -58,8 +58,9 @@ class ExpKernel(Component): ## exponential kernel
         self.batch_size = 1
         self.n_units = n_units
 
-        self.inputs = Compartment(None) # input comp
-        self.epsp = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## output comp
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input comp
+        self.epsp = Compartment(restVals) ## output comp
         self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units))) ## window comp
         #self.reset()
 
@@ -78,9 +79,9 @@ class ExpKernel(Component): ## exponential kernel
 
     @staticmethod
     def _reset(batch_size, n_units, win_len):
-        #self.tf = jnp.zeros([self.win_len, batch_size, self.n_units])
-        tf = jnp.zeros([win_len, batch_size, n_units], jnp.float32)
-        return None, jnp.zeros((batch_size, n_units), jnp.float32), tf
+        restVals = jnp.zeros((batch_size, n_units))
+        restTensor = jnp.zeros([win_len, batch_size, n_units], jnp.float32) # tf
+        return restVals, restVals, restTensor # inputs, epsp, tf
 
     @resolver(_reset)
     def reset(self, inputs, epsp, tf):
@@ -107,4 +108,3 @@ if __name__ == '__main__':
     with Context("Bar") as bar:
         X = VarTrace("X", 9, 0.0004, 3)
     print(X)
-

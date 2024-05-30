@@ -1,6 +1,7 @@
 ## point to standard spiking cell component types
 from .sLIFCell import SLIFCell
 from .LIFCell import LIFCell
+from .WTASCell import WTASCell
 from .quadLIFCell import QuadLIFCell
 from .adExCell import AdExCell
 from .fitzhughNagumoCell import FitzhughNagumoCell
