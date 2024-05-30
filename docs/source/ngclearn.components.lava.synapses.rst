@@ -12,6 +12,14 @@ ngclearn.components.lava.synapses.hebbianSynapse module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.lava.synapses.staticSynapse module
+------------------------------------------------------
+
+.. automodule:: ngclearn.components.lava.synapses.staticSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.lava.synapses.traceSTDPSynapse module
 ---------------------------------------------------------
 

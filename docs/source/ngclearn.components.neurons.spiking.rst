@@ -12,6 +12,14 @@ ngclearn.components.neurons.spiking.LIFCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.neurons.spiking.WTASCell module
+---------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.spiking.WTASCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.neurons.spiking.adExCell module
 ---------------------------------------------------
 

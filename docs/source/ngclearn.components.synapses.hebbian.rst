@@ -4,6 +4,14 @@ ngclearn.components.synapses.hebbian package
 Submodules
 ----------
 
+ngclearn.components.synapses.hebbian.eventSTDPSynapse module
+------------------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.hebbian.eventSTDPSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.synapses.hebbian.expSTDPSynapse module
 ----------------------------------------------------------
 
