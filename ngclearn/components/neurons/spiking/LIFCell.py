@@ -34,21 +34,21 @@ def _modify_current(j, dt, tau_m, R_m):
     return (j * R_m) * jScale
 
 @jit
-def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest): ## raw voltage dynamics
+def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     ## update voltage / membrane potential
-    dv_dt = (v_rest - v) + (j * mask)
+    dv_dt = (v_rest - v) * v_decay + (j * mask)
     dv_dt = dv_dt * (1./tau_m)
     return dv_dt
 
 def _dfv(t, v, params): ## voltage dynamics wrapper
-    j, rfr, tau_m, refract_T, v_rest = params
-    dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest)
+    j, rfr, tau_m, refract_T, v_rest, v_decay = params
+    dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay)
     return dv_dt
 
 @partial(jit, static_argnums=[7,8,9,10,11])
 def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
-             refract_T, integType=0):
+             v_decay, refract_T, integType=0):
     """
     Runs leaky integrator neuronal dynamics
 
@@ -77,6 +77,8 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
         v_reset: membrane reset potential (in mV) -- upon occurrence of a spike,
             a neuronal cell's membrane potential will be set to this value
 
+        v_decay: strength of voltage leak (Default: 1.)
+
         refract_T: (relative) refractory time period (in ms; Default
             value is 1 ms)
 
@@ -88,7 +90,7 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
     _v_thr = v_theta + v_thr ## calc present voltage threshold
     #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     ## update voltage / membrane potential
-    v_params = (j, rfr, tau_m, refract_T, v_rest)
+    v_params = (j, rfr, tau_m, refract_T, v_rest, v_decay)
     if integType == 1:
         _, _v = step_rk2(0., v, _dfv, dt, v_params)
     else: #_v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
@@ -166,6 +168,9 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         v_reset: membrane reset potential (in mV) -- upon occurrence of a spike,
             a neuronal cell's membrane potential will be set to this value
 
+        v_decay: decay factor applied to voltage leak (Default: 1.); setting this
+            to 0 mV recovers pure integrate-and-fire (IF) dynamics
+
         tau_theta: homeostatic threshold time constant
 
         theta_plus: physical increment to be applied to any threshold value if
@@ -177,7 +182,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             every time step of neuronal dynamics simulated, i.e., at most, only
             a single spike will be permitted to emit per step -- this means that
             if > 1 spikes emitted, a single action potential will be randomly
-            sampled from the non-zero spikes detected
+            sampled from the non-zero spikes detected (Default: False)
 
         key: PRNG key to control determinism of any underlying random values
             associated with this cell
@@ -188,9 +193,9 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m=1., thr=-52., v_rest=-65., v_reset=-60., # 60.
-                 tau_theta=1e7, theta_plus=0.05, refract_T=5., key=None, one_spike=True,
-                 directory=None, **kwargs):
+    def __init__(self, name, n_units, tau_m, R_m=1., thr=-52., v_rest=-65., v_reset=-60.,
+                 v_decay=1., tau_theta=1e7, theta_plus=0.05, refract_T=5., key=None,
+                 one_spike=False, directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -200,6 +205,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
         self.v_rest = v_rest #-65. # mV
         self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
+        self.v_decay = v_decay ## controls strength of voltage leak (1 -> LIF, 0 => IF)
         self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
         self.theta_plus = theta_plus #0.05 ## threshold increment
         self.refract_T = refract_T #5. # 2. ## refractory period  # ms
@@ -222,15 +228,16 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         #self.reset()
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr, tau_theta,
-                       theta_plus, one_spike, key, j, v, s, rfr, thr_theta, tols):
+    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T,
+                       thr, tau_theta, theta_plus, one_spike, key, j, v, s, rfr,
+                       thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike == True: ## old code ~> if self.one_spike is False:
             key, skey = random.split(key, 2)
         ## run one integration step for neuronal dynamics
         j = _modify_current(j, dt, tau_m, R_m) ## re-scale current in prep for volt ODE
         v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-                                         tau_m, v_rest, v_reset, refract_T)
+                                         tau_m, v_rest, v_reset, v_decay, refract_T)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
