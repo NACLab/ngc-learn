@@ -10,3 +10,5 @@ __pycache__/
 build
 ngclearn.egg-info
 dist
+*.png
+*.jpg
