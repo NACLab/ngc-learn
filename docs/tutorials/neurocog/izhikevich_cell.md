@@ -5,94 +5,61 @@ components, the Izhikevich (IZH) biophysical neuronal cell model, often a useful
 model for capturing the behavioral properties of several classes of spiking
 neurons.
 
-## Setting/Configuring Up The Components
-
-Create a new folder for this study, further creating within it a
-sub-directory for your JSON configuration and create the configuration
-file, i.e., `json_files/modules.json`.
-Inside the JSON file, write the following:
-
-```json
-[
-  {
-    "absolute_path": "ngcsimlib.commands",
-    "attributes": [
-      {
-        "name": "AdvanceState",
-        "keywords": ["advance"]
-      },
-      {
-        "name": "Clamp",
-        "keywords": ["clamp"]
-      },
-      {
-        "name": "Reset",
-        "keywords": ["reset"]
-      }
-    ]
-  },
-  {
-    "absolute_path": "ngclearn.components",
-    "attributes": [
-      {
-        "name": "IzhikevichCell",
-        "keywords": ["izhcell"]
-      }
-    ]
-  }
-]
-```
-
 ## Using and Probing an Izhikevich Cell
 
 ### Instantiating the Izhikevich Neuronal Cell
 
-With our JSON configuration now created, go ahead and create a Python script,
+Go ahead and create a project folder as well as a Python script within it,
 i.e., `run_izhcell.py`, to write your code for this part of the tutorial.
 
 Now let's set up the controller for this lesson's simulation and construct a
 single component system made up of the Izhikevich (`IZH`) cell.
 
 ```python
-from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random, nn, jit
+from jax import numpy as jnp, random, jit
 import numpy as np
 
-import matplotlib #.pyplot as plt
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-cmap = plt.cm.jet
-import matplotlib.patches as mpatches #used to write custom legends
+from ngclearn.utils.model_utils import scanner
+from ngcsimlib.compilers import compile_command, wrap_command
+from ngcsimlib.context import Context
+from ngcsimlib.commands import Command
+## import model-specific mechanisms
+from ngcsimlib.operations import summation
+from ngclearn.components.neurons.spiking.izhikevichCell import IzhikevichCell
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 6)
 
-## Izh cell hyperparameters
+## Izh cell hyperparameters (for RS neurons)
 v0 = -65. ## initial membrane potential (for reset condition)
 w0 = -14. ## initial recovery value (for reset condition)
+cell_tag = "RS" ## our final dynamics plot will indicate regular-spiking cells
+tau_w = 50.
+v_reset = -65.
+w_reset = 8.
+coupling_factor = 0.2
 
-## create 1-node system with IZH cell
-model = Controller() ## the simulation object
-a = model.add_component("izhcell", name="a", n_units=1, v0=v0, w0=w0, key=subkeys[0])
+## create simple system with only one Izh Cell
+with Context("Model") as model:
+    cell = IzhikevichCell("z0", n_units=1, tau_w=tau_w, v_reset=v_reset,
+                          w_reset=w_reset, coupling_factor=coupling_factor,
+                          integration_type="euler", v0=v0, w0=w0, key=subkeys[0])
 
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset",
-                  component_names=[a.name],
-                  reset_name="do_reset")
-model.add_command(
-    "advance", command_name="advance",
-    component_names=[a.name]
-)
-model.add_command("clamp", command_name="clamp_data",
-                  component_names=[a.name], compartment=a.inputCompartmentName(),
-                  clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
+    ## create and compile core simulation commands
+    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    model.add_command(wrap_command(jit(model.reset)), name="reset")
+    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
+    ## set up non-compiled utility commands
+    @Context.dynamicCommand
+    def clamp(x):
+        cell.j.set(x)
 ```
 
 The Izhikevich `IZH`, much like the FitzHugh–Nagumo cell covered in
-[a different lesson](../neurocog/fitzhugh_nagumo_cell.md), is two-dimensional
+[a different lesson](../neurocog/fitzhugh_nagumo_cell.md), is a two-dimensional
 differential equation system (developed in [1]) that attempts to (approximately)
 model spiking cellular activation and deactivation dynamics. Notably, the `IZH`
 cell models membrane potential `v` (using a squared term) jointly with a
@@ -140,23 +107,26 @@ mem_rec = []
 recov_rec = []
 spk_rec = []
 
-i_app = 10. # 0.23 ## electrical current to inject into F-N cell
-data = jnp.asarray([[i_app]], dtype=jnp.float32)
-
 T = 20000 ## number of simulation steps to run
 dt = 0.01 # ms ## compute integration time constant
 
+i_app = 10. # 0.23 ## electrical current to inject into F-N cell
+data = jnp.asarray([[i_app]], dtype=jnp.float32)
+
 time_span = []
-model.reset(do_reset=True)
+model.reset()
+t = 0.
 for ts in range(T):
     x_t = data
-    model.clamp_data(x=x_t)
-    model.runCycle(t=ts*1., dt=dt)
+    ## pass in t and dt and run step forward of simulation
+    model.clamp(x_t)
+    model.advance(t, dt)
+    t = t + dt
 
     ## naively extract simple statistics at time ts and print them to I/O
-    v = model.components["a"].voltage
-    w = model.components["a"].recovery
-    s = model.components["a"].outputCompartment
+    v = cell.v.value
+    w = cell.w.value
+    s = cell.s.value
     curr_in.append(data)
     mem_rec.append(v)
     recov_rec.append(w)
@@ -165,7 +135,12 @@ for ts in range(T):
     print("\r {}: s {} ; v {} ; w {}".format(ts, s, v, w), end="")
     time_span.append((ts)*dt)
 print()
-time_span = np.asarray(time_span)
+
+import matplotlib #.pyplot as plt
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+cmap = plt.cm.jet
+import matplotlib.patches as mpatches #used to write custom legends
 
 ## Post-process statistics (convert to arrays) and create plot
 curr_in = np.squeeze(np.asarray(curr_in))
@@ -178,57 +153,51 @@ n_plots = 1
 fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 
 ax_ptr = ax
-ax_ptr.set(xlabel='Time', ylabel='voltage (v), recovery (w)',
-           title='Izhikevich (RS) Voltage/Recovery Dynamics')
+ax_ptr.set(xlabel='Time', ylabel='Voltage (v), Recovery (w)',
+           title="Izhikevich (RS) Voltage/Recovery Dynamics")
 
 v = ax_ptr.plot(time_span, mem_rec, color='C0')
 w = ax_ptr.plot(time_span, recov_rec, color='C1', alpha=.5)
 ax_ptr.legend([v[0],w[0]],['v','w'])
 
 plt.tight_layout()
-plt.savefig("{0}".format("izhcell_plot.png"))
+plt.savefig("{0}".format("izhcell_plot.jpg"))
 ```
 
 You should get a plot that depicts the evolution of the voltage and recovery of
-the Izhikevich cell, i.e., saved as `izhcell_plot.png` locally to disk, much
+the Izhikevich cell, i.e., saved as `izhcell_plot.jpg` locally to disk, much
 like the one below:
 
-<img src="../../images/tutorials/neurocog/rs_izhcell_plot.png" width="400" />
+<img src="../../images/tutorials/neurocog/rs_izhcell.png" width="400" />
 
-The plot above actually depicts the dynamics for a specific type of spiking
-neuron called the "regular spiking" (RS) neuron (the default configuration
-for ngc-learn's neuronal cell implementation), which is only one of six
+The plot above, which you can modify slightly yourself to include the neuronal
+type tag "RS" like we do, actually depicts the dynamics for a specific type of spiking
+neuron called the "regular spiking" (RS) neuron (also the default configuration
+for ngc-learn's neuronal cell implementation), which is only one of several
 kinds of neurons you can emulate with Izhikevich's dynamics implemented in
-ngc-learn. Try modifying your code above by exposing the Izhikevich component's
-hyper-parameters and setting them to particular values (as noted in the
+ngc-learn. Try modifying the exposed Izhikevich cell hyper-parameters above
+and setting them to particular values (such as those noted in the
 component's documentation) to recreate other possible neuron types. For
 example, to obtain a "fast spiking" (FS) neuronal cell, all you would need to
 do is modify the recovery variable's time constant like so:
 
 ```python
+## FS cell configuration values
 tau_w = 10. ## new recovery time constant
 v_reset = -65. ## ngc-learn default
 w_reset = 8.  ## ngc-learn default
-coupling_factor=0.2  ## ngc-learn default
-
-## create 1-node system with IZH cell
-model = Controller() ## the simulation object
-a = model.add_component("izhcell", name="a", n_units=1, tau_w=tau_w,
-                        v_reset=v_reset, w_reset=w_reset,
-                        coupling_factor=coupling_factor,
-                        v0=v0, w0=w0, key=subkeys[0])
+coupling_factor = 0.2  ## ngc-learn default
 ```
 
 to obtain a voltage/recovery dynamics plot like so (if you also modify the
 plot title of the plotting code accordingly):
 
-<img src="../../images/tutorials/neurocog/fs_izhcell_plot.png" width="400" />
+<img src="../../images/tutorials/neurocog/fs_izhcell.png" width="400" />
 
-Three other well-known classes of neural behaviors are possible to simulate
+Three other well-known classes of neural behaviors are possible to easily simulate
 under the following hyper-parameter configurations (which produce the array
-of three plots similar to those at the bottom of this lesson),
-by simplifying modifying code snippet above for FS neurons to instead be one
-of the following:
+of three plots similar to those shown near the bottom of this lesson),
+by simplifying modifying hyper-parameters according to the following:
 
 1. Chattering (CH) neurons:
 ```python
@@ -266,6 +235,28 @@ plots shown below (from left-to-right):
    |   :scale: 40%                                         |   :scale: 40%                                         |   :scale: 40%                                          |
    |   :align: center                                      |   :align: center                                      |   :align: center                                       |
    +-------------------------------------------------------+-------------------------------------------------------+--------------------------------------------------------+
+```
+
+## Optional: Setting Up The Components with a JSON Configuration
+
+While you are not required to create a JSON configuration file for ngc-learn,
+to get rid of the warning that ngc-learn will throw at the start of your
+program's execution (indicating that you do not have a configuration set up yet),
+all you need to do is create a sub-directory for your JSON configuration
+inside of your project code's directory, i.e., `json_files/modules.json`.
+Inside the JSON file, you would write the following:
+
+```json
+[
+    {"absolute_path": "ngclearn.components",
+        "attributes": [
+            {"name": "IzhikevichCell"}]
+    },
+    {"absolute_path": "ngcsimlib.operations",
+        "attributes": [
+            {"name": "overwrite"}]
+    }
+]
 ```
 
 ## References

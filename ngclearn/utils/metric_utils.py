@@ -3,6 +3,53 @@ from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 import os, sys
 from functools import partial
 
+@partial(jit, static_argnums=[1])
+def measure_fanoFactor(spikes, preserve_batch=False):
+    """
+    Calculates the Fano factor, i.e., a secondary statistics that probes the
+    variability of a spike train within a particular time interval.
+
+    Args:
+        spikes: full spike train matrix; shape is (T x D) where D is number of
+            neurons in a group/cluster
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar average score
+
+    Returns:
+        a 1 x D Fano factor vector (one factor per neuron) OR a single
+        average Fano factor across the neuronal group
+    """
+    mu = jnp.mean(spikes, axis=0, keepdims=True)
+    sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
+    fano = sigSqr/mu
+    if preserve_batch == False:
+        fano = jnp.mean(fano)
+    return fano
+
+@partial(jit, static_argnums=[1])
+def measure_firingRate(spikes, preserve_batch=False):
+    """
+    Calculates the firing rate(s) of a group of neurons given full spike train.(s)
+
+    Args:
+        spikes: full spike train matrix; shape is (T x D) where D is number of
+            neurons in a group/cluster
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar average score
+
+    Returns:
+        a 1 x D firing rate vector (one firing rate per neuron) OR a single
+        average firing rate across the neuronal group
+    """
+    counts = jnp.sum(spikes, axis=0, keepdims=True)
+    T = spikes.shape[0] * 1.
+    fireRates = counts/T
+    if preserve_batch == False:
+        fireRates = jnp.mean(fireRates)
+    return fireRates
+
 @jit
 def measure_sparsity(codes, tolerance=0.):
     """
@@ -22,24 +69,33 @@ def measure_sparsity(codes, tolerance=0.):
     rho = jnp.sum(m, axis=1, keepdims=True)/(codes.shape[1] * 1.)
     return rho
 
-@jit
-def measure_ACC(mu, y): ## measures/calculates accuracy
+@partial(jit, static_argnums=[2])
+def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
     """
     Calculates the accuracy (ACC) given a matrix of predictions and matrix of targets.
 
     Args:
-        mu: prediction (design) matrix
+        mu: prediction (design) matrix; shape is (N x C) where C is number of classes
+            and N is the number of patterns examined
 
-        y: target / ground-truth (design) matrix
+        y: target / ground-truth (design) matrix; shape is (N x C) OR an array
+            of class integers of length N (with "extract_label_indx = True")
+
+        extract_label_indx: run an argmax to pull class integer indices from
+            "y", assuming y is a one-hot binary encoding matrix (Default: True),
+            otherwise, this assumes "y" is an array of class integer indices
+            of length N
 
     Returns:
         scalar accuracy score
     """
     guess = jnp.argmax(mu, axis=1)
-    lab = jnp.argmax(y, axis=1)
+    if extract_label_indx == True:
+        lab = jnp.argmax(y, axis=1)
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
+@partial(jit, static_argnums=[2])
 def measure_KLD(p_xHat, p_x, preserve_batch=False):
     """
     Measures the (raw) Kullback-Leibler divergence (KLD), assuming that the two

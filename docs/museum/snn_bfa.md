@@ -274,7 +274,7 @@ complexity and biological faithfulness. -->
 The training script `train_bfasnn.py` also saves for you, in the `/exp/` several
 Numpy arrays, containing measurements of the model's training and development accuracy
 and negative log likelihoods.
-You can plot the values in these numpy arrays like to produce a nice visualization
+You can plot the values in these numpy arrays to produce a nice visualization
 of the BFA-SNN's learning curves like so:
 
 ```python

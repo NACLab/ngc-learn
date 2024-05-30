@@ -31,8 +31,6 @@ the user.
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -63,8 +61,6 @@ and `dmu` is the first derivative with respect to the mean parameter.
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -85,8 +81,6 @@ and `dmu` is the first derivative with respect to the mean parameter.
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -119,8 +113,6 @@ negative pressure on the membrane potential values at `t`).
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -138,8 +130,6 @@ threshold is: `thr + thrTheta(t)`).
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -160,7 +150,23 @@ as well as a voltage scaling factor for membrane potential accumulation over tim
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
+  .. automethod:: reset
+    :noindex:
+```
+
+### The Adaptive Exponential (AdEx) Integrator Cell
+
+This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
+governs the behavior of the action potential of a spiking neuronal cell). In
+effect, the adaptive exponential (AdEx) integrate-and-fire model evolves as a
+result of two coupled differential equations. (Note that this
+cell supports either Euler or midpoint method / RK-2 integration.)
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.AdExCell
+  :noindex:
+
+  .. automethod:: advance_state
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -172,7 +178,7 @@ This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
 governs the behavior of the action potential of a spiking neuronal cell). In
 effect, the FitzHugh-Nagumo model is a set of two coupled differential equations
 that simplify the four differential equation Hodgkin-Huxley (squid axon) model.
-A voltage `v_thr` can be used to extract binary spike pulses. (Note that this 
+A voltage `v_thr` can be used to extract binary spike pulses. (Note that this
 cell supports either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
@@ -180,8 +186,6 @@ cell supports either Euler or midpoint method / RK-2 integration.)
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -195,7 +199,7 @@ effect, the Izhikevich model is a set of two coupled differential equations
 that simplify the more complex dynamics of the Hodgkin-Huxley model. Note that
 this Izhikevich model can be configured to model particular classes of neurons,
 including regular spiking (RS), intrinsically bursting (IB), chattering (CH),
-fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons. 
+fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
 (Note that this cell supports either Euler or midpoint method / RK-2 integration.)
 
 ```{eval-rst}
@@ -203,8 +207,6 @@ fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:

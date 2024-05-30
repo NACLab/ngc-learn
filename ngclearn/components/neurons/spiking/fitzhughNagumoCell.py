@@ -1,5 +1,9 @@
+# %%
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
+from ngclearn.utils import tensorstats
 from functools import partial
 import time
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
@@ -149,83 +153,13 @@ class FitzhughNagumoCell(Component):
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
-
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def voltageName(cls):
-        return 'v'
-
-    @classmethod
-    def recoveryName(cls):
-        return 'w'
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def voltage(self):
-        return self.compartments.get(self.voltageName(), None)
-
-    @voltage.setter
-    def voltage(self, t):
-        self.compartments[self.voltageName()] = t
-
-    @property
-    def recovery(self):
-        return self.compartments.get(self.recoveryName(), None)
-
-    @recovery.setter
-    def recovery(self, t):
-        self.compartments[self.recoveryName()] = t
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     # Define Functions
     def __init__(self, name, n_units, tau_m=1., tau_w=12.5, alpha=0.7,
                  beta=0.8, gamma=3., v_thr=1.07, v0=0., w0=0.,
-                 integration_type="euler", key=None, useVerboseDict=False,
-                 **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
-
-        ## Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+                 integration_type="euler", key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## Integration properties
         self.integrationType = integration_type
@@ -245,32 +179,64 @@ class FitzhughNagumoCell(Component):
         ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
-        self.reset()
 
-    def verify_connections(self):
-        pass
+        ## Compartment setup
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.j = Compartment(restVals)
+        self.v = Compartment(restVals + self.v0)
+        self.w = Compartment(restVals + self.w0)
+        self.s = Compartment(restVals)
+        self.tols = Compartment(restVals) ## time-of-last-spike
 
-    def advance_state(self, t, dt, **kwargs):
-        self.key, *subkeys = random.split(self.key, 2)
+    @staticmethod
+    def _advance_state(t, dt, tau_m, tau_w, v_thr, alpha, beta, gamma, intgFlag,
+                       j, v, w, s, tols):
+        v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, alpha, beta, gamma, intgFlag)
+        tols = update_times(t, s, tols)
+        return j, v, w, s, tols
 
-        j = self.inputCompartment
-        v = self.voltage
-        w = self.recovery
+    @resolver(_advance_state)
+    def advance_state(self, j, v, w, s, tols):
+        self.j.set(j)
+        self.w.set(w)
+        self.v.set(v)
+        self.s.set(s)
+        self.tols.set(tols)
 
-        v, w, s = run_cell(dt, j, v, w, self.v_thr, self.tau_m, self.tau_w, self.alpha,
-                           self.beta, self.gamma, self.intgFlag)
+    @staticmethod
+    def _reset(batch_size, n_units, v0, w0):
+        restVals = jnp.zeros((batch_size, n_units))
+        j = restVals # None
+        v = restVals + v0
+        w = restVals + w0
+        s = restVals #+ 0
+        tols = restVals #+ 0
+        return j, v, w, s, tols
 
-        self.voltage = v
-        self.recovery = w
-        self.outputCompartment = s
-        self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
+    @resolver(_reset)
+    def reset(self, j, v, w, s, tols):
+        self.j.set(j)
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+        self.tols.set(tols)
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.voltage = jnp.zeros((self.batch_size, self.n_units)) + self.v0
-        self.recovery = jnp.zeros((self.batch_size, self.n_units)) + self.w0
-        self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
 
-    def save(self, **kwargs):
-        pass
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = FitzhughNagumoCell("X", 9)
+    print(X)

@@ -1,4 +1,8 @@
+# %%
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+from ngclearn.utils import tensorstats
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time
@@ -28,7 +32,7 @@ def sample_poisson(dkey, data, dt, fmax=63.75):
 
     Args:
         dkey: JAX key to drive stochasticity/noise
-        
+
         data: sensory data (vector/matrix)
 
         dt: integration time constant
@@ -56,79 +60,75 @@ class PoissonCell(Component):
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
-
     # Define Functions
-    def __init__(self, name, n_units, max_freq=63.75, key=None,
-                 useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+    def __init__(self, name, n_units, max_freq=63.75, key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
-        ## Poisson parameters
+        ## Poisson meta-parameters
         self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
-        self.reset()
 
-    def verify_connections(self):
-        pass
+        ## Compartment setup
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.outputs = Compartment(restVals) # output compartment
+        self.tols = Compartment(restVals) # time of last spike
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
-    def advance_state(self, t, dt, **kwargs):
-        self.key, *subkeys = random.split(self.key, 2)
-        self.outputCompartment = sample_poisson(subkeys[0], data=self.inputCompartment, dt=dt, fmax=self.max_freq)
-        #self.timeOfLastSpike = (1 - self.outputCompartment) * self.timeOfLastSpike + (self.outputCompartment * t)
-        self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
+    @staticmethod
+    def _advance_state(t, dt, max_freq, key, inputs, tols):
+        key, *subkeys = random.split(key, 2)
+        outputs = sample_poisson(subkeys[0], data=inputs, dt=dt, fmax=max_freq)
+        tols = update_times(t, outputs, tols)
+        return outputs, tols, key
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
+    @resolver(_advance_state)
+    def advance_state(self, outputs, tols, key):
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+        self.key.set(key)
 
-    def save(self, **kwargs):
-        pass
+    @staticmethod
+    def _reset(batch_size, n_units):
+        restVals = jnp.zeros((batch_size, n_units))
+        return restVals, restVals, restVals
+
+    @resolver(_reset)
+    def reset(self, inputs, outputs, tols):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+
+    def save(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        jnp.savez(file_name, key=self.key.value)
+
+    def load(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        self.key.set( data['key'] )
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = PoissonCell("X", 9)
+    print(X)

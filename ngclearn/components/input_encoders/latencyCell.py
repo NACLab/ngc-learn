@@ -1,4 +1,9 @@
+# %%
+
 from ngcsimlib.component import Component
+from ngcsimlib.resolver import resolver
+from ngcsimlib.compartment import Compartment
+from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
 from functools import partial
@@ -142,59 +147,14 @@ class LatencyCell(Component):
 
         key: PRNG key to control determinism of any underlying synapses
             associated with this cell
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
     """
-
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
 
     # Define Functions
     def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
-                 linearize=False, normalize=False, num_steps=1., key=None,
-                 useVerboseDict=False, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 linearize=False, normalize=False, num_steps=1., key=None, **kwargs):
+        super().__init__(name, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
+        ## latency meta-parameters
         self.first_spike_time = first_spike_time
         self.tau = tau
         self.threshold = threshold
@@ -203,47 +163,94 @@ class LatencyCell(Component):
         self.normalize = normalize
         self.num_steps = num_steps
 
-        self.target_spike_times = None
-        self._mask = None
-
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
-        self.reset()
 
-    def verify_connections(self):
-        pass
+        ## Compartment setup
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.outputs = Compartment(restVals) # output compartment
+        self.tols = Compartment(restVals) # time of last spike
+        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
+        self.targ_sp_times = Compartment(restVals)
+        #self.reset()
 
-    def advance_state(self, t, dt, **kwargs):
-        self.key, *subkeys = random.split(self.key, 2)
-        tau = self.tau
-        data = self.inputCompartment ## get sensory pattern data / features
+    @staticmethod
+    def _calc_spike_times(t, dt, linearize, tau, threshold, first_spike_time,
+        num_steps, normalize, inputs):
+        ## would call this function before processing a spike train (at start)
+        data = inputs
+        if linearize == True: ## linearize spike time calculation
+            stimes = calc_spike_times_linear(data, tau, threshold,
+                                             first_spike_time,
+                                             num_steps, normalize)
+            targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
+        else: ## standard nonlinear spike time calculation
+            stimes = calc_spike_times_nonlinear(data, tau, threshold,
+                                                first_spike_time,
+                                                num_steps=num_steps,
+                                                normalize=normalize)
+            targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
+        return targ_sp_times
 
-        if self.target_spike_times == None: ## calc spike times if not called yet
-            if self.linearize == True: ## linearize spike time calculation
-                stimes = calc_spike_times_linear(data, tau, self.threshold,
-                                                 self.first_spike_time,
-                                                 self.num_steps, self.normalize)
-                self.target_spike_times = stimes
-            else: ## standard nonlinear spike time calculation
-                stimes = calc_spike_times_nonlinear(data, tau, self.threshold,
-                                                    self.first_spike_time,
-                                                    num_steps=self.num_steps,
-                                                    normalize=self.normalize)
-                self.target_spike_times = stimes
-            #print(self.target_spike_times)
-            #sys.exit(0)
-        spk_mask = self._mask
-        spikes, spk_mask = extract_spike(self.target_spike_times, t, spk_mask) ## get spikes at t
-        self._mask = spk_mask
-        self.outputCompartment = spikes
-        self.timeOfLastSpike = update_times(t, self.outputCompartment, self.timeOfLastSpike)
+    @resolver(_calc_spike_times)
+    def calc_spike_times(self, targ_sp_times):
+        self.targ_sp_times.set(targ_sp_times)
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = jnp.zeros((self.batch_size, self.n_units)) #None
-        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
-        self._mask = jnp.zeros((self.batch_size, self.n_units))
+    @staticmethod
+    def _advance_state(t, dt, key, inputs, mask, targ_sp_times, tols):
+        key, *subkeys = random.split(key, 2)
+        data = inputs ## get sensory pattern data / features
+        spikes, spk_mask = extract_spike(targ_sp_times, t, mask) ## get spikes at t
+        return spikes, tols, spk_mask, targ_sp_times, key
 
-    def save(self, **kwargs):
-        pass
+    @resolver(_advance_state)
+    def advance_state(self, outputs, tols, mask, targ_sp_times, key):
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+        self.mask.set(mask)
+        self.targ_sp_times.set(targ_sp_times)
+        self.key.set(key)
+
+    @staticmethod
+    def _reset(batch_size, n_units):
+        restVals = jnp.zeros((batch_size, n_units))
+        return (restVals, restVals, restVals, restVals, restVals)
+
+    @resolver(_reset)
+    def reset(self, inputs, outputs, tols, mask, targ_sp_times):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+        self.mask.set(mask)
+        self.targ_sp_times.set(targ_sp_times)
+
+    def save(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        jnp.savez(file_name, key=self.key.value)
+
+    def load(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        self.key.set( data['key'] )
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = LatencyCell("X", 9)
+    print(X)

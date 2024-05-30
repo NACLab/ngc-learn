@@ -1,6 +1,11 @@
+# %%
+
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit
 from functools import partial
+from ngclearn.utils import tensorstats
 import time, sys
 
 @partial(jit, static_argnums=[4])
@@ -56,89 +61,78 @@ class VarTrace(Component): ## low-pass filter
         key: PRNG key to control determinism of any underlying random values
             associated with this cell
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save sLIF parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def traceName(cls):
-        return 'trace'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-      return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, inp):
-      self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def trace(self):
-        return self.compartments.get(self.traceName(), None)
-
-    @trace.setter
-    def trace(self, inp):
-        self.compartments[self.traceName()] = inp
-
     # Define Functions
     def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", key=None,
-                 useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
-
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
-
-        ##TMP
-        self.key, subkey = random.split(self.key)
+                 directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## trace control coefficients
         self.tau_tr = tau_tr ## trace time constant
         self.a_delta = a_delta ## trace increment (if spike occurred)
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
-        self.decayFactor = None
 
         ##Layer Size Setup
+        self.batch_size = 1
         self.n_units = n_units
-        self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(),
-                                                 min_connections=1)
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.inputs = Compartment(restVals) # input compartment
+        self.outputs = Compartment(restVals) # output compartment
+        self.trace = Compartment(restVals)
+        #self.reset()
 
-    def advance_state(self, t, dt, **kwargs):
-        if self.decayFactor is None: ## compute only once the decay factor
-            self.decayFactor = 0. ## <-- pulse filter decay
-            if "exp" in self.decay_type:
-                self.decayFactor = jnp.exp(-dt/self.tau_tr)
-            elif "lin" in self.decay_type:
-                self.decayFactor = (1. - dt/self.tau_tr)
-            ## else "step", yielding a step/pulse-like filter
-        if self.trace is None:
-            self.trace = jnp.zeros((1, self.n_units))
-        s = self.inputCompartment
-        self.trace = run_varfilter(dt, s, self.trace, self.decayFactor, self.a_delta)
-        self.outputCompartment = self.trace
-        #self.inputCompartment = None
+    @staticmethod
+    def _advance_state(t, dt, decay_type, tau_tr, a_delta, inputs, trace):
+        ## compute the decay factor
+        decayFactor = 0. ## <-- pulse filter decay (default)
+        if "exp" in decay_type:
+            decayFactor = jnp.exp(-dt/tau_tr)
+        elif "lin" in decay_type:
+            decayFactor = (1. - dt/tau_tr)
+        ## else "step" == decay_type, yielding a step/pulse-like filter
+        trace = run_varfilter(dt, inputs, trace, decayFactor, a_delta)
+        outputs = trace
+        inputs = None
+        return inputs, outputs, trace
 
-    def reset(self, **kwargs):
-        self.trace = jnp.zeros((1, self.n_units))
-        self.outputCompartment = self.trace
-        self.inputCompartment = None
+    @resolver(_advance_state)
+    def advance_state(self, inputs, outputs, trace):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.trace.set(trace)
 
-    def save(self, **kwargs):
-        pass
+    @staticmethod
+    def _reset(batch_size, n_units):
+        restVals = jnp.zeros((batch_size, n_units))
+        return restVals, restVals, restVals
+
+    @resolver(_reset)
+    def reset(self, inputs, outputs, trace):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.trace.set(trace)
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = VarTrace("X", 9, 0.0004, 3)
+    print(X)

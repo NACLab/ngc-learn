@@ -183,7 +183,7 @@ training you should see a validation score and output similar[^4] to the one bel
 
 ```console
 ------------------------------------
- Trial.sim_time = 0.21799945453802744 h  (784.7980363368988 sec)  Best Acc = 0.982400119304657
+ Trial.sim_time = 0.07287026127179463 h  (262.3329405784607 sec)  Best Acc = 0.9821000695228577
 ```
 
 You will also notice that in the experimental output folder created for you
@@ -211,9 +211,9 @@ which should result in an output similar what is shown below:
 
 Desirably, our out-of-sample results on both the validation and
 test-set corroborate the measurements reported in (Whittington &amp; Bogacz, 2017) <b>[1]</b>,
-i.e., a range of `1.7`-`1.8`\% validation error was reported and our
-simulation yields a validation accuracy of `0.9824 * 100 = 98.24`\% (or `1.76`\% error)
-and a test accuracy of `0.9803 * 100 = 98.03`\% (or about `1.969`\% error),
+i.e., less than `2`\% validation error was reported and our
+simulation yields a validation accuracy of `0.9821 * 100 = 98.21`\% (or `1.79`\% error)
+and a test accuracy of `0.9803 * 100 = 98.03`\% (or about `1.97`\% error),
 even though our predictive processing classifier differs in a minor ways.[^3]
 
 Furthermore, running the `analyze_pcn.py` script as above also produces,

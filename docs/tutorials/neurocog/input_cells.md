@@ -38,39 +38,48 @@ shape `1 x 10`) with values in the range of $[0,1]$, we can convert it to a
 spike train over $100$ steps in time as follows:
 
 ```python
-from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random
+from jax import numpy as jnp, random, jit
+import time
+
+from ngcsimlib.context import Context
+from ngcsimlib.commands import Command
+from ngcsimlib.compilers import compile_command, wrap_command
 from ngclearn.utils.viz.raster import create_raster_plot
+## import model-specific mechanisms
+from ngcsimlib.operations import summation
+from ngclearn.components.input_encoders.bernoulliCell import BernoulliCell
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 2)
 
-dt = 1. ## integration time constant
+dt = 1. # ms # integration time constant
 T = 100 ## number time steps to simulate
 
-## create simple system with only one sLIF
-model = Controller() ## the simulation object / controller
-cell = model.add_component("bernoulli", name="z0", n_units=10, key=subkeys[0])
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset", component_names=[cell.name], reset_name="do_reset")
-model.add_command("advance", command_name="advance", component_names=[cell.name])
-model.add_command("clamp", command_name="clamp_data", component_names=[cell.name],
-                  compartment=cell.inputCompartmentName(), clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
+with Context("Model") as model:
+    cell = BernoulliCell("z0", n_units=10, key=subkeys[0])
+
+    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+
+    model.add_command(wrap_command(jit(model.reset)), name="reset")
+    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
+    @Context.dynamicCommand
+    def clamp(x):
+        cell.inputs.set(x)
 
 probs = jnp.asarray([[0.8, 0.2, 0., 0.55, 0.9, 0, 0.15, 0., 0.6, 0.77]],dtype=jnp.float32)
-
 spikes = []
-model.reset(True)
+model.reset()
 for ts in range(T):
-    model.clamp_data(probs)
-    model.runCycle(t=ts*1., dt=dt)
-    s_t = model.components["z0"].outputCompartment
+    model.clamp(probs)
+    model.advance(ts*1., dt)
+
+    s_t = cell.outputs.value
     spikes.append(s_t)
 spikes = jnp.concatenate(spikes,axis=0)
-create_raster_plot(spikes.T, plot_fname="bernoulli_raster.jpg")
+create_raster_plot(spikes, plot_fname="input_cell_raster.jpg")
 ```
 
 where we notice that in the first dimension `[0,0]`, fifth dimension `[0,4]`,
@@ -102,15 +111,22 @@ For instance, with a database such as MNIST, it is often desired that the input
 firing rates (of the input encoding neurons you are trying to simulate) are
 within the approximate range of $0$ to $63.75$ Hertz (Hz) (as in [2]).
 To do this in ngc-learn, the Poisson cell is used instead, by modifying the
-code above like so:
+header of the code above to have the following import statement:
 
 ```python
-model = Controller() ## the simulation object / controller
-cell = model.add_component("poisson", name="z0", n_units=10, max_freq=63.75, key=subkeys[0])
+from ngclearn.components.input_encoders.poissonCell import PoissonCell
 ```
 
-Running the code with a Poisson cell instead of a Bernoulli one, under the same
-raw input pattern data shown above, yields something like:
+and by replacing the line that has the `BernoulliCell` call with the
+following line instead:
+
+```python
+cell = PoissonCell("z0", n_units=10, max_freq=63.75, key=subkeys[0])
+```
+
+Running the code with the two above small modifications will
+simulate a Poisson cell instead of a Bernoulli one, under the same
+raw input probabilities. This should yield a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/poisson_raster.jpg" width="350" /> <br>
 
@@ -120,8 +136,10 @@ iteratively produced over time will be approximately Poisson spike trains with
 a maximum frequency `max_freq`.
 
 To check that the Poisson rate approximately yields a frequency of `64` Hertz,
-you could write the following bit of code to estimate what the firing rate
-of the Poisson cell model is over a period of `1000` milliseconds like so:
+you could adapt the above model creation code to create a single Poisson cell
+(set the `n_units = 1`) and then write the following bit of code to estimate
+what the firing rate of the Poisson cell model is over a period of
+`1000` milliseconds like so:
 
 ```python
 dt = 1. # ms
@@ -129,16 +147,16 @@ T = 1000 ## T * dt = 1000 ms
 n_trials = 30
 mu = 0.
 for _ in range(n_trials):
-    model.reset(True)
     spikes = []
+    model.reset()
     for ts in range(T):
-        model.clamp_data(probs)
-        model.runCycle(t=ts*1., dt=dt)
-        s_t = model.components["z0"].outputCompartment
+        model.clamp(probs)
+        model.advance(ts*1., dt)
+
+        s_t = cell.outputs.value
         spikes.append(s_t)
-    count = jnp.sum(jnp.concatenate(spikes,axis=0))
+    count = jnp.sum(jnp.concatenate(spikes, axis=0))
     mu += count
-    print(count)
 print("Mean firing rate = {} Hertz".format(mu/n_trials))
 ```
 
@@ -150,6 +168,6 @@ Mean firing rate = 63.833336 Hertz
 
 You now have two very useful input encoding cells to convert real-valued
 data to spike trains. Note that both the Bernoulli and Poisson cell assume
-that the dimensions of your input sensory patterns lie in the range of `[0,1]`,
-so make sure that your data's values conform to this assumption (e.g., divide
-the pixel values in MNIST by `255`).
+that the each feature in your input sensory pattern vectors lie in the range of
+`[0,1]`, so it is important to make sure that your data's values conform to
+this assumption (e.g., divide the pixel values in MNIST by `255`).

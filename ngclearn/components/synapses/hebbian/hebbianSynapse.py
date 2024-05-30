@@ -1,8 +1,14 @@
+# %%
+
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.model_utils import initialize_params
-from ngclearn.utils.optim import SGD, Adam
+from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
+from ngclearn.utils import tensorstats
 import time
 
 @partial(jit, static_argnums=[3,4,5,6,7,8])
@@ -144,86 +150,17 @@ class HebbianSynapse(Component):
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save synaptic parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def triggerName(cls):
-        return 'trigger'
-
-    @classmethod
-    def presynapticCompartmentName(cls):
-        return 'pre'
-
-    @classmethod
-    def postsynapticCompartmentName(cls):
-        return 'post'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def trigger(self):
-        return self.compartments.get(self.triggerName(), None)
-
-    @trigger.setter
-    def trigger(self, x):
-        self.compartments[self.triggerName()] = x
-
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, x):
-        self.compartments[self.inputCompartmentName()] = x
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, x):
-        self.compartments[self.outputCompartmentName()] = x
-
-    @property
-    def presynapticCompartment(self):
-        return self.compartments.get(self.presynapticCompartmentName(), None)
-
-    @presynapticCompartment.setter
-    def presynapticCompartment(self, x):
-        self.compartments[self.presynapticCompartmentName()] = x
-
-    @property
-    def postsynapticCompartment(self):
-        return self.compartments.get(self.postsynapticCompartmentName(), None)
-
-    @postsynapticCompartment.setter
-    def postsynapticCompartment(self, x):
-        self.compartments[self.postsynapticCompartmentName()] = x
-
     # Define Functions
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
                  bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
                  signVal=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 Rscale=1., key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
-
-        ## random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+                 Rscale=1., key=None, directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
@@ -238,78 +175,121 @@ class HebbianSynapse(Component):
         self.is_nonnegative = is_nonnegative
         self.signVal = signVal
 
+        self.batch_size = 1
         ## optimization / adjustment properties (given learning dynamics above)
-        self.opt = None
-        if optim_type == "adam":
-            self.opt = Adam(learning_rate=self.eta)
-        else: ## default is SGD
-            self.opt = SGD(learning_rate=self.eta)
+        self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
-        if directory is None:
-            self.key, subkey = random.split(self.key)
-            self.weights = initialize_params(subkey, wInit, shape)
-            if self.bInit is not None:
-                self.key, subkey = random.split(self.key)
-                self.biases = initialize_params(subkey, bInit, (1, shape[1]))
-        else:
+        key = random.PRNGKey(time.time_ns()) if key is None else key
+
+        # compartments (state of the cell, parameters, will be updated through stateless calls)
+        self.preVals = jnp.zeros((self.batch_size, shape[0]))
+        self.postVals = jnp.zeros((self.batch_size, shape[1]))
+        self.inputs = Compartment(self.preVals)
+        self.outputs = Compartment(self.postVals)
+        self.pre = Compartment(self.preVals)
+        self.post = Compartment(self.postVals)
+        self.dW = Compartment(jnp.zeros(shape))
+        self.db = Compartment(jnp.zeros(shape[1]))
+
+        key, subkey = random.split(key)
+        self.weights = Compartment(initialize_params(subkey, wInit, shape))
+        key, subkey = random.split(key)
+        self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
+        self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bInit else [self.weights.value]))
+
+        # loading weights
+        if directory is not None:
             self.load(directory)
 
-        ##Reset to initialize stuff
-        self.reset()
+        self.batch_size = 1
 
-        self.dW = None
-        self.db = None
+    @staticmethod
+    def _advance_state(t, dt, Rscale, inputs, weights, biases):
+        outputs = compute_layer(inputs, weights, biases, Rscale)
+        return outputs
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+    @resolver(_advance_state)
+    def advance_state(self, outputs):
+        self.outputs.set(outputs)
 
-    def advance_state(self, **kwargs):
-        biases = 0.
-        if self.bInit != None:
-            biases = self.biases
-        self.outputCompartment = compute_layer(self.inputCompartment, self.weights,
-                                               biases, self.Rscale)
+    @staticmethod
+    def _evolve(t, dt, opt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght,
+                post_wght, bInit, pre, post, weights, biases, dW, db, opt_params):
+        dW, db = calc_update(pre, post,
+                             weights, w_bounds, is_nonnegative=is_nonnegative,
+                             signVal=signVal, w_decay=w_decay,
+                             pre_wght=pre_wght, post_wght=post_wght)
 
-    def evolve(self, t, dt, **kwargs):
-        dW, db = calc_update(self.presynapticCompartment, self.postsynapticCompartment,
-                             self.weights, self.w_bounds, is_nonnegative=self.is_nonnegative,
-                             signVal=self.signVal, w_decay=self.w_decay,
-                             pre_wght=self.pre_wght, post_wght=self.post_wght)
-        self.dW = dW
-        self.db = db
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
-        if self.bInit != None:
-            theta = [self.weights, self.biases]
-            self.opt.update(theta, [dW, db])
-            self.weights = theta[0]
-            self.biases = theta[1]
+        if bInit != None:
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dW, db])
         else:
             # ignore db since no biases configured
-            theta = [self.weights]
-            self.opt.update(theta, [dW])
-            self.weights = theta[0]
+            opt_params, [weights] = opt(opt_params, [weights], [dW])
         ## ensure synaptic efficacies adhere to constraints
-        self.weights = enforce_constraints(self.weights, self.w_bounds,
-                                           is_nonnegative=self.is_nonnegative)
+        weights = enforce_constraints(weights, w_bounds,
+                                           is_nonnegative=is_nonnegative)
+        return opt_params, weights, biases
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = None
-        self.presynapticCompartment = None
-        self.postsynapticCompartment = None
-        self.dW = None
-        self.db = None
+    @resolver(_evolve)
+    def evolve(self, opt_params, weights, biases):
+        self.opt_params.set(opt_params)
+        self.weights.set(weights)
+        self.biases.set(biases)
+
+    @staticmethod
+    def _reset(batch_size, shape, wInit, bInit):
+        preVals = jnp.zeros((batch_size, shape[0]))
+        postVals = jnp.zeros((batch_size, shape[1]))
+        return (
+            preVals, # inputs
+            postVals, # outputs
+            preVals, # pre
+            postVals, # post
+            jnp.zeros(shape), # dW
+            jnp.zeros(shape[1]), # db
+        )
+
+    @resolver(_reset)
+    def reset(self, inputs, outputs, pre, post, dW, db):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.pre.set(pre)
+        self.post.set(post)
+        self.dW.set(dW)
+        self.db.set(db)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         if self.bInit != None:
-            jnp.savez(file_name, weights=self.weights, biases=self.biases)
+            jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
         else:
-            jnp.savez(file_name, weights=self.weights)
+            jnp.savez(file_name, weights=self.weights.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.weights = data['weights']
+        self.weights.set(data['weights'])
         if "biases" in data.keys():
-            self.biases = data['biases']
+            self.biases.set(data['biases'])
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
+            signVal=-1.0, bInit=("constant", 0., 0.))
+    print(Wab)

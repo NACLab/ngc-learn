@@ -1,10 +1,14 @@
+# %%
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler
 from ngclearn.utils.surrogate_fx import secant_lif_estimator
+from ngclearn.utils import tensorstats
 
 @jit
 def update_times(t, s, tols):
@@ -56,16 +60,6 @@ def modify_current(j, spikes, inh_weights, R_m, inh_R):
     if inh_R > 0.:
         _j = _j - (jnp.matmul(spikes, inh_weights) * inh_R)
     return _j
-
-## co-routines for run_cell
-# @partial(jit, static_argnums=[4,5,6])
-# def _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min=None):
-#     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
-#     _v = (v + (-v + j) * (dt / tau_m)) * mask
-#     if v_min is not None:
-#         _v = jnp.maximum(v_min, _v)
-#     #_v = v + (-v) * (dt / tau_m) + j * mask
-#     return _v, mask
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
@@ -208,109 +202,18 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         key: PRNG key to control determinism of any underlying random values
             associated with this cell
 
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
-
         directory: string indicating directory on disk to save sLIF parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'j' ## electrical current
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 's' ## spike/action potential
-
-    @classmethod
-    def timeOfLastSpikeCompartmentName(cls):
-        return 'tols' ## time-of-last-spike (record vector)
-
-    @classmethod
-    def voltageCompartmentName(cls):
-        return 'v' ## membrane potential/voltage
-
-    @classmethod
-    def thresholdCompartmentName(cls):
-        return 'thr' ## action potential threshold
-
-    @classmethod
-    def refractCompartmentName(cls):
-        return 'rfr' ## refractory variable(s)
-
-    @classmethod
-    def surrogateCompartmentName(cls):
-        return 'surrogate'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def current(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @current.setter
-    def current(self, inp):
-        self.compartments[self.inputCompartmentName()] = inp
-
-    @property
-    def surrogate(self):
-        return self.compartments.get(self.surrogateCompartmentName(), None)
-
-    @surrogate.setter
-    def surrogate(self, inp):
-        self.compartments[self.surrogateCompartmentName()] = inp
-
-    @property
-    def spikes(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @spikes.setter
-    def spikes(self, out):
-        self.compartments[self.outputCompartmentName()] = out
-
-    @property
-    def timeOfLastSpike(self):
-        return self.compartments.get(self.timeOfLastSpikeCompartmentName(), None)
-
-    @timeOfLastSpike.setter
-    def timeOfLastSpike(self, t):
-        self.compartments[self.timeOfLastSpikeCompartmentName()] = t
-
-    @property
-    def voltage(self):
-        return self.compartments.get(self.voltageCompartmentName(), None)
-
-    @voltage.setter
-    def voltage(self, v):
-        self.compartments[self.voltageCompartmentName()] = v
-
-    @property
-    def refract(self):
-        return self.compartments.get(self.refractCompartmentName(), None)
-
-    @refract.setter
-    def refract(self, rfr):
-        self.compartments[self.refractCompartmentName()] = rfr
-
-    @property
-    def threshold(self):
-        return self.compartments.get(self.thresholdCompartmentName(), None)
-
-    @threshold.setter
-    def threshold(self, thr):
-        self.compartments[self.thresholdCompartmentName()] = thr
-
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=0., thr_persist=False,
                  thrGain=0.0, thrLeak=0.0, rho_b=0., refract_T=0., sticky_spikes=False,
-                 thr_jitter=0.05, key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 thr_jitter=0.05, key=None, directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+        key = random.PRNGKey(time.time_ns()) if key is None else key
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant
@@ -325,7 +228,7 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
         ## create simple recurrent inhibitory pressure
         self.inh_R = inhibit_R ## lateral inhibitory magnitude
-        self.key, subkey = random.split(self.key)
+        key, subkey = random.split(key)
         self.inh_weights = random.uniform(subkey, (n_units, n_units), minval=0.025, maxval=1.)
         MV = 1. - jnp.eye(n_units)
         self.inh_weights = self.inh_weights * MV
@@ -339,59 +242,103 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.thr_persist = thr_persist ## are adapted thresholds persistent? True (persistent)
         self.thrGain = thrGain #0.0005
         self.thrLeak = thrLeak #0.00005
-        if directory is None:
-            self.thr_jitter =  thr_jitter ## some random jitter to ensure thresholds start off different
-            self.key, subkey = random.split(self.key)
-            #self.threshold = random.uniform(subkey, (1, n_units), minval=thr, maxval=1.25 * thr)
-            self.threshold0 = thr + random.uniform(subkey, (1, n_units),
-                                                  minval=-self.thr_jitter, maxval=self.thr_jitter,
-                                                  dtype=jnp.float32)
-            self.threshold = self.threshold0 + 0 ## save initial threshold
-        else:
-            self.load(directory)
 
-        self.reset()
+        # thr_jitter: some random jitter to ensure thresholds start off different
+        key, subkey = random.split(key)
+        self.threshold0 = thr + random.uniform(subkey, (1, n_units),
+                                               minval=-thr_jitter, maxval=thr_jitter,
+                                               dtype=jnp.float32)
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
+        ## Compartments
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        self.j = Compartment(restVals) ## electrical current, input
+        self.s = Compartment(restVals) ## spike/action potential, output
+        self.tols = Compartment(restVals) ## time-of-last-spike (record vector)
+        self.v = Compartment(restVals) ## membrane potential/voltage
+        self.thr = Compartment(self.threshold0 + 0.) ## action potential threshold
+        self.rfr = Compartment(restVals + self.refract_T) ## refractory variable(s)
+        self.surrogate = Compartment(restVals + 1.) ## surrogate signal
 
-    def advance_state(self, t, dt, **kwargs):
-        if self.spikes is None:
-            self.spikes = jnp.zeros((self.batch_size, self.n_units))
-        if self.refract is None:
-            self.refract = jnp.zeros((self.batch_size, self.n_units)) + self.refract_T
+    @staticmethod
+    def _advance_state(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx,
+                 refract_T, thrGain, thrLeak, rho_b, sticky_spikes, v_min,
+                 j, s, v, thr, rfr, tols):
         ## run one step of Euler integration over neuronal dynamics
-        j_curr = self.current
+        j_curr = j
         ## apply simplified inhibitory pressure
-        j_curr = modify_current(j_curr, self.spikes, self.inh_weights, self.R_m, self.inh_R)
-        self.current = j_curr # None ## store electrical current
-        self.surrogate = self.d_spike_fx(j_curr, c1=0.82, c2=0.08)
-        self.voltage, self.spikes, self.threshold, self.refract = \
-            run_cell(dt, j_curr, self.voltage, self.threshold, self.tau_m,
-                     self.refract, self.spike_fx, self.refract_T, self.thrGain, self.thrLeak,
-                     self.rho_b, sticky_spikes=self.sticky_spikes, v_min=self.v_min)
+        j_curr = modify_current(j_curr, s, inh_weights, R_m, inh_R)
+        j = j_curr # None ## store electrical current
+        surrogate = d_spike_fx(j_curr, c1=0.82, c2=0.08)
+        v, s, thr, rfr = \
+            run_cell(dt, j_curr, v, thr, tau_m,
+                     rfr, spike_fx, refract_T, thrGain, thrLeak,
+                     rho_b, sticky_spikes=sticky_spikes, v_min=v_min)
         ## update tols
-        self.timeOfLastSpike = update_times(t, self.spikes, self.timeOfLastSpike)
+        tols = update_times(t, s, tols)
+        return j, s, tols, v, thr, rfr, surrogate
 
-    def reset(self, **kwargs):
-        self.voltage = jnp.zeros((self.batch_size, self.n_units))
-        self.refract = jnp.zeros((self.batch_size, self.n_units)) + self.refract_T
-        self.current = None
-        self.surrogate = None
-        self.timeOfLastSpike = jnp.zeros((self.batch_size, self.n_units))
-        self.spikes = jnp.zeros((self.batch_size, self.n_units)) #None
-        if self.thr_persist == False: ## if thresh non-persistent, reset to base value
-            self.threshold = self.threshold0 + 0
+    @resolver(_advance_state)
+    def advance_state(self, j, s, tols, v, thr, rfr, surrogate):
+        self.j.set(j)
+        self.s.set(s)
+        self.tols.set(tols)
+        self.thr.set(thr)
+        self.rfr.set(rfr)
+        self.surrogate.set(surrogate)
+        self.v.set(v)
+
+    @staticmethod
+    def _reset(refract_T, thr_persist, threshold0, batch_size, n_units, thr):
+        restVals = jnp.zeros((batch_size, n_units))
+        voltage = restVals
+        refract = restVals + refract_T
+        current = restVals
+        surrogate = restVals + 1.
+        timeOfLastSpike = restVals
+        spikes = restVals
+        if not thr_persist: ## if thresh non-persistent, reset to base value
+            thr = threshold0 + 0
+        return current, spikes, timeOfLastSpike, voltage, thr, refract, surrogate
+
+    @resolver(_reset)
+    def reset(self, j, s, tols, v, thr, rfr, surrogate):
+        self.j.set(j)
+        self.s.set(s)
+        self.tols.set(tols)
+        self.thr.set(thr)
+        self.rfr.set(rfr)
+        self.surrogate.set(surrogate)
+        self.v.set(v)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         if self.thr_persist == False:
-            jnp.savez(file_name, threshold=self.threshold0)
+            jnp.savez(file_name, threshold=self.threshold0) # save threshold0
         else:
-            jnp.savez(file_name, threshold=self.threshold)
+            jnp.savez(file_name, threshold=self.thr.value) # save the actual threshold param/compartment
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.threshold = data['threshold']
-        self.threshold0 = self.threshold + 0
+        self.thr.set(data['threshold'])
+        self.threshold0 = self.thr.value + 0
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = SLIFCell("X", 9, 0.0004, 3, 0.3)
+    print(X)

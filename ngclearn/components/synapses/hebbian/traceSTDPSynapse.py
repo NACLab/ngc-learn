@@ -1,12 +1,17 @@
+# %%
+
 from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
 from jax import random, numpy as jnp, jit
 from functools import partial
-from ngclearn.utils.model_utils import initialize_params, normalize_matrix
+from ngclearn.utils import tensorstats
+from ngclearn.utils.model_utils import initialize_params
 import time
 
-@partial(jit, static_argnums=[6,7,8,9,10,11,12])
-def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
-            x_tar=0.0, mu=0., Aplus=1., Aminus=0., w_norm=None):
+#@partial(jit, static_argnums=[6,7,8,9,10,11])
+def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
+           mu=0., Aplus=1., Aminus=0.):
     """
     Evolves/changes the synpatic value matrix underlying this synaptic cable,
     given relevant statistics.
@@ -34,16 +39,15 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
 
         Aminus: strength of long-term depression (LTD)
 
-        w_norm: (Unused)
-
     Returns:
-        the newly evolved synaptic weight value matrix
+        the newly evolved synaptic weight value matrix, synaptic update matrix
     """
     if mu > 0.:
         ## equations 3, 5, & 6 from Diehl and Cook - full power-law STDP
         post_shift = jnp.power(w_bound - W, mu)
         pre_shift = jnp.power(W, mu)
         dWpost = (post_shift * jnp.matmul((x_pre - x_tar).T, post)) * Aplus
+        dWpre = 0.
         if Aminus > 0.:
             dWpre = -(pre_shift * jnp.matmul(pre.T, x_post)) * Aminus
     else:
@@ -54,16 +58,17 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1.,
             ## calculate pre-synaptic term
             dWpre = -jnp.matmul(pre.T, x_post * Aminus)
     ## calc final weighted adjustment
-    dW = (dWpost + dWpre) * eta
-    _W = W + dW
-    # if w_norm is not None:
-    #     _W = normalize_matrix(_W, w_norm, order=1, axis=1) ## L1 norm constraint
-    #    #_W = _W * (w_norm/(jnp.linalg.norm(_W, axis=1, keepdims=True) + 1e-5))
-    _W = jnp.clip(_W, 0.001, w_bound) # 0.01, w_bound)
-    return _W
+    dW = (dWpost + dWpre)
+    ## do a gradient ascent update/shift
+    _W = W + dW * eta
+    ## enforce non-negativity
+    eps = 0.01 # 0.001
+    _W = jnp.clip(_W, eps, w_bound - eps) #jnp.abs(w_bound)) # 0.01, w_bound)
+    #print(_W)
+    return _W, dW
 
 @jit
-def compute_layer(inp, weight):
+def compute_layer(inp, weight, scale=1.):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -73,10 +78,13 @@ def compute_layer(inp, weight):
 
         weight: this cable's synaptic value matrix
 
+        scale: scale factor to apply to synapses before transform applied
+            to input values
+
     Returns:
         a projection/transformation of input "inp"
     """
-    return jnp.matmul(inp, weight)
+    return jnp.matmul(inp, weight * scale)
 
 class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     """
@@ -115,93 +123,25 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
-        w_norm: if not None, applies an L1 norm constraint to synapses
-
-        norm_T: clocked time at which to apply L1 synaptic norm constraint
+        Rscale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
 
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
-
-        useVerboseDict: triggers slower, verbose dictionary mode (Default: False)
 
         directory: string indicating directory on disk to save synaptic parameter
             values to (i.e., initial threshold values and any persistent adaptive
             threshold values)
     """
 
-    ## Class Methods for Compartment Names
-    @classmethod
-    def inputCompartmentName(cls):
-        return 'in'
-
-    @classmethod
-    def outputCompartmentName(cls):
-        return 'out'
-
-    @classmethod
-    def presynapticTraceName(cls):
-        return 'x_pre'
-
-    @classmethod
-    def postsynapticTraceName(cls):
-        return 'x_post'
-
-    @classmethod
-    def triggerName(cls):
-        return 'trigger'
-
-    ## Bind Properties to Compartments for ease of use
-    @property
-    def inputCompartment(self):
-        return self.compartments.get(self.inputCompartmentName(), None)
-
-    @inputCompartment.setter
-    def inputCompartment(self, x):
-        self.compartments[self.inputCompartmentName()] = x
-
-    @property
-    def outputCompartment(self):
-        return self.compartments.get(self.outputCompartmentName(), None)
-
-    @outputCompartment.setter
-    def outputCompartment(self, x):
-        self.compartments[self.outputCompartmentName()] = x
-
-    @property
-    def trigger(self):
-        return self.compartments.get(self.triggerName(), None)
-
-    @trigger.setter
-    def trigger(self, x):
-        # FIXME: place a check in here? (should check for single float value)
-        self.compartments[self.triggerName()] = x
-
-    @property
-    def presynapticTrace(self):
-        return self.compartments.get(self.presynapticTraceName(), None)
-
-    @presynapticTrace.setter
-    def presynapticTrace(self, x):
-        self.compartments[self.presynapticTraceName()] = x
-
-    @property
-    def postsynapticTrace(self):
-        return self.compartments.get(self.postsynapticTraceName(), None)
-
-    @postsynapticTrace.setter
-    def postsynapticTrace(self, x):
-        self.compartments[self.postsynapticTraceName()] = x
-
     # Define Functions
     def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
-                 preTrace_target=0., wInit=("uniform", 0.025, 0.8), w_norm=None,
-                 norm_T=250., key=None, useVerboseDict=False, directory=None, **kwargs):
-        super().__init__(name, useVerboseDict, **kwargs)
+                 preTrace_target=0., wInit=("uniform", 0.025, 0.8), Rscale=1.,
+                 key=None, directory=None, **kwargs):
+        super().__init__(name, **kwargs)
 
-        ##Random Number Set up
-        self.key = key
-        if self.key is None:
-            self.key = random.PRNGKey(time.time_ns())
+        ## constructor-only rng setup
+        tmp_key = random.PRNGKey(time.time_ns()) if key is None else key
 
         ##parms
         self.shape = shape ## shape of synaptic efficacy matrix
@@ -210,55 +150,100 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.preTrace_target = preTrace_target ## target (pre-synaptic) trace activity value # 0.7
         self.Aplus = Aplus ## LTP strength
         self.Aminus = Aminus ## LTD strength
-        self.shape = shape  # shape of synaptic matrix W
+        self.shape = shape  ## shape of synaptic matrix W
+        self.Rscale = Rscale ## post-transformation scale factor
         self.w_bound = 1. ## soft weight constraint
-        self.w_norm = w_norm ## normalization constant for synaptic matrix after update
-        self.norm_T = norm_T ## scheduling time / checkpoint for synaptic normalization
 
-        if directory is None:
-            self.key, subkey = random.split(self.key)
-            #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
-            self.weights = initialize_params(subkey, wInit, shape)
-        else:
-            self.load(directory)
+        tmp_key, subkey = random.split(tmp_key)
+        #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
+        weights = initialize_params(subkey, wInit, shape)
 
-        ##Reset to initialize core compartments
-        self.reset()
+        self.batch_size = 1
+        ## Compartment setup
+        preVals = jnp.zeros((self.batch_size, shape[0]))
+        postVals = jnp.zeros((self.batch_size, shape[1]))
+        self.inputs = Compartment(preVals)
+        self.outputs = Compartment(postVals)
+        self.preSpike = Compartment(preVals)
+        self.postSpike = Compartment(postVals)
+        self.preTrace = Compartment(preVals)
+        self.postTrace = Compartment(postVals)
+        self.weights = Compartment(weights)
+        self.dWeights = Compartment(weights * 0)
+        #self.reset()
 
-    def verify_connections(self):
-        self.metadata.check_incoming_connections(self.inputCompartmentName(), min_connections=1)
-
-    def advance_state(self, dt, t, **kwargs):
+    @staticmethod
+    def _advance_state(t, dt, Rscale, inputs, weights):
         ## run signals across synapses
-        self.outputCompartment = compute_layer(self.inputCompartment, self.weights)
+        outputs = compute_layer(inputs, weights, Rscale)
+        return outputs
 
-    def evolve(self, dt, t, **kwargs):
-        #trigger = self.trigger
-        pre = self.inputCompartment
-        post = self.outputCompartment
-        x_pre = self.presynapticTrace
-        x_post = self.postsynapticTrace
-        self.weights = evolve(dt, pre, x_pre, post, x_post, self.weights,
-                              w_bound=self.w_bound, eta=self.eta,
-                              x_tar=self.preTrace_target, mu=self.mu,
-                              Aplus=self.Aplus, Aminus=self.Aminus,
-                              w_norm=self.w_norm)
-        if self.norm_T > 0:
-            if t % (self.norm_T-1) == 0: #t % self.norm_t == 0:
-                self.weights = normalize_matrix(self.weights, self.w_norm, order=1, axis=0)
+    @resolver(_advance_state)
+    def advance_state(self, outputs):
+        self.outputs.set(outputs)
 
-    def reset(self, **kwargs):
-        self.inputCompartment = None
-        self.outputCompartment = None
-        self.presynapticTrace = None
-        self.postsynapticTrace = None
-        self.trigger = 1. ## default: assume synaptic change will occur
+    @staticmethod
+    def _evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus,
+                preSpike, postSpike, preTrace, postTrace, weights):
+        weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
+                             w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
+                             Aplus=Aplus, Aminus=Aminus)
+        return weights, dW
+
+    @resolver(_evolve)
+    def evolve(self, weights, dWeights):
+        self.weights.set(weights)
+        self.dWeights.set(dWeights)
+
+    @staticmethod
+    def _reset(batch_size, shape):
+        preVals = jnp.zeros((batch_size, shape[0]))
+        postVals = jnp.zeros((batch_size, shape[1]))
+        inputs = preVals
+        outputs = postVals
+        preSpike = preVals
+        postSpike = postVals
+        preTrace = preVals
+        postTrace = postVals
+        dWeights = jnp.zeros(shape)
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights
+
+    @resolver(_reset)
+    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.preSpike.set(preSpike)
+        self.postSpike.set(postSpike)
+        self.preTrace.set(preTrace)
+        self.postTrace.set(postTrace)
+        self.dWeights.set(dWeights)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, weights=self.weights)
+        jnp.savez(file_name,
+                  weights=self.weights.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.weights = data['weights']
+        self.weights.set( data['weights'] )
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        Wab = TraceSTDPSynapse("Wab", (2, 3), 0.0004, 1, 1)
+    print(Wab)

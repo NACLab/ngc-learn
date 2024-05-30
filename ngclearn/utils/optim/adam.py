@@ -1,10 +1,15 @@
-from ngclearn.utils.optim.opt import Opt
+# %%
+
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+
 import numpy as np
 from jax import jit, numpy as jnp, random, nn, lax
 from functools import partial
 import time
 
-@jit
+
 def step_update(param, update, g1, g2, lr, beta1, beta2, time, eps):
     """
     Runs one step of Adam over a set of parameters given updates.
@@ -48,41 +53,54 @@ def step_update(param, update, g1, g2, lr, beta1, beta2, time, eps):
     _param = param - lr * g1_unb/(jnp.sqrt(g2_unb) + eps)
     return _param, _g1, _g2
 
-class Adam(Opt):
-    """
-    Implements the adaptive moment estimation (Adam) algorithm as a decoupled
-    update rule given adjustments produced by a credit assignment algorithm/process.
+@jit
+def adam_step(opt_params, theta, updates, eta=0.001, beta1=0.9, beta2=0.999, eps=1e-8):  ## apply adjustment to theta
+    """Implements the adaptive moment estimation (Adam) algorithm as a decoupled
+        update rule given adjustments produced by a credit assignment algorithm/process.
 
     Args:
-        learning_rate: step size coefficient for Adam update
+        opt_params: (ArrayLike) parameters of the optimization algorithm
 
-        beta1: 1st moment control factor
+        theta: (ArrayLike) the weights of neural network
 
-        beta2: 2nd moment control factor
+        updates: (ArrayLike) the updates of neural network
 
-        epsilon: numberical stability coefficient (for calculating final update)
+        eta: (float, optional) step size coefficient for Adam update (Default: 0.001)
+
+        beta1: (float, optional) 1st moment control factor. (Default: 0.9)
+
+        beta2: (float, optional) 2nd moment control factor. (Default: 0.999)
+
+        eps: (float, optional) numberical stability coefficient (for calculating
+            final update). (Default: 1e-8)
+
+    Returns:
+        ArrayLike: opt_params. New opt params, ArrayLike: theta. The updated weights
     """
-    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
-        super().__init__(name="adam")
-        self.eta = learning_rate
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.eps = epsilon
+    g1, g2, time_step = opt_params
+    time_step = time_step + 1
+    new_theta = []
+    new_g1 = []
+    new_g2 = []
+    for i in range(len(theta)):
+        px_i, g1_i, g2_i = step_update(theta[i], updates[i], g1[i],
+                                        g2[i], eta, beta1,
+                                        beta2, time_step, eps)
+        new_theta.append(px_i)
+        new_g1.append(g1_i)
+        new_g2.append(g2_i)
+    return (new_g1, new_g2, time_step), new_theta
 
-        self.g1 = []
-        self.g2 = []
-        #self.time = 0.
+@jit
+def adam_init(theta):
+    time_step = jnp.asarray(0.0)
+    g1 = [jnp.zeros(theta[i].shape) for i in range(len(theta))]
+    g2 = [jnp.zeros(theta[i].shape) for i in range(len(theta))]
+    return g1, g2, time_step
 
-    def update(self, theta, updates):  ## apply adjustment to theta
-        if self.time <= 0.: ## init statistics
-            for i in range(len(theta)):
-                self.g1.append(jnp.zeros(theta[i].shape))
-                self.g2.append(jnp.zeros(theta[i].shape))
-        self.time += 1
-        for i in range(len(theta)):
-            px_i, g1_i, g2_i = step_update(theta[i], updates[i], self.g1[i],
-                                           self.g2[i], self.eta, self.beta1,
-                                           self.beta2, self.time, self.eps)
-            theta[i] = px_i
-            self.g1[i] = g1_i
-            self.g2[i] = g2_i
+if __name__ == '__main__':
+    weights = [jnp.asarray([3.0, 3.0]), jnp.asarray([3.0, 3.0])]
+    updates = [jnp.asarray([3.0, 3.0]), jnp.asarray([3.0, 3.0])]
+    opt_params = adam_init(weights)
+    opt_params, theta = adam_step(opt_params, weights, updates)
+    print(f"opt_params: {opt_params}, theta: {theta}")

@@ -18,7 +18,22 @@ cell components, the rate cell ([RateCell](ngclearn.components.neurons.graded.ra
 
 Let's go ahead and set up the controller for this lesson's simulation,
 where we will a dynamical system with only a single component,
-specifically the rate-cell (RateCell), like so:
+specifically the rate-cell (RateCell). Let's start with the file's header
+(or import statements):
+
+```python
+from jax import numpy as jnp, random, jit
+import time
+
+from ngcsimlib.context import Context
+from ngcsimlib.commands import Command
+from ngcsimlib.compilers import compile_command, wrap_command
+## import model-specific elements
+from ngcsimlib.operations import summation
+from ngclearn.components.neurons.graded.rateCell import RateCell
+```
+
+and move on to constructing the one component model:
 
 ```python
 from ngcsimlib.controller import Controller
@@ -33,11 +48,20 @@ tau_m = 10. # ms ## membrane time constant
 act_fx = "unit_threshold"
 gamma = 1.
 
-## create simple system with only one sLIF
-model = Controller() ## the simulation object / controller
-cell = model.add_component("Rate", name="z0", n_units=1, tau_m=tau_m,
-                           act_fx=act_fx, prior=("gaussian",gamma),
-                           integration_type="euler", key=subkeys[0])
+with Context("Model") as model: ## model/simulation definition
+    ## instantiate components (like cells)
+    cell = RateCell("z0", n_units=1, tau_m=tau_m, act_fx=act_fx,
+                  prior=("gaussian",gamma), integration_type="euler", key=subkeys[0])
+
+    ## instantiate desired core commands that drive the simulation
+    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    model.add_command(wrap_command(jit(model.reset)), name="reset")
+    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    ## instantiate some non-jitted dynamic utility commands
+    @Context.dynamicCommand
+    def clamp(x):
+        cell.j.set(x)
 ```
 
 A notable argument to the rate-cell, beyond some of its differential equation
@@ -72,25 +96,6 @@ this example, $0 \leq \gamma \leq 1$ and $\text{prior}$ could be set to one
 of any kind of kurtotic distribution to induce a soft form of sparsity in
 the dynamics, e.g., such as "cauchy" for the Cauchy distribution.
 
-Let's finish up setting up the single-node dynamical system before we move on
-to simulating it:
-
-```python
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset",
-                  component_names=[cell.name],
-                  reset_name="do_reset")
-model.add_command(
-    "advance", command_name="advance",
-    component_names=[cell.name]
-)
-model.add_command("clamp", command_name="clamp_data",
-                  component_names=[cell.name], compartment=cell.inputCompartmentName(),
-                  clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
-```
-
 ### Simulating a Rate Cell
 
 Given our single rate-cell dynamical system above, let us write some code to use
@@ -104,30 +109,30 @@ nonlinear activity `phi(z)` as follows:
 ```python
 # create a synthetic electrical pulse current
 current = jnp.concatenate((jnp.zeros((1,10)),
-                           jnp.ones((1,50)) * 1.006,
-                           jnp.zeros((1,50)),
-                           jnp.ones((1,50)) * 1.006,
-                           jnp.zeros((1,50))), axis=1)
+                          jnp.ones((1,50)) * 1.006,
+                          jnp.zeros((1,50)),
+                          jnp.ones((1,50)) * 1.006,
+                          jnp.zeros((1,50))), axis=1)
 
 lin_out = []
 nonlin_out = []
 t_values = []
 
-model.reset(True)
+model.reset()
 t = 0.
 for ts in range(current.shape[1]):
-    j_t = jnp.expand_dims(current[0,ts], axis=0) ## get data at time ts
-    model.clamp_data(j_t)
-    model.runCycle(t=ts*1., dt=dt)
-    t_values.append(t)
-    t += dt
+   j_t = jnp.expand_dims(current[0,ts], axis=0) ## get data at time ts
+   model.clamp(j_t)
+   model.advance(ts*1., dt)
+   t_values.append(t)
+   t += dt
 
-    ## naively extract simple statistics at time ts and print them to I/O
-    linear_z = model.components["z0"].rateActivity
-    nonlinear_z = model.components["z0"].activity
-    lin_out.append(linear_z)
-    nonlin_out.append(nonlinear_z)
-    print(" {}: s {} ; v {}".format(ts, linear_z, nonlinear_z))
+   ## naively extract simple statistics at time ts and print them to I/O
+   linear_z = cell.z.value
+   nonlinear_z = cell.zF.value
+   lin_out.append(linear_z)
+   nonlin_out.append(nonlinear_z)
+   print(" {}: s {} ; v {}".format(ts, linear_z, nonlinear_z))
 
 import numpy as np
 lin_out = np.squeeze(np.asarray(lin_out))

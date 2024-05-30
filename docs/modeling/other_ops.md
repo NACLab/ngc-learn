@@ -26,8 +26,6 @@ sequence.
 
   .. automethod:: advance_state
     :noindex:
-  .. automethod:: verify_connections
-    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -52,8 +50,6 @@ of an exponential kernel.
   :noindex:
 
   .. automethod:: advance_state
-    :noindex:
-  .. automethod:: verify_connections
     :noindex:
   .. automethod:: reset
     :noindex:

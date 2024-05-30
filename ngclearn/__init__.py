@@ -8,7 +8,7 @@ from pkg_resources import get_distribution
 __version__ = get_distribution('ngclearn').version
 
 #required = {'ngcsimlib', 'jax', 'jaxlib'} ## list of core ngclearn dependencies
-required = {'ngcsimlib', 'jax', 'jaxlib'}
+required = {'ngcsimlib'} #, 'jax', 'jaxlib'}
 installed = {pkg.key for pkg in pkg_resources.working_set}
 missing = required - installed
 
@@ -19,5 +19,33 @@ for key in required:
 
 
 ## Needed to preload is called before anything in ngclearn
+from pathlib import Path
+from sys import argv
+
 import ngcsimlib
-from ngcsimlib.controller import Controller
+
+from ngcsimlib.context import Context
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.resolver import resolver
+from ngcsimlib import utils as sim_utils
+
+
+from ngcsimlib import configure, preload_modules
+from ngcsimlib import logger
+
+if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
+    if "readthedocs" not in argv[0]:  ## prevent readthedocs execution of preload
+        configure()
+        logger.init_logging()
+        from ngcsimlib.configManager import get_config
+        pkg_config = get_config("packages")
+        if pkg_config is not None:
+            use_base_numpy = pkg_config.get("use_base_numpy", False)
+            if use_base_numpy:
+                import numpy as numpy
+            else:
+                from jax import numpy
+
+
+        preload_modules()

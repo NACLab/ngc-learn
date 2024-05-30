@@ -3,43 +3,6 @@
 In this tutorial, we will study one of ngc-learn's (simplest) in-built leaky
 integrator components, the simplified leaky integrate-and-fire (SLIF).
 
-## Setting/Configuring Up The Components
-
-Create a new folder for this study and further create within it a
-sub-directory for your JSON configuration and create the configuration
-file, i.e., `json_files/modules.json`.
-Inside the JSON file, write the following:
-
-```json
-[
-  {
-    "absolute_path": "ngcsimlib.commands",
-    "attributes": [
-      {
-        "name": "AdvanceState",
-        "keywords": ["advance"]
-      },
-      {
-        "name": "Clamp",
-        "keywords": ["clamp"]
-      },
-      {
-        "name": "Reset",
-        "keywords": ["reset"]
-      }
-    ]
-  },
-  {
-    "absolute_path": "ngclearn.components",
-    "attributes": [
-      {"name": "SLIFCell",
-       "keywords": ["sLIF"]
-      }
-    ]
-  }
-]
-```
-
 ## Creating and Using a Leaky Integrator
 
 ### Instantiating the Leaky Integrate-and-Fire Cell
@@ -52,8 +15,15 @@ where we will a dynamical system with only a single component,
 specifically the simplified LIF (sLIF), like so:
 
 ```python
-from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random
+from jax import numpy as jnp, random, jit
+
+from ngclearn.utils.model_utils import scanner
+from ngcsimlib.compilers import compile_command, wrap_command
+from ngcsimlib.context import Context
+from ngcsimlib.commands import Command
+## import model-specific mechanisms
+from ngcsimlib.operations import summation
+from ngclearn.components.neurons.spiking.sLIFCell import SLIFCell
 from ngclearn.utils.viz.spike_plot import plot_spiking_neuron
 
 ## create seeding keys (JAX-style)
@@ -68,9 +38,20 @@ ref_T = 0.0 ## length of absolute refractory period
 tau_m = R_m * C ## membrane time constant
 
 ## create simple system with only one sLIF
-model = Controller() ## the simulation object / controller
-cell = model.add_component("sLIF", name="z0", n_units=1, tau_m=tau_m, R_m=R_m,
-                           thr=V_thr, refract_T=ref_T, key=subkeys[0])
+with Context("Model") as model:
+    cell = SLIFCell("z0", n_units=1, tau_m=tau_m, R_m=R_m, thr=V_thr,
+                    refract_T=ref_T, key=subkeys[0])
+
+    ## set up core commands that drive the simulation
+    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    model.add_command(wrap_command(jit(model.reset)), name="reset")
+    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
+    ## set up non-compiled utility commands
+    @Context.dynamicCommand
+    def clamp(x):
+        cell.j.set(x)
 ```
 
 This node has quite a few compartments and constants but only a handful are important
@@ -96,32 +77,13 @@ exposition and explanation of the above constants/compartments
 purposes we will now move on to using your `sLIF` node in a simple simulation
 to illustrate some of its dynamics.
 
-Let's finish up setting up the single-node dynamical system before we move on
-to simulating it:
-
-```python
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset",
-                  component_names=[cell.name],
-                  reset_name="do_reset")
-model.add_command(
-    "advance", command_name="advance",
-    component_names=[cell.name]
-)
-model.add_command("clamp", command_name="clamp_data",
-                  component_names=[cell.name], compartment=cell.inputCompartmentName(),
-                  clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
-```
-
 ### Simulating a Leaky Integrator
 
 <!--
 Now that we understand the key compartments and constants inherent to an `sLIF`
 node, we can start simulating one.-->
 Given our single-cell dynamical system above, let us write some code to use
-our `sLIF` node and visualize its spiking pattern of our LIF node by feeding
+our `sLIF` node and visualize its spiking pattern by feeding
 into it a step current, where the electrical current `j` starts at $0$ then
 switches to $0.3$ at $t = 10$ (ms). Specifically, we can plot the input current,
 the neuron's voltage `v`, and its output spikes as follows:
@@ -134,14 +96,14 @@ curr_in = []
 mem_rec = []
 spk_rec = []
 
-model.reset(True)
+model.reset()
 for ts in range(current.shape[1]):
     j_t = jnp.expand_dims(current[0,ts], axis=0) ## get data at time ts
-    model.clamp_data(j_t)
-    model.runCycle(t=ts*1., dt=dt)
+    model.clamp(j_t)
+    model.advance(ts*1., dt)
     ## naively extract simple statistics at time ts and print them to I/O
-    v = model.components["z0"].voltage
-    s = model.components["z0"].spikes
+    v = cell.v.value
+    s = cell.s.value
     curr_in.append(j_t)
     mem_rec.append(v)
     spk_rec.append(s)
@@ -152,13 +114,13 @@ curr_in = np.squeeze(np.asarray(curr_in))
 mem_rec = np.squeeze(np.asarray(mem_rec))
 spk_rec = np.squeeze(np.asarray(spk_rec))
 plot_spiking_neuron(curr_in, mem_rec, spk_rec, None, dt, thr_line=V_thr, min_mem_val=0.,
-                    max_mem_val=1.3, title="FN-Node: Constant Electrical Input",
-                    fname="lif_plot.png")
+                    max_mem_val=1.3, title="SLIF-Node: Constant Electrical Input",
+                    fname="lif_plot.jpg")
 ```
 
-which produces the following plot (saved as `lif_plot.png` locally to disk):
+which produces the following plot (saved as `lif_plot.jpg` locally to disk):
 
-<img src="../../images/tutorials/neurocog/slif_no_refract_plot.png" width="600" />
+<img src="../../images/tutorials/neurocog/slif_no_refract_plot.jpg" width="600" />
 
 where we see that, given a build-up over time in the neuron's membrane potential
 (since the current is constant and non-zero after $10$ ms), a spike is emitted
@@ -168,7 +130,7 @@ Notice that if we play with the value of `ref_T` (the refactory period $T_{ref}$
 and change it to something like `ref_T = 10 * dt` (ten times the integration time
 constant), we get the following neuronal dynamics plot:
 
-<img src="../../images/tutorials/neurocog/slif_refract_plot.png" width="600" />
+<img src="../../images/tutorials/neurocog/slif_refract_plot.jpg" width="600" />
 
 where we see that after the LIF neuron fires, it remains stuck at its resting
 potential for a period of $0.01$ ms (the short flat periods in the red curve
@@ -276,3 +238,25 @@ negative, requiring a different and more careful setting of hyper-parameters
 model, it can be used as a rational first step for crafting very useful spiking
 neural networks and offers other aspects of functionality not used in this tutorial,
 such as adaptive threshold functionality and fast approximate lateral inhibition/recurrence.
+
+## Optional: Setting Up The Components with a JSON Configuration
+
+While you are not required to create a JSON configuration file for ngc-learn,
+to get rid of the warning that ngc-learn will throw at the start of your
+program's execution (indicating that you do not have a configuration set up yet),
+all you need to do is create a sub-directory for your JSON configuration
+inside of your project code's directory, i.e., `json_files/modules.json`.
+Inside the JSON file, you would write the following:
+
+```json
+[
+    {"absolute_path": "ngclearn.components",
+        "attributes": [
+            {"name": "SLIFCell"}]
+    },
+    {"absolute_path": "ngcsimlib.operations",
+        "attributes": [
+            {"name": "overwrite"}]
+    }
+]
+```

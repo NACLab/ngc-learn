@@ -56,10 +56,15 @@ image patching utilities, then Patchify will be needed).-->
 
 ### User Installation
 
-<i>Setup</i>: The easiest way to install ngc-learn (CPU version) is through <code>pip</code>:
+<i>Setup</i>: The easiest way to install ngc-learn is through <code>pip</code>:
 <pre>
 $ pip install ngclearn
 </pre>
+
+Note that installing the official pip package without any form of JAX installed
+on your system will default to downloading the CPU version of ngc-learn; make
+sure you have installed the Cuda 12 version of Jax/Jaxlib on your system before
+running the above pip command if you want to use the GPU version.
 
 The documentation includes more detailed
 <a href="https://ngc-learn.readthedocs.io/en/latest/installation.html">installation instructions</a>.

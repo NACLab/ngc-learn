@@ -55,7 +55,7 @@ def extract_tsne_latents(vectors, perplexity=30, n_pca_comp=32): ## tSNE mapping
         if n_comp > batch_size:
             batch_size = n_comp
         if vectors.shape[1] < n_comp:
-            n_comp = vectors.shape[1] - 2 #z_top.shape[1]-2
+            n_comp = vectors.shape[1] - 2
             n_comp = max(2, n_comp)
         ipca = IncrementalPCA(n_components=n_comp, batch_size=batch_size)
         ipca.fit(vectors)
