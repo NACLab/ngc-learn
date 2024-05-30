@@ -46,6 +46,8 @@ if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
                 import numpy as numpy
             else:
                 from jax import numpy
+        else:
+            from jax import numpy
 
 
         preload_modules()

@@ -134,7 +134,7 @@ class WTASCell(Component): ## winner-take-all spiking cell
     def advance_state(self, v, s, thr, rfr, tols):
         self.v.set(v)
         self.s.set(s)
-        self.thr.set(rfr)
+        self.thr.set(thr)
         self.rfr.set(rfr)
         self.tols.set(tols)
 
