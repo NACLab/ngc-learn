@@ -38,19 +38,21 @@ def run_cell(dt, j, v, rfr, v_thr, tau_m, R_m, thr_gain=0.002, refract_T=0.):
 
         v: membrane potential (voltage, in milliVolts or mV) value (at t)
 
-        v_thr: base voltage threshold value (in mV)
-
         rfr: refractory variable vector (one per neuronal cell)
+
+        v_thr: base voltage threshold value (in mV)
 
         tau_m: cell membrane time constant
 
         R_m: cell membrane resistance
 
+        thr_gain: increment to be applied to threshold upon spike occurrence
+
         refract_T: (relative) refractory time period (in ms; Default
             value is 1 ms)
 
     Returns:
-        voltage(t+dt), spikes, raw spikes, updated refactory variables
+        voltage(t+dt), spikes, updated voltage thresholds, updated refactory variables
     """
     mask = (rfr >= refract_T).astype(jnp.float32) ## check refractory period
     v = (j * R_m) * mask
@@ -65,7 +67,14 @@ def run_cell(dt, j, v, rfr, v_thr, tau_m, R_m, thr_gain=0.002, refract_T=0.):
 
 class WTASCell(Component): ## winner-take-all spiking cell
     """
-    A spiking cell based on leaky integrate-and-fire (LIF) neuronal dynamics.
+    A spiking cell based on winner-take-all neuronal dynamics ("WTAS" stands
+    for "winner-take-all-spiking").
+
+    The differential equation for adjusting this specific cell
+    (for adjusting v, given current j, over time) is:
+
+    | tau_m * dv/dt = j * R  ;  v_p = softmax(v)
+    | where R is membrane resistance and v_p is a voltage probability vector
 
     Args:
         name: the string name of this cell

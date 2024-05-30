@@ -143,7 +143,6 @@ class ExpSTDPSynapse(Component):
         self.preTrace_target = preTrace_target ## target (pre-synaptic) trace activity value # 0.7
         self.Aplus = Aplus ## LTP strength
         self.Aminus = Aminus ## LTD strength
-        self.shape = shape  ## shape of synaptic matrix W
         self.Rscale = Rscale ## post-transformation scale factor
         self.w_bound = 1. ## soft weight constraint
 
