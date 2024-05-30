@@ -9,7 +9,7 @@ import time, sys
 class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
 
     # Define Functions
-    def __init__(self, name, n_units, thr_theta0, dt, tau_m, R_m=1., thr=-52.,
+    def __init__(self, name, n_units, dt, tau_m, thr_theta0=None, R_m=1., thr=-52.,
                  v_rest=-65., v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
                  refract_T=5., **kwargs):
         super().__init__(name, **kwargs)
@@ -38,9 +38,13 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         self.v = Compartment(restVals + self.v_rest)
         self.s = Compartment(restVals)
         self.rfr = Compartment(restVals + self.refract_T)
+        self.thr_theta = Compartment(None)
+
+        if thr_theta0 is not None:
+            self._init(thr_theta0)
+
+    def _init(self, thr_theta0):
         self.thr_theta = Compartment(thr_theta0)
-        #self.tols = Compartment(restVals) ## time-of-last-spike
-        #self.reset()
 
     @staticmethod
     def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
@@ -103,7 +107,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     def load(self, directory, seeded=False, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.thr_theta.set( data['threshold_theta'] )
+        self._init( data['threshold_theta'] )
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

@@ -25,8 +25,23 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
 
         ## Component size setup
         self.batch_size = 1
-        self.shape = weights.shape
+        self.shape = None
 
+        ## Compartments
+        self.inputs = Compartment(None)
+        self.outputs = Compartment(None)
+        self.pre = Compartment(None) ## pre-synaptic spike
+        self.x_pre = Compartment(None) ## pre-synaptic trace
+        self.post = Compartment(None) ## post-synaptic spike
+        self.x_post = Compartment(None) ## post-synaptic trace
+        self.weights = Compartment(None)
+        self.eta = Compartment(jnp.ones((1,1)) * eta)
+
+        if weights is not None:
+            self._init(weights)
+
+    def _init(self, weights):
+        self.shape = weights.shape
         ## pre-computed empty zero pads
         preVals = jnp.zeros((self.batch_size, self.shape[0]))
         postVals = jnp.zeros((self.batch_size, self.shape[1]))
@@ -38,7 +53,6 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.post = Compartment(postVals) ## post-synaptic spike
         self.x_post = Compartment(postVals) ## post-synaptic trace
         self.weights = Compartment(weights)
-        self.eta = Compartment(jnp.ones((1,1)) * eta)
 
     @staticmethod
     def _advance_state(dt, Rscale, Aplus, Aminus, w_bounds, w_decay, x_tar,
@@ -95,7 +109,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.weights.set(data['weights'])
+        self._init( data['weights'] )
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

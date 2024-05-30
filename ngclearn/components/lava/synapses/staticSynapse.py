@@ -14,10 +14,20 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
 
         ## synaptic plasticity properties and characteristics
         self.batch_size = 1
-        self.shape = weights.shape
         self.dt = dt
         self.Rscale = Rscale
+        self.shape = None
 
+        ## Compartments
+        self.inputs = Compartment(None)
+        self.outputs = Compartment(None)
+        self.weights = Compartment(None)
+
+        if weights is not None:
+            self._init(weights)
+
+    def _init(self, weights):
+        self.shape = weights.shape
         ## pre-computed empty zero pads
         preVals = jnp.zeros((self.batch_size, self.shape[0]))
         postVals = jnp.zeros((self.batch_size, self.shape[1]))
@@ -56,7 +66,7 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.weights.set(data['weights'])
+        self._init( data['weights'] )
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

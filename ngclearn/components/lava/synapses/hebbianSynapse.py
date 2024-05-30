@@ -15,13 +15,25 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
 
         ## synaptic plasticity properties and characteristics
         self.batch_size = 1
-        self.shape = weights.shape
+        self.shape = None
         self.dt = dt
         self.Rscale = Rscale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.eta = eta
 
+        ## Compartments
+        self.inputs = Compartment(None)
+        self.outputs = Compartment(None)
+        self.pre = Compartment(None)
+        self.post = Compartment(None)
+        self.weights = Compartment(None)
+
+        if weights is not None:
+            self._init(weights)
+
+    def _init(self, weights):
+        self.shape = weights.shape
         ## pre-computed empty zero pads
         preVals = jnp.zeros((self.batch_size, self.shape[0]))
         postVals = jnp.zeros((self.batch_size, self.shape[1]))
