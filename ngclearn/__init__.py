@@ -21,6 +21,7 @@ for key in required:
 ## Needed to preload is called before anything in ngclearn
 from pathlib import Path
 from sys import argv
+import numpy
 
 import ngcsimlib
 

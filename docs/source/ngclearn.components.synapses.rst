@@ -9,6 +9,17 @@ Subpackages
 
    ngclearn.components.synapses.hebbian
 
+Submodules
+----------
+
+ngclearn.components.synapses.staticSynapse module
+-------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.staticSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
