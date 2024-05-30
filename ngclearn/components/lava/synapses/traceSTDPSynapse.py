@@ -7,6 +7,38 @@ from ngclearn import numpy as jnp
 import time, sys
 
 class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
+    """
+    A synaptic cable that adjusts its efficacies via trace-based form of
+    spike-timing-dependent plasticity (STDP). This is a Lava-compliant synaptic
+    cable that adjusts with a hard-coded form of (stochastic) gradient ascent.
+
+    Args:
+        name: the string name of this cell
+
+        weights: matrix of synaptic weight values to initialize this synapse
+            component to
+
+        dt: integration time constant (ms)
+
+        Rscale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+
+        Aplus: strength of long-term potentiation (LTP)
+
+        Aminus: strength of long-term depression (LTD)
+
+        eta: global learning rate
+
+        w_decay: degree to which (L2) synaptic weight decay is applied to the
+            computed Hebbian adjustment (Default: 0); note that decay is not
+            applied to any configured biases
+
+        w_bound: maximum weight to softly bound this cable's value matrix to; if
+            set to 0, then no synaptic value bounding will be applied
+
+        preTrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
+                 (higher -> lower synaptic values)
+    """
 
     # Define Functions
     def __init__(self, name, weights, dt, Rscale=1., Aplus=0.01, Aminus=0.001,
@@ -67,7 +99,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         flag = (w_bounds > 0.) * 1.
         dW = (dW * (w_bounds - jnp.abs(weights))) * flag + (dW) * (1. - flag)
         ## physically adjust synapses
-        weights = weights + dW * eta - weights * w_decay
+        weights = weights + (dW - weights * w_decay) * eta
         #weights = weights + (dW - weights * w_decay) * dt/tau_w ## ODE format
         weights = jnp.clip(weights, 0., w_bounds)
         ########################################################################
@@ -110,17 +142,3 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self._init( data['weights'] )
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines

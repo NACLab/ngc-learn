@@ -18,7 +18,7 @@ def update_times(t, s, tols):
 
         s: binary spike vector
 
-        tols: current time-of-last-spike variable
+        tols: current time-of-last-spike variable 
 
     Returns:
         updated tols variable

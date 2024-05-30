@@ -7,6 +7,48 @@ from ngclearn import numpy as jnp
 import time, sys
 
 class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
+    """
+    A spiking cell based on (leaky) integrate-and-fire (LIF) neuronal dynamics.
+    Note that this cell can be readily configured to pure integrate-and-fire
+    dynamics as needed. Note that dynamics in this Lava-compliant cell are
+    hard-coded to move according to Euler integration.
+
+    The specific differential equation that characterize this cell
+    is (for adjusting v, given current j, over time) is:
+
+    | tau_m * dv/dt = gamma_d * (v_rest - v) + j * R
+    | where R is the membrane resistance and v_rest is the resting potential
+    | gamma_d is voltage decay -- 1 recovers LIF dynamics and 0 recovers IF dynamics
+
+    Args:
+        name: the string name of this cell
+
+        n_units: number of cellular entities (neural population size)
+
+        dt: integration time constant (ms)
+
+        thr_theta0: initial conditions for voltage threshold
+
+        R_m: membrane resistance value (Default: 1)
+
+        thr: base value for adaptive thresholds that govern short-term
+            plasticity (in milliVolts, or mV)
+
+        v_rest: membrane resting potential (in mV)
+
+        v_reset: membrane reset potential (in mV) -- upon occurrence of a spike,
+            a neuronal cell's membrane potential will be set to this value
+
+        v_decay: decay factor applied to voltage leak (Default: 1.); setting this
+            to 0 mV results in pure integrate-and-fire (IF) dynamics
+
+        tau_theta: homeostatic threshold time constant
+
+        theta_plus: physical increment to be applied to any threshold value if
+            a spike was emitted
+
+        refract_T: relative refractory period time (ms; Default: 1 ms)
+    """
 
     # Define Functions
     def __init__(self, name, n_units, dt, tau_m, thr_theta0=None, R_m=1., thr=-52.,
@@ -85,8 +127,6 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         v = restVals + v_rest
         s = restVals #+ 0
         rfr = restVals + refract_T
-        #thr_theta = thr_theta0 ## do not reset thr_theta
-        #tols = restVals #+ 0
         return j_exc, j_inh, v, s, rfr #, tols
 
     @resolver(_reset)
@@ -96,8 +136,6 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         self.v.set(v)
         self.s.set(s)
         self.rfr.set(rfr)
-        #self.thr_theta.set(thr_theta)
-        #self.tols.set(tols)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

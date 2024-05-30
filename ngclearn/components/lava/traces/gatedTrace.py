@@ -7,6 +7,19 @@ from ngclearn import numpy as jnp
 import time, sys
 
 class GatedTrace(Component): ## gated/piecewise low-pass filter
+    """
+    A gated/piecewise variable trace (filter).
+
+    Args:
+        name: the string name of this operator
+
+        n_units: number of calculating entities or units
+
+        dt: integration time constant (ms)
+
+        tau_tr: trace time constant (in milliseconds, or ms)
+    """
+
     # Define Functions
     def __init__(self, name, n_units, dt, tau_tr, **kwargs):
         super().__init__(name, **kwargs)

@@ -7,6 +7,22 @@ from ngclearn import numpy as jnp
 import time
 
 class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
+    """
+    A static (dense) synaptic cable; no form of synaptic evolution/adaptation
+    is in-built to this component. This a Lava-compliant version of the
+    static synapse component from the synapses sub-package of components.
+
+    Args:
+        name: the string name of this cell
+
+        weights: matrix of synaptic weight values to initialize this synapse
+            component to
+
+        dt: integration time constant (ms)
+
+        Rscale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+    """
 
     # Define Functions
     def __init__(self, name, weights, dt, Rscale=1., **kwargs):

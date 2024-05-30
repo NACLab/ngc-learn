@@ -124,7 +124,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
             for each dimension/value of this cable's underlying value matrix
 
         Rscale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
 
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable

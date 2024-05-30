@@ -7,6 +7,31 @@ from ngclearn import numpy as jnp
 import time
 
 class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
+    """
+    A synaptic cable that adjusts its efficacies via a two-factor Hebbian
+    adjustment rule. This is a Lava-compliant synaptic cable that adjusts
+    with a hard-coded form of (stochastic) gradient ascent.
+
+    Args:
+        name: the string name of this cell
+
+        weights: matrix of synaptic weight values to initialize this synapse
+            component to
+
+        dt: integration time constant (ms)
+
+        Rscale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+
+        eta: global learning rate
+
+        w_decay: degree to which (L2) synaptic weight decay is applied to the
+            computed Hebbian adjustment (Default: 0); note that decay is not
+            applied to any configured biases
+
+        w_bound: maximum weight to softly bound this cable's value matrix to; if
+            set to 0, then no synaptic value bounding will be applied
+    """
 
     # Define Functions
     def __init__(self, name, weights, dt, Rscale=1., eta=0., w_decay=0.,
@@ -45,48 +70,46 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.weights = Compartment(weights)
 
     @staticmethod
-    def _advance_state(dt, Rscale, inputs, weights):
+    def _advance_state(dt, Rscale, eta, w_bounds, w_decay, inputs, weights,
+                       pre, post, eta):
         outputs = jnp.matmul(inputs, weights) * Rscale
-        return outputs
-
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
-
-    @staticmethod
-    def _evolve(dt, eta, w_bounds, w_decay, pre, post, weights):
+        ########################################################################
+        ## Run one step of 2-factor Hebbian adaptation online
         dW = jnp.matmul(pre.T, post)
         #db = jnp.sum(_post, axis=0, keepdims=True)
         ## reformulated bounding flag to be linear algebraic
         flag = (w_bounds > 0.) * 1.
         dW = (dW * (w_bounds - jnp.abs(weights))) * flag + (dW) * (1. - flag)
         ## add small amount of synaptic decay
-        dW = dW - weights * w_decay
-        weights = weights + dW * eta
-        #weights = jnp.clip(weights, 0., w_bounds)
-        return weights
+        weights = weights + (dW - weights * w_decay) * eta
+        weights = jnp.clip(weights, 0., w_bounds)
+        ########################################################################
+        return outputs, weights
 
-    @resolver(_evolve)
-    def evolve(self, weights):
+    @resolver(_advance_state)
+    def advance_state(self, outputs, weights):
+        self.outputs.set(outputs)
         self.weights.set(weights)
 
     @staticmethod
-    def _reset(batch_size, shape):
+    def _reset(batch_size, shape, eta0):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         return (
             preVals, # inputs
             postVals, # outputs
             preVals, # pre
-            postVals # post
+            postVals, # post
+            jnp.ones((1,1)) * eta0
         )
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post):
+    def reset(self, inputs, outputs, pre, post, eta):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
+        self.eta.set(eta)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -95,18 +118,4 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
+        self._init( data['weights'] )
