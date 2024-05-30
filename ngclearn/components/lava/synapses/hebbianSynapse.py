@@ -45,7 +45,7 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.Rscale = Rscale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
-        self.eta = eta
+        self.eta0 = eta
 
         ## Compartments
         self.inputs = Compartment(None)
@@ -53,6 +53,7 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.pre = Compartment(None)
         self.post = Compartment(None)
         self.weights = Compartment(None)
+        self.eta = Compartment(jnp.ones((1,1)) * eta)
 
         if weights is not None:
             self._init(weights)
@@ -70,7 +71,7 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.weights = Compartment(weights)
 
     @staticmethod
-    def _advance_state(dt, Rscale, eta, w_bounds, w_decay, inputs, weights,
+    def _advance_state(dt, Rscale, w_bounds, w_decay, inputs, weights,
                        pre, post, eta):
         outputs = jnp.matmul(inputs, weights) * Rscale
         ########################################################################
