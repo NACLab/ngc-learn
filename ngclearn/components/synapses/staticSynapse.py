@@ -75,6 +75,7 @@ class StaticSynapse(Component): ## static non-learnable synaptic cable
         postVals = jnp.zeros((self.batch_size, shape[1]))
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
+        self.weights = Compartment(weights)
 
     @staticmethod
     def _advance_state(t, dt, Rscale, inputs, weights):
