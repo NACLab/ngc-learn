@@ -6,7 +6,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
 import time
 
-@partial(jit, static_argnums=[3,4,5,6,7,8])
+@partial(jit, static_argnums=[3, 4, 5, 6, 7, 8])
 def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
                 pre_wght=1., post_wght=1.):
     """

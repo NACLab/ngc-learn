@@ -1,11 +1,9 @@
 from jax import random, numpy as jnp, jit
-from functools import partial
 from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import initialize_params
 import time
 
-#@partial(jit, static_argnums=5)
 def evolve(pre, post, W, eta=0.00005, lmbda=0., w_bound=1.):
     """
     Evolves/changes the synpatic value matrix underlying this synaptic cable,

@@ -1,11 +1,8 @@
-import jax
 import numpy as np
-from jax import numpy as jnp, grad, jit, vmap, random, lax
-import os, sys, pickle
-from functools import partial
+from jax import numpy as jnp
 from sklearn.feature_extraction.image import extract_patches_2d
 
-def generate_patch_set(x_batch_, patch_size=(8,8), max_patches=50, center=True): ## scikit
+def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True): ## scikit
     """
     Generates a set of patches from an array/list of image arrays (via
     random sampling with replacement). This uses scikit-learn's patch creation
@@ -13,7 +10,7 @@ def generate_patch_set(x_batch_, patch_size=(8,8), max_patches=50, center=True):
     Note: this routine also subtracts each patch's mean from itself.
 
     Args:
-        imgs: the array of image arrays to sample from
+        x_batch: the array of image arrays to sample from
 
         patch_size: a 2-tuple of the form (pH = patch height, pW = patch width)
 
@@ -24,11 +21,11 @@ def generate_patch_set(x_batch_, patch_size=(8,8), max_patches=50, center=True):
     Returns:
         an array (D x (pH * pW)), where each row is a flattened patch sample
     """
-    x_batch = np.array(x_batch_)
-    px = py = int(np.sqrt(x_batch.shape[1])) # get image shape of the data
+    _x_batch = np.array(x_batch)
+    px = py = int(np.sqrt(_x_batch.shape[1])) # get image shape of the data
     p_batch = None
-    for s in range(x_batch.shape[0]):
-        xs = x_batch[s,:]
+    for s in range(_x_batch.shape[0]):
+        xs = _x_batch[s, :]
         xs = xs.reshape(px, py)
         patches = extract_patches_2d(xs, patch_size, max_patches=max_patches)#, random_state=69)
         patches = np.reshape(patches, (len(patches), -1)) # flatten each patch in set
@@ -41,7 +38,7 @@ def generate_patch_set(x_batch_, patch_size=(8,8), max_patches=50, center=True):
         p_batch = p_batch - mu
     return jnp.array(p_batch)
 
-def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True): ## patchify
+def generate_pacthify_patch_set(x_batch_, patch_size=(5, 5), center=True): ## patchify
     ## this is a patchify-specific function (only use if you have patchify installed...)
     import patchify as ptch
     """
@@ -51,11 +48,9 @@ def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True)
     Note: this routine also subtracts each patch's mean from itself.
 
     Args:
-        imgs: the array of image arrays to sample from
+        x_batch_: the array of image arrays to sample from
 
         patch_size: a 2-tuple of the form (pH = patch height, pW = patch width)
-
-        max_patches: UNUSED
 
         center: centers each patch by subtracting the patch mean (per-patch)
 

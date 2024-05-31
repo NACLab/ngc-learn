@@ -1,6 +1,6 @@
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
-import time, sys
+import time
 from ngclearn.utils import tensorstats
 from ngclearn import resolver, Component, Compartment
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
@@ -10,14 +10,14 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
 
 ## rewritten code
 @partial(jit, static_argnums=[3, 4, 5])
-def _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType=None): ## raw dynamics
+def _dfz_internal(z, j, j_td, tau_m, leak_gamma, prior_type=None): ## raw dynamics
     z_leak = z # * 2 ## Default: assume Gaussian
-    if priorType != None:
-        if priorType == "laplacian": ## Laplace dist
+    if prior_type != None:
+        if prior_type == "laplacian": ## Laplace dist
             z_leak = jnp.sign(z) ## d/dx of Laplace is signum
-        elif priorType == "cauchy":  ## Cauchy dist: x ~ (1.0 + tf.math.square(z))
+        elif prior_type == "cauchy":  ## Cauchy dist: x ~ (1.0 + tf.math.square(z))
             z_leak = (z * 2)/(1. + jnp.square(z))
-        elif priorType == "exp":  ## Exp dist: x ~ -exp(-x^2)
+        elif prior_type == "exp":  ## Exp dist: x ~ -exp(-x^2)
             z_leak = jnp.exp(-jnp.square(z)) * z * 2
     dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
     return dz_dt
