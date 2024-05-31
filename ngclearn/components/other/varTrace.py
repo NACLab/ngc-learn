@@ -93,12 +93,10 @@ class VarTrace(Component): ## low-pass filter
         ## else "step" == decay_type, yielding a step/pulse-like filter
         trace = run_varfilter(dt, inputs, trace, decayFactor, a_delta)
         outputs = trace
-        inputs = None
-        return inputs, outputs, trace
+        return outputs, trace
 
     @resolver(_advance_state)
-    def advance_state(self, inputs, outputs, trace):
-        self.inputs.set(inputs)
+    def advance_state(self, outputs, trace):
         self.outputs.set(outputs)
         self.trace.set(trace)
 
