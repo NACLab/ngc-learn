@@ -38,10 +38,10 @@ Wab.post << b.zF
 as well as (a bit later in the model construction code):
 
 ```python
-advance_cmd, advance_args = circuit.compile_command_key(a, Wab, b, compile_key="advance_state")
+advance_cmd, advance_args = circuit.compile_by_key(a, Wab, b, compile_key="advance_state")
 circuit.add_command(wrap_command(jit(circuit.advance_state)), name="advance")
 
-evolve_cmd, evolve_args = circuit.compile_command_key(Wab, compile_key="evolve")
+evolve_cmd, evolve_args = circuit.compile_by_key(Wab, compile_key="evolve")
 circuit.add_command(wrap_command(jit(circuit.evolve)), name="evolve")
 ```
 

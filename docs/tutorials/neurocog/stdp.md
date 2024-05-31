@@ -40,8 +40,8 @@ from ngclearn.components.synapses.hebbian.traceSTDPSynapse import TraceSTDPSynap
 dkey = random.PRNGKey(231)
 dkey, *subkeys = random.split(dkey, 2)
 
-dt = 1. # ms # integration time constant
-T_max = 100 ## number time steps to simulate
+dt = 1.  # ms # integration time constant
+T_max = 100  ## number time steps to simulate
 
 with Context("Model") as model:
     tr0 = VarTrace("tr0", n_units=1, tau_tr=8., a_delta=1.)
@@ -51,24 +51,26 @@ with Context("Model") as model:
 
     # wire only relevant compartments to synaptic cable W for demo purposes
     W.preTrace << tr0.trace
-    #self.W1.preSpike << self.z0.outputs ## we disable this as we will manually
-                                         ## insert a binary value (for a spike)
+    # self.W1.preSpike << self.z0.outputs ## we disable this as we will manually
+    ## insert a binary value (for a spike)
     W.postTrace << tr1.trace
-    #self.W1.postSpike << self.z1e.s ## we disable this as we will manually
-                                     ## insert a binary value (for a spike)
+    # self.W1.postSpike << self.z1e.s ## we disable this as we will manually
+    ## insert a binary value (for a spike)
 
-    reset_cmd, reset_args = model.compile_command_key(tr0, tr1, W, compile_key="reset")
-    adv_tr_cmd, _ = model.compile_command_key(tr0, tr1, compile_key="advance_state", name="advance_traces")
-    evolve_cmd, evolve_args = model.compile_command_key(W, compile_key="evolve") ## M-step
+    reset_cmd, reset_args = model.compile_by_key(tr0, tr1, W, compile_key="reset")
+    adv_tr_cmd, _ = model.compile_by_key(tr0, tr1, compile_key="advance_state", name="advance_traces")
+    evolve_cmd, evolve_args = model.compile_by_key(W, compile_key="evolve")  ## M-step
 
     model.add_command(wrap_command(jit(model.reset)), name="reset")
     model.add_command(wrap_command(jit(model.advance_traces)), name="advance_traces")
     model.add_command(wrap_command(jit(model.evolve)), name="evolve")
 
+
     @Context.dynamicCommand
     def clamp_synapse(pre_spk, post_spk):
         W.preSpike.set(pre_spk)
         W.postSpike.set(post_spk)
+
 
     @Context.dynamicCommand
     def clamp_traces(pre_spk, post_spk):

@@ -24,7 +24,7 @@ from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
 from ngcsimlib.commands import Command
 ## import model-specific mechanisms
-from ngcsimlib.operations import summation
+from ngclearn.operations import summation
 from ngclearn.components.neurons.spiking.izhikevichCell import IzhikevichCell
 
 ## create seeding keys (JAX-style)
@@ -32,9 +32,9 @@ dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 6)
 
 ## Izh cell hyperparameters (for RS neurons)
-v0 = -65. ## initial membrane potential (for reset condition)
-w0 = -14. ## initial recovery value (for reset condition)
-cell_tag = "RS" ## our final dynamics plot will indicate regular-spiking cells
+v0 = -65.  ## initial membrane potential (for reset condition)
+w0 = -14.  ## initial recovery value (for reset condition)
+cell_tag = "RS"  ## our final dynamics plot will indicate regular-spiking cells
 tau_w = 50.
 v_reset = -65.
 w_reset = 8.
@@ -47,10 +47,11 @@ with Context("Model") as model:
                           integration_type="euler", v0=v0, w0=w0, key=subkeys[0])
 
     ## create and compile core simulation commands
-    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
 
     ## set up non-compiled utility commands
     @Context.dynamicCommand

@@ -22,7 +22,7 @@ from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
 from ngcsimlib.commands import Command
 ## import model-specific mechanisms
-from ngcsimlib.operations import summation
+from ngclearn.operations import summation
 from ngclearn.components.neurons.spiking.sLIFCell import SLIFCell
 from ngclearn.utils.viz.spike_plot import plot_spiking_neuron
 
@@ -30,12 +30,12 @@ from ngclearn.utils.viz.spike_plot import plot_spiking_neuron
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 2)
 
-dt = 1e-3 # integration time constant
-R_m = 5.0 ## input resistance (to sLIF cell)
-C = 5e-3 ## capacitance, in picofarads
-V_thr = 1.0 ## voltage threshold
-ref_T = 0.0 ## length of absolute refractory period
-tau_m = R_m * C ## membrane time constant
+dt = 1e-3  # integration time constant
+R_m = 5.0  ## input resistance (to sLIF cell)
+C = 5e-3  ## capacitance, in picofarads
+V_thr = 1.0  ## voltage threshold
+ref_T = 0.0  ## length of absolute refractory period
+tau_m = R_m * C  ## membrane time constant
 
 ## create simple system with only one sLIF
 with Context("Model") as model:
@@ -43,10 +43,11 @@ with Context("Model") as model:
                     refract_T=ref_T, key=subkeys[0])
 
     ## set up core commands that drive the simulation
-    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
 
     ## set up non-compiled utility commands
     @Context.dynamicCommand

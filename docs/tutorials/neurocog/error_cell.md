@@ -62,17 +62,18 @@ from ngclearn.utils.viz.raster import create_raster_plot
 ## import model-specific mechanisms
 from ngclearn.components.neurons.graded.gaussianErrorCell import GaussianErrorCell
 
-dt = 1. # ms # integration time constant
-T = 5 ## number time steps to simulate
+dt = 1.  # ms # integration time constant
+T = 5  ## number time steps to simulate
 
 with Context("Model") as model:
     cell = GaussianErrorCell("z0", n_units=3)
 
-    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
+    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
 
     model.add_command(wrap_command(jit(model.reset)), name="reset")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
 
     @Context.dynamicCommand
     def clamp(x, y):
@@ -80,13 +81,13 @@ with Context("Model") as model:
         cell.mu.set(x)
         cell.target.set(y)
 
-guess = jnp.asarray([[-1., 1., 1.]], jnp.float32) ## the produced guess or prediction
-answer = jnp.asarray([[1., -1., 1.]], jnp.float32) ## what we wish the guess had been
+guess = jnp.asarray([[-1., 1., 1.]], jnp.float32)  ## the produced guess or prediction
+answer = jnp.asarray([[1., -1., 1.]], jnp.float32)  ## what we wish the guess had been
 
 model.reset()
 for ts in range(T):
     model.clamp(guess, answer)
-    model.advance(ts*1., dt)
+    model.advance(ts * 1., dt)
     ## extract compartment values of interest
     dmu = cell.dmu.value
     dtarget = cell.dtarget.value

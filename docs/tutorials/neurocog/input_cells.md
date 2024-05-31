@@ -46,39 +46,40 @@ from ngcsimlib.commands import Command
 from ngcsimlib.compilers import compile_command, wrap_command
 from ngclearn.utils.viz.raster import create_raster_plot
 ## import model-specific mechanisms
-from ngcsimlib.operations import summation
+from ngclearn.operations import summation
 from ngclearn.components.input_encoders.bernoulliCell import BernoulliCell
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 2)
 
-dt = 1. # ms # integration time constant
-T = 100 ## number time steps to simulate
+dt = 1.  # ms # integration time constant
+T = 100  ## number time steps to simulate
 
 with Context("Model") as model:
     cell = BernoulliCell("z0", n_units=10, key=subkeys[0])
 
-    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
+    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
 
     model.add_command(wrap_command(jit(model.reset)), name="reset")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
 
     @Context.dynamicCommand
     def clamp(x):
         cell.inputs.set(x)
 
-probs = jnp.asarray([[0.8, 0.2, 0., 0.55, 0.9, 0, 0.15, 0., 0.6, 0.77]],dtype=jnp.float32)
+probs = jnp.asarray([[0.8, 0.2, 0., 0.55, 0.9, 0, 0.15, 0., 0.6, 0.77]], dtype=jnp.float32)
 spikes = []
 model.reset()
 for ts in range(T):
     model.clamp(probs)
-    model.advance(ts*1., dt)
+    model.advance(ts * 1., dt)
 
     s_t = cell.outputs.value
     spikes.append(s_t)
-spikes = jnp.concatenate(spikes,axis=0)
+spikes = jnp.concatenate(spikes, axis=0)
 create_raster_plot(spikes, plot_fname="input_cell_raster.jpg")
 ```
 

@@ -148,5 +148,45 @@ def make_video(f_start, f_end, path, prefix, suffix='.jpg', skip=1):
     print("writing gif")
     iio.imwrite(path + '/training.gif', images, loop=0, duration=200)
 
-#if __name__ == "__main__":
-#    make_video(0, 50, 'trials/Two_Layer/3', 'joint_')
+
+# def visualize_norm(thetas, sizes, prefix, suffix='.jpg'):
+
+def viz_block(thetas, sizes, prefix, suffix=".jpg", padding=1, low_rez=True):
+    num_filters = [T.shape[1] for T in thetas]
+    n_cols = [math.ceil(math.sqrt(nf)) for nf in num_filters]
+    n_rows = [math.ceil(nf / c) for nf, c in zip(num_filters, n_cols)]
+    idxs = [i for i in range(len(thetas))]
+
+    if not low_rez:
+        n_cols_size = int(sum([(t_c * cols) + padding * (cols - 1) for (t_c, _), cols in zip(sizes, n_cols)]))
+        n_rows_size = int(sum([(t_r * rows) + padding * (rows - 1) for (_, t_r), rows in zip(sizes, n_rows)]))
+        plt.figure(figsize=(n_cols_size, n_rows_size))
+
+
+    for t, num_f, (t_c, t_r), cols, rows, idx in zip(thetas, num_filters, sizes, n_cols, n_rows, idxs):
+        c_dim = (t_c * cols) + padding * (cols - 1)
+        r_dim = (t_r * rows) + padding * (rows - 1)
+
+        full = jnp.ones((r_dim, c_dim)) * np.amax(t)
+
+        for k in range(num_f):
+            r = k // cols
+            c = k % cols
+
+            r_start = (r * (t_r + padding))
+            r_end = (r * (t_r + padding)) + t_r
+
+            c_start = (c * (t_c + padding))
+            c_end = (c * (t_c + padding)) + t_c
+
+            full = full.at[r_start:r_end, c_start:c_end].set(
+                jnp.reshape(t[:, k], (t_r, t_c)))
+
+        plt.subplot(1, len(thetas), idx+1)
+        plt.imshow(full, cmap=plt.cm.bone, interpolation='nearest')
+        plt.axis("off")
+
+    plt.savefig(prefix + suffix, bbox_inches='tight')
+    plt.clf()
+    plt.close()
+

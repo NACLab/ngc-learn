@@ -27,19 +27,19 @@ from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
 from ngcsimlib.commands import Command
 ## import model-specific mechanisms
-from ngcsimlib.operations import summation
+from ngclearn.operations import summation
 from ngclearn.components.neurons.spiking.adExCell import AdExCell
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 6)
 
-T = 10000 ## number of simulation steps to run
-dt = 0.1 # ms ## compute integration time constant
+T = 10000  ## number of simulation steps to run
+dt = 0.1  # ms ## compute integration time constant
 
 ## AdEx cell hyperparameters
-v0 = -70. ## initial membrane potential (for its reset condition)
-w0 = 0. ## initial recovery value (for its reset condition)
+v0 = -70.  ## initial membrane potential (for its reset condition)
+w0 = 0.  ## initial recovery value (for its reset condition)
 
 ## create simple system with only one AdEx
 with Context("Model") as model:
@@ -48,10 +48,11 @@ with Context("Model") as model:
                     v0=v0, w0=w0, integration_type="euler", key=subkeys[0])
 
     ## create and compile core simulation commands
-    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
 
     ## set up non-compiled utility commands
     @Context.dynamicCommand

@@ -22,7 +22,7 @@ from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
 from ngcsimlib.commands import Command
 ## import model-specific mechanisms
-from ngcsimlib.operations import summation
+from ngclearn.operations import summation
 from ngclearn.components.neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 
 ## create seeding keys (JAX-style)
@@ -30,12 +30,12 @@ dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 6)
 
 ## F-N cell hyperparameters
-alpha = 0.3 ## recovery variable shift factor
-beta = 1.4 ## recovery variable scale factor
-gamma = 1. ## membrane potential power term denominator
-tau_w = 20. ## recovery variable time constant
-v0 = -0.63605838 ## initial membrane potential (for reset condition)
-w0 = -0.16983366 ## initial recovery value (for reset condition)
+alpha = 0.3  ## recovery variable shift factor
+beta = 1.4  ## recovery variable scale factor
+gamma = 1.  ## membrane potential power term denominator
+tau_w = 20.  ## recovery variable time constant
+v0 = -0.63605838  ## initial membrane potential (for reset condition)
+w0 = -0.16983366  ## initial recovery value (for reset condition)
 
 ## create simple system with only one F-N cell
 with Context("Model") as model:
@@ -43,10 +43,11 @@ with Context("Model") as model:
                               gamma=gamma, v0=v0, w0=w0, integration_type="euler")
 
     ## create and compile core simulation commands
-    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
 
     ## set up non-compiled utility commands
     @Context.dynamicCommand

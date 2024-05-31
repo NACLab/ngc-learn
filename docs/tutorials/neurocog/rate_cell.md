@@ -29,7 +29,7 @@ from ngcsimlib.context import Context
 from ngcsimlib.commands import Command
 from ngcsimlib.compilers import compile_command, wrap_command
 ## import model-specific elements
-from ngcsimlib.operations import summation
+from ngclearn.operations import summation
 from ngclearn.components.neurons.graded.rateCell import RateCell
 ```
 
@@ -43,21 +43,23 @@ from jax import numpy as jnp, random
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 2)
 
-dt = 1. # ms # integration time constant
-tau_m = 10. # ms ## membrane time constant
+dt = 1.  # ms # integration time constant
+tau_m = 10.  # ms ## membrane time constant
 act_fx = "unit_threshold"
 gamma = 1.
 
-with Context("Model") as model: ## model/simulation definition
+with Context("Model") as model:  ## model/simulation definition
     ## instantiate components (like cells)
     cell = RateCell("z0", n_units=1, tau_m=tau_m, act_fx=act_fx,
-                  prior=("gaussian",gamma), integration_type="euler", key=subkeys[0])
+                    prior=("gaussian", gamma), integration_type="euler", key=subkeys[0])
 
     ## instantiate desired core commands that drive the simulation
-    reset_cmd, reset_args = model.compile_command_key(cell, compile_key="reset")
+    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
+
     ## instantiate some non-jitted dynamic utility commands
     @Context.dynamicCommand
     def clamp(x):

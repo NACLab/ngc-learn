@@ -29,7 +29,7 @@ from ngcsimlib.commands import Command
 from ngcsimlib.compilers import compile_command, wrap_command
 from ngclearn.utils.viz.raster import create_raster_plot
 ## import model-specific mechanisms
-from ngcsimlib.operations import summation
+from ngclearn.operations import summation
 from ngclearn.components.input_encoders.poissonCell import PoissonCell
 from ngclearn.components.other.varTrace import VarTrace
 
@@ -44,11 +44,12 @@ with Context("Model") as model:
     ## wire up cell z0 to trace tr0
     trace.inputs << cell.outputs
 
-    reset_cmd, reset_args = model.compile_command_key(cell, trace, compile_key="reset")
-    advance_cmd, advance_args = model.compile_command_key(cell, trace, compile_key="advance_state")
+    reset_cmd, reset_args = model.compile_by_key(cell, trace, compile_key="reset")
+    advance_cmd, advance_args = model.compile_by_key(cell, trace, compile_key="advance_state")
 
     model.add_command(wrap_command(jit(model.reset)), name="reset")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+
 
     @Context.dynamicCommand
     def clamp(x):
