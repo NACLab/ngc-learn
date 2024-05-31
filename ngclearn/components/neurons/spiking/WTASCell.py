@@ -1,11 +1,8 @@
-# %%
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit, nn
-from ngclearn.utils import tensorstats
 from functools import partial
 import time, sys
+from ngclearn import resolver, Component, Compartment
+from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import softmax
 
 @jit
@@ -18,7 +15,7 @@ def update_times(t, s, tols):
 
         s: binary spike vector
 
-        tols: current time-of-last-spike variable 
+        tols: current time-of-last-spike variable
 
     Returns:
         updated tols variable

@@ -1,8 +1,4 @@
-# %%
-
-from ngcsimlib.component import Component
-from ngcsimlib.resolver import resolver
-from ngcsimlib.compartment import Compartment
+from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit

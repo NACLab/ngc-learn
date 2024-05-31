@@ -1,11 +1,8 @@
-# %%
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
 from jax import numpy as jnp, random, jit, nn
-from ngclearn.utils import tensorstats
 from functools import partial
 import time, sys
+from ngclearn.utils import tensorstats
+from ngclearn import resolver, Component, Compartment
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 

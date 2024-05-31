@@ -1,10 +1,6 @@
-# %%
-
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
 from jax import random, numpy as jnp, jit
 from functools import partial
+from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import initialize_params
 import time

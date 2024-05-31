@@ -1,6 +1,4 @@
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
+from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
 
 from ngclearn import numpy as jnp
