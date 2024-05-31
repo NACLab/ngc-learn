@@ -7,6 +7,12 @@ from pkg_resources import get_distribution
 
 __version__ = get_distribution('ngclearn').version
 
+if sys.version_info.minor < 10:
+    import warnings
+    warnings.warn(
+        "Running ngclearn and jax in a python version prior to 3.10 may have unintended consequences. Compatability "
+        "with python 3.8 is maintained to allow for lava-nc components and should only be used with those")
+
 #required = {'ngcsimlib', 'jax', 'jaxlib'} ## list of core ngclearn dependencies
 required = {'ngcsimlib'} #, 'jax', 'jaxlib'}
 installed = {pkg.key for pkg in pkg_resources.working_set}

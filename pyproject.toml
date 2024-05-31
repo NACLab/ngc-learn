@@ -13,7 +13,7 @@ authors = [
 readme = "README.md"
 keywords = ['python', 'ngc-learn', 'predictive-processing', 'predictive-coding',
             'jax', 'spiking-neural-networks', 'biomimetics', 'bionics', 'computational-neuroscience']
-requires-python = ">=3.10" # 3.8
+requires-python = ">=3.8" # 3.10
 license = {text = "BSD-3-Clause License"}
 classifiers=[
   "Development Status :: 4 - Beta", #3 - Alpha", # 5 - Production/Stable
@@ -33,13 +33,6 @@ classifiers=[
 dynamic = ["dependencies"]
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]} ## use classic requirements file
-#dependencies = [
-#  "imageio==2.31.5",
-#  "numpy>=1.26.0",
-#  "scikit-learn>=0.24.2",
-#  "scipy>=1.7.0",
-#  "matplotlib>=3.8.0",
-#]
 
 [project.urls]
 Homepage = "https://github.com/NACLab/ngc-learn"

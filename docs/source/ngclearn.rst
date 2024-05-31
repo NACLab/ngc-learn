@@ -9,6 +9,7 @@ Subpackages
 
    ngclearn.commands
    ngclearn.components
+   ngclearn.operations
    ngclearn.utils
 
 Module contents

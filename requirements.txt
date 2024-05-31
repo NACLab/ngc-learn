@@ -5,5 +5,5 @@ matplotlib>=3.8.0
 patchify
 jax>=0.4.18
 jaxlib>=0.4.18
-ngcsimlib>=0.2.b2
+ngcsimlib>=0.3.b0
 imageio>=2.31.5
