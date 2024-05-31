@@ -51,3 +51,13 @@ History
   * backend migration/revision finished; ngc-learn now depends on ngc-sim-lib (ngcsimlib)
   * tutorials updated reflected
   * STDP is now first-class citizen
+
+1.1.0-beta
+— — — — — — — — -
+  * rewrite of framework to adhere to revised ngc-sim-lib
+  * simple starting point for lava support
+  * new adex, wtas, and event-based stdp components integrated
+  * all current tutorials written
+  * clean-up of utility sub-package files
+  * minor clean-up, revisions, bug fixes and doc-string updates
+  * model museum updates reflect current state of ngc-learn/sim-lib
