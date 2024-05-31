@@ -199,7 +199,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m, thr=-52., v_rest=-65., v_reset=60.,
-                 v_c=-41.6, a0=1., tau_theta=1e7, theta_plus=0.05, refract_T=5.,
+                 v_scale=-41.6, critical_V=1., tau_theta=1e7, theta_plus=0.05, refract_T=5.,
                  key=None, one_spike=True, directory=None, **kwargs):
         super().__init__(name, n_units, tau_m, R_m, thr, v_rest, v_reset,
                          tau_theta, theta_plus, refract_T, key, one_spike,

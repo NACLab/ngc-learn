@@ -188,5 +188,5 @@ class WTASCell(Component): ## winner-take-all spiking cell
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        X = LIFCell("X", 9, 0.0004, 3)
+        X = WTASCell("X", 1, 1.)
     print(X)

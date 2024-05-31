@@ -2,7 +2,7 @@
 Data functions and utilies for data loading.
 """
 from jax import random, numpy as jnp, jit, nn
-import io, sys #, math
+import io, sys, time
 
 class DataLoader(object):
     """

@@ -187,5 +187,5 @@ class EventSTDPSynapse(Component): # event-driven, post-synaptic STDP
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        Wab = TraceSTDPSynapse("Wab", (2, 3), 0.0004, 1, 1)
+        Wab = EventSTDPSynapse("Wab", (2, 3), 1.)
     print(Wab)

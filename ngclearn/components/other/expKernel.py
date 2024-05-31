@@ -104,5 +104,5 @@ class ExpKernel(Component): ## exponential kernel
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        X = VarTrace("X", 9, 0.0004, 3)
+        X = ExpKernel("X", 1, 1.)
     print(X)

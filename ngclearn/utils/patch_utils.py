@@ -68,13 +68,13 @@ def _generate_patch_set(x_batch_, patch_size=(5,5), max_patches=50, center=True)
     pch_x = patch_size[0]
     pch_y = patch_size[1]
     pX = np.squeeze( ptch.patchify(x_batch, (pch_x,pch_y,1), step=pch_x) ) # step = stride
-    p_patch = []
+    patchBatch = []
     for i in range(pX.shape[0]):
         for j in range(pX.shape[1]):
             _p = np.reshape(pX[i,j,:,:], (1, pch_x * pch_y))
-            p_patch.append(_p)
-    p_patch = jnp.concatenate(p_patch, axis=0)
+            patchBatch.append(_p)
+    patchBatch = jnp.concatenate(patchBatch, axis=0)
     if center == True:
-        mu = np.mean(p_batch,axis=1,keepdims=True)
-        p_batch = p_batch - mu
-    return p_patch
+        mu = np.mean(patchBatch, axis=1,keepdims=True)
+        patchBatch = patchBatch - mu
+    return patchBatch
