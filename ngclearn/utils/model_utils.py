@@ -123,7 +123,7 @@ def initialize_params(dkey, initKernel, shape):
                 ("hollow", off_diagonal_scale, ~ignored~);
                 ("eye", diagonal_scale, ~ignored~);
                 ("uniform", min_val, max_val);
-                ("uniform_scale", ~ignored, ~ignored~);
+                ("fan_in_gaussian", ~ignored, ~ignored~);
                 ("gaussian", mu, sigma) OR ("normal", mu, sigma);
                 ("constant", magnitude, ~ignored~)
 
