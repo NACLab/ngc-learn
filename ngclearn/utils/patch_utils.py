@@ -33,8 +33,8 @@ def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True):
             p_batch = np.concatenate((p_batch,patches),axis=0)
         else:
             p_batch = patches
-    if center == True:
-        mu = np.mean(p_batch,axis=1,keepdims=True)
+    if center: ## center patches by subtracting out their means
+        mu = np.mean(p_batch, axis=1, keepdims=True)
         p_batch = p_batch - mu
     return jnp.array(p_batch)
 

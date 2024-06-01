@@ -123,6 +123,7 @@ def initialize_params(dkey, initKernel, shape):
                 ("hollow", off_diagonal_scale, ~ignored~);
                 ("eye", diagonal_scale, ~ignored~);
                 ("uniform", min_val, max_val);
+                ("uniform_scale", ~ignored, ~ignored~);
                 ("gaussian", mu, sigma) OR ("normal", mu, sigma);
                 ("constant", magnitude, ~ignored~)
 
@@ -142,6 +143,10 @@ def initialize_params(dkey, initKernel, shape):
     elif initType == "uniform": ## uniformly distributed values
         lb, ub = args
         params = random.uniform(dkey, shape, minval=lb, maxval=ub)
+    elif initType == "fan_in_gaussian":
+        Phi = random.normal(dkey, shape)
+        Phi = Phi * jnp.sqrt(1.0 / (shape[0] * 1.))
+        params = Phi.astype(jnp.float32)
     elif initType == "gaussian" or initType == "normal": ## gaussian distributed values
         mu, sigma = args
         params = random.normal(dkey, shape) * sigma + mu
@@ -173,9 +178,9 @@ def normalize_matrix(M, wnorm, order=1, axis=0):
         a normalized value matrix
     """
     if order == 2: ## denominator is L2 norm
-        wOrdSum = jnp.square(jnp.sum(jnp.square(M), axis=axis, keepdims=True))
+        wOrdSum = jnp.maximum(jnp.sum(jnp.square(M), axis=axis, keepdims=True), 1e-8)
     else: ## denominator is L1 norm
-        wOrdSum = jnp.sum(jnp.abs(M), axis=axis, keepdims=True)
+        wOrdSum = jnp.maximum(jnp.sum(jnp.abs(M), axis=axis, keepdims=True), 1e-8)
     m = (wOrdSum == 0.).astype(dtype=jnp.float32)
     wOrdSum = wOrdSum * (1. - m) + m #wAbsSum[wAbsSum == 0.] = 1.
     _M = M * (wnorm/wOrdSum)

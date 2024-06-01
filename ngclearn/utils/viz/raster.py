@@ -11,7 +11,8 @@ import imageio.v3 as iio
 import jax.numpy as jnp
 
 def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
-                       plot_fname=None, indices=None, tag="", suffix='.jpg'):
+                       plot_fname=None, indices=None, tag="", suffix='.jpg', 
+                       title_font_size=20):
     """
     Generates a raster plot of a given (binary) spike train (row dimension
     corresponds to the discrete time dimension).
@@ -52,7 +53,7 @@ def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
         nc = n_count if indices is None else len(indices)
         fig_size = 5 if nc < 25 else int(nc / 5)
         plt.figure(figsize=(fig_size, fig_size)) # (fig_size * K, fig_size)
-        plt.title("Spike Train Raster Plot, {}".format(tag))
+        plt.title("Spike Train Raster Plot, {}".format(tag), fontsize=title_font_size)
         plt.xlabel("Time Step")
         # plt.ylabel("Neuron Index")
         save = True
