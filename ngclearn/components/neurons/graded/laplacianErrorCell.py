@@ -3,6 +3,7 @@ from ngclearn import resolver, Component, Compartment
 from jax import numpy as jnp, random, jit
 from functools import partial
 import time, sys
+from ngclearn.utils import tensorstats
 
 #@partial(jit, static_argnums=[3])
 def run_cell(dt, targ, mu):
