@@ -155,10 +155,10 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.fx, self.dfx = create_function(fun_name=act_fx)
 
         # compartments (state of the cell, parameters, will be updated through stateless calls)
-        self.j = Compartment(jnp.zeros((1, n_units))) # electrical current
-        self.zF = Compartment(jnp.zeros((1, n_units))) # rate-coded output - activity
-        self.j_td = Compartment(jnp.zeros((1, n_units))) # top-down electrical current - pressure
-        self.z = Compartment(jnp.zeros((1, n_units))) # rate activity
+        self.j = Compartment(jnp.zeros((self.batch_size, n_units))) # electrical current
+        self.zF = Compartment(jnp.zeros((self.batch_size, n_units))) # rate-coded output - activity
+        self.j_td = Compartment(jnp.zeros((self.batch_size, n_units))) # top-down electrical current - pressure
+        self.z = Compartment(jnp.zeros((self.batch_size, n_units))) # rate activity
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
     @staticmethod
@@ -176,11 +176,11 @@ class RateCell(Component): ## Rate-coded/real-valued cell
                          integType=intgFlag, priorType=priorType)
             ## apply optional thresholding sub-dynamics
             if thresholdType == "soft_threshold":
-                tmp_z = threshold_soft(z, thr_lmbda)
+                tmp_z = threshold_soft(tmp_z, thr_lmbda)
             elif thresholdType == "cauchy_threshold":
-                tmp_z = threshold_cauchy(z, thr_lmbda)
-            z = tmp_z
-            zF = fx(z)
+                tmp_z = threshold_cauchy(tmp_z, thr_lmbda)
+            z = tmp_z ## pre-activation function value(s)
+            zF = fx(z) ## post-activation function value(s)
         else:
             ## run in "stateless" mode (when no membrane time constant provided)
             z = run_cell_stateless(j)
