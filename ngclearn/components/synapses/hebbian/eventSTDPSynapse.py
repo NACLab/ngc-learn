@@ -57,6 +57,17 @@ class EventSTDPSynapse(Component): # event-driven, post-synaptic STDP
     A synaptic cable that adjusts its efficacies via event-driven, post-synaptic
     spike-timing-dependent plasticity (STDP).
 
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output signal (transformation induced by synapses)
+    | weights - current value matrix of synaptic efficacies
+    | --- Synaptic Learning Compartments: ---
+    | preSpike - pre-synaptic spike to drive 1st term of STDP update
+    | postSpike - post-synaptic spike to drive 2nd term of STDP update
+    | preTrace - pre-synaptic trace value to drive 1st term of STDP update
+    | postTrace - post-synaptic trace value to drive 2nd term of STDP update
+    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+
     | References:
     | Tavanaei, Amirhossein, Timothée Masquelier, and Anthony Maida.
     | "Representation learning using event-based STDP." Neural Networks 105

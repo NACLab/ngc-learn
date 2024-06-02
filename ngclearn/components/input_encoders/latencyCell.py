@@ -117,7 +117,7 @@ class LatencyCell(Component):
     A (nonlinear) latency encoding (spike) cell; produces a time-lagged set of
     spikes on-the-fly.
 
-    | Cell Compartments:
+    | --- Cell Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output
     | tols - time-of-last-spike

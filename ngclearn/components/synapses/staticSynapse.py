@@ -28,6 +28,11 @@ class StaticSynapse(Component): ## static non-learnable synaptic cable
     A static (dense) synaptic cable; no form of synaptic evolution/adaptation
     is in-built to this component.
 
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output
+    | weights - current value matrix of synaptic efficacies
+
     Args:
         name: the string name of this cell
 

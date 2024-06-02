@@ -154,6 +154,16 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
     threshold (per unit) scheme. (Note that this particular spiking cell only
     supports Euler integration of its voltage dynamics.)
 
+    | --- Cell Compartments: ---
+    | j - electrical current input (takes in external signals)
+    | v - membrane potential/voltage state
+    | s - emitted binary spikes/action potentials
+    | rfr - (relative) refractory variable state
+    | thr - (adaptive) threshold state
+    | surrogate - state of surrogate function output signals (currently, the secant LIF estimator)
+    | tols - time-of-last-spike
+    | key - JAX RNG key
+
     | Reference:
     | Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep learning with
     | dynamic spiking neurons and fixed feedback weights." Neural computation 29.3

@@ -42,7 +42,7 @@ class BernoulliCell(Component):
     """
     A Bernoulli cell that produces Bernoulli-distributed spikes on-the-fly.
 
-    | Cell Compartments:
+    | --- Cell Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output
     | tols - time-of-last-spike

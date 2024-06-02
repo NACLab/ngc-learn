@@ -51,7 +51,7 @@ class PoissonCell(Component):
     """
     A Poisson cell that produces approximately Poisson-distributed spikes on-the-fly.
 
-    | Cell Compartments:
+    | --- Cell Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output
     | tols - time-of-last-spike

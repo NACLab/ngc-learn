@@ -84,6 +84,14 @@ class AdExCell(Component):
     | tau_w * dw/dt =  -w + (v - v_rest) * a
     | where w = w + s * (w + b) [in the event of a spike]
 
+    | --- Cell Compartments: ---
+    | j - electrical current input (takes in external signals)
+    | v - membrane potential/voltage state
+    | w - recovery variable state
+    | s - emitted binary spikes/action potentials
+    | tols - time-of-last-spike
+    | key - JAX RNG key
+
 
     | References:
     | Brette, Romain, and Wulfram Gerstner. "Adaptive exponential integrate-and-fire

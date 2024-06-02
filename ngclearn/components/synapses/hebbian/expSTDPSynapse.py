@@ -80,6 +80,17 @@ class ExpSTDPSynapse(Component):
     spike-timing-dependent plasticity (STDP) based on an exponential weight
     dependence (the strength of which is controlled by a factor).
 
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output signal (transformation induced by synapses)
+    | weights - current value matrix of synaptic efficacies
+    | --- Synaptic Learning Compartments: ---
+    | preSpike - pre-synaptic spike to drive 1st term of STDP update
+    | postSpike - post-synaptic spike to drive 2nd term of STDP update
+    | preTrace - pre-synaptic trace value to drive 1st term of STDP update
+    | postTrace - post-synaptic trace value to drive 2nd term of STDP update
+    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+
     | References:
     | Nessler, Bernhard, et al. "Bayesian computation emerges in generic cortical
     | microcircuits through spike-timing-dependent plasticity." PLoS computational

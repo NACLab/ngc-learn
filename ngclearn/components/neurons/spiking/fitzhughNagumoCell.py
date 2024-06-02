@@ -110,6 +110,14 @@ class FitzhughNagumoCell(Component):
     | tau_m * dv/dt = v - (v^3)/3 - w + j
     | tau_w * dw/dt = v + a - b * w
 
+    | --- Cell Compartments: ---
+    | j - electrical current input (takes in external signals)
+    | v - membrane potential/voltage state
+    | w - recovery variable state
+    | s - emitted binary spikes/action potentials
+    | tols - time-of-last-spike
+    | key - JAX RNG key
+
     | References:
     | FitzHugh, Richard. "Impulses and physiological states in theoretical
     | models of nerve membrane." Biophysical journal 1.6 (1961): 445-466.

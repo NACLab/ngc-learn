@@ -96,7 +96,14 @@ class RateCell(Component): ## Rate-coded/real-valued cell
     A non-spiking cell driven by the gradient dynamics of neural generative
     coding-driven predictive processing.
 
-    | Cell Compartments:
+    The specific differential equation that characterizes this cell
+    is (for adjusting v, given current j, over time) is:
+
+    | tau_m * dz/dt = lambda * prior(z) + (j + j_td)
+    | where j is the set of general incoming input signals (e.g., message-passed signals)
+    | and j_td is taken to be the set of top-down pressure signals
+
+    | --- Cell Compartments: ---
     | j - input (takes in external signals)
     | j_td - input/top-down pressure input (takes in external signals)
     | z - rate activity

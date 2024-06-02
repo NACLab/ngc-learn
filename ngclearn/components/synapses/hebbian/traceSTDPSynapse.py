@@ -87,6 +87,17 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     dependence that can be equipped to the Hebbian adjustment (the strength of
     which is controlled by a scalar factor).
 
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output signal (transformation induced by synapses)
+    | weights - current value matrix of synaptic efficacies
+    | --- Synaptic Learning Compartments: ---
+    | preSpike - pre-synaptic spike to drive 1st term of STDP update
+    | postSpike - post-synaptic spike to drive 2nd term of STDP update
+    | preTrace - pre-synaptic trace value to drive 1st term of STDP update
+    | postTrace - post-synaptic trace value to drive 2nd term of STDP update
+    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+
     | References:
     | Morrison, Abigail, Ad Aertsen, and Markus Diesmann. "Spike-timing-dependent
     | plasticity in balanced random networks." Neural computation 19.6 (2007): 1437-1467.

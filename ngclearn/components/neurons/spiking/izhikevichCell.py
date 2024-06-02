@@ -138,6 +138,14 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     | tau_m * dv/dt = 0.04 v^2 + 5v + 140 - w + j * R_m
     | tau_w * dw/dt = (v * b - w),  where tau_w = 1/a
 
+    | --- Cell Compartments: ---
+    | j - electrical current input (takes in external signals)
+    | v - membrane potential/voltage state
+    | w - recovery variable state
+    | s - emitted binary spikes/action potentials
+    | tols - time-of-last-spike
+    | key - JAX RNG key
+
     | References:
     | Izhikevich, Eugene M. "Simple model of spiking neurons." IEEE Transactions
     | on neural networks 14.6 (2003): 1569-1572.

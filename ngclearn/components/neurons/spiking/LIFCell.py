@@ -142,14 +142,14 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
     """
     A spiking cell based on leaky integrate-and-fire (LIF) neuronal dynamics.
 
-    The specific differential equation that characterize this cell
+    The specific differential equation that characterizes this cell
     is (for adjusting v, given current j, over time) is:
 
     | tau_m * dv/dt = (v_rest - v) + j * R
     | where R is the membrane resistance and v_rest is the resting potential
     | also, if a spike occurs, v is set to v_reset
 
-    | Cell Compartments:
+    | --- Cell Compartments: ---
     | j - electrical current input (takes in external signals)
     | v - membrane potential/voltage state
     | s - emitted binary spikes/action potentials

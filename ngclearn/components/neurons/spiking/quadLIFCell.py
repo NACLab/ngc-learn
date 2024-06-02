@@ -155,7 +155,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     |   a0 - scaling factor for voltage accumulation
     |   V_c - critical voltage (value)
 
-    | Cell Compartments:
+    | --- Cell Compartments: ---
     | j - electrical current input (takes in external signals)
     | v - membrane potential/voltage state
     | s - emitted binary spikes/action potentials
