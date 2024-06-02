@@ -19,7 +19,7 @@ using and running various historical models in the museum.
 ## References
 <b>[1]</b> Ororbia, Alexander G. "Brain-inspired machine intelligence: A survey
 of neurobiologically-plausible credit assignment."
-arXiv preprint arXiv:2312.09257 (2023).
+arXiv preprint arXiv:2312.09257 (2023). <br>
 <b>[2]</b> Ororbia, Alexander, Ankur Mali, Adam Kohan, Beren Millidge, and
 Tommaso Salvatori. "A Review of Neuroscience-Inspired Machine Learning."
 arXiv preprint arXiv:2403.18929 (2024).
