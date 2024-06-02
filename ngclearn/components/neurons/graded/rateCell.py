@@ -42,8 +42,7 @@ def modulate(j, dfx_val):
     """
     return j * dfx_val
 
-def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
-             priorType=None):
+def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
     """
     Runs leaky rate-coded state dynamics one step in time.
 
@@ -59,8 +58,6 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., beta=1., integType=0,
         tau_m: membrane/state time constant
 
         leak_gamma: strength of leak to apply to membrane/state
-
-        beta: dampening coefficient (Default: 1.)
 
         integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
 
