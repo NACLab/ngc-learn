@@ -117,6 +117,13 @@ class LatencyCell(Component):
     A (nonlinear) latency encoding (spike) cell; produces a time-lagged set of
     spikes on-the-fly.
 
+    | Cell Compartments:
+    | inputs - input (takes in external signals)
+    | outputs - output
+    | tols - time-of-last-spike
+    | targ_sp_times - target-spike-time
+    | key - JAX RNG key
+
     Args:
         name: the string name of this cell
 

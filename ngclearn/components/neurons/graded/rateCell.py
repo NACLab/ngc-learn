@@ -96,6 +96,13 @@ class RateCell(Component): ## Rate-coded/real-valued cell
     A non-spiking cell driven by the gradient dynamics of neural generative
     coding-driven predictive processing.
 
+    | Cell Compartments:
+    | j - input (takes in external signals)
+    | j_td - input/top-down pressure input (takes in external signals)
+    | z - rate activity
+    | zF - post-activation function activity, i.e., fx(z)
+    | key - JAX RNG key
+
     Args:
         name: the string name of this cell
 

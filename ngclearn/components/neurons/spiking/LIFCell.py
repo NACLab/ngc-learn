@@ -47,7 +47,7 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
 def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
              v_decay, refract_T, integType=0):
     """
-    Runs leaky integrator neuronal dynamics
+    Runs leaky integrator (or leaky integrate-and-fire; LIF) neuronal dynamics.
 
     Args:
         dt: integration time constant (milliseconds, or ms)
@@ -147,6 +147,17 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     | tau_m * dv/dt = (v_rest - v) + j * R
     | where R is the membrane resistance and v_rest is the resting potential
+    | also, if a spike occurs, v is set to v_reset
+
+    | Cell Compartments:
+    | j - electrical current input (takes in external signals)
+    | v - membrane potential/voltage state
+    | s - emitted binary spikes/action potentials
+    | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
+    | rfr - (relative) refractory variable state
+    | thr_theta - homeostatic/adaptive threshold increment state
+    | tols - time-of-last-spike
+    | key - JAX RNG key
 
     Args:
         name: the string name of this cell

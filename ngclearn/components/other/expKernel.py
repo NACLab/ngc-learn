@@ -23,6 +23,11 @@ class ExpKernel(Component): ## exponential kernel
     A spiking function based on an exponential kernel applied to
     a moving window of spike times.
 
+    | Cell Compartments:
+    | inputs - input (takes in external signals)
+    | epsp - excitatory postsynaptic potential/pulse
+    | tf - maintained local window of pulse signals
+
     Args:
         name: the string name of this operator
 

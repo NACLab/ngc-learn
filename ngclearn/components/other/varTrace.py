@@ -36,6 +36,11 @@ class VarTrace(Component): ## low-pass filter
     """
     A variable trace (filter) functional node.
 
+    | Cell Compartments:
+    | inputs - input (takes in external signals)
+    | outputs - output signal (same as "trace" compartment)
+    | trace - traced value signal
+
     Args:
         name: the string name of this operator
 

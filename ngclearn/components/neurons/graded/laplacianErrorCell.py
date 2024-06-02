@@ -50,6 +50,14 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
     A simple (non-spiking) Laplacian error cell - this is a fixed-point solution
     of a mismatch/error signal.
 
+    | Cell Compartments:
+    | mu - predicted value (takes in external signals)
+    | target - desired/goal value (takes in external signals)
+    | L - local loss function embodied by this cell
+    | dmu - derivative of L w.r.t. mu
+    | dtarget - derivative of L w.r.t. target
+    | modulator - modulation signal (takes in optional external signals)
+
     Args:
         name: the string name of this cell
 
