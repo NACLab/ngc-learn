@@ -100,7 +100,7 @@ class HebbianSynapse(Component):
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
     | biases - current value vector of synaptic bias values
-    | --- Synaptic Learning Compartments: ---
+    | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal to drive first term of Hebbian update
     | post - post-synaptic signal to drive 2nd term of Hebbian update
     | dW - current delta matrix containing changes to be applied to synaptic efficacies

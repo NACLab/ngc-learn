@@ -91,7 +91,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     | inputs - input (takes in external signals)
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
-    | --- Synaptic Learning Compartments: ---
+    | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update
     | postSpike - post-synaptic spike to drive 2nd term of STDP update
     | preTrace - pre-synaptic trace value to drive 1st term of STDP update
