@@ -14,5 +14,6 @@ relevant, referenced publicly available ngc-learn simulation code.
   :caption: Neuromimetic Models
 
   pcn_discrim
+  sparse_coding
   snn_dc
   snn_bfa

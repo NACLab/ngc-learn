@@ -503,6 +503,7 @@ def softmax(x, tau=0.0):
     exp_x = jnp.exp(x - max_x)
     return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
 
+@jit
 def threshold_soft(x, lmbda):
     """
     A soft threshold routine applied to each dimension of input
@@ -519,6 +520,7 @@ def threshold_soft(x, lmbda):
     ## legacy ngclearn: tf.math.maximum(x - lmbda, 0.) - tf.math.maximum(-x - lmbda, 0.)
     return jnp.maximum(x - lmbda, 0.) - jnp.maximum(-x - lmbda, 0.)
 
+@jit
 def threshold_cauchy(x, lmbda):
     """
     A Cauchy distributional threshold routine applied to each dimension of input
