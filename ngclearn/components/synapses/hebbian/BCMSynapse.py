@@ -71,8 +71,9 @@ class BCMSynapse(Component): # BCM-adjusted synaptic cable
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
     | --- Synaptic Plasticity Compartments: ---
-    | pre - pre-synaptic spike to drive 1st term of BCM update
-    | post - post-synaptic spike to drive 2nd term of BCM update
+    | pre - pre-synaptic spike to drive 1st term of BCM update (takes in external signals)
+    | post - post-synaptic spike to drive 2nd term of BCM update (takes in external signals)
+    | theta - synaptic threshold (post-synaptic) variables
     | dWeights - current delta matrix containing changes to be applied to synapses
 
     | References:

@@ -62,10 +62,10 @@ class EventSTDPSynapse(Component): # event-driven, post-synaptic STDP
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
     | --- Synaptic Plasticity Compartments: ---
-    | preSpike - pre-synaptic spike to drive 1st term of STDP update
-    | postSpike - post-synaptic spike to drive 2nd term of STDP update
-    | preTrace - pre-synaptic trace value to drive 1st term of STDP update
-    | postTrace - post-synaptic trace value to drive 2nd term of STDP update
+    | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
+    | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
+    | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
+    | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
     | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
 
     | References:
