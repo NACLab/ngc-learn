@@ -12,15 +12,7 @@ typically associated with a local plasticity rule, e.g., a Hebbian-type
 update, that either is either triggered online (at some or all simulation time
 steps) or by integrating a differential equation, e.g., via eligibility traces.
 
-## Simple Factor Learning Synapse Types
-
-Hebbian rules operate in a local manner -- they generally use information more
-immediately available to synapses in both space and time -- and can come in a
-wide variety of flavors. One general way to categorize variants of Hebbian learning
-is to clarify what (neural) statistics they operate on, e.g, do they work with
-real-valued information or discrete spikes, and how many factors (or distinct
-terms) are involved in calculating the rule. (Note that, in principle, all
-forms of plasticity in ngc-learn are technically local, factor-based rules. )
+## Non-Plastic Synapse Types
 
 ### Static (Dense) Synapse
 
@@ -37,6 +29,16 @@ used for fixed value (dense) synaptic connections.
   .. automethod:: reset
     :noindex:
 ```
+
+## Simple Factor Learning Synapse Types
+
+Hebbian rules operate in a local manner -- they generally use information more
+immediately available to synapses in both space and time -- and can come in a
+wide variety of flavors. One general way to categorize variants of Hebbian learning
+is to clarify what (neural) statistics they operate on, e.g, do they work with
+real-valued information or discrete spikes, and how many factors (or distinct
+terms) are involved in calculating the rule. (Note that, in principle, all
+forms of plasticity in ngc-learn are technically local, factor-based rules. )
 
 ### (Two-Factor) Hebbian Synapse
 
