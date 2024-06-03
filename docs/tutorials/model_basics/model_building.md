@@ -1,102 +1,47 @@
 # Lesson 3: Building a Model
 
-In this tutorial, we will build a simple controller made up of three components:
+In this tutorial, we will build a simple model made up of three components:
 two simple graded cells that are connected by one synaptic cable.
 
-## Setting Up the Desired Components
+## Instantiating the Dynamical System as a Context
 
-First, to ensure that we pull out the right modeling pieces from the
-ngc-learn/ngcsimlib "toolbox", we should write our project's JSON configuration
-file as follows:
-
-```json
-[
-  {
-    "absolute_path": "ngcsimlib.commands",
-    "attributes": [
-      {
-        "name": "AdvanceState",
-        "keywords": ["advance"]
-      },
-      {
-        "name": "Clamp",
-        "keywords": ["clamp"]
-      },
-      {
-        "name": "Reset",
-        "keywords": ["reset"]
-      }
-    ]
-  },
-  {
-    "absolute_path": "ngclearn.components",
-    "attributes": [
-      {"name": "RateCell",
-        "keywords": ["rate"]
-      },
-      {
-        "name": "HebbianSynapse",
-        "keywords": ["hebbian"]
-      }
-    ]
-  }
-]
-```
-
-where we see above that we have chosen to pull out the
-[RateCell](ngclearn.components.neurons.graded.rateCell) and
-the [HebbianSynapse](ngclearn.components.synapses.hebbian.hebbianSynapse)
-components along with the `AdvanceState` (keyword-bound to `advance`),
-`Reset` (keyword-bound to `reset`), and `Clamp` (keyword-bound to `clamp`) commands.
-The above JSON snippets would be placed in a JSON configuration file, usually
-in the default local folder, e.g., in `/json_files/modules.json` (though one
-can name this folder and config file anything they desire -- so long as the
-proper flag is passed when executing the later Python script if different
-names beside the default are used).
-
-We will next arrange these together to craft our system with the parts selected
-in our JSON configuration within a Python script.
-
-## Instantiating the Dynamical System as a Controller
-
-With the JSON configuration in place, we can now readily use the modeling
-pieces that we felt were useful in building our simple 3-element system.
-Concretely, we instantiate a simulation controller as well as the desired
-components we would like to build into it:
+While building our dynamical system we will set up a Context and then add the three different components to it.
 
 ```python
-from ngcsimlib.controller import Controller
+from ngclearn import Context
+from ngclearn.components import RateCell, HebbianSynapse
+from ngclearn.commands import Reset, Clamp, AdvanceState
 from jax import numpy as jnp, random
 
-## create seeding keys (JAX-style)
+## create seeding keys
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 4)
 
 ## create simple dynamical system: a --> w_ab --> b
-model = Controller() ## the simulation object
-a = model.add_component("rate", name="a", n_units=1, tau_m=0.,
-                        act_fx="identity", key=subkeys[0])
-b = model.add_component("rate", name="b", n_units=1, tau_m=20.,
-                        act_fx="identity", key=subkeys[1])
-Wab = model.add_component("hebbian", name="Wab", shape=(1, 1),
-                          wInit=("constant", 1., None), key=subkeys[2])
+with Context("model") as model:
+    a = RateCell(name="a", n_units=1, tau_m=0.,
+                 act_fx="identity", key=subkeys[0])
+    b = RateCell(name="b", n_units=1, tau_m=20.,
+                 act_fx="identity", key=subkeys[1])
+    Wab = HebbianSynapse(name="Wab", shape=(1, 1),
+                         wInit=("constant", 1., None), key=subkeys[2])
 ```
 
 Next, we will want to wire together the three components we have embedded into
-our controller, connecting `a` to node `b` through synaptic cable `Wab`. In
+our model, connecting `a` to node `b` through synaptic cable `Wab`. In
 other words, this means that the output compartment of `a` must be wired to the
 input compartment of transformation `Wab` and the output compartment of `Wab`
 must be wired to the input compartment of `b`. In code, this is done as follows:
 
 ```python                        
-## wire a to w_ab and wire w_ab to b
-model.connect(a.name, a.outputCompartmentName(), Wab.name, Wab.inputCompartmentName())
-model.connect(Wab.name, Wab.outputCompartmentName(), b.name, b.inputCompartmentName())
+    ## wire a to w_ab and wire w_ab to b
+    Wab.inputs << a.zF
+    b.j << Wab.outputs
 ```
 
 Finally, to make our dynamical system do something for each step of simulated
 time, we must append a few basic commands
-(see [Understanding Commands](../foundations/commands.md) to the controller.
+(see [Understanding Commands](../foundations/commands.md) to the context.
 The commands we will want, as implied by our JSON configuration that we put
 together at the start of this tutorial, include a `reset` (which will
 initialize the compartments within each node to their resting values,
@@ -108,27 +53,17 @@ allow us to insert data into particular nodes).
 This is simply done with the following few lines:
 
 ```python
-## configure desired commands for simulation object
-model.add_command("reset", command_name="reset",
-                  component_names=[a.name, Wab.name, b.name],
-                  reset_name="do_reset")
-model.add_command(
-    "advance", command_name="advance",
-    component_names=[a.name, Wab.name, b.name]
-)
-model.add_command("clamp", command_name="clamp_data",
-                  component_names=[a.name], compartment=a.inputCompartmentName(),
-                  clamp_name="x")
-## pin the commands to the object
-model.add_step("advance")
+    ## configure desired commands for simulation object
+    Reset(command_name="reset",
+          components=[a, Wab, b],
+          reset_name="do_reset")
+    AdvanceState(command_name="advance",
+                 components=[a, Wab, b])
+    Clamp(command_name="clamp_data",
+          components=[a],
+          compartment="j",
+          clamp_name="x")
 ```
-
-where we also notice we have one line that makes the controller aware that it
-must execute the `advance` command for all components in its argument list
-`component_names` one time within a simulation cycle (under
-the hood, this lets the controller know that, for one cycle of computation
-within the system, marching on from time step to the next involves calling
-the `advance` command for cell `a`, then synapse `Wab`, and finally cell `b`).
 
 ## Running the Dynamical System's Controller
 
@@ -141,15 +76,13 @@ x_seq = jnp.asarray([[1., 2., 3., 4., 5.]], dtype=jnp.float32)
 
 model.reset(True)
 for ts in range(x_seq.shape[1]):
-    x_t = jnp.expand_dims(x_seq[0,ts], axis=0) ## get data at time ts
+    x_t = jnp.expand_dims(x_seq[0, ts], axis=0)  ## get data at time ts
     model.clamp_data(x_t)
-    model.runCycle(t=ts*1., dt=1.)
+    model.advance(t=ts * 1., dt=1.)
     ## naively extract simple statistics at time ts and print them to I/O
-    a_out = model.components["a"].outputCompartment
-    aName = model.components["a"].outputCompartmentName()
-    b_out = model.components["b"].outputCompartment
-    bName = model.components["b"].outputCompartmentName()
-    print(" {}: a.{} = {} ~> b.{} = {}".format(ts, aName, a_out, bName, b_out))
+    a_out = a.zF
+    b_out = b.zF
+    print(" {}: a.zF = {} ~> b.zF = {}".format(ts, a_out, b_out))
 ```
 
 and, assuming you place your code above in a Python script
@@ -174,6 +107,7 @@ was `tau_m = 0` ms, meaning that it reduces to a stateless "feedforward" cell),
 b had a time constant you set to `tau_m = 20` ms. This means, as can be confirmed
 by inspecting the API for `RateCell`, with your integration time constant
 `dt = 1` ms:
+
 1. at time step `ts = 0`, the value clamped to `a`, i.e., `1`, was multiplied by
    `1/20 = 0.05` and then added `b`'s internal state (which started at the value
    of `0` through the reset command called before the for-loop);
@@ -183,4 +117,4 @@ by inspecting the API for `RateCell`, with your integration time constant
 3. at `ts = 2`, a value `3` is clamped to `a`, which is then multiplied by `0.05`
    to yield `0.15` and then added to `b`'s current state -- meaning that the new
    state is `0.15 + 0.15 = 0.3`
-and so on and so forth (`b` acts like a non-decaying recurrently additive state).
+   and so on and so forth (`b` acts like a non-decaying recurrently additive state).
