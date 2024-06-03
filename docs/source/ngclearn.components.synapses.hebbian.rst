@@ -4,6 +4,14 @@ ngclearn.components.synapses.hebbian package
 Submodules
 ----------
 
+ngclearn.components.synapses.hebbian.BCMSynapse module
+------------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.hebbian.BCMSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.synapses.hebbian.eventSTDPSynapse module
 ------------------------------------------------------------
 
