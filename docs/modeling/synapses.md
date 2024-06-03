@@ -22,6 +22,22 @@ real-valued information or discrete spikes, and how many factors (or distinct
 terms) are involved in calculating the rule. (Note that, in principle, all
 forms of plasticity in ngc-learn are technically local, factor-based rules. )
 
+### Static (Dense) Synapse
+
+This synapse performs a linear transform of its input signals.
+Note that this synaptic cable does not evolve and is meant to be 
+used for fixed value (dense) synaptic connections.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.StaticSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### (Two-Factor) Hebbian Synapse
 
 This synapse performs a linear transform of its input signals and evolves
@@ -35,6 +51,30 @@ values, which can contain any type of vector/matrix statistics.
   :noindex:
 
   .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### (Two-Factor) BCM Synapse
+
+This synapse performs a linear transform of its input signals and evolves
+according to multi-factor Bienenstock-Cooper-Munro (BCM) update rule. The
+underlying synaptic efficacy matrix is changed according to an evolved 
+synaptic threshold parameter `theta` and a product between
+pre-synaptic compartment values (`pre`) and nonlinear function of post-synaptic 
+compartment (`post`) values, which can contain any type of vector/matrix 
+statistics.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.BCMSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
     :noindex:
   .. automethod:: reset
     :noindex:
@@ -74,6 +114,8 @@ form of STDP (via the hyper-parameter `mu`).
 
   .. automethod:: advance_state
     :noindex:
+  .. automethod:: evolve
+    :noindex:
   .. automethod:: reset
     :noindex:
 ```
@@ -90,6 +132,25 @@ described above.
   :noindex:
 
   .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### Event-Driven Post-Synaptic STDP
+
+This is a two-factor STDP rule that is driven by only spike events. 
+
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.EventSTDPSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
     :noindex:
   .. automethod:: reset
     :noindex:
