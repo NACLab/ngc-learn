@@ -125,7 +125,7 @@ t = 0.
 for ts in range(current.shape[1]):
    j_t = jnp.expand_dims(current[0,ts], axis=0) ## get data at time ts
    model.clamp(j_t)
-   model.advance(ts*1., dt)
+   model.advance(t=ts*1., dt=dt)
    t_values.append(t)
    t += dt
 

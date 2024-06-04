@@ -113,7 +113,7 @@ for ts in range(T):
     x_t = data
     ## pass in t and dt and run step forward of simulation
     model.clamp(x_t)
-    model.advance(t, dt)
+    model.advance(t=t, dt=dt)
     t = t + dt
 
     ## naively extract simple statistics at time ts and print them to I/O

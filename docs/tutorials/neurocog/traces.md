@@ -74,7 +74,7 @@ traceVals = []
 model.reset()
 for ts in range(T):
     model.clamp(probs)
-    model.advance(ts*1., dt)
+    model.advance(t=ts*1., dt=dt)
 
     print("{}  {}".format(cell.outputs.value, trace.trace.value))
     spikes.append( cell.outputs.value )

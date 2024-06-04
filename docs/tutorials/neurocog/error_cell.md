@@ -87,7 +87,7 @@ answer = jnp.asarray([[1., -1., 1.]], jnp.float32)  ## what we wish the guess ha
 model.reset()
 for ts in range(T):
     model.clamp(guess, answer)
-    model.advance(ts * 1., dt)
+    model.advance(t=ts * 1., dt=dt)
     ## extract compartment values of interest
     dmu = cell.dmu.value
     dtarget = cell.dtarget.value
