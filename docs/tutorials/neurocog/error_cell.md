@@ -91,7 +91,7 @@ for ts in range(T):
     ## extract compartment values of interest
     dmu = cell.dmu.value
     dtarget = cell.dtarget.value
-    loss = cell.loss.L
+    loss = cell.L.value
     ## print compartment values to I/O
     print("{} |  dmu: {}  dtarget: {}  loss: {} ".format(ts, dmu, dtarget, loss))
 ```
