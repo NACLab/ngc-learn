@@ -154,6 +154,9 @@ class HebbianSynapse(Component):
         Rscale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
 
+        p_conn: probability of a connection existing (default: 1.); setting
+            this to < 1. will result in a sparser synaptic structure
+
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
@@ -166,7 +169,7 @@ class HebbianSynapse(Component):
     def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
                  bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
                  signVal=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 Rscale=1., key=None, directory=None, **kwargs):
+                 p_conn=1., Rscale=1., key=None, directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
@@ -199,7 +202,12 @@ class HebbianSynapse(Component):
         self.db = Compartment(jnp.zeros(shape[1]))
 
         key, subkey = random.split(key)
-        self.weights = Compartment(initialize_params(subkey, wInit, shape))
+        weights = initialize_params(subkey, wInit, shape)
+        key, subkey = random.split(key)
+        if 0. < p_conn < 1.:  ## only non-zero and <1 probs allowed
+            mask = random.bernoulli(subkey, p=p_conn, shape=shape)
+            weights = weights * mask  ## sparsify matrix
+        self.weights = Compartment(weights)
         key, subkey = random.split(key)
         self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bInit else [self.weights.value]))

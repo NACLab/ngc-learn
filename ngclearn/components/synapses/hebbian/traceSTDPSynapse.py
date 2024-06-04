@@ -131,6 +131,9 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         Rscale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
 
+        p_conn: probability of a connection existing (default: 1.); setting
+            this to < 1. will result in a sparser synaptic structure
+
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
@@ -142,7 +145,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     # Define Functions
     def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
                  preTrace_target=0., wInit=("uniform", 0.025, 0.8), Rscale=1.,
-                 key=None, directory=None, **kwargs):
+                 p_conn=1., key=None, directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## constructor-only rng setup
@@ -158,9 +161,11 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.Rscale = Rscale ## post-transformation scale factor
         self.w_bound = 1. ## soft weight constraint
 
-        tmp_key, subkey = random.split(tmp_key)
-        #self.weights = random.uniform(subkey, shape, minval=lb, maxval=ub)
-        weights = initialize_params(subkey, wInit, shape)
+        tmp_key, *subkeys = random.split(tmp_key, 3)
+        weights = initialize_params(subkeys[0], wInit, shape)
+        if 0. < p_conn < 1.:  ## only non-zero and <1 probs allowed
+            mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
+            weights = weights * mask  ## sparsify matrix
 
         self.batch_size = 1
         ## Compartment setup
