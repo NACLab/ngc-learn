@@ -112,14 +112,14 @@ for i in range(T_max+1):
         _post_trig = jnp.zeros((1,1))
         ts = 0.
     model.clamp_traces(pre_spk, post_spk)
-    model.advance_traces(dt * i, dt)
+    model.advance_traces(t=dt * i, dt=dt)
 
     ## get STDP update
     W.preSpike.set(_pre_trig)
     W.postSpike.set(_post_trig)
     W.preTrace.set(tr0.trace.value)
     W.postTrace.set(tr1.trace.value)
-    model.evolve(dt * i, dt)
+    model.evolve(t=dt * i, dt=dt)
     dW = W.dWeights.value
     dW_vals.append(dW)
     if i >= int(T_max/2):

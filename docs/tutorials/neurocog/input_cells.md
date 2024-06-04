@@ -152,7 +152,7 @@ for _ in range(n_trials):
     model.reset()
     for ts in range(T):
         model.clamp(probs)
-        model.advance(ts*1., dt)
+        model.advance(t=ts*1., dt=dt)
 
         s_t = cell.outputs.value
         spikes.append(s_t)
