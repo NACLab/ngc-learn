@@ -202,8 +202,8 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, R_m=1., thr=-52., v_rest=-65., v_reset=-60.,
-                 v_decay=1., tau_theta=1e7, theta_plus=0.05, refract_T=5., key=None,
-                 one_spike=False, directory=None, **kwargs):
+                 v_decay=1., tau_theta=1e7, theta_plus=0.05, refract_T=5.,
+                 thr_jitter=0., key=None, one_spike=False, directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -225,12 +225,15 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
+        key, subkey = random.split(key)
+        thr0 = random.uniform(subkey, (1, n_units), minval=-thr_jitter,
+                              maxval=thr_jitter, dtype=jnp.float32)
         self.j = Compartment(restVals)
         self.v = Compartment(restVals + self.v_rest)
         self.s = Compartment(restVals)
         self.s_raw = Compartment(restVals)
         self.rfr = Compartment(restVals + self.refract_T)
-        self.thr_theta = Compartment(restVals)
+        self.thr_theta = Compartment(restVals + thr0)
         self.tols = Compartment(restVals) ## time-of-last-spike
         self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         #self.reset()
