@@ -81,8 +81,8 @@ print("{}: Wab = {}".format(-1, Wab.weights.value))
 for ts in range(x_seq.shape[1]):
   x_t = jnp.expand_dims(x_seq[0,ts], axis=0) ## get data at time t
   circuit.clamp(x_t)
-  circuit.advance(ts*1., 1.)
-  circuit.evolve(ts*1., 1.)
+  circuit.advance(t=ts*1., dt=1.)
+  circuit.evolve(t=ts*1., dt=1.)
   print(" {}: input = {} ~> Wab = {}".format(ts, x_t, Wab.weights.value))
 
 ```
