@@ -91,6 +91,9 @@ class EventSTDPSynapse(Component): # event-driven, post-synaptic STDP
         Rscale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
 
+        p_conn: probability of a connection existing (default: 1.); setting
+            this to < 1. will result in a sparser synaptic structure
+
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
 
@@ -101,7 +104,7 @@ class EventSTDPSynapse(Component): # event-driven, post-synaptic STDP
 
     # Define Functions
     def __init__(self, name, shape, eta, lmbda=0.01, w_bound=1.,
-                 wInit=("uniform", 0.025, 0.8), Rscale=1., key=None,
+                 wInit=("uniform", 0.025, 0.8), Rscale=1., p_conn=1., key=None,
                  directory=None, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -116,8 +119,11 @@ class EventSTDPSynapse(Component): # event-driven, post-synaptic STDP
         self.Rscale = Rscale ## post-transformation scale factor
         self.w_bound = w_bound ## soft weight constraint
 
-        tmp_key, subkey = random.split(tmp_key)
-        weights = initialize_params(subkey, wInit, shape)
+        tmp_key, *subkeys = random.split(tmp_key, 3)
+        weights = initialize_params(subkeys[0], wInit, shape)
+        if 0. < p_conn < 1.:  ## only non-zero and <1 probs allowed
+            mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
+            weights = weights * mask  ## sparsify matrix
 
         self.batch_size = 1
         ## Compartment setup
