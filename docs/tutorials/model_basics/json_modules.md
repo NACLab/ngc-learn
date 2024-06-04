@@ -2,10 +2,8 @@
 
 ## Basic Usage:
 
-The basic usage for the `modules.json` file is to provide a straightforward
-method for the imports of arbitrary classes and methods without needing to
-register them before use. The primary use for these is for adding components
-and commands to controller objects. If there is a need to use the imported
+The basic usage for the `modules.json` file is to provide ngclearn with a list of modules to import and associated
+classes that are needed to build the models it will be loading. If there is a need to use the imported
 modules outside of these cases, use `ngcsimlib.utils.load_attribute` and the loaded
 attribute will be returned.
 
@@ -14,23 +12,16 @@ dependency of ngc-learn, looks for `json_files/modules.json` in your project pat
 However, this can be changed inside the
 <a href=https://ngc-learn.readthedocs.io/en/latest/tutorials/model_basics/configuration.html>configuration file</a>. In
 the event that this
-file is missing, ngcsimlib will not break but its ability to import and create
-parts of the model will be hindered. It is highly recommended to set up the
-`modules.json` file at the start of a project. There is a schema file named
-`modules.schema` that can be referenced and used to verify that custom modules
-files are in the correct format for use.
+file is missing, ngcsimlib will not break but its ability to load saved models will be limited.
 
 ## Motivation
 
 The motivation behind the use of `modules.json` versus the registering all the
 various parts of the model at the top of the file is reusability. When all the
-parts have to be registered/imported at the top of a trial file, the creation of
-additional trial files will lead to code duplication. Obviously, one solution to
-this code duplication is to extract it into a file and then import and run that
-file at the top of each trial. This is almost what was done in the original
-ngcsimlib, but we also had the goal of allowing users to alias components, and
-then swap out their source with ease. To do this we moved to the use of a JSON
-file that fulfills this need.
+parts have to be registered/imported at the top of every test file, or be placed into specific locations can be limiting
+and slows down development. With a single project wide modules file all loaded models can look there to load components.
+This also allows for components to be saved in humanreadable formats not as a pickled object as we can save and load all
+the relevant class information from the class name and the modules file.
 
 ## Structure
 
@@ -40,7 +31,7 @@ The general structure of the modules file can be thought of as a transformation
 of python import statements to JSON objects. Take the following example:
 
 ```python
-from ngcsimlib.commands import AdvanceState as advance
+from ngclearn.commands import AdvanceState as advance
 ```
 
 In this statement we are importing a command from ngcsimlib and aliasing it to the
@@ -53,7 +44,7 @@ take these three parts and combine them into the following JSON object:
 
 ```json
   {
-  "absolute_path": "ngcsimlib.commands",
+  "absolute_path": "ngclearn.commands",
   "attributes": [
     {
       "name": "AdvanceState",
@@ -131,15 +122,15 @@ header import statements to JSON configuration.
 > Case 2
 > Python
 > ```python
-> from ngcsimlib.commands import AdvanceState as advance
-> from ngcsimlib.bundle_rules import additive as add, overwrite
+> from ngclearn.commands import AdvanceState as advance
+> from ngclearn.operations import summation as summ, overwrite
 > ```
 >
 > Json
 > ```json
 > [
 >   {
->     "absolute_path": "ngcsimlib.commands",
+>     "absolute_path": "ngclearn.commands",
 >     "attributes": [
 >       {
 >         "name": "AdvanceState",
@@ -148,11 +139,11 @@ header import statements to JSON configuration.
 >     ]
 >   },
 >   {
->     "absolute_path": "ngcsimlib.bundle_rules",
+>     "absolute_path": "ngclearn.operations",
 >     "attributes": [
 >       {
->         "name": "additive",
->         "keywords": ["add"]
+>         "name": "summation",
+>         "keywords": ["summ"]
 >       },
 >       {
 >         "name": "overwrite"
