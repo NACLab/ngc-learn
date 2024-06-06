@@ -147,6 +147,7 @@ dt = 1. # ms
 T = 1000 ## T * dt = 1000 ms
 n_trials = 30
 mu = 0.
+probs = jnp.asarray([[1.]],dtype=jnp.float32)
 for _ in range(n_trials):
     spikes = []
     model.reset()

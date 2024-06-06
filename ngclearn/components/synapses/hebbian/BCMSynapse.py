@@ -1,5 +1,6 @@
 from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import initialize_params
 import time
@@ -42,26 +43,7 @@ def evolve(dt, pre, post, theta, W, tau_w, tau_theta, w_bound=0., w_decay=0.):
     _theta = theta + (-theta + jnp.square(post)) * dt/tau_theta
     return _W, _theta, dW
 
-@jit
-def compute_layer(inp, weight, scale=1.):
-    """
-    Applies the transformation/projection induced by the synaptic efficacie
-    associated with this synaptic cable
-
-    Args:
-        inp: signal input to run through this synaptic cable
-
-        weight: this cable's synaptic value matrix
-
-        scale: scale factor to apply to synapses before transform applied
-            to input values
-
-    Returns:
-        a projection/transformation of input "inp"
-    """
-    return jnp.matmul(inp, weight * scale)
-
-class BCMSynapse(Component): # BCM-adjusted synaptic cable
+class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
     A synaptic cable that adjusts its efficacies in accordance with BCM
     (Bienenstock-Cooper-Munro) theory.
@@ -70,6 +52,7 @@ class BCMSynapse(Component): # BCM-adjusted synaptic cable
     | inputs - input (takes in external signals)
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
+    | key - JAX RNG key
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic spike to drive 1st term of BCM update (takes in external signals)
     | post - post-synaptic spike to drive 2nd term of BCM update (takes in external signals)
@@ -96,71 +79,40 @@ class BCMSynapse(Component): # BCM-adjusted synaptic cable
 
         w_decay: synaptic decay factor (default: 0.)
 
-        wInit: a kernel to drive initialization of this synaptic cable's values;
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
-        Rscale: a fixed scaling factor to apply to synaptic transform
+        resist_scale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this synaptic cable
-
-        directory: string indicating directory on disk to save synaptic parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
     def __init__(self, name, shape, tau_w, tau_theta, w_bound=0., w_decay=0.,
-                 wInit=("uniform", 0.025, 0.8), Rscale=1., p_conn=1., key=None,
-                 directory=None, **kwargs):
-        super().__init__(name, **kwargs)
+                 weight_init=("uniform", 0.025, 0.8), resist_scale=1., p_conn=1., **kwargs):
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, **kwargs)
 
-        ## constructor-only rng setup
-        tmp_key = random.PRNGKey(time.time_ns()) if key is None else key
-
-        ## synapse and BCM hyper-parameters
+        ## Synapse and BCM hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
         self.tau_w = tau_w ## time constant governing synaptic plasticity
         self.tau_theta = tau_theta ## time constant of threshold delta variables
         self.w_decay = w_decay ## synaptic decay factor
         self.w_bound = w_bound  ## soft weight constraint
-        self.Rscale = Rscale ## post-transformation scale factor
+        self.Rscale = resist_scale ## post-transformation scale factor
         self.theta0 = -1. ## initial condition for theta/threshold variables
-
-        tmp_key, *subkeys = random.split(tmp_key, 3)
-        weights = initialize_params(subkeys[0], wInit, shape)
-        if 0. < p_conn < 1.:  ## only non-zero and <1 probs allowed
-            mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
-            weights = weights * mask  ## sparsify matrix
 
         self.batch_size = 1
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
-        self.inputs = Compartment(preVals)
-        self.outputs = Compartment(postVals)
         self.pre = Compartment(preVals) ## pre-synaptic statistic
         self.post = Compartment(postVals) ## post-synaptic statistic
         self.theta = Compartment(postVals + self.theta0) ## synaptic threshold variables
-        self.weights = Compartment(weights)
-        self.dWeights = Compartment(weights * 0)
-        #self.reset()
-
-    @staticmethod
-    def _advance_state(t, dt, Rscale, inputs, weights):
-        ## run signals across synapses
-        outputs = compute_layer(inputs, weights, Rscale)
-        return outputs
-
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
+        self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
     def _evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):

@@ -32,40 +32,41 @@ dkey, *subkeys = random.split(dkey, 6)
 
 ## create simple system with only one F-N cell
 with Context("Circuit") as circuit:
-    a = RateCell(name="a", n_units=1, tau_m=0.,
-                 act_fx="identity", key=subkeys[0])
-    b = RateCell(name="b", n_units=1, tau_m=0.,
-                 act_fx="identity", key=subkeys[1])
+  a = RateCell(name="a", n_units=1, tau_m=0.,
+               act_fx="identity", key=subkeys[0])
+  b = RateCell(name="b", n_units=1, tau_m=0.,
+               act_fx="identity", key=subkeys[1])
 
-    Wab = HebbianSynapse(name="Wab", shape=(1, 1), eta=1.,
-                         signVal=-1., wInit=("constant", 1., None),
-                         w_bound=0., key=subkeys[3])
+  Wab = HebbianSynapse(name="Wab", shape=(1, 1), eta=1.,
+                       sign_value=-1., weight_init=("constant", 1., None),
+                       w_bound=0., key=subkeys[3])
 
-    # wire output compartment (rate-coded output zF) of RateCell `a` to input compartment of HebbianSynapse `Wab`
-    Wab.inputs << a.zF
-    # wire output compartment of HebbianSynapse `Wab` to input compartment (electrical current j) RateCell `b`
-    b.j << Wab.outputs
+  # wire output compartment (rate-coded output zF) of RateCell `a` to input compartment of HebbianSynapse `Wab`
+  Wab.inputs << a.zF
+  # wire output compartment of HebbianSynapse `Wab` to input compartment (electrical current j) RateCell `b`
+  b.j << Wab.outputs
 
-    # wire output compartment (rate-coded output zF) of RateCell `a` to presynaptic compartment of HebbianSynapse `Wab`
-    Wab.pre << a.zF
-    # wire output compartment (rate-coded output zF) of RateCell `b` to postsynaptic compartment of HebbianSynapse `Wab`
-    Wab.post << b.zF
+  # wire output compartment (rate-coded output zF) of RateCell `a` to presynaptic compartment of HebbianSynapse `Wab`
+  Wab.pre << a.zF
+  # wire output compartment (rate-coded output zF) of RateCell `b` to postsynaptic compartment of HebbianSynapse `Wab`
+  Wab.post << b.zF
 
-    ## create and compile core simulation commands
-    reset_cmd, reset_args = circuit.compile_by_key(a, Wab, b, compile_key="reset")
-    circuit.add_command(wrap_command(jit(circuit.reset)), name="reset")
+  ## create and compile core simulation commands
+  reset_cmd, reset_args = circuit.compile_by_key(a, Wab, b, compile_key="reset")
+  circuit.add_command(wrap_command(jit(circuit.reset)), name="reset")
 
-    advance_cmd, advance_args = circuit.compile_by_key(a, Wab, b, compile_key="advance_state")
-    circuit.add_command(wrap_command(jit(circuit.advance_state)), name="advance")
+  advance_cmd, advance_args = circuit.compile_by_key(a, Wab, b,
+                                                     compile_key="advance_state")
+  circuit.add_command(wrap_command(jit(circuit.advance_state)), name="advance")
 
-    evolve_cmd, evolve_args = circuit.compile_by_key(Wab, compile_key="evolve")
-    circuit.add_command(wrap_command(jit(circuit.evolve)), name="evolve")
+  evolve_cmd, evolve_args = circuit.compile_by_key(Wab, compile_key="evolve")
+  circuit.add_command(wrap_command(jit(circuit.evolve)), name="evolve")
 
 
-    ## set up non-compiled utility commands
-    @Context.dynamicCommand
-    def clamp(x):
-        a.j.set(x)
+  ## set up non-compiled utility commands
+  @Context.dynamicCommand
+  def clamp(x):
+    a.j.set(x)
 ```
 
 Now with our simple system above created, we will now run a simple sequence

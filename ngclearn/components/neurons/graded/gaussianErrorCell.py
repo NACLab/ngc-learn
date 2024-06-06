@@ -1,12 +1,9 @@
 from ngclearn import resolver, Component, Compartment
-
-from jax import numpy as jnp, random, jit
-from functools import partial
-import time, sys
+from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
 
-#@partial(jit, static_argnums=[3])
-def run_cell(dt, targ, mu, eType="gaussian"):
+def run_cell(dt, targ, mu):
     """
     Moves cell dynamics one step forward.
 
@@ -46,7 +43,7 @@ def run_gaussian_cell(dt, targ, mu):
     L = -jnp.sum(jnp.square(dmu)) * 0.5
     return dmu, dtarg, L
 
-class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
+class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
     A simple (non-spiking) Gaussian error cell - this is a fixed-point solution
     of a mismatch signal.
@@ -67,18 +64,18 @@ class GaussianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         tau_m: (Unused -- currently cell is a fixed-point model)
 
         leakRate: (Unused -- currently cell is a fixed-point model)
-
-        key: PRNG Key to control determinism of any underlying synapses
-            associated with this cell
     """
-    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None, **kwargs):
+    def __init__(self, name, n_units, **kwargs):
         super().__init__(name, **kwargs)
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.n_units = n_units
         self.batch_size = 1
 
-        ##Random Number Set up
+        ## Convolution shape setup
+        self.width = self.height = n_units
+
+        ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.L = Compartment(0.) # loss compartment
         self.mu = Compartment(restVals) # mean/mean name. input wire

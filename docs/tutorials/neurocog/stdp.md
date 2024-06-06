@@ -46,7 +46,7 @@ T_max = 100  ## number time steps to simulate
 with Context("Model") as model:
     tr0 = VarTrace("tr0", n_units=1, tau_tr=8., a_delta=1.)
     tr1 = VarTrace("tr1", n_units=1, tau_tr=8., a_delta=1.)
-    W = TraceSTDPSynapse("W1", shape=(1, 1), eta=0., Aplus=1., Aminus=0.8,
+    W = TraceSTDPSynapse("W1", shape=(1, 1), eta=0., A_plus=1., A_minus=0.8,
                          wInit=("uniform", 0.0, 0.3), key=subkeys[0])
 
     # wire only relevant compartments to synaptic cable W for demo purposes
@@ -57,12 +57,16 @@ with Context("Model") as model:
     # self.W1.postSpike << self.z1e.s ## we disable this as we will manually
     ## insert a binary value (for a spike)
 
-    reset_cmd, reset_args = model.compile_by_key(tr0, tr1, W, compile_key="reset")
-    adv_tr_cmd, _ = model.compile_by_key(tr0, tr1, compile_key="advance_state", name="advance_traces")
-    evolve_cmd, evolve_args = model.compile_by_key(W, compile_key="evolve")  ## M-step
+    reset_cmd, reset_args = model.compile_by_key(tr0, tr1, W,
+                                                 compile_key="reset")
+    adv_tr_cmd, _ = model.compile_by_key(tr0, tr1, compile_key="advance_state",
+                                         name="advance_traces")
+    evolve_cmd, evolve_args = model.compile_by_key(W,
+                                                   compile_key="evolve")  ## M-step
 
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_traces)), name="advance_traces")
+    model.add_command(wrap_command(jit(model.advance_traces)),
+                      name="advance_traces")
     model.add_command(wrap_command(jit(model.evolve)), name="evolve")
 
 

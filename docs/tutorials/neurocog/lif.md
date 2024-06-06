@@ -42,17 +42,19 @@ T = 100  ## number of simulation steps to run
 dt = 0.1  # ms ## compute integration time constant
 V_thr = -52.  ## mV
 V_rest = -65  ## mV
+tau_m = 100.
 
 ## create simple system with only one AdEx
 with Context("Model") as model:
-    cell = LIFCell("z0", n_units=1, tau_m=100., R_m=1., thr=V_thr, v_rest=V_rest,
-                   v_reset=-60., tau_theta=300., theta_plus=0.05, refract_T=2.,
-                   key=subkeys[0])
+    cell = LIFCell("z0", n_units=1, tau_m=tau_m, resist_m=tau_m/dt, thr=V_thr,
+                   v_rest=V_rest, v_reset=-60., tau_theta=300., theta_plus=0.05,
+                   refract_time=2., key=subkeys[0])
 
     ## create and compile core simulation commands
     reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell,
+                                                     compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
 
 

@@ -1,7 +1,6 @@
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
-from functools import partial
-import time
 from ngclearn.utils import tensorstats
 
 @jit
@@ -38,7 +37,7 @@ def sample_bernoulli(dkey, data):
     s_t = random.bernoulli(dkey, p=data).astype(jnp.float32)
     return s_t
 
-class BernoulliCell(Component):
+class BernoulliCell(JaxComponent):
     """
     A Bernoulli cell that produces Bernoulli-distributed spikes on-the-fly.
 
@@ -52,9 +51,6 @@ class BernoulliCell(Component):
         name: the string name of this cell
 
         n_units: number of cellular entities (neural population size)
-
-        key: PRNG key to control determinism of any underlying synapses
-            associated with this cell
     """
 
     # Define Functions
@@ -70,7 +66,6 @@ class BernoulliCell(Component):
         self.inputs = Compartment(restVals) # input compartment
         self.outputs = Compartment(restVals) # output compartment
         self.tols = Compartment(restVals) # time of last spike
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
     @staticmethod
     def _advance_state(t, dt, key, inputs, tols):

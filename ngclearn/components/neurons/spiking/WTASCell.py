@@ -1,7 +1,6 @@
 from jax import numpy as jnp, random, jit, nn
-from functools import partial
-import time, sys
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import softmax
 
@@ -22,8 +21,7 @@ def update_times(t, s, tols):
     """
     _tols = (1. - s) * tols + (s * t)
     return _tols
-
-#@partial(jit, static_argnums=[7,8,9,10,11])
+@jit
 def run_cell(dt, j, v, rfr, v_thr, tau_m, R_m, thr_gain=0.002, refract_T=0.):
     """
     Runs leaky integrator neuronal dynamics
@@ -62,7 +60,7 @@ def run_cell(dt, j, v, rfr, v_thr, tau_m, R_m, thr_gain=0.002, refract_T=0.):
     rfr = (rfr + dt) * (1. - s) + s * dt # set refract to dt
     return v, s, v_thr, rfr
 
-class WTASCell(Component): ## winner-take-all spiking cell
+class WTASCell(JaxComponent): ## winner-take-all spiking cell
     """
     A spiking cell based on winner-take-all neuronal dynamics ("WTAS" stands
     for "winner-take-all-spiking").
@@ -80,6 +78,7 @@ class WTASCell(Component): ## winner-take-all spiking cell
     | rfr - (relative) refractory variable state
     | thr - (adaptive) threshold state
     | tols - time-of-last-spike
+    | key - JAX RNG key
 
     Args:
         name: the string name of this cell
@@ -88,42 +87,36 @@ class WTASCell(Component): ## winner-take-all spiking cell
 
         tau_m: membrane time constant
 
-        R_m: membrane resistance value (Default: 1)
+        resist_m: membrane resistance value (Default: 1)
 
         thr_base: base value for adaptive thresholds that govern short-term
             plasticity (in milliVolts, or mV)
 
         thr_gain: increment to be applied to threshold in presence of spike
 
-        refract_T: relative refractory period time (ms; Default: 1 ms)
+        refract_time: relative refractory period time (ms; Default: 1 ms)
 
         thr_jitter: scale of uniform jitter to add to initialization of thresholds
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this cell
-
-        directory: string indicating directory on disk to save LIF parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m=1., thr_base=0.4, thr_gain=0.002,
-                 refract_T=0., thr_jitter=0.05, key=None, directory=None, **kwargs):
+    def __init__(self, name, n_units, tau_m, resist_m=1., thr_base=0.4, thr_gain=0.002,
+                 refract_time=0., thr_jitter=0.05, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant
-        self.R_m = R_m ## resistance value
+        self.R_m = resist_m ## resistance value
         self.thr_gain = thr_gain
         self.thr_base = thr_base # mV ## base value for threshold
-        self.refract_T = refract_T
+        self.refract_T = refract_time
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
-        key, subkey = random.split(key)
+        ## base threshold setup
+        key, subkey = random.split(self.key.value)
         self.threshold0 = thr_base + random.uniform(subkey, (1, n_units),
                                                    minval=-thr_jitter, maxval=thr_jitter,
                                                    dtype=jnp.float32)
@@ -136,7 +129,6 @@ class WTASCell(Component): ## winner-take-all spiking cell
         self.thr = Compartment(self.threshold0)
         self.rfr = Compartment(restVals + self.refract_T)
         self.tols = Compartment(restVals) ## time-of-last-spike
-        #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, s, thr, rfr, tols):

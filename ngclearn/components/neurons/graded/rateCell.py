@@ -1,8 +1,9 @@
-from jax import numpy as jnp, random, jit, nn
+from jax import numpy as jnp, random, jit
 from functools import partial
-import time
+import time, math
 from ngclearn.utils import tensorstats
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
@@ -88,7 +89,7 @@ def run_cell_stateless(j):
     """
     return j + 0
 
-class RateCell(Component): ## Rate-coded/real-valued cell
+class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     """
     A non-spiking cell driven by the gradient dynamics of neural generative
     coding-driven predictive processing.
@@ -105,7 +106,6 @@ class RateCell(Component): ## Rate-coded/real-valued cell
     | j_td - input/top-down pressure input (takes in external signals)
     | z - rate activity
     | zF - post-activation function activity, i.e., fx(z)
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell
@@ -136,15 +136,11 @@ class RateCell(Component): ## Rate-coded/real-valued cell
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
-
-        key: PRNG Key to control determinism of any underlying random values
-            associated with this cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.),
-                 act_fx="identity", threshold=("none", 0.),
-                 integration_type="euler", key=None, **kwargs):
+    def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
+                 threshold=("none", 0.), integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -160,17 +156,17 @@ class RateCell(Component): ## Rate-coded/real-valued cell
         self.integrationType = integration_type
         self.intgFlag = get_integrator_code(self.integrationType)
 
-        ##Layer Size Setup
+        ## Layer size setup
         self.n_units = n_units
         self.batch_size = 1
         self.fx, self.dfx = create_function(fun_name=act_fx)
 
-        # compartments (state of the cell, parameters, will be updated through stateless calls)
-        self.j = Compartment(jnp.zeros((self.batch_size, n_units))) # electrical current
-        self.zF = Compartment(jnp.zeros((self.batch_size, n_units))) # rate-coded output - activity
-        self.j_td = Compartment(jnp.zeros((self.batch_size, n_units))) # top-down electrical current - pressure
-        self.z = Compartment(jnp.zeros((self.batch_size, n_units))) # rate activity
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
+        # compartments (state of the cell & parameters will be updated through stateless calls)
+        restVals = jnp.zeros((self.batch_size, n_units))
+        self.j = Compartment(restVals) # electrical current
+        self.zF = Compartment(restVals) # rate-coded output - activity
+        self.j_td = Compartment(restVals) # top-down electrical current - pressure
+        self.z = Compartment(restVals) # rate activity
 
     @staticmethod
     def _advance_state(t, dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,

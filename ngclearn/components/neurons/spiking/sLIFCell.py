@@ -1,8 +1,8 @@
 from jax import numpy as jnp, random, jit
 from functools import partial
-import time, sys
 from ngclearn import resolver, Component, Compartment
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler
+from ngclearn.components.jaxComponent import JaxComponent
+from ngclearn.utils.diffeq.ode_utils import step_euler
 from ngclearn.utils.surrogate_fx import secant_lif_estimator
 from ngclearn.utils import tensorstats
 
@@ -145,7 +145,7 @@ def run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
     _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, refract_T, sticky_spikes)
     return _v, spikes, new_thr, _rfr
 
-class SLIFCell(Component): ## leaky integrate-and-fire cell
+class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
     """
     A spiking cell based on a simplified leaky integrate-and-fire (sLIF) model.
     This neuronal cell notably contains functionality required by the computational
@@ -176,12 +176,12 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
 
         tau_m: membrane time constant
 
-        R_m: membrane resistance value
+        resist_m: membrane resistance value
 
         thr: base value for adaptive thresholds (initial condition for
             per-cell thresholds) that govern short-term plasticity
 
-        inhibit_R: lateral modulation factor (DEFAULT: 6.); if >0, this will trigger
+        resist_inh: lateral modulation factor (DEFAULT: 6.); if >0, this will trigger
             a heuristic form of lateral inhibition via an internally integrated
             hollow matrix multiplication
 
@@ -191,11 +191,11 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
                 True = adaptive thresholds are NEVER reset upon call to reset
                 False = adaptive thresholds are reset to "thr" upon call to reset
 
-        thrGain: how much adaptive thresholds increment by
+        thr_gain: how much adaptive thresholds increment by
 
-        thrLeak: how much adaptive thresholds are decremented/decayed by
+        thr_leak: how much adaptive thresholds are decremented/decayed by
 
-        refract_T: relative refractory period time (ms; Default: 1 ms)
+        refract_time: relative refractory period time (ms; Default: 1 ms)
 
         rho_b: threshold sparsity factor (Default: 0)
 
@@ -204,27 +204,18 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
             a key setting used by Samadi et al., 2017
 
         thr_jitter: scale of uniform jitter to add to initialization of thresholds
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this cell
-
-        directory: string indicating directory on disk to save sLIF parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m, thr, inhibit_R=0., thr_persist=False,
-                 thrGain=0.0, thrLeak=0.0, rho_b=0., refract_T=0., sticky_spikes=False,
-                 thr_jitter=0.05, key=None, directory=None, **kwargs):
+    def __init__(self, name, n_units, tau_m, resist_m, thr, resist_inh=0.,
+                 thr_persist=False, thr_gain=0.0, thr_leak=0.0, rho_b=0.,
+                 refract_time=0., sticky_spikes=False, thr_jitter=0.05, **kwargs):
         super().__init__(name, **kwargs)
-
-        key = random.PRNGKey(time.time_ns()) if key is None else key
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant
-        self.R_m = R_m ## resistance value
-        self.refract_T = refract_T #5. # 2. ## refractory period  # ms
+        self.R_m = resist_m ## resistance value
+        self.refract_T = refract_time #5. # 2. ## refractory period  # ms
         self.v_min = -3.
         ## variable below determines if spikes pinned at 1 during refractory period?
         self.sticky_spikes = sticky_spikes
@@ -233,21 +224,20 @@ class SLIFCell(Component): ## leaky integrate-and-fire cell
         self.spike_fx, self.d_spike_fx = secant_lif_estimator()
 
         ## create simple recurrent inhibitory pressure
-        self.inh_R = inhibit_R ## lateral inhibitory magnitude
-        key, subkey = random.split(key)
+        self.inh_R = resist_inh ## lateral inhibitory magnitude
+        key, subkey = random.split(self.key.value)
         self.inh_weights = random.uniform(subkey, (n_units, n_units), minval=0.025, maxval=1.)
-        MV = 1. - jnp.eye(n_units)
-        self.inh_weights = self.inh_weights * MV
+        self.inh_weights = self.inh_weights * (1. - jnp.eye(n_units))
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.n_units = n_units
         self.batch_size = 1
 
-        ## adaptive threshold setup
+        ## Adaptive threshold setup
         self.rho_b = rho_b
         self.thr_persist = thr_persist ## are adapted thresholds persistent? True (persistent)
-        self.thrGain = thrGain #0.0005
-        self.thrLeak = thrLeak #0.00005
+        self.thrGain = thr_gain #0.0005
+        self.thrLeak = thr_leak #0.00005
 
         # thr_jitter: some random jitter to ensure thresholds start off different
         key, subkey = random.split(key)

@@ -1,7 +1,6 @@
-from jax import numpy as jnp, random, jit
-from functools import partial
-import time
+from jax import numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
@@ -64,14 +63,13 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
         _, _v = step_euler(0., v, _dfv, dt, v_params)
         w_params = (j, v, a, tau_w, v_rest)
         _, _w = step_euler(0., w, _dfw, dt, w_params)
-    #s = (_v > v_thr).astype(jnp.float32)
     s = _emit_spike(_v, v_thr)
     ## hyperpolarize/reset/snap variables
     _v = _v * (1. - s) + s * v_reset
     _w = _w * (1. - s) + s * (_w + b)
     return _v, _w, s
 
-class AdExCell(Component):
+class AdExCell(JaxComponent):
     """
     The AdEx (adaptive exponential leaky integrate-and-fire) neuronal cell
     model; a two-variable model. This cell model iteratively evolves
@@ -90,8 +88,6 @@ class AdExCell(Component):
     | w - recovery variable state
     | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
-    | key - JAX RNG key
-
 
     | References:
     | Brette, Romain, and Wulfram Gerstner. "Adaptive exponential integrate-and-fire
@@ -105,13 +101,13 @@ class AdExCell(Component):
 
         tau_m: membrane time constant (Default: 15 ms)
 
-        R_m: membrane resistance (Default: 1 mega-Ohm)
+        resist_m: membrane resistance (Default: 1 mega-Ohm)
 
         tau_w: recover variable time constant (Default: 400 ms)
 
-        sharpV: slope factor/sharpness constant (Default: 2)
+        v_sharpness: slope factor/sharpness constant (Default: 2)
 
-        vT: intrinsic membrane threshold (Default: -55 mV)
+        intrinsic_mem_thr: intrinsic membrane threshold (Default: -55 mV)
 
         v_thr: voltage/membrane threshold (to obtain action potentials in terms
             of binary spikes) (Default: 5 mV)
@@ -133,16 +129,13 @@ class AdExCell(Component):
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
-
-        key: PRNG key to control determinism of any underlying synapses
-            associated with this cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m=15., R_m=1., tau_w=400.,
-                 sharpV=2., vT=-55., v_thr=5., v_rest=-72., v_reset=-75.,
-                 a=0.1, b=0.75, v0=-70., w0=0.,
-                 integration_type="euler", key=None, **kwargs):
+    def __init__(self, name, n_units, tau_m=15., resist_m=1., tau_w=400.,
+                 v_sharpness=2., intrinsic_mem_thr=-55., v_thr=5., v_rest=-72.,
+                 v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0.,
+                 integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -151,10 +144,10 @@ class AdExCell(Component):
 
         ## Cell properties
         self.tau_m = tau_m
-        self.R_m = R_m
+        self.R_m = resist_m
         self.tau_w = tau_w
-        self.sharpV = sharpV ## sharpness of action potential
-        self.vT = vT ## intrinsic membrane threshold
+        self.sharpV = v_sharpness ## sharpness of action potential
+        self.vT = intrinsic_mem_thr ## intrinsic membrane threshold
         self.a = a
         self.b = b
         self.v_rest = v_rest
@@ -175,7 +168,6 @@ class AdExCell(Component):
         self.w = Compartment(restVals + self.w0)
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
-        #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,

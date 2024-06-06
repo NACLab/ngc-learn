@@ -1,5 +1,6 @@
 from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import initialize_params
 import time
@@ -60,27 +61,7 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
     _W = jnp.clip(_W, eps, w_bound - eps) #jnp.abs(w_bound)) # 0.01, w_bound)
     #print(_W)
     return _W, dW
-
-@jit
-def compute_layer(inp, weight, scale=1.):
-    """
-    Applies the transformation/projection induced by the synaptic efficacie
-    associated with this synaptic cable
-
-    Args:
-        inp: signal input to run through this synaptic cable
-
-        weight: this cable's synaptic value matrix
-
-        scale: scale factor to apply to synapses before transform applied
-            to input values
-
-    Returns:
-        a projection/transformation of input "inp"
-    """
-    return jnp.matmul(inp, weight * scale)
-
-class TraceSTDPSynapse(Component): # power-law / trace-based STDP
+class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     """
     A synaptic cable that adjusts its efficacies via trace-based form of
     spike-timing-dependent plasticity (STDP), including an optional power-scale
@@ -91,6 +72,7 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
     | inputs - input (takes in external signals)
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
+    | key - JAX RNG key
     | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
@@ -112,84 +94,55 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
+        A_plus: strength of long-term potentiation (LTP)
+
+        A_minus: strength of long-term depression (LTD)
+
         eta: global learning rate
-
-        Aplus: strength of long-term potentiation (LTP)
-
-        Aminus: strength of long-term depression (LTD)
 
         mu: controls the power scale of the Hebbian shift
 
-        preTrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
+        pretrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
                  (higher -> lower synaptic values)
 
-        wInit: a kernel to drive initialization of this synaptic cable's values;
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
-        Rscale: a fixed scaling factor to apply to synaptic transform
+        resist_scale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this synaptic cable
-
-        directory: string indicating directory on disk to save synaptic parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, shape, eta, Aplus, Aminus, mu=0.,
-                 preTrace_target=0., wInit=("uniform", 0.025, 0.8), Rscale=1.,
-                 p_conn=1., key=None, directory=None, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
+                 pretrace_target=0., weight_init=("uniform", 0.025, 0.8),
+                 resist_scale=1., p_conn=1., **kwargs):
+        super().__init__(name, shape, weight_init, None, resist_scale,
+                         p_conn, **kwargs)
 
-        ## constructor-only rng setup
-        tmp_key = random.PRNGKey(time.time_ns()) if key is None else key
-
-        ##parms
+        ## Synaptic hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
         self.eta = eta ## global learning rate governing plasticity
         self.mu = mu ## controls power-scaling of STDP rule
-        self.preTrace_target = preTrace_target ## target (pre-synaptic) trace activity value # 0.7
-        self.Aplus = Aplus ## LTP strength
-        self.Aminus = Aminus ## LTD strength
-        self.Rscale = Rscale ## post-transformation scale factor
+        self.preTrace_target = pretrace_target ## target (pre-synaptic) trace activity value # 0.7
+        self.Aplus = A_plus ## LTP strength
+        self.Aminus = A_minus ## LTD strength
+        self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = 1. ## soft weight constraint
-
-        tmp_key, *subkeys = random.split(tmp_key, 3)
-        weights = initialize_params(subkeys[0], wInit, shape)
-        if 0. < p_conn < 1.:  ## only non-zero and <1 probs allowed
-            mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
-            weights = weights * mask  ## sparsify matrix
 
         self.batch_size = 1
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
-        self.inputs = Compartment(preVals)
-        self.outputs = Compartment(postVals)
         self.preSpike = Compartment(preVals)
         self.postSpike = Compartment(postVals)
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
-        self.weights = Compartment(weights)
-        self.dWeights = Compartment(weights * 0)
-        #self.reset()
-
-    @staticmethod
-    def _advance_state(t, dt, Rscale, inputs, weights):
-        ## run signals across synapses
-        outputs = compute_layer(inputs, weights, Rscale)
-        return outputs
-
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
+        self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
     def _evolve(t, dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus,
@@ -227,16 +180,6 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
         self.postTrace.set(postTrace)
         self.dWeights.set(dWeights)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  weights=self.weights.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set( data['weights'] )
-
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
@@ -254,5 +197,5 @@ class TraceSTDPSynapse(Component): # power-law / trace-based STDP
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        Wab = TraceSTDPSynapse("Wab", (2, 3), 0.0004, 1, 1)
+        Wab = TraceSTDPSynapse("Wab", (2, 3), 1, 1, 0.0004)
     print(Wab)

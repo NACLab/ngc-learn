@@ -1,4 +1,5 @@
-## point to rate-coded cell componet types
+from .jaxComponent import JaxComponent
+## point to rate-coded cell component types
 from .neurons.graded.rateCell import RateCell
 from .neurons.graded.gaussianErrorCell import GaussianErrorCell
 from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
@@ -18,6 +19,7 @@ from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
 from .input_encoders.latencyCell import LatencyCell
 ## point to synapse component types
+from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse

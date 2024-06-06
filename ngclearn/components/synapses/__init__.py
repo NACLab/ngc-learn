@@ -1,3 +1,4 @@
+from .denseSynapse import DenseSynapse
 from .staticSynapse import StaticSynapse
 from .hebbian.hebbianSynapse import HebbianSynapse
 from .hebbian.traceSTDPSynapse import TraceSTDPSynapse

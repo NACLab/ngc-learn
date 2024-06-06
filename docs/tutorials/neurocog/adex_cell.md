@@ -43,14 +43,17 @@ w0 = 0.  ## initial recovery value (for its reset condition)
 
 ## create simple system with only one AdEx
 with Context("Model") as model:
-    cell = AdExCell("z0", n_units=1, tau_m=15., R_m=1., tau_w=400., sharpV=2.,
-                    vT=-55., v_thr=5., v_rest=-72., v_reset=-75., a=0.1, b=0.75,
+    cell = AdExCell("z0", n_units=1, tau_m=15., resist_m=1., tau_w=400.,
+                    v_sharpness=2.,
+                    intrinsic_mem_thr=-55., v_thr=5., v_rest=-72., v_reset=-75.,
+                    a=0.1, b=0.75,
                     v0=v0, w0=w0, integration_type="euler", key=subkeys[0])
 
     ## create and compile core simulation commands
     reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell,
+                                                     compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
 
 
