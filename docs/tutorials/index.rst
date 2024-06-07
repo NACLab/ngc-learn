@@ -31,5 +31,6 @@ to configuration).
   :caption: II. NGC-Learn/Sim-Lib Foundations
 
   foundations
+  foundations/contexts
   foundations/commands
-  foundations/bundle_rules
+  foundations/operations
