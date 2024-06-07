@@ -318,6 +318,13 @@ We remark that this constructed SNN is not particularly deep and with additional
 layers of `SLIF` nodes, improvements to its accuracy and approximate log
 likelihood would be possible.[^6]
 
+### Computing Hardware Note:
+
+This tutorial was tested and run on an `Ubuntu 22.04.2 LTS` operating system 
+using an `NVIDIA GeForce RTX 2070` GPU with `CUDA Version: 12.1` 
+(`Driver Version: 530.41.03`). Note that the times reported in any tutorial 
+screenshot/console snippets were produced on this system.
+
 <!-- references -->
 ## References
 <b>[1]</b> Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep

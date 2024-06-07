@@ -297,6 +297,13 @@ optimizing the full free energy $\mathcal{F}$. Note that, while it would not be
 easy to tell by visual inspection of the above plot, the final free energy
 reached is `-1.9853954` (nats).
 
+### Computing Hardware Note:
+
+This tutorial was tested and run on an `Ubuntu 22.04.2 LTS` operating system 
+using an `NVIDIA GeForce RTX 2070` GPU with `CUDA Version: 12.1` 
+(`Driver Version: 530.41.03`). Note that the times reported in any tutorial 
+screenshot/console snippets were produced on this system.
+
 <!-- references -->
 ## References
 <b>[1]</b> Whittington, James CR, and Rafal Bogacz. "An approximation of the error

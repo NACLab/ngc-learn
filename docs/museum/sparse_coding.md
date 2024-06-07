@@ -250,6 +250,13 @@ indicating that the latent states of the thresholding model are, indeed,
 the sparsest.
 -->
 
+### Computing Hardware Note:
+
+This tutorial was tested and run on an `Ubuntu 22.04.2 LTS` operating system 
+using an `NVIDIA GeForce RTX 2070` GPU with `CUDA Version: 12.1` 
+(`Driver Version: 530.41.03`). Note that the times reported in any tutorial 
+screenshot/console snippets were produced on this system.
+
 ## References
 <b>[1]</b> Olshausen, B., Field, D. Emergence of simple-cell receptive field properties
 by learning a sparse code for natural images. Nature 381, 607–609 (1996).<br>
