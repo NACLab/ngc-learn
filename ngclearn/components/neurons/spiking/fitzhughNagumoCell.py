@@ -1,7 +1,6 @@
-from jax import numpy as jnp, random, jit
-from functools import partial
-import time
+from jax import numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
@@ -51,7 +50,6 @@ def _emit_spike(v, v_thr):
     s = (v > v_thr).astype(jnp.float32)
     return s
 
-#@partial(jit, static_argnums=[10])
 def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     """
 
@@ -96,7 +94,7 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     s = _emit_spike(_v, v_thr)
     return _v, _w, s
 
-class FitzhughNagumoCell(Component):
+class FitzhughNagumoCell(JaxComponent):
     """
     The Fitzhugh-Nagumo neuronal cell model; a two-variable simplification
     of the Hodgkin-Huxley (squid axon) model. This cell model iteratively evolves
@@ -116,7 +114,6 @@ class FitzhughNagumoCell(Component):
     | w - recovery variable state
     | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     | References:
     | FitzHugh, Richard. "Impulses and physiological states in theoretical
@@ -132,6 +129,8 @@ class FitzhughNagumoCell(Component):
         n_units: number of cellular entities (neural population size)
 
         tau_m: membrane time constant
+
+        resist_m: membrane resistance value
 
         tau_w: recover variable time constant (Default: 12.5 ms)
 
@@ -155,15 +154,12 @@ class FitzhughNagumoCell(Component):
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
-
-        key: PRNG key to control determinism of any underlying synapses
-            associated with this cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m=1., tau_w=12.5, alpha=0.7,
+    def __init__(self, name, n_units, tau_m=1., resist_m=1., tau_w=12.5, alpha=0.7,
                  beta=0.8, gamma=3., v_thr=1.07, v0=0., w0=0.,
-                 integration_type="euler", key=None, **kwargs):
+                 integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -172,6 +168,7 @@ class FitzhughNagumoCell(Component):
 
         ## Cell properties
         self.tau_m = tau_m
+        self.R_m = resist_m
         self.tau_w = tau_w
         self.alpha = alpha
         self.beta = beta
@@ -194,9 +191,10 @@ class FitzhughNagumoCell(Component):
         self.tols = Compartment(restVals) ## time-of-last-spike
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, tau_w, v_thr, alpha, beta, gamma, intgFlag,
-                       j, v, w, s, tols):
-        v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, alpha, beta, gamma, intgFlag)
+    def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, alpha, beta, gamma,
+                       intgFlag, j, v, w, s, tols):
+        v, w, s = run_cell(dt, j * R_m, v, w, v_thr, tau_m, tau_w, alpha, beta,
+                           gamma, intgFlag)
         tols = update_times(t, s, tols)
         return j, v, w, s, tols
 

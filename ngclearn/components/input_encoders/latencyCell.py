@@ -1,9 +1,9 @@
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
 from functools import partial
-import time
 
 @jit
 def update_times(t, s, tols):
@@ -112,7 +112,7 @@ def extract_spike(spk_times, t, mask):
     _mask = mask + (1. - mask) * spikes_t
     return spikes_t, _mask
 
-class LatencyCell(Component):
+class LatencyCell(JaxComponent):
     """
     A (nonlinear) latency encoding (spike) cell; produces a time-lagged set of
     spikes on-the-fly.
@@ -147,14 +147,11 @@ class LatencyCell(Component):
 
         num_steps: number of discrete time steps to consider for normalized latency
             code (only useful if "normalize" is set to True) (Default: 1)
-
-        key: PRNG key to control determinism of any underlying synapses
-            associated with this cell
     """
 
     # Define Functions
     def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
-                 linearize=False, normalize=False, num_steps=1., key=None, **kwargs):
+                 linearize=False, normalize=False, num_steps=1., **kwargs):
         super().__init__(name, **kwargs)
 
         ## latency meta-parameters
@@ -175,7 +172,6 @@ class LatencyCell(Component):
         self.inputs = Compartment(restVals) # input compartment
         self.outputs = Compartment(restVals) # output compartment
         self.tols = Compartment(restVals) # time of last spike
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
         self.targ_sp_times = Compartment(restVals)
         #self.reset()
 

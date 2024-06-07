@@ -1,8 +1,8 @@
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
-import time, sys
 from ngclearn.utils import tensorstats
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
@@ -24,11 +24,11 @@ def update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
-@jit
-def _modify_current(j, dt, tau_m, R_m):
-    ## electrical current re-scaling co-routine
-    jScale = tau_m/dt ## <-- this anti-scale counter-balances form of ODE used in this cell
-    return (j * R_m) * jScale
+# @jit
+# def _modify_current(j, dt, tau_m, R_m):
+#     ## electrical current re-scaling co-routine
+#     jScale = tau_m/dt ## <-- this anti-scale counter-balances form of ODE used in this cell
+#     return (j * R_m) * jScale
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
@@ -43,7 +43,7 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay)
     return dv_dt
 
-@partial(jit, static_argnums=[7,8,9,10,11])
+#@partial(jit, static_argnums=[7, 8, 9, 10, 11, 12])
 def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
              v_decay, refract_T, integType=0):
     """
@@ -110,7 +110,7 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
     ############################################################################
     return _v, s, raw_s, _rfr
 
-@partial(jit, static_argnums=[3,4])
+@partial(jit, static_argnums=[3, 4])
 def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     """
     Runs homeostatic threshold update dynamics one step (via Euler integration).
@@ -138,7 +138,7 @@ def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     #_V_theta = V_theta + -V_theta * (dt/tau_theta) + S * alpha
     return _v_theta
 
-class LIFCell(Component): ## leaky integrate-and-fire cell
+class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     """
     A spiking cell based on leaky integrate-and-fire (LIF) neuronal dynamics.
 
@@ -166,7 +166,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
 
         tau_m: membrane time constant
 
-        R_m: membrane resistance value (Default: 1)
+        resist_m: membrane resistance value (Default: 1)
 
         thr: base value for adaptive thresholds that govern short-term
             plasticity (in milliVolts, or mV)
@@ -184,7 +184,7 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         theta_plus: physical increment to be applied to any threshold value if
             a spike was emitted
 
-        refract_T: relative refractory period time (ms; Default: 1 ms)
+        refract_time: relative refractory period time (ms; Default: 1 ms)
 
         one_spike: if True, a single-spike constraint will be enforced for
             every time step of neuronal dynamics simulated, i.e., at most, only
@@ -192,23 +192,29 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
             if > 1 spikes emitted, a single action potential will be randomly
             sampled from the non-zero spikes detected (Default: False)
 
-        key: PRNG key to control determinism of any underlying random values
-            associated with this cell
+        integration_type: type of integration to use for this cell's dynamics;
+            current supported forms include "euler" (Euler/RK-1 integration)
+            and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
-        directory: string indicating directory on disk to save LIF parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
+            :Note: setting the integration type to the midpoint method will
+                increase the accuray of the estimate of the cell's evolution
+                at an increase in computational cost (and simulation time)
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m=1., thr=-52., v_rest=-65., v_reset=-60.,
-                 v_decay=1., tau_theta=1e7, theta_plus=0.05, refract_T=5.,
-                 thr_jitter=0., key=None, one_spike=False, directory=None, **kwargs):
+    def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
+                 v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
+                 refract_time=5., thr_jitter=0., one_spike=False,
+                 integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
+
+        ## Integration properties
+        self.integrationType = integration_type
+        self.intgFlag = get_integrator_code(self.integrationType)
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant
-        self.R_m = R_m ## resistance value
+        self.R_m = resist_m ## resistance value
         self.one_spike = one_spike ## True => constrains system to simulate 1 spike per time step
 
         self.v_rest = v_rest #-65. # mV
@@ -216,18 +222,20 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.v_decay = v_decay ## controls strength of voltage leak (1 -> LIF, 0 => IF)
         self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
         self.theta_plus = theta_plus #0.05 ## threshold increment
-        self.refract_T = refract_T #5. # 2. ## refractory period  # ms
+        self.refract_T = refract_time #5. # 2. ## refractory period  # ms
         self.thr = thr ## (fixed) base value for threshold  #-52 # -72. # mV
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        key, subkey = random.split(key)
-        thr0 = random.uniform(subkey, (1, n_units), minval=-thr_jitter,
-                              maxval=thr_jitter, dtype=jnp.float32)
+        thr0 = 0.
+        if thr_jitter > 0.:
+            key, subkey = random.split(self.key.value)
+            thr0 = random.uniform(subkey, (1, n_units), minval=-thr_jitter,
+                                  maxval=thr_jitter, dtype=jnp.float32)
         self.j = Compartment(restVals)
         self.v = Compartment(restVals + self.v_rest)
         self.s = Compartment(restVals)
@@ -235,20 +243,20 @@ class LIFCell(Component): ## leaky integrate-and-fire cell
         self.rfr = Compartment(restVals + self.refract_T)
         self.thr_theta = Compartment(restVals + thr0)
         self.tols = Compartment(restVals) ## time-of-last-spike
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
-        #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T,
-                       thr, tau_theta, theta_plus, one_spike, key, j, v, s, rfr,
-                       thr_theta, tols):
+                       thr, tau_theta, theta_plus, one_spike, intgFlag,
+                       key, j, v, s, rfr, thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
-        if one_spike == True: ## old code ~> if self.one_spike is False:
+        if one_spike: ## old code ~> if self.one_spike is False:
             key, skey = random.split(key, 2)
         ## run one integration step for neuronal dynamics
-        j = _modify_current(j, dt, tau_m, R_m) ## re-scale current in prep for volt ODE
+        #j = _modify_current(j, dt, tau_m, R_m) ## re-scale current in prep for volt ODE
+        j = j * R_m
         v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-                                         tau_m, v_rest, v_reset, v_decay, refract_T)
+                                         tau_m, v_rest, v_reset, v_decay, refract_T,
+                                         intgFlag)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)

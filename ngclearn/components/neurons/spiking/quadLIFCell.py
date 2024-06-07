@@ -172,7 +172,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
 
         tau_m: membrane time constant
 
-        R_m: membrane resistance value
+        resist_m: membrane resistance value
 
         thr: base value for adaptive thresholds that govern short-term
             plasticity (in milliVolts, or mV)
@@ -191,29 +191,21 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         theta_plus: physical increment to be applied to any threshold value if
             a spike was emitted
 
-        refract_T: relative refractory period time (ms; Default: 1 ms)
+        refract_time: relative refractory period time (ms; Default: 1 ms)
 
         one_spike: if True, a single-spike constraint will be enforced for
             every time step of neuronal dynamics simulated, i.e., at most, only
             a single spike will be permitted to emit per step -- this means that
             if > 1 spikes emitted, a single action potential will be randomly
             sampled from the non-zero spikes detected
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this cell
-
-        directory: string indicating directory on disk to save LIF parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, R_m, thr=-52., v_rest=-65., v_reset=60.,
-                 v_scale=-41.6, critical_V=1., tau_theta=1e7, theta_plus=0.05, refract_T=5.,
-                 key=None, one_spike=True, directory=None, **kwargs):
-        super().__init__(name, n_units, tau_m, R_m, thr, v_rest, v_reset,
-                         tau_theta, theta_plus, refract_T, key, one_spike,
-                         directory, **kwargs)
+    def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
+                 v_reset=60., v_scale=-41.6, critical_V=1., tau_theta=1e7,
+                 theta_plus=0.05, refract_time=5., one_spike=False, **kwargs):
+        super().__init__(name, n_units, tau_m, resist_m, thr, v_rest, v_reset,
+                         tau_theta, theta_plus, refract_time, one_spike, **kwargs)
         ## only two distinct additional constants distinguish the Quad-LIF cell
         self.v_c = v_scale
         self.a0 = critical_V
@@ -222,12 +214,14 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
                  theta_plus, one_spike, v_c, a0, key, j, v, s, rfr, thr,
                  thr_theta, tols):
+        ## Note: this runs quadratic LIF neuronal dynamics but constrained to be
+        ## similar to the general form of LIF dynamics
         skey = None ## this is an empty dkey if single_spike mode turned off
-        if one_spike == True: ## old code ~> if self.one_spike is False:
+        if one_spike: ## old code ~> if self.one_spike is False:
             key, *subkeys = random.split(key, 2)
             skey = subkeys[0]
         ## run one integration step for neuronal dynamics
-        j = _modify_current(j, dt, tau_m)
+        j = _modify_current(j, dt, tau_m) ## get ODE re-scaled current
         v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
                                          v_c, a0, tau_m, R_m, v_rest, v_reset,
                                          refract_T)
@@ -249,30 +243,6 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         self.tols.set(tols)
         self.key.set(key)
 
-    #@resolver(LIFCell._reset)
-    #def reset(self, j, v, s, rfr, tols):
-    #    super.reset(j, v, s, rfr, tols)
-
-    @staticmethod
-    def _reset(batch_size, n_units, v_rest, refract_T):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals #+ 0
-        v = restVals + v_rest
-        s = restVals #+ 0
-        s_raw = restVals
-        rfr = restVals + refract_T
-        tols = restVals #+ 0
-        return j, v, s, s_raw, rfr, tols
-
-    @resolver(_reset)
-    def reset(self, j, v, s, s_raw, rfr, tols):
-        self.j.set(j)
-        self.v.set(v)
-        self.s.set(s)
-        self.s_raw.set(s_raw)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
-
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
@@ -291,5 +261,5 @@ if __name__ == '__main__':
     # NOTE: VN: currently error in init function
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        X = QuadLIFCell("X", 9, 0.0004, 3)
+        X = QuadLIFCell("X", 1, 10.)
     print(X)

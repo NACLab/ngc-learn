@@ -19,12 +19,12 @@ dkey, *subkeys = random.split(dkey, 4)
 
 ## create simple dynamical system: a --> w_ab --> b
 with Context("model") as model:
-    a = RateCell(name="a", n_units=1, tau_m=0.,
-                 act_fx="identity", key=subkeys[0])
-    b = RateCell(name="b", n_units=1, tau_m=20.,
-                 act_fx="identity", key=subkeys[1])
-    Wab = HebbianSynapse(name="Wab", shape=(1, 1),
-                         wInit=("constant", 1., None), key=subkeys[2])
+   a = RateCell(name="a", n_units=1, tau_m=0.,
+                act_fx="identity", key=subkeys[0])
+   b = RateCell(name="b", n_units=1, tau_m=20.,
+                act_fx="identity", key=subkeys[1])
+   Wab = HebbianSynapse(name="Wab", shape=(1, 1),
+                        weight_init=("constant", 1., None), key=subkeys[2])
 ```
 
 Next, we will want to wire together the three components we have embedded into
@@ -74,7 +74,7 @@ simple sequence of one-dimensional real-valued numbers:
 ## run some data through our simple dynamical system
 x_seq = jnp.asarray([[1., 2., 3., 4., 5.]], dtype=jnp.float32)
 
-model.reset(True)
+model.reset()
 for ts in range(x_seq.shape[1]):
     x_t = jnp.expand_dims(x_seq[0, ts], axis=0)  ## get data at time ts
     model.clamp_data(x_t)

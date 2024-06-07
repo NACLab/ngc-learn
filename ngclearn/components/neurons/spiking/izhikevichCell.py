@@ -1,8 +1,7 @@
-from jax import numpy as jnp, random, jit, nn
-from functools import partial
-import time, sys
+from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
@@ -122,9 +121,9 @@ def run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.
         _, _w = step_euler(0., w, _dfw, dt, w_params) #_w = step_euler(w, w_params, _dfw, dt)
     ## for spikes, snap to particular states
     _v, _w = _post_process(s, _v, _w, v, w, c, d)
-    return  _v, _w, s
+    return _v, _w, s
 
-class IzhikevichCell(Component): ## Izhikevich neuronal cell
+class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
     """
     A spiking cell based on Izhikevich's model of neuronal dynamics. Note that
     this a two-variable simplification of more complex multi-variable systems
@@ -144,7 +143,6 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     | w - recovery variable state
     | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     | References:
     | Izhikevich, Eugene M. "Simple model of spiking neurons." IEEE Transactions
@@ -169,7 +167,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
 
         tau_m: membrane time constant (Default: 1 ms)
 
-        R_m: membrane resistance value
+        resist_m: membrane resistance value
 
         v_thr: voltage threshold value to cross for emitting a spike
             (in milliVolts, or mV) (Default: 30 mV)
@@ -188,9 +186,6 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
 
         w0: initial condition / reset for recovery (Default: -14)
 
-        key: PRNG key to control determinism of any underlying random values
-            associated with this cell
-
         integration_type: type of integration to use for this cell's dynamics;
             current supported forms include "euler" (Euler/RK-1 integration)
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
@@ -201,13 +196,13 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m=1., R_m=1., v_thr=30., v_reset=-65.,
+    def __init__(self, name, n_units, tau_m=1., resist_m=1., v_thr=30., v_reset=-65.,
                  tau_w=50., w_reset=8., coupling_factor=0.2, v0=-65., w0=-14.,
-                 integration_type="euler", key=None, **kwargs):
+                 integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
 
         ## Cell properties
-        self.R_m = R_m
+        self.R_m = resist_m
         self.tau_m = tau_m
         self.tau_w = tau_w
         self.coupling = coupling_factor
@@ -222,7 +217,7 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         self.integrationType = integration_type
         self.intgFlag = get_integrator_code(self.integrationType)
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
@@ -233,7 +228,6 @@ class IzhikevichCell(Component): ## Izhikevich neuronal cell
         self.w = Compartment(restVals + self.w0)
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
-        #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,

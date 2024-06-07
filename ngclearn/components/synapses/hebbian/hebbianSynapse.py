@@ -3,6 +3,7 @@ from functools import partial
 from ngclearn.utils.model_utils import initialize_params
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 import time
 
@@ -69,28 +70,7 @@ def enforce_constraints(W, w_bound, is_nonnegative=True):
             _W = jnp.clip(_W, -w_bound, w_bound)
     return _W
 
-@jit
-def compute_layer(inp, weight, biases, Rscale):
-    """
-    Applies the transformation/projection induced by the synaptic efficacie
-    associated with this synaptic cable
-
-    Args:
-        inp: signal input to run through this synaptic cable
-
-        weight: this cable's synaptic value matrix
-
-        biases: this cable's bias value vector
-
-        Rscale: scale factor to apply to synapses before transform applied
-            to input values
-
-    Returns:
-        a projection/transformation of input "inp"
-    """
-    return jnp.matmul(inp, weight * Rscale) + biases
-
-class HebbianSynapse(Component):
+class HebbianSynapse(DenseSynapse):
     """
     A synaptic cable that adjusts its efficacies via a two-factor Hebbian
     adjustment rule.
@@ -100,6 +80,7 @@ class HebbianSynapse(Component):
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
     | biases - current value vector of synaptic bias values
+    | key - JAX RNG key
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
     | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
@@ -115,12 +96,12 @@ class HebbianSynapse(Component):
 
         eta: global learning rate
 
-        wInit: a kernel to drive initialization of this synaptic cable's values;
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
             for each dimension/value of this cable's underlying value matrix
 
-        bInit: a kernel to drive initialization of biases for this synaptic cable
+        bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
 
         w_bound: maximum weight to softly bound this cable's value matrix to; if
@@ -133,7 +114,7 @@ class HebbianSynapse(Component):
             computed Hebbian adjustment (Default: 0); note that decay is not
             applied to any configured biases
 
-        signVal: multiplicative factor to apply to final synaptic update before
+        sign_value: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
             optimization is required (as Hebbian rules typically yield
             adjustments for ascent)
@@ -151,7 +132,7 @@ class HebbianSynapse(Component):
 
         post_wght: post-synaptic weighting factor (Default: 1.)
 
-        Rscale: a fixed scaling factor to apply to synaptic transform
+        resist_scale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
 
         p_conn: probability of a connection existing (default: 1.); setting
@@ -166,84 +147,56 @@ class HebbianSynapse(Component):
     """
 
     # Define Functions
-    def __init__(self, name, shape, eta=0., wInit=("uniform", 0., 0.3),
-                 bInit=None, w_bound=1., is_nonnegative=False, w_decay=0.,
-                 signVal=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 p_conn=1., Rscale=1., key=None, directory=None, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name, shape, eta=0., weight_init=("uniform", 0., 0.3),
+                 bias_init=None, w_bound=1., is_nonnegative=False, w_decay=0.,
+                 sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1.,
+                 p_conn=1., resist_scale=1., **kwargs):
+        super().__init__(name, shape, weight_init, bias_init, resist_scale,
+                         p_conn, **kwargs)
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
-        self.Rscale = Rscale
+        self.Rscale = resist_scale
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.pre_wght = pre_wght
         self.post_wght = post_wght
         self.eta = eta
-        self.wInit = wInit
-        self.bInit = bInit
         self.is_nonnegative = is_nonnegative
-        self.signVal = signVal
+        self.sign_value = sign_value
 
         self.batch_size = 1
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
-        key = random.PRNGKey(time.time_ns()) if key is None else key
-
         # compartments (state of the cell, parameters, will be updated through stateless calls)
         self.preVals = jnp.zeros((self.batch_size, shape[0]))
         self.postVals = jnp.zeros((self.batch_size, shape[1]))
-        self.inputs = Compartment(self.preVals)
-        self.outputs = Compartment(self.postVals)
         self.pre = Compartment(self.preVals)
         self.post = Compartment(self.postVals)
         self.dW = Compartment(jnp.zeros(shape))
         self.db = Compartment(jnp.zeros(shape[1]))
 
-        key, subkey = random.split(key)
-        weights = initialize_params(subkey, wInit, shape)
-        key, subkey = random.split(key)
-        if 0. < p_conn < 1.:  ## only non-zero and <1 probs allowed
-            mask = random.bernoulli(subkey, p=p_conn, shape=shape)
-            weights = weights * mask  ## sparsify matrix
-        self.weights = Compartment(weights)
-        key, subkey = random.split(key)
-        self.biases = Compartment(initialize_params(subkey, bInit, (1, shape[1])) if bInit else 0.0)
-        self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bInit else [self.weights.value]))
-
-        # loading weights
-        if directory is not None:
-            self.load(directory)
-
-        self.batch_size = 1
+        key, subkey = random.split(self.key.value)
+        self.biases = Compartment(initialize_params(subkey, bias_init, (1, shape[1])) if bias_init else 0.0)
+        self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _advance_state(t, dt, Rscale, inputs, weights, biases):
-        outputs = compute_layer(inputs, weights, biases, Rscale)
-        return outputs
-
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
-
-    @staticmethod
-    def _evolve(t, dt, opt, w_bounds, is_nonnegative, signVal, w_decay, pre_wght,
-                post_wght, bInit, pre, post, weights, biases, dW, db, opt_params):
+    def _evolve(t, dt, opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
+                post_wght, bias_init, pre, post, weights, biases, dW, db, opt_params):
+        ## calculate synaptic update values
         dW, db = calc_update(pre, post,
                              weights, w_bounds, is_nonnegative=is_nonnegative,
-                             signVal=signVal, w_decay=w_decay,
+                             signVal=sign_value, w_decay=w_decay,
                              pre_wght=pre_wght, post_wght=post_wght)
-
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
-        if bInit != None:
+        if bias_init != None:
             opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dW, db])
         else:
             # ignore db since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dW])
         ## ensure synaptic efficacies adhere to constraints
-        weights = enforce_constraints(weights, w_bounds,
-                                           is_nonnegative=is_nonnegative)
+        weights = enforce_constraints(weights, w_bounds, is_nonnegative=is_nonnegative)
         return opt_params, weights, biases
 
     @resolver(_evolve)
@@ -253,7 +206,7 @@ class HebbianSynapse(Component):
         self.biases.set(biases)
 
     @staticmethod
-    def _reset(batch_size, shape, wInit, bInit):
+    def _reset(batch_size, shape, weight_init, bias_init):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         return (
@@ -274,20 +227,6 @@ class HebbianSynapse(Component):
         self.dW.set(dW)
         self.db.set(db)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        if self.bInit != None:
-            jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
-        else:
-            jnp.savez(file_name, weights=self.weights.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-        if "biases" in data.keys():
-            self.biases.set(data['biases'])
-
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
@@ -306,5 +245,5 @@ if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
-            signVal=-1.0, bInit=("constant", 0., 0.))
+                             sign_value=-1.0, bias_init=("constant", 0., 0.))
     print(Wab)

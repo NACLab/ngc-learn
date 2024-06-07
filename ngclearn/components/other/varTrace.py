@@ -1,8 +1,8 @@
 from jax import numpy as jnp, random, jit
 from functools import partial
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
-import time, sys
 
 @partial(jit, static_argnums=[4])
 def run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
@@ -32,7 +32,7 @@ def run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
         #_x_tr = ( x_tr + (-x_tr) * (dt / tau_tr) ) * (1. - x) + x
     return _x_tr
 
-class VarTrace(Component): ## low-pass filter
+class VarTrace(JaxComponent): ## low-pass filter
     """
     A variable trace (filter) functional node.
 
@@ -58,26 +58,18 @@ class VarTrace(Component): ## low-pass filter
                 1) `'lin'` = linear trace filter, i.e., decay = x_tr + (-x_tr) * (dt/tau_tr);
                 2) `'exp'` = exponential trace filter, i.e., decay = exp(-dt/tau_tr) * x_tr;
                 3) `'step'` = step trace, i.e., decay = 0 (a pulse applied upon input value)
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this cell
-
-        directory: string indicating directory on disk to save sLIF parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", key=None,
-                 directory=None, **kwargs):
+    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", **kwargs):
         super().__init__(name, **kwargs)
 
-        ## trace control coefficients
+        ## Trace control coefficients
         self.tau_tr = tau_tr ## trace time constant
         self.a_delta = a_delta ## trace increment (if spike occurred)
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
 
-        ##Layer Size Setup
+        ## Layer Size Setup
         self.batch_size = 1
         self.n_units = n_units
 
@@ -85,7 +77,6 @@ class VarTrace(Component): ## low-pass filter
         self.inputs = Compartment(restVals) # input compartment
         self.outputs = Compartment(restVals) # output compartment
         self.trace = Compartment(restVals)
-        #self.reset()
 
     @staticmethod
     def _advance_state(t, dt, decay_type, tau_tr, a_delta, inputs, trace):

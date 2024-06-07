@@ -1,8 +1,8 @@
-from jax import numpy as jnp, random, jit
+from jax import numpy as jnp, jit
 from functools import partial
 from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
-import time, sys
 
 @partial(jit, static_argnums=[5,6])
 def apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
@@ -18,7 +18,7 @@ def apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
     epsp = jnp.sum( jnp.exp( -(t - _tf)/tau_w ) * mask, axis=0 )
     return tf, epsp
 
-class ExpKernel(Component): ## exponential kernel
+class ExpKernel(JaxComponent): ## exponential kernel
     """
     A spiking function based on an exponential kernel applied to
     a moving window of spike times.
@@ -38,24 +38,15 @@ class ExpKernel(Component): ## exponential kernel
         nu: (ms, spike time interval for window)
 
         tau_w: spike window time constant (in micro-secs, or nano-s)
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this cell
-
-        directory: string indicating directory on disk to save sLIF parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, n_units, dt, tau_w=500., nu=4., key=None,
-                 directory=None, **kwargs):
+    def __init__(self, name, n_units, dt, tau_w=500., nu=4., **kwargs):
         super().__init__(name, **kwargs)
 
         self.tau_w = tau_w ## kernel window time constant
         self.nu = nu
         self.win_len = int(nu/dt) + 1 ## window length
-        #tf ## window of spike times
 
         ## Layer Size Setup
         self.batch_size = 1
@@ -64,8 +55,8 @@ class ExpKernel(Component): ## exponential kernel
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.inputs = Compartment(restVals) # input comp
         self.epsp = Compartment(restVals) ## output comp
-        self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units))) ## window comp
-        #self.reset()
+        ## window of spike times
+        self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units)))
 
     @staticmethod
     def _advance_state(t, dt, tau_w, win_len, inputs, epsp, tf):

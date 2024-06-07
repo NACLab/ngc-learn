@@ -79,24 +79,23 @@ code, as follows:
 
 ```python
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
 from ngclearn.components import GaussianErrorCell as ErrorCell, RateCell, HebbianSynapse, StaticSynapse
 from ngclearn.utils.model_utils import normalize_matrix
 
-in_dim = # ... dimension of patch data ...
-hid_dim = # ... number of atoms in the dictionary matrix
-dt = 1. # ms
-T = 300 # ms # (OR) number of E-steps to take during inference
+in_dim =  # ... dimension of patch data ...
+hid_dim =  # ... number of atoms in the dictionary matrix
+dt = 1.  # ms
+T = 300  # ms # (OR) number of E-steps to take during inference
 # ---- build a sparse coding linear generative model with a Cauchy prior ----
 with Context("Circuit") as circuit:
-    z1 = RateCell("z1", n_units=hid_dim, tau_m=20., act_fx="identity", 
-                       prior=("cauchy", 0.14), integration_type="euler")
+    z1 = RateCell("z1", n_units=hid_dim, tau_m=20., act_fx="identity",
+                  prior=("cauchy", 0.14), integration_type="euler")
     e0 = ErrorCell("e0", n_units=in_dim)
     W1 = HebbianSynapse("W1", shape=(hid_dim, in_dim),
-                             eta=1e-2, wInit=("fan_in_gaussian", 0., 1.),
-                             bInit=None, w_bound=0., optim_type="sgd", signVal=-1.)
-    E1 = StaticSynapse("E1", shape=(in_dim, hid_dim), 
-                             wInit=("uniform", -0.2, 0.2), Rscale=1.)
+                        eta=1e-2, wInit=("fan_in_gaussian", 0., 1.),
+                        bInit=None, w_bound=0., optim_type="sgd", signVal=-1.)
+    E1 = StaticSynapse("E1", shape=(in_dim, hid_dim),
+                       wInit=("uniform", -0.2, 0.2), Rscale=1.)
     ## wire z1.zF to e0.mu via W1
     W1.inputs << z1.zF
     e0.mu << W1.outputs
@@ -108,11 +107,11 @@ with Context("Circuit") as circuit:
     W1.post << e0.dmu
 
     reset_cmd, reset_args = circuit.compile_by_key(
-                                W1, E1, z1, e0,
-                                compile_key="reset")
+        W1, E1, z1, e0,
+        compile_key="reset")
     advance_cmd, advance_args = circuit.compile_by_key(
-                                    W1, E1, z1, e0,
-                                    compile_key="advance_state")
+        W1, E1, z1, e0,
+        compile_key="advance_state")
     evolve_cmd, evolve_args = circuit.compile_by_key(W1, compile_key="evolve")
 ```
 

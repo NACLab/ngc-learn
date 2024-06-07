@@ -1,11 +1,8 @@
 from ngclearn import resolver, Component, Compartment
-
-from jax import numpy as jnp, random, jit
-from functools import partial
-import time, sys
+from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
 
-#@partial(jit, static_argnums=[3])
 def run_cell(dt, targ, mu):
     """
     Moves cell dynamics one step forward.
@@ -46,7 +43,7 @@ def run_laplacian_cell(dt, targ, mu):
     L = -jnp.sum(jnp.abs(dmu)) # technically, this is mean absolute error
     return dmu, dtarg, L
 
-class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
+class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
     A simple (non-spiking) Laplacian error cell - this is a fixed-point solution
     of a mismatch/error signal.
@@ -67,18 +64,18 @@ class LaplacianErrorCell(Component): ## Rate-coded/real-valued error unit/cell
         tau_m: (Unused -- currently cell is a fixed-point model)
 
         leakRate: (Unused -- currently cell is a fixed-point model)
-
-        key: PRNG Key to control determinism of any underlying synapses
-            associated with this cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m=0., leakRate=0., key=None, **kwargs):
+    def __init__(self, name, n_units, **kwargs):
         super().__init__(name, **kwargs)
 
-        ##Layer Size setup
+        ## Layer Size setup
         self.n_units = n_units
         self.batch_size = 1
+
+        ## Convolution shape setup
+        self.width = self.height = n_units
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))

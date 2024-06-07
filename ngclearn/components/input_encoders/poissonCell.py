@@ -1,11 +1,8 @@
-# %%
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
+from ngclearn import resolver, Component, Compartment
+from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 from jax import numpy as jnp, random, jit
 from functools import partial
-import time
 
 @jit
 def update_times(t, s, tols):
@@ -47,7 +44,7 @@ def sample_poisson(dkey, data, dt, fmax=63.75):
     s_t = (eps < pspike).astype(jnp.float32)
     return s_t
 
-class PoissonCell(Component):
+class PoissonCell(JaxComponent):
     """
     A Poisson cell that produces approximately Poisson-distributed spikes on-the-fly.
 
@@ -63,13 +60,10 @@ class PoissonCell(Component):
         n_units: number of cellular entities (neural population size)
 
         max_freq: maximum frequency (in Hertz) of this Poisson spike train (must be > 0.)
-
-        key: PRNG key to control determinism of any underlying synapses
-            associated with this cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, max_freq=63.75, key=None, **kwargs):
+    def __init__(self, name, n_units, max_freq=63.75, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Poisson meta-parameters
@@ -84,7 +78,6 @@ class PoissonCell(Component):
         self.inputs = Compartment(restVals) # input compartment
         self.outputs = Compartment(restVals) # output compartment
         self.tols = Compartment(restVals) # time of last spike
-        self.key = Compartment(random.PRNGKey(time.time_ns()) if key is None else key)
 
     @staticmethod
     def _advance_state(t, dt, max_freq, key, inputs, tols):

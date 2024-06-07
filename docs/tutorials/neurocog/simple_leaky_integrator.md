@@ -39,13 +39,14 @@ tau_m = R_m * C  ## membrane time constant
 
 ## create simple system with only one sLIF
 with Context("Model") as model:
-    cell = SLIFCell("z0", n_units=1, tau_m=tau_m, R_m=R_m, thr=V_thr,
-                    refract_T=ref_T, key=subkeys[0])
+    cell = SLIFCell("z0", n_units=1, tau_m=tau_m, resist_m=R_m, thr=V_thr,
+                    refract_time=ref_T, key=subkeys[0])
 
     ## set up core commands that drive the simulation
     reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
+    advance_cmd, advance_args = model.compile_by_key(cell,
+                                                     compile_key="advance_state")
     model.add_command(wrap_command(jit(model.advance_state)), name="advance")
 
 
@@ -216,7 +217,7 @@ where we see that if the $i$th neuron's membrane potential exceeds the threshold
 $V_{thr}$, then a voltage spike is emitted. After a spike is emitted, the $i$th
 neuron within the node needs to be reset to its resting potential and this is done
 with the final compartment that we mentioned, i.e., the refractory
-variable $\mathbf{r}_t$.
+variable $\mathbf{r}_t$. 
 The refractory variable $\mathbf{r}_t$ is important for hyperpolarizing the
 $i$th neuron back to its resting potential (establishing a critical reset mechanism
 -- otherwise, the neuron would fire out of control after overcoming its

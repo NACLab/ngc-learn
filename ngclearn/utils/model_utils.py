@@ -159,8 +159,8 @@ def initialize_params(dkey, initKernel, shape):
             )
     return params
 
-@partial(jit, static_argnums=[2, 3])
-def normalize_matrix(M, wnorm, order=1, axis=0):
+@partial(jit, static_argnums=[2, 3, 4])
+def normalize_matrix(M, wnorm, order=1, axis=0, scale=1.):
     """
     Normalizes the values in matrix to have a particular norm across each vector span.
 
@@ -174,6 +174,8 @@ def normalize_matrix(M, wnorm, order=1, axis=0):
 
         axis: 0 (apply to column vectors), 1 (apply to row vectors)
 
+        scale: step modifier to produce the projected matrix
+
     Returns:
         a normalized value matrix
     """
@@ -183,7 +185,9 @@ def normalize_matrix(M, wnorm, order=1, axis=0):
         wOrdSum = jnp.maximum(jnp.sum(jnp.abs(M), axis=axis, keepdims=True), 1e-8)
     m = (wOrdSum == 0.).astype(dtype=jnp.float32)
     wOrdSum = wOrdSum * (1. - m) + m #wAbsSum[wAbsSum == 0.] = 1.
-    _M = M * (wnorm/wOrdSum)
+    # _M = M * (wnorm/wOrdSum)
+    dM = ((wnorm/wOrdSum) - 1.) * M
+    _M = M + dM * scale
     return _M
 
 @jit

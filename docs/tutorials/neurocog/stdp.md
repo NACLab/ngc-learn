@@ -15,7 +15,9 @@ i.e., `run_trstdp.py`, to write your code for this part of the tutorial.
 Now let's set up the model for this lesson's simulation and construct a
 3-component system made up of two variable traces (`VarTrace`) connected by
 one single synapse that is capable of producing changes in connection strength
-in accordance with STDP. Note that the trace components do not really do
+in accordance with STDP, specifically with a form of the update rule known 
+as [trace-based STDP](ngclearn.components.synapses.hebbian.eventSTDPSynapse). 
+Note that the trace components do not really do 
 anything meaningful unless they receive some input and we will provide
 carefully controlled input spike values in order to control their behavior
 so as to see how STDP responds to the relative temporal ordering of a pre- and
@@ -46,7 +48,7 @@ T_max = 100  ## number time steps to simulate
 with Context("Model") as model:
     tr0 = VarTrace("tr0", n_units=1, tau_tr=8., a_delta=1.)
     tr1 = VarTrace("tr1", n_units=1, tau_tr=8., a_delta=1.)
-    W = TraceSTDPSynapse("W1", shape=(1, 1), eta=0., Aplus=1., Aminus=0.8,
+    W = TraceSTDPSynapse("W1", shape=(1, 1), eta=0., A_plus=1., A_minus=0.8,
                          wInit=("uniform", 0.0, 0.3), key=subkeys[0])
 
     # wire only relevant compartments to synaptic cable W for demo purposes
@@ -57,12 +59,16 @@ with Context("Model") as model:
     # self.W1.postSpike << self.z1e.s ## we disable this as we will manually
     ## insert a binary value (for a spike)
 
-    reset_cmd, reset_args = model.compile_by_key(tr0, tr1, W, compile_key="reset")
-    adv_tr_cmd, _ = model.compile_by_key(tr0, tr1, compile_key="advance_state", name="advance_traces")
-    evolve_cmd, evolve_args = model.compile_by_key(W, compile_key="evolve")  ## M-step
+    reset_cmd, reset_args = model.compile_by_key(tr0, tr1, W,
+                                                 compile_key="reset")
+    adv_tr_cmd, _ = model.compile_by_key(tr0, tr1, compile_key="advance_state",
+                                         name="advance_traces")
+    evolve_cmd, evolve_args = model.compile_by_key(W,
+                                                   compile_key="evolve")  ## M-step
 
     model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_traces)), name="advance_traces")
+    model.add_command(wrap_command(jit(model.advance_traces)),
+                      name="advance_traces")
     model.add_command(wrap_command(jit(model.evolve)), name="evolve")
 
 
@@ -167,17 +173,28 @@ negative exponential curve to the right-hand side of zero) and the long-term
 depression curve (the flipped exponential-like function to the left-hand
 side of zero). Ultimately, a synaptic component like the `TraceSTDPSynapse`
 can be quite useful for constructing spiking neural network architectures
-that learn in a biologically-plausible fashion as this rule, as seen by the
+that learn in a biologically-plausible fashion since this rule, as seen by the
 above simulation usage, solely depends on information that is locally
-available at the pre-synaptic neuron -- its spike and a single trace that
-tracks its temporal spiking history -- and the post-synaptic neuron --
-its own spike as well as a trace that tracks its spike history. Notably,
+available at the pre-synaptic neuron (its spike and a single trace that
+tracks its temporal spiking history) and the post-synaptic neuron
+(its own spike as well as a trace that tracks its spike history). Notably,
 traced-based STDP can be an effective way of adapting the synapses of
 biophysically more accurate computational models, such as those that balance
 excitatory and inhibitory pressures produced by laterally-wired populations of
 leaky integrator neurons, e.g., the
 [Diehl and Cook spiking architecture](../../museum/snn_dc) we study in the model
-museum in more detail.
+museum in more detail. 
+
+### Other Forms of Spike-Timing-Dependent Plasticity
+Finally, beyond trace-based STDP, there are other types of STDP in-built to 
+ngc-learn, such as event-driven post-synaptic STDP 
+([eventSTDPSynapse](ngclearn.components.synapses.hebbian.eventSTDPSynapse)), that 
+you can experiment with and use in your model building and simulation projects. 
+You can learn more about these in the ngc-learn 
+[modeling API](../../modeling/components.md). 
+Beyond this, the ngc-learn dev team is always busy behind the scenes 
+constructing more standard computational neuroscience building blocks and 
+synaptic plasticity rules; so keep an eye out for future incoming developments!
 
 ## References
 
