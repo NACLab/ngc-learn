@@ -1,6 +1,8 @@
-import jax
-from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
-import os, sys
+"""
+Metric and measurement routines and co-routines. These functions are useful
+for model-level/simulation analysis as well as experimental inspection and probing.
+"""
+from jax import numpy as jnp, jit
 from functools import partial
 
 @partial(jit, static_argnums=[1])
