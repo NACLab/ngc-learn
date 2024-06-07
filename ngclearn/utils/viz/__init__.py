@@ -1,4 +1,4 @@
-import dim_reduce
-import raster
-import spike_plot
-import synapse_plot
+from . import dim_reduce
+from . import raster
+from . import spike_plot
+from . import synapse_plot
