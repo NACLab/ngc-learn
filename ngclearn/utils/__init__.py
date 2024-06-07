@@ -4,4 +4,5 @@ import metric_utils
 import io_utils
 import model_utils
 import patch_utils
+import weight_distribution
 import surrogate_fx

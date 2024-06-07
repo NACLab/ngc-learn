@@ -1,11 +1,9 @@
 from jax import random, numpy as jnp, jit
 from functools import partial
-from ngclearn.utils.model_utils import initialize_params
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
-import time
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8])
 def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
@@ -178,7 +176,6 @@ class HebbianSynapse(DenseSynapse):
         self.db = Compartment(jnp.zeros(shape[1]))
 
         key, subkey = random.split(self.key.value)
-        self.biases = Compartment(initialize_params(subkey, bias_init, (1, shape[1])) if bias_init else 0.0)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bias_init else [self.weights.value]))
 
     @staticmethod

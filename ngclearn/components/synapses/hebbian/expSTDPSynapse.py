@@ -2,8 +2,6 @@ from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
-from ngclearn.utils.model_utils import initialize_params
-import time
 
 def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
             x_tar=0.7, exp_beta=1., Aplus=1., Aminus=0.):

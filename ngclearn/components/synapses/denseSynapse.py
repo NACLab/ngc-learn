@@ -2,8 +2,7 @@ from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
-from ngclearn.utils.model_utils import initialize_params
-import time
+from ngclearn.utils.weight_distribution import initialize_params
 
 @jit
 def compute_layer(inp, weight, biases=0., Rscale=1.):
