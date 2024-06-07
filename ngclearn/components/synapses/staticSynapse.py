@@ -18,8 +18,7 @@ class StaticSynapse(DenseSynapse):
 
             weight_init: a kernel to drive initialization of this synaptic cable's values;
                 typically a tuple with 1st element as a string calling the name of
-                initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
-                for each dimension/value of this cable's underlying value matrix
+                initialization to use
 
             resist_scale: a fixed (resistance) scaling factor to apply to synaptic
                 transform (Default: 1.), i.e., yields: out = ((W * Rscale) * in)

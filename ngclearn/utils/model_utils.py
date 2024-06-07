@@ -113,57 +113,6 @@ def create_function(fun_name, args=None):
             )
     return fx, dfx
 
-
-def initialize_params(dkey, initKernel, shape):
-    """
-    Creates the intiial condition values for a parameter tensor.
-
-    Args:
-        dkey: PRNG key to control determinism of this routine
-
-        initKernel: triplet/3-tuple with 1st element as a string calling the name
-            of initialization scheme to use
-
-            :Note: Currently supported kernel schemes include:
-                ("hollow", off_diagonal_scale, ~ignored~);
-                ("eye", diagonal_scale, ~ignored~);
-                ("uniform", min_val, max_val);
-                ("fan_in_gaussian", ~ignored, ~ignored~);
-                ("gaussian", mu, sigma) OR ("normal", mu, sigma);
-                ("constant", magnitude, ~ignored~)
-
-        shape: tuple containing the dimensions/shape of the tensor to initialize
-
-    Returns:
-        output (tensor) value
-    """
-    initType, *args = initKernel # get out arguments of initialization kernel
-    params = None
-    if initType == "hollow":
-        eyeScale, _ = args
-        params = (1. - jnp.eye(N=shape[0], M=shape[1])) * eyeScale
-    elif initType == "eye":
-        eyeScale, _ = args
-        params = jnp.eye(N=shape[0], M=shape[1]) * eyeScale
-    elif initType == "uniform": ## uniformly distributed values
-        lb, ub = args
-        params = random.uniform(dkey, shape, minval=lb, maxval=ub)
-    elif initType == "fan_in_gaussian":
-        Phi = random.normal(dkey, shape)
-        Phi = Phi * jnp.sqrt(1.0 / (shape[0] * 1.))
-        params = Phi.astype(jnp.float32)
-    elif initType == "gaussian" or initType == "normal": ## gaussian distributed values
-        mu, sigma = args
-        params = random.normal(dkey, shape) * sigma + mu
-    elif initType == "constant": ## constant value(s)
-        scale, _ = args
-        params = jnp.ones(shape) * scale
-    else:
-        raise RuntimeError(
-            "Initialization scheme (" + initType + ") is not recognized/supported!"
-            )
-    return params
-
 @partial(jit, static_argnums=[2, 3, 4])
 def normalize_matrix(M, wnorm, order=1, axis=0, scale=1.):
     """

@@ -1,11 +1,9 @@
 from jax import random, numpy as jnp, jit
 from functools import partial
-from ngclearn.utils.model_utils import initialize_params
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
-import time
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8])
 def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
@@ -98,8 +96,7 @@ class HebbianSynapse(DenseSynapse):
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
-            initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
-            for each dimension/value of this cable's underlying value matrix
+            initialization to use
 
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
@@ -137,20 +134,13 @@ class HebbianSynapse(DenseSynapse):
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this synaptic cable
-
-        directory: string indicating directory on disk to save synaptic parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, shape, eta=0., weight_init=("uniform", 0., 0.3),
-                 bias_init=None, w_bound=1., is_nonnegative=False, w_decay=0.,
-                 sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 p_conn=1., resist_scale=1., **kwargs):
+    def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
+                 w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
+                 optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
+                 resist_scale=1., **kwargs):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
                          p_conn, **kwargs)
 
@@ -178,7 +168,6 @@ class HebbianSynapse(DenseSynapse):
         self.db = Compartment(jnp.zeros(shape[1]))
 
         key, subkey = random.split(self.key.value)
-        self.biases = Compartment(initialize_params(subkey, bias_init, (1, shape[1])) if bias_init else 0.0)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bias_init else [self.weights.value]))
 
     @staticmethod
