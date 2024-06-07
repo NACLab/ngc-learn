@@ -13,6 +13,17 @@ Subpackages
    ngclearn.components.other
    ngclearn.components.synapses
 
+Submodules
+----------
+
+ngclearn.components.jaxComponent module
+---------------------------------------
+
+.. automodule:: ngclearn.components.jaxComponent
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

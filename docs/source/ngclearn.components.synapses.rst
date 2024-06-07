@@ -12,6 +12,14 @@ Subpackages
 Submodules
 ----------
 
+ngclearn.components.synapses.denseSynapse module
+------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.denseSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.synapses.staticSynapse module
 -------------------------------------------------
 
