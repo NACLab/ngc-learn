@@ -1,3 +1,6 @@
+"""
+Image/tensor patching utility routines.
+"""
 import numpy as np
 from jax import numpy as jnp
 from sklearn.feature_extraction.image import extract_patches_2d

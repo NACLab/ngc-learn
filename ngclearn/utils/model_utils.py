@@ -1,3 +1,8 @@
+"""
+General modeling utility routines and co-routines. This contains useful
+commonly jit-i-fied mathematical functions and operations needed to design
+and develop ngc-learn internal components.
+"""
 import jax
 from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 from jax.lax import scan as _scan

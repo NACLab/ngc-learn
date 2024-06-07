@@ -315,7 +315,7 @@ operation that does not require integrating an ODE (this just reduces unused
 calculations of little interest to the modeler).   
 [^2]: Note that the bottom/input layer `z0`'s activation $\phi^0$ is set to the
 identity function in both ngc-learn and in <b>[1]</b>. The same is done for the
-PCN's top/layer `z1`'s activation $\phi^3$.
+PCN's top/layer `z3`'s activation $\phi^3$.
 [^3]: The most notable difference is that our PCN model works directly with
 the normalized pixel data whereas <b>[1]</b> transforms the
 data with an inverse logistic transform. However, note that you can find this
