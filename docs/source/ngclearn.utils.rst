@@ -63,6 +63,14 @@ ngclearn.utils.surrogate\_fx module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.weight\_distribution module
+------------------------------------------
+
+.. automodule:: ngclearn.utils.weight_distribution
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
