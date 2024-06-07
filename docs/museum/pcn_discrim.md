@@ -6,8 +6,8 @@ reported (Whittington &amp; Bogacz, 2017) <b>[1]</b>. The model code for this
 exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_discrim).
 
-Note: You will need to unzip the MNIST arrays in `exhibits/data/mnist.zip` to the
-folder `exhibits/data/` to work through this exhibit/walkthrough.
+Note: You will need to unzip the MNIST arrays in `data/mnist.zip` to the
+folder `data/` to work through this exhibit/walkthrough.
 
 ## The Predictive Coding Network (PCN)
 
