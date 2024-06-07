@@ -79,8 +79,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
-            initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
-            for each dimension/value of this cable's underlying value matrix
+            initialization to use
 
         resist_scale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
@@ -91,7 +90,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     # Define Functions
     def __init__(self, name, shape, tau_w, tau_theta, w_bound=0., w_decay=0.,
-                 weight_init=("uniform", 0.025, 0.8), resist_scale=1., p_conn=1., **kwargs):
+                 weight_init=None, resist_scale=1., p_conn=1., **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale, p_conn, **kwargs)
 
         ## Synapse and BCM hyper-parameters

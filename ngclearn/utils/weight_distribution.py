@@ -100,7 +100,7 @@ def initialize_params(dkey, init_kernel, shape):
         dkey: PRNG key to control determinism of this routine
 
         init_kernel: dictionary specifying the distribution type and its
-            parameters
+            parameters (default: `uniform` dist w/ `amin=0.02`, `amax=0.8`)
 
             :Note: Currently supported distribution (dist) kernel schemes include:
                 "constant" (value);
@@ -120,38 +120,41 @@ def initialize_params(dkey, init_kernel, shape):
     Returns:
         output (tensor) value
     """
-    dist_type = init_kernel.get("dist")
+    _init_kernel = init_kernel
+    if _init_kernel is None: ## the "universal default distribution" if None provided
+        _init_kernel = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
+    dist_type = _init_kernel.get("dist")
     params = None
     if dist_type == "hollow":
-        diag_scale = init_kernel.get("scale", 1.)
+        diag_scale = _init_kernel.get("scale", 1.)
         params = (1. - jnp.eye(N=shape[0], M=shape[1])) * diag_scale
     elif dist_type == "eye":
-        off_diag_scale = init_kernel.get("scale", 1.)
+        off_diag_scale = _init_kernel.get("scale", 1.)
         params = jnp.eye(N=shape[0], M=shape[1]) * off_diag_scale
     elif dist_type == "gaussian" or dist_type == "normal":
-        mu = init_kernel.get("mu", 0.)
-        sigma = init_kernel.get("sigma", 1.)
+        mu = _init_kernel.get("mu", 0.)
+        sigma = _init_kernel.get("sigma", 1.)
         params = random.normal(dkey, shape) * sigma + mu
     elif dist_type == "uniform":
-        amin = init_kernel.get("amin", 0.)
-        amax = init_kernel.get("amax", 1.)
+        amin = _init_kernel.get("amin", 0.)
+        amax = _init_kernel.get("amax", 1.)
         params = random.uniform(dkey, shape, minval=amin, maxval=amax)
     elif dist_type == "fan_in_gaussian":
         phi = random.normal(dkey, shape)
         phi = phi * jnp.sqrt(1.0 / (shape[0] * 1.))
         params = phi.astype(jnp.float32)
     elif dist_type == "constant":
-        scale = init_kernel.get("scale", 1.)
+        scale = _init_kernel.get("scale", 1.)
         params = jnp.ones(shape) * scale
     else:
         raise RuntimeError(
             "Initialization scheme (" + dist_type + ") is not recognized/supported!"
         )
     ## check for any additional distribution post-processing kwargs (e.g., clipping)
-    clip_min = init_kernel.get("amin")
-    clip_max = init_kernel.get("amax")
-    is_hollow = init_kernel.get("hollow", False)
-    is_eye = init_kernel.get("eye", False)
+    clip_min = _init_kernel.get("amin")
+    clip_max = _init_kernel.get("amax")
+    is_hollow = _init_kernel.get("hollow", False)
+    is_eye = _init_kernel.get("eye", False)
     if clip_min is not None: ## bound all values to be > clip_min
         params = jnp.maximum(params, clip_min)
     if clip_max is not None: ## bound all values to be < clip_max

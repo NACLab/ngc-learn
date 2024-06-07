@@ -44,8 +44,7 @@ class DenseSynapse(JaxComponent): ## static non-learnable synaptic cable
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
-            initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
-            for each dimension/value of this cable's underlying value matrix
+            initialization to use
 
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
@@ -59,8 +58,8 @@ class DenseSynapse(JaxComponent): ## static non-learnable synaptic cable
     """
 
     # Define Functions
-    def __init__(self, name, shape, weight_init=("uniform", 0.025, 0.8),
-                 bias_init=None, resist_scale=1., p_conn=1., **kwargs):
+    def __init__(self, name, shape, weight_init=None, bias_init=None,
+                 resist_scale=1., p_conn=1., **kwargs):
         super().__init__(name, **kwargs)
 
         self.weight_init = weight_init

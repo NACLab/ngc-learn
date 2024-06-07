@@ -96,8 +96,7 @@ class HebbianSynapse(DenseSynapse):
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
-            initialization to use, e.g., ("uniform", -0.1, 0.1) samples U(-1,1)
-            for each dimension/value of this cable's underlying value matrix
+            initialization to use
 
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
@@ -135,20 +134,13 @@ class HebbianSynapse(DenseSynapse):
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
-
-        key: PRNG key to control determinism of any underlying random values
-            associated with this synaptic cable
-
-        directory: string indicating directory on disk to save synaptic parameter
-            values to (i.e., initial threshold values and any persistent adaptive
-            threshold values)
     """
 
     # Define Functions
-    def __init__(self, name, shape, eta=0., weight_init=("uniform", 0., 0.3),
-                 bias_init=None, w_bound=1., is_nonnegative=False, w_decay=0.,
-                 sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1.,
-                 p_conn=1., resist_scale=1., **kwargs):
+    def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
+                 w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
+                 optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
+                 resist_scale=1., **kwargs):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
                          p_conn, **kwargs)
 
