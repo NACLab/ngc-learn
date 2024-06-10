@@ -86,6 +86,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     def _init(self, thr_theta0):
         self.thr_theta = Compartment(thr_theta0)
 
+
     @staticmethod
     def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
                        theta_plus, j_exc, j_inh, v, s, rfr, thr_theta): #, tols):
@@ -144,6 +145,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self._init( data['threshold_theta'] )
+
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

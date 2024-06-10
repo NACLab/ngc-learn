@@ -23,7 +23,7 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
     """
 
     # Define Functions
-    def __init__(self, name, weights, dt, Rscale=1., **kwargs):
+    def __init__(self, name, dt, weights=None, Rscale=1., **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
@@ -32,7 +32,6 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
         self.Rscale = Rscale
         self.shape = None
 
-        ## Compartments
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
         self.weights = Compartment(None)
@@ -41,10 +40,12 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
             self._init(weights)
 
     def _init(self, weights):
-        self.shape = weights.shape
+
+        self.rows = weights.shape[0]
+        self.cols = weights.shape[1]
         ## pre-computed empty zero pads
-        preVals = jnp.zeros((self.batch_size, self.shape[0]))
-        postVals = jnp.zeros((self.batch_size, self.shape[1]))
+        preVals = jnp.zeros((self.batch_size, self.rows))
+        postVals = jnp.zeros((self.batch_size, self.cols))
         ## Compartments
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
@@ -60,9 +61,9 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
         self.outputs.set(outputs)
 
     @staticmethod
-    def _reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
+    def _reset(batch_size, rows, cols):
+        preVals = jnp.zeros((batch_size, rows))
+        postVals = jnp.zeros((batch_size, cols))
         return (
             preVals, # inputs
             postVals, # outputs
@@ -81,6 +82,7 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self._init( data['weights'] )
+
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
