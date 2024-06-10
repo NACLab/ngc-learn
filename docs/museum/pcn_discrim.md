@@ -6,8 +6,8 @@ reported (Whittington &amp; Bogacz, 2017) <b>[1]</b>. The model code for this
 exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_discrim).
 
-Note: You will need to unzip the MNIST arrays in `exhibits/data/mnist.zip` to the
-folder `exhibits/data/` to work through this exhibit/walkthrough.
+Note: You will need to unzip the MNIST arrays in `data/mnist.zip` to the
+folder `data/` to work through this exhibit/walkthrough.
 
 ## The Predictive Coding Network (PCN)
 
@@ -296,6 +296,13 @@ equation for layer $\ell$). Indeed, since we see that our free energy curve appr
 optimizing the full free energy $\mathcal{F}$. Note that, while it would not be
 easy to tell by visual inspection of the above plot, the final free energy
 reached is `-1.9853954` (nats).
+
+### Computing Hardware Note:
+
+This tutorial was tested and run on an `Ubuntu 22.04.2 LTS` operating system 
+using an `NVIDIA GeForce RTX 2070` GPU with `CUDA Version: 12.1` 
+(`Driver Version: 530.41.03`). Note that the times reported in any tutorial 
+screenshot/console snippets were produced on this system.
 
 <!-- references -->
 ## References

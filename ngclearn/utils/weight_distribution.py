@@ -144,7 +144,7 @@ def initialize_params(dkey, init_kernel, shape):
         phi = phi * jnp.sqrt(1.0 / (shape[0] * 1.))
         params = phi.astype(jnp.float32)
     elif dist_type == "constant":
-        scale = _init_kernel.get("scale", 1.)
+        scale = _init_kernel.get("value", 1.)
         params = jnp.ones(shape) * scale
     else:
         raise RuntimeError(

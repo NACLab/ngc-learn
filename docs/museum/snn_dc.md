@@ -297,6 +297,13 @@ exhibit file's default configuration) and was only trained online on the first
 `10000` digits. Different results would be obtained if more digit patterns
 were used and more excitatory neurons were utilized.
 
+### Computing Hardware Note:
+
+This tutorial was tested and run on an `Ubuntu 22.04.2 LTS` operating system 
+using an `NVIDIA GeForce RTX 2070` GPU with `CUDA Version: 12.1` 
+(`Driver Version: 530.41.03`). Note that the times reported in any tutorial 
+screenshot/console snippets were produced on this system.
+
 
 <!-- References/Citations -->
 ## References
