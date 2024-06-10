@@ -102,8 +102,8 @@ by $\frac{\Delta t}{\tau}$).
 ## Higher-Order Forms of (Explicit) Integration
 
 Notably, ngc-learn has built-in several forms of (explicit) numerical integration beyond
-the Euler method, such as a second order Runge-Kutta (RK) method (also known as
-the midpoint method or RK-2) or an error-predictor method such as Heun's method
+the Euler method, such as a second order Runge-Kutta (RK-2) method (also known as
+the midpoint method) and 4th-order Runge-Kutta (RK-4) method or an error-predictor method such as Heun's method
 (also known as the trapezoid method). These forms of integration might be useful particularly
 if a cell or plastic synaptic component you might be writing follows dynamics
 that are more nonlinear or biophysically complex (requiring a higher degree
@@ -121,7 +121,7 @@ $\frac{\partial y(t)}{\partial t} = -2 t^3 + 12 t^2 - 20 t + 8.5$ which
 has the analytic solution $y(t) = -(1/2) t^4 + 4 t^3 - 10 t^2 + 8.5 t + C$ (
 where we will set $C = 1$). You can write code like below, importing from
 `ngclearn.utils.diffeq.ode_utils` the Euler routine (`step_euler`),
-the RK-2 routine (`step_rk2`), and Heun's method (`step_heun`), and compare
+the RK-2 routine (`step_rk2`), RK-4 routine (`step_rk4`), and Heun's method (`step_heun`), and compare
 how these methods approximate the nonlinear dynamics inherent to our
 constructed $\frac{\partial y(t)}{\partial t}$ ODE below:
 
@@ -194,7 +194,8 @@ which should yield you a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/ode_method_comparison.jpg" width="500" />
 
-As you might observe, when the integration step size is held constant, Euler integration
+As you might observe, RK-4 give the best approximation of the solution. In addition, 
+when the integration step size is held constant, Euler integration
 does quite poorly over just a few steps while RK-2 and Heun's method do much better
 at approximating the analytical equation. In the end, the type of numerical integration method employed can
 matter depending on the ODE(s) you use in modeling, particularly if you seek higher accuracy
