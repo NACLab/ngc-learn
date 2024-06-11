@@ -95,7 +95,7 @@ needed to create the necessary model components:
 
 ```python
 #Training Params
-epochs = 30
+epochs = 35
 view_length = 200
 rest_length = 1000
 
@@ -122,7 +122,7 @@ with LavaContext("Model") as model:
     tr1 = GatedTrace("tr1", n_units=n_hid, dt=dt, tau_tr=20.)
 
     W1 = TraceSTDPSynapse("W1", weight_init=dist.uniform(amin=0, amax=0.3), 
-                          shape=(n_in, n_hid), dt=dt, Aplus=0.0055, Aminus=0.00055, 
+                          shape=(n_in, n_hid), dt=dt, Aplus=0.011, Aminus=0.0011, 
                           preTrace_target=0.055)
     W1ie = StaticSynapse("W1ie", weight_init=dist.hollow(120.), 
                          shape=(n_hid, n_hid),dt=dt)

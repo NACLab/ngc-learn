@@ -126,6 +126,9 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
     Returns:
         output (tensor) value
     """
+    if dkey is None:
+        use_numpy = True
+
     _init_kernel = init_kernel
     if _init_kernel is None: ## the "universal default distribution" if None provided
         critical("No initialization kernel provided!")

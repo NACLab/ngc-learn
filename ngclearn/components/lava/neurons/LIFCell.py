@@ -92,8 +92,8 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         else:
             if self.thr_theta_init is None:
                 info(self.name, "is using default threshold variable initializer!")
-                self.weight_init = {"dist": "constant", "value": 0.}
-            thr_theta0 = initialize_params(None, self.weight_init, (1, self.n_units))
+                self.thr_theta_init = {"dist": "constant", "value": 0.}
+            thr_theta0 = initialize_params(None, self.thr_theta_init, (1, self.n_units))
             self._init(thr_theta0)
 
     def _init(self, thr_theta0):
