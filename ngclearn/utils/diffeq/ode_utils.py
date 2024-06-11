@@ -161,7 +161,7 @@ def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
     fourth-order Runge-Kutta (RK-4) step.
-    (Note: ngc-learn internally recognizes "rk4$" or this routine)
+    (Note: ngc-learn internally recognizes "rk4" or this routine)
 
     | Reference:
     | Ascher, Uri M., and Linda R. Petzold. Computer methods for ordinary
