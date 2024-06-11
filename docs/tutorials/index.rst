@@ -43,3 +43,4 @@ to configuration).
   lava/setup
   lava/lava_components
   lava/lava_context
+  lava/hebbian_learning
