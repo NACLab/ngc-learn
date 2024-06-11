@@ -25,6 +25,8 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
 
         dt: integration time constant (ms)
 
+        tau_m: cell membrane time constant
+
         thr_theta_init: initialization kernel for threshold increment variable
 
         resist_m: membrane resistance value (Default: 1)
