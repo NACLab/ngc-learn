@@ -40,6 +40,6 @@ to configuration).
   :caption: III. NGC-Lava: Support for Loihi 2 Transfer
 
   lava/introduction
-  lava/lava_components
-  lava/LavaContext
   lava/setup
+  lava/lava_components
+  lava/lava_context
