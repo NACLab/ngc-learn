@@ -102,8 +102,8 @@ by $\frac{\Delta t}{\tau}$).
 ## Higher-Order Forms of (Explicit) Integration
 
 Notably, ngc-learn has built-in several forms of (explicit) numerical integration beyond
-the Euler method, such as a second order Runge-Kutta (RK) method (also known as
-the midpoint method or RK-2) or an error-predictor method such as Heun's method
+the Euler method, such as a second order Runge-Kutta (RK-2) method (also known as
+the midpoint method) and 4th-order Runge-Kutta (RK-4) method or an error-predictor method such as Heun's method
 (also known as the trapezoid method). These forms of integration might be useful particularly
 if a cell or plastic synaptic component you might be writing follows dynamics
 that are more nonlinear or biophysically complex (requiring a higher degree
@@ -121,20 +121,18 @@ $\frac{\partial y(t)}{\partial t} = -2 t^3 + 12 t^2 - 20 t + 8.5$ which
 has the analytic solution $y(t) = -(1/2) t^4 + 4 t^3 - 10 t^2 + 8.5 t + C$ (
 where we will set $C = 1$). You can write code like below, importing from
 `ngclearn.utils.diffeq.ode_utils` the Euler routine (`step_euler`),
-the RK-2 routine (`step_rk2`), and Heun's method (`step_heun`), and compare
+the RK-2 routine (`step_rk2`), RK-4 routine (`step_rk4`), and Heun's method (`step_heun`), and compare
 how these methods approximate the nonlinear dynamics inherent to our
 constructed $\frac{\partial y(t)}{\partial t}$ ODE below:
 
 ```python
 from jax import numpy as jnp, random, jit, nn
-from functools import partial
-
 import matplotlib #.pyplot as plt
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 cmap = plt.cm.jet
 
-from ngclearn.utils.diffeq.ode_utils import step_euler, step_rk2 as step_midpoint, step_heun
+from ngclearn.utils.diffeq.ode_utils import step_euler, step_rk2 as step_midpoint, step_heun, step_rk4
 
 @jit
 def soln(t): ## analytic solution
@@ -157,13 +155,16 @@ t_values = [t]
 rk2_data = [y0]
 heun_data = [y0]
 euler_data = [y0]
+rk4_data = [y0]
 for i in range(0, T):
     _t, _y = step_heun(t, heun_data[-1], dfy, dt, (1,1))
     heun_data.append(_y)
-    _t, _y = step_midpoint(t, rk2_data[-1], dfy, dt, (1,1))
+    _t, _y = step_rk2(t, rk2_data[-1], dfy, dt, (1,1))
     rk2_data.append(_y)
     _t, _y = step_euler(t, euler_data[-1], dfy, dt, (1,1))
     euler_data.append(_y)
+    _t, _y = step_rk4(t, rk4_data[-1], dfy, dt, (1,1))
+    rk4_data.append(_y)
     ## Note: we move time forward below only for demo-purposes since each
     ##       method increments and returns new time for you (e.g., "_t" as above)
     t = t + dt
@@ -176,14 +177,15 @@ euler_data = jnp.asarray(euler_data)
 soln_values = soln(t_values)
 fig, ax = plt.subplots()
 
-sol = ax.plot(t_values, soln_values, '-.', color='C0')
-eul = ax.plot(t_values, euler_data, color='C1') #, alpha=.5)
-rk2 = ax.plot(t_values, rk2_data, color='C2')
-heun = ax.plot(t_values, heun_data, color='C3')
+sol = ax.plot(t_values, soln_values, color='r', lw=3)
+eul = ax.plot(t_values, euler_data, color='C0', lw=2) #, alpha=.5)
+rk2 = ax.plot(t_values, rk2_data, color='C2', lw=2)
+heun = ax.plot(t_values, heun_data, color='C6', lw=2)
+rk4 = ax.plot(t_values, rk4_data, '--', color='yellow', lw=2)
 
 ax.set(xlabel='time (ms)', ylabel='y (mV)',
-       title='Integration of:  dy/dt = $-2 * t^3 + 12 * t^2 - 20 * t + 8.5$')
-ax.legend([sol[0],eul[0],rk2[0],heun[0]],['sol\'n','euler','rk2','heun'])
+       title='Integration of  '  r'$\frac{dy}{dt} = -2 * t^3 + 12 * t^2 - 20 * t + 8.5$')
+ax.legend([eul[0], rk2[0],heun[0], rk4[0], sol[0]],[r'$Euler$',r'$RK-2$', r'$Heun$', r'$RK4$', r'$Sol\'n$'])
 ax.grid()
 fig.savefig("ode_method_comparison.jpg")
 ```
@@ -192,7 +194,8 @@ which should yield you a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/ode_method_comparison.jpg" width="500" />
 
-As you might observe, when the integration step size is held constant, Euler integration
+As you might observe, RK-4 give the best approximation of the solution. In addition, 
+when the integration step size is held constant, Euler integration
 does quite poorly over just a few steps while RK-2 and Heun's method do much better
 at approximating the analytical equation. In the end, the type of numerical integration method employed can
 matter depending on the ODE(s) you use in modeling, particularly if you seek higher accuracy

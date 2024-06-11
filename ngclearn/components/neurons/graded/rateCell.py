@@ -7,7 +7,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
+                                            step_euler, step_rk2, step_rk4
 
 ## rewritten code
 @partial(jit, static_argnums=[3, 4, 5])
@@ -60,7 +60,7 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
 
         leak_gamma: strength of leak to apply to membrane/state
 
-        integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
+        integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2, 2 --> RK4)
 
         priorType: scale-shift prior distribution to impose over neural dynamics
 
@@ -70,6 +70,9 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
     if integType == 1:
         params = (j, j_td, tau_m, leak_gamma, priorType)
         _, _z = step_rk2(0., z, _dfz, dt, params)
+    elif integType == 2:
+        params = (j, j_td, tau_m, leak_gamma, priorType)
+        _, _z = step_rk4(0., z, _dfz, dt, params)
     else:
         params = (j, j_td, tau_m, leak_gamma, priorType)
         _, _z = step_euler(0., z, _dfz, dt, params)
