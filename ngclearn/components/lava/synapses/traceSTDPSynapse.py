@@ -39,7 +39,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
     """
 
     # Define Functions
-    def __init__(self, name, weights, dt, Rscale=1., Aplus=0.01, Aminus=0.001,
+    def __init__(self, name, dt, Rscale=1., weights=None,  Aplus=0.01, Aminus=0.001,
                  eta=1., w_decay=0., w_bound=1., preTrace_target=0., **kwargs):
         super().__init__(name, **kwargs)
 
@@ -55,9 +55,9 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
 
         ## Component size setup
         self.batch_size = 1
-        self.shape = None
 
-        ## Compartments
+        self.eta = Compartment(jnp.ones((1,1)) * eta)
+
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
         self.pre = Compartment(None) ## pre-synaptic spike
@@ -65,16 +65,17 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.post = Compartment(None) ## post-synaptic spike
         self.x_post = Compartment(None) ## post-synaptic trace
         self.weights = Compartment(None)
-        self.eta = Compartment(jnp.ones((1,1)) * eta)
+
 
         if weights is not None:
             self._init(weights)
 
     def _init(self, weights):
-        self.shape = weights.shape
+        self.rows = weights.shape[0]
+        self.cols = weights.shape[1]
         ## pre-computed empty zero pads
-        preVals = jnp.zeros((self.batch_size, self.shape[0]))
-        postVals = jnp.zeros((self.batch_size, self.shape[1]))
+        preVals = jnp.zeros((self.batch_size, self.rows))
+        postVals = jnp.zeros((self.batch_size, self.cols))
         ## Compartments
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
@@ -109,9 +110,9 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.weights.set(weights)
 
     @staticmethod
-    def _reset(batch_size, shape, eta0):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
+    def _reset(batch_size, rows, cols, eta0):
+        preVals = jnp.zeros((batch_size, rows))
+        postVals = jnp.zeros((batch_size, cols))
         return (
             preVals, # inputs
             postVals, # outputs
@@ -140,3 +141,17 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self._init( data['weights'] )
+
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines

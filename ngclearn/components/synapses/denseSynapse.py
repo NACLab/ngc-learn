@@ -3,6 +3,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
 
 @jit
 def compute_layer(inp, weight, biases=0., Rscale=1.):
@@ -71,7 +72,10 @@ class DenseSynapse(JaxComponent): ## static non-learnable synaptic cable
 
         ## Set up synaptic weight values
         tmp_key, *subkeys = random.split(self.key.value, 4)
-        weights = initialize_params(subkeys[0], weight_init, shape)
+        if self.weight_init is None:
+            info(self.name, "is using default weight initializer!")
+            self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
+        weights = initialize_params(subkeys[0], self.weight_init, shape)
         if 0. < p_conn < 1.: ## only non-zero and <1 probs allowed
             mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
             weights = weights * mask ## sparsify matrix
@@ -84,6 +88,9 @@ class DenseSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.outputs = Compartment(postVals)
         self.weights = Compartment(weights)
         ## Set up (optional) bias values
+        if self.bias_init is None:
+            info(self.name, "is using default bias value of zero (no bias "
+                            "kernel provided)!")
         self.biases = Compartment(initialize_params(subkeys[2], bias_init,
                                                     (1, shape[1]))
                                   if bias_init else 0.0)

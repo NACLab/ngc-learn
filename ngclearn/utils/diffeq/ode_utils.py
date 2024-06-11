@@ -2,10 +2,11 @@
 Routines and co-routines for ngc-learn's differential equation integration backend.
 
 Currently supported back-end forms of integration in ngc-learn include:
-1) Euler integration (RK-1);
-2) Midpoint method (RK-2);
-3) Heun's method (error-corrector RK-2); 
-4) Ralston's method (error-corrector RK-2)
+0) Euler integration (RK-1);
+1) Midpoint method (RK-2);
+2) Heun's method (error-corrector RK-2);
+3) Ralston's method (error-corrector RK-2);
+4) 4th-order Runge-Kutta method (RK-4);
 """
 from jax import numpy as jnp, random, jit #, nn
 from functools import partial
@@ -19,7 +20,7 @@ def get_integrator_code(integrationType):
     Args:
         integrationType: string indicating integrator type
             (supported type: rk1` or `euler`, `rk2` or `midpoint`,
-            `rk2_heun` or `heun`, `rk2_ralston` or `ralston`)
+            `rk2_heun` or `heun`, `rk2_ralston` or `ralston`, `rk4`)
 
     Returns:
         integator type integer code
@@ -31,17 +32,21 @@ def get_integrator_code(integrationType):
         intgFlag = 2
     elif integrationType == "rk2_ralston" or integrationType == "ralston": ## Ralston's method
         intgFlag = 3
-    # elif integrationType == "rk4": ## Runge-Kutte 4rd order code
-    #     intgFlag = 4
+    elif integrationType == "rk4": ## Runge-Kutte 4rd order code
+        intgFlag = 4
     else:
         if integrationType != "euler" or integrationType == "rk1":
             print("ERROR: unrecognized integration method {} provided! Defaulting \
                   to RK-1/Euler routine".format(integrationType))
     return intgFlag
 
+
 @jit
-def _sum_combine(y1, y2, weight1=1., weight2=1.): ## fast co-routine for simple addition
-    return (y1 * weight1 + y2 * weight2)
+def _sum_combine(*args, **kwargs): ## fast co-routine for simple addition
+    sum = 0
+    for arg, val in zip(args, kwargs.values()):
+        sum += arg * val
+    return sum
 
 @jit
 def _step_forward(t, x, dx_dt, dt, x_scale): ## internal step co-routine
@@ -110,9 +115,10 @@ def step_heun(t, x, dfx, dt, params, x_scale=1.):
     dx_dt = dfx(t, x, params)
     _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
     _dx_dt = dfx(_t, _x, params)
-    summed_dx_dt = _sum_combine(dx_dt, _dx_dt)
+    summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
     _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
     return _t, _x
+
 
 def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     """
@@ -143,11 +149,59 @@ def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-    dx_dt = dfx(t, x, params)
-    tm, xm = _step_forward(t, x, dx_dt, dt * 0.5, x_scale)
-    _dx_dt = dfx(tm, xm, params)
-    _t, _x = _step_forward(t, x, _dx_dt, dt, x_scale)
+    f_1 = dfx(t, x, params)
+    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
+
+    f_2 = dfx(t1, x1, params)
+    _t, _x = _step_forward(t, x, f_2, dt, x_scale)
     return _t, _x
+
+
+def step_rk4(t, x, dfx, dt, params, x_scale=1.):
+    """
+    Iteratively integrates one step forward via the midpoint method, i.e., a
+    fourth-order Runge-Kutta (RK-4) step.
+    (Note: ngc-learn internally recognizes "rk4" or this routine)
+
+    | Reference:
+    | Ascher, Uri M., and Linda R. Petzold. Computer methods for ordinary
+    | differential equations and differential-algebraic equations. Society for
+    | Industrial and Applied Mathematics, 1998.
+
+    Args:
+        t: current time variable to advance by dt
+
+        x: current variable values to advance/iteratively integrate (at time `t`)
+
+        dfx: (ordinary) differential equation co-routine (as implemented in an
+            ngc-learn component)
+
+        dt: integration time step (also referred to as `h` in mathematics)
+
+        params: tuple containing configuration values/hyper-parameters for the
+            (ordinary) differential equation an ngc-learn component will provide
+
+        x_scale: dampening factor to scale `x` by (Default: 1)
+
+    Returns:
+        variable values iteratively integrated/advanced to next step (`t + dt`)
+    """
+    f_1 = dfx(t, x, params)
+    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
+
+    f_2 = dfx(t1, x1, params)
+    t2, x2 = _step_forward(t, x, f_2, dt * 0.5, x_scale)
+
+    f_3 = dfx(t2, x2, params)
+    t3, x3 = _step_forward(t, x, f_3, dt, x_scale)
+
+    f_4 = dfx(t3, x3, params)
+
+    _dx_dt = _sum_combine(f_1, f_2, f_3, f_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
+    _t, _x = _step_forward(t, x, _dx_dt, dt / 6, x_scale)
+    return _t, _x
+
+
 
 def step_ralston(t, x, dfx, dt, params, x_scale=1.):
     """
