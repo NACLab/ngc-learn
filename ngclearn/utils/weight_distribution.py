@@ -3,6 +3,7 @@ Weight distribution initialization routines and co-routines, including
 parameter mapping functions for standard initializers.
 """
 from jax import numpy as jnp, jit, vmap, random, lax, nn
+from ngcsimlib.logger import critical
 
 ################################################################################
 ## supported distribution initializer configuration generator routines
@@ -122,7 +123,7 @@ def initialize_params(dkey, init_kernel, shape):
     """
     _init_kernel = init_kernel
     if _init_kernel is None: ## the "universal default distribution" if None provided
-        _init_kernel = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
+        critical("No initialization kernel provided!")
     dist_type = _init_kernel.get("dist")
     params = None
     if dist_type == "hollow":
@@ -147,9 +148,7 @@ def initialize_params(dkey, init_kernel, shape):
         scale = _init_kernel.get("value", 1.)
         params = jnp.ones(shape) * scale
     else:
-        raise RuntimeError(
-            "Initialization scheme (" + dist_type + ") is not recognized/supported!"
-        )
+        critical("Initialization scheme (" + dist_type + ") is not recognized/supported!")
     ## check for any additional distribution post-processing kwargs (e.g., clipping)
     clip_min = _init_kernel.get("amin")
     clip_max = _init_kernel.get("amax")
