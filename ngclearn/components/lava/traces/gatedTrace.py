@@ -33,7 +33,6 @@ class GatedTrace(Component): ## gated/piecewise low-pass filter
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.inputs = Compartment(restVals) # input compartment
         self.trace = Compartment(restVals)
-        #self.reset()
 
     @staticmethod
     def _advance_state(dt, tau_tr, inputs, trace):

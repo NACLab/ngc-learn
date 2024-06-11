@@ -58,7 +58,7 @@ order to use certain runtime methods as defined below.
    with block.
 - `model.start_runtime()`: This starts the runtime without the management of 
    automatically stopping it later.
-- `model.pause`: Pauses the runtime, allowing for values to be read and set.
+- `model.pause()`: Pauses the runtime, allowing for values to be read and set.
 - `model.stop()`: Stops the runtime, runtimes can not be restarted once they are 
    stopped.
 - `model.run(t)`: Runs the runtime, for `t` time steps. Will automatically pause 

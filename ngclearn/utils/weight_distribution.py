@@ -2,7 +2,9 @@
 Weight distribution initialization routines and co-routines, including
 parameter mapping functions for standard initializers.
 """
-from jax import numpy as jnp, jit, vmap, random, lax, nn
+import numpy as np
+import jax
+from jax import numpy as jnp, jit, vmap, lax, nn
 from ngcsimlib.logger import critical
 
 ################################################################################
@@ -93,7 +95,7 @@ def eye(scale, **kwargs):
 ################################################################################
 ## initializer co-routine(s)
 
-def initialize_params(dkey, init_kernel, shape):
+def initialize_params(dkey, init_kernel, shape, use_numpy=False):
     """
     Creates the intiial condition values for a parameter tensor.
 
@@ -118,6 +120,9 @@ def initialize_params(dkey, init_kernel, shape):
 
         shape: tuple containing the dimensions/shape of the tensor to initialize
 
+        use_numpy: if true, conducts weight value initialization/post-processing using
+            exclusively Numpy, disabling Jax calls (default: False)
+
     Returns:
         output (tensor) value
     """
@@ -126,27 +131,45 @@ def initialize_params(dkey, init_kernel, shape):
         critical("No initialization kernel provided!")
     dist_type = _init_kernel.get("dist")
     params = None
-    if dist_type == "hollow":
+    if dist_type == "hollow": ## scaled hollow-matrix init
         diag_scale = _init_kernel.get("scale", 1.)
-        params = (1. - jnp.eye(N=shape[0], M=shape[1])) * diag_scale
-    elif dist_type == "eye":
+        if use_numpy:
+            params = (1. - np.eye(N=shape[0], M=shape[1])) * diag_scale
+        else:
+            params = (1. - jnp.eye(N=shape[0], M=shape[1])) * diag_scale
+    elif dist_type == "eye": ## scaled diagonal/eye init
         off_diag_scale = _init_kernel.get("scale", 1.)
-        params = jnp.eye(N=shape[0], M=shape[1]) * off_diag_scale
-    elif dist_type == "gaussian" or dist_type == "normal":
+        if use_numpy:
+            params = np.eye(N=shape[0], M=shape[1]) * off_diag_scale
+        else:
+            params = jnp.eye(N=shape[0], M=shape[1]) * off_diag_scale
+    elif dist_type == "gaussian" or dist_type == "normal": ## normal distrib
         mu = _init_kernel.get("mu", 0.)
         sigma = _init_kernel.get("sigma", 1.)
-        params = random.normal(dkey, shape) * sigma + mu
-    elif dist_type == "uniform":
+        if use_numpy:
+            params = np.random.normal(size=shape) * sigma + mu
+        else:
+            params = jax.random.normal(dkey, shape) * sigma + mu
+    elif dist_type == "uniform": ## uniform distrib
         amin = _init_kernel.get("amin", 0.)
         amax = _init_kernel.get("amax", 1.)
-        params = random.uniform(dkey, shape, minval=amin, maxval=amax)
-    elif dist_type == "fan_in_gaussian":
-        phi = random.normal(dkey, shape)
+        if use_numpy:
+            params = np.random.uniform(low=amin, high=amax, size=shape)
+        else:
+            params = jax.random.uniform(dkey, shape, minval=amin, maxval=amax)
+    elif dist_type == "fan_in_gaussian": ## fan-in scaled standard normal init
+        if use_numpy:
+            phi = np.random.normal(size=shape)
+        else:
+            phi = jax.random.normal(dkey, shape)
         phi = phi * jnp.sqrt(1.0 / (shape[0] * 1.))
         params = phi.astype(jnp.float32)
-    elif dist_type == "constant":
+    elif dist_type == "constant": ## constant value (everywhere) init
         scale = _init_kernel.get("value", 1.)
-        params = jnp.ones(shape) * scale
+        if use_numpy:
+            params = np.ones(shape) * scale
+        else:
+            params = jnp.ones(shape) * scale
     else:
         critical("Initialization scheme (" + dist_type + ") is not recognized/supported!")
     ## check for any additional distribution post-processing kwargs (e.g., clipping)
@@ -155,12 +178,24 @@ def initialize_params(dkey, init_kernel, shape):
     is_hollow = _init_kernel.get("hollow", False)
     is_eye = _init_kernel.get("eye", False)
     if clip_min is not None: ## bound all values to be > clip_min
-        params = jnp.maximum(params, clip_min)
+        if use_numpy:
+            params = np.maximum(params, clip_min)
+        else:
+            params = jnp.maximum(params, clip_min)
     if clip_max is not None: ## bound all values to be < clip_max
-        params = jnp.minimum(params, clip_max)
+        if use_numpy:
+            params = np.minimum(params, clip_max)
+        else:
+            params = jnp.minimum(params, clip_max)
     if is_hollow: ## apply a hollow mask
-        params = (1. - jnp.eye(N=shape[0], M=shape[1])) * params
+        if use_numpy:
+            params = (1. - np.eye(N=shape[0], M=shape[1])) * params
+        else:
+            params = (1. - jnp.eye(N=shape[0], M=shape[1])) * params
     if is_eye: ## apply an eye/diagonal mask
-        params = jnp.eye(N=shape[0], M=shape[1]) * params
+        if use_numpy:
+            params = np.eye(N=shape[0], M=shape[1]) * params
+        else:
+            params = jnp.eye(N=shape[0], M=shape[1]) * params
     return params ## return initial distribution conditions
 
