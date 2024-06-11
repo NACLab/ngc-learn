@@ -1,8 +1,8 @@
 from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
-
 from ngclearn import numpy as jnp
-import time
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info, warn
 
 class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
     """
@@ -13,13 +13,17 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
     Args:
         name: the string name of this cell
 
-        weights: matrix of synaptic weight values to initialize this synapse
-            component to
-
         dt: integration time constant (ms)
 
-        Rscale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+        resist_scale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
 
         eta: global learning rate
 
@@ -29,18 +33,28 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
 
         w_bound: maximum weight to softly bound this cable's value matrix to; if
             set to 0, then no synaptic value bounding will be applied
+
+        weights: matrix of synaptic weight values to initialize this synapse
+            component to
+
+        Rscale: DEPRECATED argument (maps to resist_scale)
     """
 
     # Define Functions
-    def __init__(self, name, dt, weights=None, Rscale=1., eta=0., w_decay=0.,
-                 w_bound=1., **kwargs):
+    def __init__(self, name, dt, resist_scale=1., weight_init=None, shape=None,
+                 eta=0., w_decay=0., w_bound=1., weights=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
+        self.weight_init = weight_init
+        self.shape = shape
         self.batch_size = 1
 
         self.dt = dt
-        self.Rscale = Rscale
+        self.Rscale = resist_scale
+        if kwargs.get("Rscale") is not None:
+            warn("The argument `Rscale` being used is deprecated.")
+            self.Rscale = kwargs.get("Rscale")
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.eta0 = eta
@@ -50,9 +64,18 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.pre = Compartment(None)
         self.post = Compartment(None)
         self.weights = Compartment(None)
-        self.eta = Compartment(jnp.ones((1,1)) * eta)
+        self.eta = Compartment(jnp.ones((1, 1)) * eta)
 
         if weights is not None:
+            warn("The argument `weights` being used is deprecated.")
+            self._init(weights)
+        else:
+            assert self.shape is not None  ## if using an init, MUST have shape
+            if self.weight_init is None:
+                info(self.name, "is using default weight initializer!")
+                self.weight_init = {"dist": "uniform", "amin": 0.025,
+                                    "amax": 0.8}
+            weights = initialize_params(None, self.weight_init, self.shape)
             self._init(weights)
 
     def _init(self, weights):
@@ -68,6 +91,7 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.pre = Compartment(preVals)
         self.post = Compartment(postVals)
         self.weights = Compartment(weights)
+
     @staticmethod
     def _advance_state(dt, Rscale, w_bounds, w_decay, inputs, weights,
                        pre, post, eta):

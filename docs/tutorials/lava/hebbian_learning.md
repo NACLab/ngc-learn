@@ -85,6 +85,7 @@ in Lava:
 from ngclava import LavaContext
 from ngclearn import numpy as np
 from ngclearn.components.lava import LIFCell, GatedTrace, TraceSTDPSynapse, StaticSynapse
+import ngclearn.utils.weight_distribution as dist
 from ngclearn.utils.viz.synapse_plot import visualize
 from data_generator import make_X, make_O, make_T
 ```
@@ -94,7 +95,7 @@ needed to create the necessary model components:
 
 ```python
 #Training Params
-epochs = 30
+epochs = 35
 view_length = 200
 rest_length = 1000
 
@@ -102,36 +103,31 @@ rest_length = 1000
 n_in = 64  # Input layer size
 n_hid = 25  # Hidden layer size
 dt = 1.  # ms # integration time constant
-
-### Setting up all the initial weight matrices
-np.random.seed(42)
-
-thr0 = np.zeros((1, n_in))
-thr1e = np.random.uniform(-2, 2, (1, n_hid))
-thr1i = np.random.uniform(-2, 2, (1, n_hid))
-_W1 = np.random.uniform(0, 0.3, (n_in, n_hid))
-_W1ie = (1. - np.eye(n_hid)) * 120.
-_W1ei = np.eye(n_hid) * 22.5
+np.random.seed(42) ## seed the internal numpy calls
 ```
 
 After this we will create the lava context, the components, as well as the wiring:
 
 ```python
 with LavaContext("Model") as model:
-    z0 = LIFCell("z0", n_units=n_in, thr_theta0=thr0, dt=dt, tau_m=50.,
-                 v_decay=0., tau_theta=500., refract_T=0.) ## IF cell
-    z1e = LIFCell("z1e", n_units=n_hid, thr_theta0=thr1e, dt=dt, tau_m=100.,
-                  tau_theta=500.)  ## LIF cell
-    z1i = LIFCell("z1i", n_units=n_hid, thr_theta0=thr1i, dt=dt, tau_m=100.,
-                  thr=-40., v_rest=-60., v_reset=-45., theta_plus=0.)
+    z0 = LIFCell("z0", n_units=n_in, thr_theta_init=dist.constant(0.), dt=dt, 
+                 tau_m=50., v_decay=0., tau_theta=500., refract_T=0.) ## IF cell
+    z1e = LIFCell("z1e", n_units=n_hid, thr_theta_init=dist.uniform(amin=-2, amax=2.), 
+                  dt=dt, tau_m=100., tau_theta=500.) ## excitatory LIF cell
+    z1i = LIFCell("z1i", n_units=n_hid, thr_theta_init=dist.uniform(amin=-2, amax=2.), 
+                  dt=dt, tau_m=100., thr=-40., v_rest=-60., v_reset=-45., 
+                  theta_plus=0.) ## inhibitory LIF cell
 
     tr0 = GatedTrace("tr0", n_units=n_in, dt=dt, tau_tr=20.)
     tr1 = GatedTrace("tr1", n_units=n_hid, dt=dt, tau_tr=20.)
 
-    W1 = TraceSTDPSynapse("W1", weights=_W1, dt=dt,
-                          Aplus=0.0055, Aminus=0.00055, preTrace_target=0.055)
-    W1ie = StaticSynapse("W1ie", weights=_W1ie, dt=dt)
-    W1ei = StaticSynapse("W1ei", weights=_W1ei, dt=dt)
+    W1 = TraceSTDPSynapse("W1", weight_init=dist.uniform(amin=0, amax=0.3), 
+                          shape=(n_in, n_hid), dt=dt, Aplus=0.011, Aminus=0.0011, 
+                          preTrace_target=0.055)
+    W1ie = StaticSynapse("W1ie", weight_init=dist.hollow(120.), 
+                         shape=(n_hid, n_hid),dt=dt)
+    W1ei = StaticSynapse("W1ei", weight_init=dist.eye(22.5), 
+                         shape=(n_hid, n_hid), dt=dt)
 
     ## wire z0 to z1e via W1 and z1i to z1e via W1ie
     W1.inputs << z0.s

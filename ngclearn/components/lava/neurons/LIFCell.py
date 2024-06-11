@@ -1,8 +1,8 @@
 from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
-
 from ngclearn import numpy as jnp
-import time, sys
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info, warn
 
 class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     """
@@ -25,9 +25,9 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
 
         dt: integration time constant (ms)
 
-        thr_theta0: initial conditions for voltage threshold
+        thr_theta_init: initialization kernel for threshold increment variable
 
-        R_m: membrane resistance value (Default: 1)
+        resist_m: membrane resistance value (Default: 1)
 
         thr: base value for adaptive thresholds that govern short-term
             plasticity (in milliVolts, or mV)
@@ -45,26 +45,32 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         theta_plus: physical increment to be applied to any threshold value if
             a spike was emitted
 
-        refract_T: relative refractory period time (ms; Default: 1 ms)
+        refract_time: relative refractory period time (ms; Default: 1 ms)
+
+        thr_theta0: (DEPRECATED) initial conditions for voltage threshold
     """
 
     # Define Functions
-    def __init__(self, name, n_units, dt, tau_m, thr_theta0=None, R_m=1., thr=-52.,
-                 v_rest=-65., v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
-                 refract_T=5., **kwargs):
+    def __init__(self, name, n_units, dt, tau_m, thr_theta_init=None, resist_m=1.,
+                 thr=-52., v_rest=-65., v_reset=-60., v_decay=1., tau_theta=1e7,
+                 theta_plus=0.05, refract_time=5., thr_theta0=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Cell dynamics setup
         self.dt = dt
         self.tau_m = tau_m ## membrane time constant
-        self.R_m = R_m ## resistance value
+        self.R_m = resist_m ## resistance value
+        if kwargs.get("R_m") is not None:
+            warn("The argument `R_m` being used is deprecated.")
+            self.Rscale = kwargs.get("R_m")
         self.v_rest = v_rest # mV
         self.v_reset = v_reset # mV (milli-volts)
         self.v_decay = v_decay
         self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
         self.theta_plus = theta_plus ## threshold increment
-        self.refract_T = refract_T ## refractory period  # ms
+        self.refract_T = refract_time ## refractory period  # ms
         self.thr = thr ## (fixed) base value for threshold # mV
+        self.thr_theta_init = thr_theta_init
         self.thr_theta0 = thr_theta0 ## initial jittered adaptive threshold values
 
         ## Component size setup
@@ -81,11 +87,17 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         self.thr_theta = Compartment(None)
 
         if thr_theta0 is not None:
+            warn("The argument `thr_theta0` being used is deprecated.")
+            self._init(thr_theta0)
+        else:
+            if self.thr_theta_init is None:
+                info(self.name, "is using default threshold variable initializer!")
+                self.thr_theta_init = {"dist": "constant", "value": 0.}
+            thr_theta0 = initialize_params(None, self.thr_theta_init, (1, self.n_units))
             self._init(thr_theta0)
 
     def _init(self, thr_theta0):
         self.thr_theta = Compartment(thr_theta0)
-
 
     @staticmethod
     def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,

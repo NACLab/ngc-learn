@@ -1,8 +1,8 @@
 from ngclearn import resolver, Component, Compartment
 from ngclearn.utils import tensorstats
-
 from ngclearn import numpy as jnp
-import time, sys
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info, warn
 
 class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
     """
@@ -13,13 +13,17 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
     Args:
         name: the string name of this cell
 
-        weights: matrix of synaptic weight values to initialize this synapse
-            component to
-
         dt: integration time constant (ms)
 
-        Rscale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+        resist_scale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
 
         Aplus: strength of long-term potentiation (LTP)
 
@@ -36,16 +40,27 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
 
         preTrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
                  (higher -> lower synaptic values)
+
+        weights: matrix of synaptic weight values to initialize this synapse
+            component to
+
+        Rscale: DEPRECATED argument (maps to resist_scale)
     """
 
     # Define Functions
-    def __init__(self, name, dt, Rscale=1., weights=None,  Aplus=0.01, Aminus=0.001,
-                 eta=1., w_decay=0., w_bound=1., preTrace_target=0., **kwargs):
+    def __init__(self, name, dt, resist_scale=1., weight_init=None, shape=None,
+                 Aplus=0.01, Aminus=0.001, eta=1., w_decay=0., w_bound=1.,
+                 preTrace_target=0., weights=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## synaptic plasticity properties and characteristics
+        self.weight_init = weight_init
+        self.shape = shape
         self.dt = dt
-        self.Rscale = Rscale
+        self.Rscale = resist_scale
+        if kwargs.get("Rscale") is not None:
+            warn("The argument `Rscale` being used is deprecated.")
+            self.Rscale = kwargs.get("Rscale")
         self.w_bounds = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.eta0 = eta
@@ -66,8 +81,16 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         self.x_post = Compartment(None) ## post-synaptic trace
         self.weights = Compartment(None)
 
-
         if weights is not None:
+            warn("The argument `weights` being used is deprecated.")
+            self._init(weights)
+        else:
+            assert self.shape is not None ## if using an init, MUST have shape
+            if self.weight_init is None:
+                info(self.name, "is using default weight initializer!")
+                self.weight_init = {"dist": "uniform", "amin": 0.025,
+                                    "amax": 0.8}
+            weights = initialize_params(None, self.weight_init, self.shape)
             self._init(weights)
 
     def _init(self, weights):
