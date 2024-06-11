@@ -10,7 +10,7 @@ development and testing of models inside ngclearn prior to their deployment onto
 a Loihi neuromorphic chip without needing to translate between the two models 
 written across the two different Python libraries.
 
-### Some Cautionary Notes
+## Some Cautionary Notes
 
 - For the best experience in training models in ngclearn, Python version `>=3.10` 
   should be used. However, much of lava is written to be used in Python `3.8` and, 
