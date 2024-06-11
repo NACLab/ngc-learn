@@ -28,9 +28,6 @@ written across the two different Python libraries.
 
 ## Table of Contents
 1. <b>[Setting up ngc-lava](setup.md)</b>: A brief overview of how to set up ngc-lava
-2. 
-
-
-## Setup
-To set up a project using ngc-lava first clone the repo from 
-`https://github.com/NACLab/ngc-lava`
+2. <b>[Lava components](lava_components.md)</b>: An overview of lava components in ngclearn and how to make custom ones
+3. <b>[Lava Context](lava_context.md)</b>: An overview of the lava context and building models for lava
+4. <b>[On Chip Hebbian Learning](hebbian_learning.md): A walkthrough for getting a simple hebbian learning model set up
