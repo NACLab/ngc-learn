@@ -177,6 +177,42 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.postTrace.set(postTrace)
         self.dWeights.set(dWeights)
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "TraceSTDPSynapse - performs an adaptable synaptic transformation "
+                         "of inputs to produce output signals; synapses are adjusted with "
+                         "trace-based spike-timing-dependent plasticity"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key",
+                 "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
+                 "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
+                 "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
+                 "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
+            "outputs_compartments":
+                {"outputs": "Output of synaptic transformation",
+                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+        }
+        hyperparams = {
+            "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "weight_init": "Initialization conditions for synaptic weight (W) values",
+            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
+            "A_plus": "Strength of long-term potentiation (LTP)",
+            "A_minus": "Strength of long-term depression (LTD)",
+            "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+            "mu": "Power factor for STDP adjustment",
+            "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "outputs = [(W * Rscale) * inputs] ;"
+                            "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

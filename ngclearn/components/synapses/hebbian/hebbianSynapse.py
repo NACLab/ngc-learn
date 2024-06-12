@@ -207,6 +207,43 @@ class HebbianSynapse(DenseSynapse):
             jnp.zeros(shape[1]), # db
         )
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "HebbianSynapse - performs an adaptable synaptic transformation "
+                         "of inputs to produce output signals; synapses are adjusted via "
+                         "two-term/factor Hebbian adjustment"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key",
+                 "pre": "Pre-synaptic statistic for BCM (z_j)",
+                 "post": "Post-synaptic statistic for BCM (z_i)"},
+            "outputs_compartments":
+                {"outputs": "Output of synaptic transformation",
+                 "theta": "Synaptic threshold variable",
+                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+        }
+        hyperparams = {
+            "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "weight_init": "Initialization conditions for synaptic weight (W) values",
+            "bias_init": "Initialization conditions for bias/base-rate (b) values",
+            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
+            "is_nonnegative": "Should synapses be constrained to be non-negative post-updates?",
+            "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
+            "pre_wght" : "Pre-synaptic weighting coefficient (q_pre)",
+            "post_wght" : "Post-synaptic weighting coefficient (q_post)",
+            "w_bound": "Soft synaptic bound applied to synapses post-update",
+            "w_decay": "Synaptic decay term"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "outputs = [(W * Rscale) * inputs] + b ;"
+                            "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay",
+                "hyperparameters": hyperparams}
+        return info
+
     @resolver(_reset)
     def reset(self, inputs, outputs, pre, post, dW, db):
         self.inputs.set(inputs)

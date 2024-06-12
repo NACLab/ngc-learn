@@ -83,6 +83,30 @@ class ExpKernel(JaxComponent): ## exponential kernel
         self.epsp.set(epsp)
         self.tf.set(tf)
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "ExpKernel - maintains an exponential kernel over "
+                         "incoming signal values (such as sequences of discrete pulses)"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values"},
+            "outputs_compartments":
+                {"epsp": "Excitatory postsynaptic potential/pulse emitted at time t",
+                 "tr": "Value signal (rolling) time window"},
+        }
+        hyperparams = {
+            "n_units": "Number of neuronal cells to model in this layer",
+            "dt": "Integration time constant (kernel needs knowledge of `dt`)",
+            "nu": "Spike time interval for window",
+            "tau_w": "Spike window time constant"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "epsp ~ Sum_{tf} exp(-(t - tf)/tau_w)",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

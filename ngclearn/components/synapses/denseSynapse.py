@@ -132,6 +132,31 @@ class DenseSynapse(JaxComponent): ## static non-learnable synaptic cable
         if "biases" in data.keys():
             self.biases.set(data['biases'])
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "DenseSynapse - performs a synaptic transformation of inputs to produce "
+                         "output signals (e.g., a scaled linear multivariate transformation)"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"outputs": "Output of synaptic transformation"},
+        }
+        hyperparams = {
+            "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "weight_init": "Initialization conditions for synaptic weight (W) values",
+            "bias_init": "Initialization conditions for bias/base-rate (b) values",
+            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "outputs = [(W * Rscale) * inputs] + b",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5
