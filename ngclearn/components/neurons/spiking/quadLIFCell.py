@@ -243,6 +243,45 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         self.tols.set(tols)
         self.key.set(key)
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "QuadLIFCell - evolves neurons according to quadratic "
+                         "leaky integrate-and-fire spiking dynamics."
+        }
+        compartment_props = {
+            "input_compartments":
+                {"j": "External input electrical current",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"v": "Membrane potential/voltage at time t",
+                 "s": "Emitted spikes/pulses at time t",
+                 "rfr": "Current state of (relative) refractory variable",
+                 "thr": "Current state of voltage threshold at time t",
+                 "tols": "Time-of-last-spike"},
+        }
+        hyperparams = {
+            "n_units": "Number of neuronal cells to model in this layer",
+            "tau_m": "Cell membrane time constant",
+            "resist_m": "Membrane resistance value",
+            "thr": "Base voltage threshold value",
+            "v_rest": "Resting membrane potential value",
+            "v_reset": "Reset membrane potential value",
+            "v_decay": "Voltage leak/decay factor",
+            "v_scale": "Scaling factor for voltage accumulation",
+            "critical_V": "Critical voltage value",
+            "tau_theta": "Threshold/homoestatic increment time constant",
+            "theta_plus": "Amount to increment threshold by upon occurrence of spike",
+            "refract_time": "Length of relative refractory period (ms)",
+            "thr_jitter": "Scale of random uniform noise to apply to initial condition of threshold",
+            "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
+            "integration_type": "Type of numerical integration to use for the cell dynamics"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "tau_m * dv/dt = (v_rest - v) + j * resist_m",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

@@ -319,6 +319,43 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.thr.set(data['threshold'])
         self.threshold0 = self.thr.value + 0
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "SLIFCell - evolves neurons according to simplified "
+                         "leaky integrate-and-fire spiking dynamics."
+        }
+        compartment_props = {
+            "input_compartments":
+                {"j": "External input electrical current",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"v": "Membrane potential/voltage at time t",
+                 "s": "Emitted spikes/pulses at time t",
+                 "rfr": "Current state of (relative) refractory variable",
+                 "thr": "Current state of voltage threshold at time t",
+                 "tols": "Time-of-last-spike",
+                 "surrogate": "State/value of surrogate function at time t"},
+        }
+        hyperparams = {
+            "n_units": "Number of neuronal cells to model in this layer",
+            "tau_m": "Cell membrane time constant",
+            "resist_m": "Membrane resistance value",
+            "thr": "Base voltage threshold value",
+            "resist_inh": "Inhibitory resistance value",
+            "thr_persist": "Should adaptive threshold persist across reset calls?",
+            "thr_gain": "Amount to increment threshold by upon occurrence of spike",
+            "thr_leak": "Amount to decay threshold upon occurrence of spike",
+            "rho_b": "Shared threshold sparsity control parameter (if using shared threshold)",
+            "refract_time": "Length of relative refractory period (ms)",
+            "thr_jitter": "Scale of random uniform noise to apply to initial condition of threshold",
+            "sticky_spikes": "Should spikes be allowed to persist during refractory period?"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "tau_m * dv/dt = -v + j * resist_m",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

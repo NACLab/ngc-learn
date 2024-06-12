@@ -119,6 +119,30 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator.set(modulator)
         self.L.set(L)
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "LaplacianErrorcell - computes mismatch/error signals at "
+                         "each time step t (between a `target` and a prediction `mu`)"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"mu": "External input prediction value(s)",
+                 "target": "External input target signal value(s)",
+                 "modulator": "External input modulatory/scaling signal(s)"},
+            "outputs_compartments":
+                {"L": "Local loss value computed/embodied by this error-cell",
+                 "dmu": "first derivative of loss w.r.t. prediction value(s)",
+                 "dtarget": "first derivative of loss w.r.t. target value(s)"},
+        }
+        hyperparams = {
+            "n_units": "Number of neurons to model in this layer"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "Laplacian(x=target; shift=mu, scale=1)",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

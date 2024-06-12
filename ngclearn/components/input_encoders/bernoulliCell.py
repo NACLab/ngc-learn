@@ -54,7 +54,7 @@ class BernoulliCell(JaxComponent):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, key=None, **kwargs):
+    def __init__(self, name, n_units, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size Setup
@@ -99,6 +99,29 @@ class BernoulliCell(JaxComponent):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.key.set( data['key'] )
+
+    def help(self): ## component help function
+        properties = {
+            "cell type": "BernoulliCell - samples input to produce spikes, "
+                          "where dimension is a probability proportional to "
+                          "the dimension's magnitude/value/intensity"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"tols": "Time-of-last-spike",
+                 "outputs": "Binary spike values emitted at time t"},
+        }
+        hyperparams = {
+            "n_units": "Number of neuronal cells to model in this layer",
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "~ Bernoulli(x)",
+                "hyperparameters": hyperparams}
+        return info
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
