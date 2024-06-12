@@ -153,6 +153,41 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.weights.set(data['weights'])
         self.theta.set(data['theta'])
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "BCMSTDPSynapse - performs an adaptable synaptic transformation "
+                         "of inputs to produce output signals; synapses are adjusted via "
+                         "BCM theory"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key",
+                 "pre": "Pre-synaptic statistic for BCM (z_j)",
+                 "post": "Post-synaptic statistic for BCM (z_i)"},
+            "outputs_compartments":
+                {"outputs": "Output of synaptic transformation",
+                 "theta": "Synaptic threshold variable",
+                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+        }
+        hyperparams = {
+            "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "weight_init": "Initialization conditions for synaptic weight (W) values",
+            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
+            "tau_theta": "Time constant for synaptic threshold variable `theta`",
+            "tau_w": "Time constant for BCM synaptic adjustment",
+            "w_bound": "Soft synaptic bound applied to synapses post-update",
+            "w_decay": "Synaptic decay term"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "outputs = [(W * Rscale) * inputs] ;"
+                            "tau_w dW_{ij}/dt = z_j * (z_i - theta) - W_{ij} * w_decay;"
+                            "tau_theta d(theta_{i})/dt = (-theta_{i} + (z_i)^2)",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

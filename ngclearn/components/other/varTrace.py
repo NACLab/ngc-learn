@@ -107,6 +107,33 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.outputs.set(outputs)
         self.trace.set(trace)
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "VarTrace - maintains a low pass filter over incoming signal "
+                         "values (such as sequences of discrete pulses)"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values"},
+            "outputs_compartments":
+                {"trace": "Continuous low-pass filtered signal values, at time t",
+                 "outputs": "Continuous low-pass filtered signal values, "
+                            "at time t (same as `trace`)"},
+        }
+        hyperparams = {
+            "n_units": "Number of neuronal cells to model in this layer",
+            "tau_tr": "Trace/filter time constant",
+            "a_delta": "Increment to apply to trace (if not set to 0); "
+                       "otherwise, traces clamp to 1 and then decay",
+            "decay_type": "Indicator of what type of decay dynamics to use "
+                          "as filter is updated at time t"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "tau_tr * dz/dt ~ -z + inputs",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

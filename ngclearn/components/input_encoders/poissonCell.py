@@ -112,6 +112,32 @@ class PoissonCell(JaxComponent):
         data = jnp.load(file_name)
         self.key.set( data['key'] )
 
+    def help(self): ## component help function
+        properties = {
+            "cell type": "PoissonCell - samples input to produce spikes, "
+                          "where dimension is a probability proportional to "
+                          "the dimension's magnitude/value/intensity and "
+                         "constrained by a maximum spike frequency (spikes follow "
+                         "a Poisson distribution)"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"tols": "Time-of-last-spike",
+                 "outputs": "Binary spike values emitted at time t"},
+        }
+        hyperparams = {
+            "n_units": "Number of neuronal cells to model in this layer",
+            "max_freq": "Maximum spike frequency of the train produced",
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "~ Poisson(x; max_freq)",
+                "hyperparameters": hyperparams}
+        return info
+
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
         maxlen = max(len(c) for c in comps) + 5

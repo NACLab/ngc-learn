@@ -10,6 +10,18 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
     spike-timing-dependent plasticity (STDP). This is a Lava-compliant synaptic
     cable that adjusts with a hard-coded form of (stochastic) gradient ascent.
 
+    | --- Synapse Input Compartments: (Takes wired-in signals) ---
+    | inputs - input (pre-synaptic) stimulus
+    | --- Synaptic Plasticity Input Compartments: (Takes in wired-in signals) ---
+    | pre - pre-synaptic spike(s) to drive STDP update
+    | x_pre - pre-synaptic trace value(s) to drive STDP update
+    | post - post-synaptic spike(s) to drive STDP update
+    | x_post - post-synaptic trace value(s) to drive STDP update
+    | eta - global learning rate (unidimensional/scalar value)
+    | --- Synapse Output Compartments: (These signals are generated) ---
+    | outputs - transformed (post-synaptic) signal
+    | weights - current value matrix of synaptic efficacies (this is post-update if eta > 0)
+
     Args:
         name: the string name of this cell
 
@@ -29,7 +41,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
 
         Aminus: strength of long-term depression (LTD)
 
-        eta: global learning rate
+        eta: global learning rate (default: 1)
 
         w_decay: degree to which (L2) synaptic weight decay is applied to the
             computed Hebbian adjustment (Default: 0); note that decay is not

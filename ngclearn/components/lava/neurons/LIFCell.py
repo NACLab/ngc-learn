@@ -18,6 +18,15 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     | where R is the membrane resistance and v_rest is the resting potential
     | gamma_d is voltage decay -- 1 recovers LIF dynamics and 0 recovers IF dynamics
 
+    | --- Cell Input Compartments: (Takes wired-in signals) ---
+    | j_exc - excitatory electrical input
+    | j_inh - inhibitory electrical input
+    | --- Cell Output Compartments: (These signals are generated) ---
+    | v - membrane potential/voltage state
+    | s - emitted binary spikes/action potentials
+    | rfr - (relative) refractory variable state
+    | thr_theta - homeostatic/adaptive threshold increment state
+
     Args:
         name: the string name of this cell
 

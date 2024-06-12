@@ -171,6 +171,7 @@ class LatencyCell(JaxComponent):
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.inputs = Compartment(restVals) # input compartment
         self.outputs = Compartment(restVals) # output compartment
+        self.mask = Compartment(restVals)  # output compartment
         self.tols = Compartment(restVals) # time of last spike
         self.targ_sp_times = Compartment(restVals)
         #self.reset()
@@ -233,6 +234,37 @@ class LatencyCell(JaxComponent):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.key.set( data['key'] )
+
+    def help(self): ## component help function
+        properties = {
+            "cell type": "LatencyCell - samples input to produce spikes via latency "
+                         "coding, where each dimension's magnitude determines how "
+                         "early in the spike train a value occurs. This is a "
+                         "temporal/order encoder."
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"tols": "Time-of-last-spike",
+                 "outputs": "Binary spike values emitted at time t",
+                 "mask": "Spike ordering mask",
+                 "targ_sp_times": "Target spike times"},
+        }
+        hyperparams = {
+            "n_units": "Number of neuronal cells to model in this layer",
+            "threshold": "Spike threshold (constant and shared across neurons)",
+            "linearize": "Should a linear latency encoding be used?",
+            "normalize": "Should the latency code(s) be normalized?",
+            "num_steps": "Number of total time steps of simulation to consider ("
+                         "useful for target spike time computation",
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "~ Latency(x)",
+                "hyperparameters": hyperparams}
+        return info
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
