@@ -10,6 +10,16 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
     adjustment rule. This is a Lava-compliant synaptic cable that adjusts
     with a hard-coded form of (stochastic) gradient ascent.
 
+    | --- Synapse Input Compartments: (Takes wired-in signals) ---
+    | inputs - input (pre-synaptic) stimulus
+    | --- Synaptic Plasticity Input Compartments: (Takes in wired-in signals) ---
+    | pre - pre-synaptic signal to drive first term of Hebbian update
+    | post - post-synaptic signal to drive 2nd term of Hebbian update
+    | eta - global learning rate (unidimensional/scalar value)
+    | --- Synapse Output Compartments: (These signals are generated) ---
+    | outputs - transformed (post-synaptic) signal
+    | weights - current value matrix of synaptic efficacies (this is post-update if eta > 0)
+
     Args:
         name: the string name of this cell
 

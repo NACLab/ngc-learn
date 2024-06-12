@@ -10,6 +10,12 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
     is in-built to this component. This a Lava-compliant version of the
     static synapse component from the synapses sub-package of components.
 
+    | --- Synapse Input Compartments: (Takes wired-in signals) ---
+    | inputs - input (pre-synaptic) stimulus
+    | --- Synapse Output Compartments: (These signals are generated) ---
+    | outputs - transformed (post-synaptic) signal
+    | weights - current value matrix of synaptic efficacies (this is post-update if eta > 0)
+
     Args:
         name: the string name of this cell
 
