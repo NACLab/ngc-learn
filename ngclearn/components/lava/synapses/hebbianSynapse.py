@@ -96,11 +96,11 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         preVals = jnp.zeros((self.batch_size, self.rows))
         postVals = jnp.zeros((self.batch_size, self.cols))
         ## Compartments
-        self.inputs = Compartment(preVals)
-        self.outputs = Compartment(postVals)
-        self.pre = Compartment(preVals)
-        self.post = Compartment(postVals)
-        self.weights = Compartment(weights)
+        self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.pre.set(preVals)
+        self.post.set(postVals)
+        self.weights.set(weights)
 
     @staticmethod
     def _advance_state(dt, Rscale, w_bounds, w_decay, inputs, weights,

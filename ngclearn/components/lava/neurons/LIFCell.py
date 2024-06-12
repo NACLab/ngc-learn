@@ -108,7 +108,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
             self._init(thr_theta0)
 
     def _init(self, thr_theta0):
-        self.thr_theta = Compartment(thr_theta0)
+        self.thr_theta.set(thr_theta0)
 
     @staticmethod
     def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
