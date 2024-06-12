@@ -8,6 +8,11 @@ class GatedTrace(Component): ## gated/piecewise low-pass filter
     """
     A gated/piecewise variable trace (filter).
 
+    | --- Cell Input Compartments: (Takes wired-in signals) ---
+    | inputs - input (takes wired-in external signals)
+    | --- Cell Output Compartments: (These signals are generated) ---
+    | trace - traced value signal
+
     Args:
         name: the string name of this operator
 
