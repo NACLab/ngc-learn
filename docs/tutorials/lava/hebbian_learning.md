@@ -175,8 +175,8 @@ issues (as described [here](lava_context.md)).
 
 ```python
     model.set_lag('W1')
-model.set_lag('W1ie')
-model.set_lag('W1ei')
+    model.set_lag('W1ie')
+    model.set_lag('W1ei')
 ```
 
 Now that the model is all set up, we have to tell the Lava compiler to actually
@@ -242,10 +242,13 @@ with model.runtime:
 
 ```
 
-## Evaluating the model
-The code above will work to train the model on the chip, but currently we do not 
-have a way of viewing how effective of a model this is. To start we can call 
-the `viz` method defined above to view the receptive fields that model trained.
+## Evaluating the On-Chip Trained Model
+
+The code above will work to train the model on a Loihi neuromorphic chip, but, 
+currently, we do not have a way of viewing how effective the model learned 
+really is. To set up this evaluation, we can call 
+the `viz` method defined above to view the receptive fields that our spiking 
+model has acquired:
 
 ```python
     model.viz()
@@ -256,9 +259,12 @@ following:
 
 <img src="../../images/tutorials/lava/lava_fields.jpg" width="350" /> <br>
 
-While viewing the receptive fields tells us that it trained we may also want to
-view raster plots for each of our three images. To do this we will make use of
-the monitor defined above.
+While viewing the receptive fields qualitatively tells us that our spiking 
+model has trained, we may also want to view the 
+[raster plots](ngclearn.utils.viz.raster) -- visual depictions of the 
+underlying spike patterns acquired in the hidden layer of our model -- for each 
+of our three image patterns (as they are fed into our trained model). To do 
+this, we will make use of the monitor we defined above in the following manner:
 
 ```python
     ## Turning off learning
@@ -286,18 +292,21 @@ the monitor defined above.
     print("Done O")
 ```
 
-Those should produce raster plots where the spikes correspond to the receptive
-fields of the trained letter. Where the top left field is `N0` and the bottom
-right is `N24`. Your plots should look the ones below.
+The above should result in raster plots where the spikes correspond to the 
+receptive fields of each trained letter pattern. Specifically, you should see 
+that the top left field is `N0` and the bottom right is `N24`. Your raster plots 
+should look like the ones below:
 
 <img src="../../images/tutorials/lava/raster_T.png" width="350" /> <br>
 <img src="../../images/tutorials/lava/raster_X.png" width="350" /> <br>
 <img src="../../images/tutorials/lava/raster_O.png" width="350" /> <br>
 
+Finally to save the model to disk, you can call the following:
 
-Finally to save the model to disk we can call
 ```python
     model.save_to_json(".", model_name="trained")
 ```
+
+which will save your on-chip trained Loihi model to disk for later use.
 
 
