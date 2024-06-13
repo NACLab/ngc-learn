@@ -220,6 +220,9 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.v_rest = v_rest #-65. # mV
         self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
         self.v_decay = v_decay ## controls strength of voltage leak (1 -> LIF, 0 => IF)
+        ## basic asserts to prevent neuronal dynamics breaking...
+        #assert (self.v_decay * self.dt / self.tau_m) <= 1. ## <-- to integrate in verify...
+        assert self.R_m > 0.
         self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
         self.theta_plus = theta_plus #0.05 ## threshold increment
         self.refract_T = refract_time #5. # 2. ## refractory period  # ms
