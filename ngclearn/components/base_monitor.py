@@ -1,6 +1,8 @@
+import json
+
 from ngclearn import Component, Compartment
 from ngclearn import numpy as np
-from ngcsimlib.utils import add_component_resolver, add_resolver_meta
+from ngcsimlib.utils import add_component_resolver, add_resolver_meta, get_current_path
 from ngcsimlib.logger import warn, critical
 
 
@@ -67,7 +69,7 @@ class Base_Monitor(Component):
         def _reset(**kwargs):
             return_vals = []
             for _, comp in compartments:
-                current_store = kwargs[comp + "_store"]
+                current_store = kwargs[comp + "*store"]
                 return_vals.append(np.zeros(current_store.shape))
             return return_vals if len(compartments) > 1 else return_vals[0]
 
@@ -104,8 +106,8 @@ class Base_Monitor(Component):
         new_comp = Compartment(np.zeros(shape))
         new_comp_store = Compartment(np.zeros((window_length, *shape)))
 
-        comp_key = "_".join(compartment.path.split("/"))
-        store_comp_key = comp_key + "_store"
+        comp_key = "*".join(compartment.path.split("/"))
+        store_comp_key = comp_key + "*store"
 
         new_comp._setup(self, comp_key)
         new_comp_store._setup(self, store_comp_key)
@@ -123,7 +125,7 @@ class Base_Monitor(Component):
         output_compartments = []
         compartments = []
         for comp in self.compartments:
-            output_compartments.append(comp.split("/")[-1] + "_store")
+            output_compartments.append(comp.split("/")[-1] + "*store")
             compartments.append((0, comp.split("/")[-1]))
 
         args = []
@@ -171,3 +173,44 @@ class Base_Monitor(Component):
                 return None
             current_store = current_store[p]
         return current_store
+
+    def save(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".json"
+        _dict = {"sources": {}, "stores": {}}
+        for key in self.compartments:
+            n = key.split("/")[-1]
+            _dict["sources"][key] = self.__dict__[n].value.shape
+            _dict["stores"][key + "*store"] = self.__dict__[n + "*store"].value.shape
+
+        with open(file_name, "w") as f:
+            json.dump(_dict, f)
+
+    def load(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".json"
+        with open(file_name, "r") as f:
+            vals = json.load(f)
+
+            for comp_path, shape in vals["stores"].items():
+
+                compartment_path = comp_path.split("/")[-1]
+                new_path = get_current_path() + "/" + "/".join(compartment_path.split("*")[-3:-1])
+
+                cs, end = self._add_path(new_path)
+
+                new_comp = Compartment(np.zeros(shape))
+                new_comp._setup(self, compartment_path)
+
+                cs[end] = new_comp
+                setattr(self, compartment_path, new_comp)
+
+
+
+            for comp_path, shape in vals['sources'].items():
+                compartment_path = comp_path.split("/")[-1]
+                new_comp = Compartment(np.zeros(shape))
+                new_comp._setup(self, compartment_path)
+
+                setattr(self, compartment_path, new_comp)
+                self.compartments.append(new_comp.path)
+
+            self._update_resolver()

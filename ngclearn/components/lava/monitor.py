@@ -13,7 +13,7 @@ class Monitor(Base_Monitor):
             return_vals = []
             for _, comp in compartments:
                 new_val = kwargs[comp]
-                current_store = kwargs[comp + "_store"]
+                current_store = kwargs[comp + "*store"]
                 current_store[:-1] = current_store[1:]
                 current_store[-1] = new_val
                 return_vals.append(current_store)
