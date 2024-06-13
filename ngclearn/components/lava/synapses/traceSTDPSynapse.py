@@ -83,7 +83,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         ## Component size setup
         self.batch_size = 1
 
-        self.eta = Compartment(jnp.ones((1,1)) * eta)
+        self.eta = Compartment(jnp.ones((1, 1)) * eta)
 
         self.inputs = Compartment(None)
         self.outputs = Compartment(None)
@@ -112,13 +112,13 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
         preVals = jnp.zeros((self.batch_size, self.rows))
         postVals = jnp.zeros((self.batch_size, self.cols))
         ## Compartments
-        self.inputs = Compartment(preVals)
-        self.outputs = Compartment(postVals)
-        self.pre = Compartment(preVals) ## pre-synaptic spike
-        self.x_pre = Compartment(preVals) ## pre-synaptic trace
-        self.post = Compartment(postVals) ## post-synaptic spike
-        self.x_post = Compartment(postVals) ## post-synaptic trace
-        self.weights = Compartment(weights)
+        self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.pre.set(preVals) ## pre-synaptic spike
+        self.x_pre.set(preVals) ## pre-synaptic trace
+        self.post.set(postVals) ## post-synaptic spike
+        self.x_post.set(postVals) ## post-synaptic trace
+        self.weights.set(weights)
 
     @staticmethod
     def _advance_state(dt, Rscale, Aplus, Aminus, w_bounds, w_decay, x_tar,
@@ -155,7 +155,7 @@ class TraceSTDPSynapse(Component): ## Lava-compliant trace-STDP synapse
             postVals, # post
             preVals, # x_pre
             postVals, # x_post
-            jnp.ones((1,1)) * eta0
+            jnp.ones((1, 1)) * eta0
         )
 
     @resolver(_reset)

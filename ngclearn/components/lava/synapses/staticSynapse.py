@@ -12,7 +12,7 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
 
     | --- Synapse Input Compartments: (Takes wired-in signals) ---
     | inputs - input (pre-synaptic) stimulus
-    | --- Synapse Output Compartments: (These signals are generated) ---
+    | --- Synapse Output Compartments: .set()ese signals are generated) ---
     | outputs - transformed (post-synaptic) signal
     | weights - current value matrix of synaptic efficacies (this is post-update if eta > 0)
 
@@ -75,9 +75,9 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
         preVals = jnp.zeros((self.batch_size, self.rows))
         postVals = jnp.zeros((self.batch_size, self.cols))
         ## Compartments
-        self.inputs = Compartment(preVals)
-        self.outputs = Compartment(postVals)
-        self.weights = Compartment(weights)
+        self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.weights.set(weights)
 
     @staticmethod
     def _advance_state(dt, Rscale, inputs, weights):
