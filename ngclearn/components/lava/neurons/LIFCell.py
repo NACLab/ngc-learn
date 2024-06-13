@@ -77,6 +77,9 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         self.v_rest = v_rest # mV
         self.v_reset = v_reset # mV (milli-volts)
         self.v_decay = v_decay
+        ## basic asserts to prevent neuronal dynamics breaking...
+        assert (self.v_decay * self.dt / self.tau_m) <= 1.
+        assert self.R_m > 0.
         self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
         self.theta_plus = theta_plus ## threshold increment
         self.refract_T = refract_time ## refractory period  # ms
