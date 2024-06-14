@@ -171,7 +171,7 @@ class AdExCell(JaxComponent):
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,
-                     v_rest, v_reset, intgFlag, j, v, w, s, tols):
+                     v_rest, v_reset, intgFlag, j, v, w, tols):
         v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
                            v_rest, v_reset, R_m, intgFlag)
         tols = update_times(t, s, tols)

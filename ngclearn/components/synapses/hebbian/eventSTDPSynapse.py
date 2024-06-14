@@ -95,7 +95,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
-    def _evolve(t, dt, eta, lmbda, w_bound, preSpike, postSpike, weights):
+    def _evolve(eta, lmbda, w_bound, preSpike, postSpike, weights):
         weights, dWeights = evolve(preSpike, postSpike, weights, eta, lmbda, w_bound)
         return weights, dWeights
 

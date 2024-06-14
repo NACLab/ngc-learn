@@ -171,8 +171,8 @@ class HebbianSynapse(DenseSynapse):
         self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _evolve(t, dt, opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
-                post_wght, bias_init, pre, post, weights, biases, dW, db, opt_params):
+    def _evolve(opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
+                post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dW, db = calc_update(pre, post,
                              weights, w_bounds, is_nonnegative=is_nonnegative,

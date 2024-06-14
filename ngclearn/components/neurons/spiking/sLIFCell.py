@@ -256,9 +256,9 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.surrogate = Compartment(restVals + 1.) ## surrogate signal
 
     @staticmethod
-    def _advance_state(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx,
-                 refract_T, thrGain, thrLeak, rho_b, sticky_spikes, v_min,
-                 j, s, v, thr, rfr, tols):
+    def _advance_state(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m,
+                       spike_fx, refract_T, thrGain, thrLeak, rho_b,
+                       sticky_spikes, v_min, j, s, v, thr, rfr, tols):
         ## run one step of Euler integration over neuronal dynamics
         j_curr = j
         ## apply simplified inhibitory pressure

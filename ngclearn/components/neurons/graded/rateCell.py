@@ -172,8 +172,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.z = Compartment(restVals) # rate activity
 
     @staticmethod
-    def _advance_state(t, dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
-                       thresholdType, thr_lmbda, j, j_td, z, zF):
+    def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
+                       thresholdType, thr_lmbda, j, j_td, z):
         if tau_m > 0.:
             ### run a step of integration over neuronal dynamics
             ## Notes:

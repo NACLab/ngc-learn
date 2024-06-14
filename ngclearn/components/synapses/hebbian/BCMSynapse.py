@@ -112,7 +112,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
-    def _evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
+    def _evolve(dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
         weights, theta, dWeights = evolve(dt, pre, post, theta, weights, tau_w,
                                           tau_theta, w_bound, w_decay)
         return weights, theta, dWeights

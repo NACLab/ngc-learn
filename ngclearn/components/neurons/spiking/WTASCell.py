@@ -131,7 +131,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.tols = Compartment(restVals) ## time-of-last-spike
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, s, thr, rfr, tols):
+    def _advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols):
         v, s, thr, rfr = run_cell(dt, j, v, rfr, thr, tau_m, R_m, thr_gain, refract_T)
         tols = update_times(t, s, tols) ## update tols
         return v, s, thr, rfr, tols

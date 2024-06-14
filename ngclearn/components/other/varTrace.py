@@ -79,7 +79,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.trace = Compartment(restVals)
 
     @staticmethod
-    def _advance_state(t, dt, decay_type, tau_tr, a_delta, inputs, trace):
+    def _advance_state(dt, decay_type, tau_tr, a_delta, inputs, trace):
         ## compute the decay factor
         decayFactor = 0. ## <-- pulse filter decay (default)
         if "exp" in decay_type:

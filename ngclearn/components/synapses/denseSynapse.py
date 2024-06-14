@@ -96,7 +96,7 @@ class DenseSynapse(JaxComponent): ## static non-learnable synaptic cable
                                   if bias_init else 0.0)
 
     @staticmethod
-    def _advance_state(t, dt, Rscale, inputs, weights, biases):
+    def _advance_state(Rscale, inputs, weights, biases):
         outputs = compute_layer(inputs, weights, biases, Rscale)
         return outputs
 

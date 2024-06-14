@@ -137,7 +137,7 @@ class ExpSTDPSynapse(DenseSynapse):
         self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
-    def _evolve(t, dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
+    def _evolve(dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
                     preSpike, postSpike, preTrace, postTrace, weights):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target,

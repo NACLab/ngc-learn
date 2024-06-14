@@ -85,7 +85,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
 
     @staticmethod
-    def _advance_state(t, dt, mu, dmu, target, dtarget, modulator):
+    def _advance_state(dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
         dmu, dtarget, L = run_cell(dt, target, mu)
         dmu = dmu * modulator

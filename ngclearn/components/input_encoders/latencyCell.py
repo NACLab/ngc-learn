@@ -177,8 +177,8 @@ class LatencyCell(JaxComponent):
         #self.reset()
 
     @staticmethod
-    def _calc_spike_times(t, dt, linearize, tau, threshold, first_spike_time,
-        num_steps, normalize, inputs):
+    def _calc_spike_times(linearize, tau, threshold, first_spike_time, num_steps,
+                          normalize, inputs):
         ## would call this function before processing a spike train (at start)
         data = inputs
         if linearize == True: ## linearize spike time calculation
