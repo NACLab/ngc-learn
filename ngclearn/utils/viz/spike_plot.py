@@ -1,5 +1,4 @@
 import matplotlib #.pyplot as plt
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 cmap = plt.cm.jet
 import jax.numpy as jnp
