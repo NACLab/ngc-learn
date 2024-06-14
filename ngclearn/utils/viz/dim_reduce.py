@@ -1,5 +1,4 @@
-import matplotlib #.pyplot as plt
-matplotlib.use('Agg')
+import matplotlib
 import matplotlib.pyplot as plt
 cmap = plt.cm.jet
 
@@ -82,6 +81,9 @@ def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1.):
         plot_fname: /path/to/plot_fname.<suffix> for saving the plot to disk
     """
     print(" > Plotting 2D latent encodings...")
+    curr_backend = plt.rcParams["backend"]
+    matplotlib.use(
+        'Agg')  ## temporarily go in Agg plt backend for tsne plotting
     lab = labels
     if lab.shape[1] > 1: ## extract integer class labels from a one-hot matrix
         lab = np.argmax(lab, 1)
@@ -91,3 +93,6 @@ def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1.):
     plt.grid()
     plt.savefig("{0}".format(plot_fname), dpi=300)
     plt.clf()
+    matplotlib.use(
+        curr_backend)  ## return back to auto-selected plt backend for system
+
