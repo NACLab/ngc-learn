@@ -67,7 +67,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.batch_size = 1
         ## Compartment setup and shape computation
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
-        _d = conv2d(_x, weights.value, stride_size=stride, padding=padding) * 0
+        _d = conv2d(_x, weights, stride_size=stride, padding=padding) * 0
         self.in_shape = _x.shape
         self.out_shape = _d.shape
         self.inputs = Compartment(jnp.zeros(self.in_shape))
