@@ -4,6 +4,7 @@ for model-level/simulation analysis as well as experimental inspection and probi
 """
 from jax import numpy as jnp, jit
 from functools import partial
+from sklearn.metrics import confusion_matrix
 
 @partial(jit, static_argnums=[1])
 def measure_fanoFactor(spikes, preserve_batch=False):
@@ -25,7 +26,7 @@ def measure_fanoFactor(spikes, preserve_batch=False):
     mu = jnp.mean(spikes, axis=0, keepdims=True)
     sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
     fano = sigSqr/mu
-    if preserve_batch == False:
+    if preserve_batch:
         fano = jnp.mean(fano)
     return fano
 
@@ -48,7 +49,7 @@ def measure_firingRate(spikes, preserve_batch=False):
     counts = jnp.sum(spikes, axis=0, keepdims=True)
     T = spikes.shape[0] * 1.
     fireRates = counts/T
-    if preserve_batch == False:
+    if preserve_batch:
         fireRates = jnp.mean(fireRates)
     return fireRates
 
@@ -77,7 +78,7 @@ def measure_breadth_TC(spikes, preserve_batch=False):
     sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
     C = sigSqr/mu
     BTC = 1./(1 + jnp.square(C))
-    if preserve_batch == False:
+    if preserve_batch:
         BTC = jnp.mean(BTC)
     return BTC
 
@@ -100,6 +101,42 @@ def measure_sparsity(codes, tolerance=0.):
     rho = jnp.sum(m, axis=1, keepdims=True)/(codes.shape[1] * 1.)
     return rho
 
+@jit
+def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation statistics
+    """
+        Analyzes a set of prediction matrix and target/ground-truth matrix or vector.
+
+        Args:
+            mu: prediction (design) matrix; shape is (N x C) where C is number of classes
+                and N is the number of patterns examined
+
+            y: target / ground-truth (design) matrix; shape is (N x C) OR an array
+                of class integers of length N (with "extract_label_indx = True")
+
+            extract_label_indx: run an argmax to pull class integer indices from
+                "y", assuming y is a one-hot binary encoding matrix (Default: True),
+                otherwise, this assumes "y" is an array of class integer indices
+                of length N
+
+        Returns:
+            confusion matrix, accuracy, precision, recall, misses (empty predictions/all-zero rows)
+        """
+    misses = (jnp.sum(mu, axis=1, keepdims=True) == 0.) * 1. ## how many misses?
+    labels = y
+    if extract_label_indx:
+        labels = jnp.argmax(y, axis=1)
+    guesses = jnp.argmax(mu, axis=1)
+    conf_matrix = confusion_matrix(labels, guesses)
+    acc = measure_ACC(mu, y, extract_label_indx)
+    ## compute precision and recall based on confusion matrix above
+    true_pos = jnp.diag(conf_matrix)
+    false_pos = jnp.sum(conf_matrix, axis=0) - true_pos
+    false_neg = jnp.sum(conf_matrix, axis=1) - true_pos
+    precision = jnp.sum(true_pos / (true_pos + false_pos))
+    recall = jnp.sum(true_pos / (true_pos + false_neg))
+    ## output analysis statistics
+    return conf_matrix, acc, precision, recall, misses
+
 @partial(jit, static_argnums=[2])
 def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
     """
@@ -121,7 +158,7 @@ def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
         scalar accuracy score
     """
     guess = jnp.argmax(mu, axis=1)
-    if extract_label_indx == True:
+    if extract_label_indx:
         lab = jnp.argmax(y, axis=1)
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
@@ -158,7 +195,7 @@ def measure_KLD(p_xHat, p_x, preserve_batch=False):
     term1 = jnp.sum(_p_x * jnp.log(_p_x), axis=1, keepdims=True) # * (1/N)
     term2 = -jnp.sum(_p_x * jnp.log(_p_xHat), axis=1, keepdims=True) # * (1/N)
     kld = (term1 + term2) * (1/N)
-    if preserve_batch == False:
+    if preserve_batch:
         kld = jnp.mean(kld)
     return kld
 
@@ -185,7 +222,7 @@ def measure_CatNLL(p, x, offset=1e-7, preserve_batch=False):
     p_ = jnp.clip(p, offset, 1.0 - offset)
     loss = -(x * jnp.log(p_))
     nll = jnp.sum(loss, axis=1, keepdims=True) #/(y_true.shape[0] * 1.0)
-    if preserve_batch == False:
+    if preserve_batch:
         nll = jnp.mean(nll)
     return nll #tf.reduce_mean(nll)
 
@@ -210,7 +247,7 @@ def measure_MSE(mu, x, preserve_batch=False):
     diff = mu - x
     se = jnp.square(diff) ## squared error
     mse = jnp.sum(se, axis=1, keepdims=True) # technically se at this point
-    if preserve_batch == False:
+    if preserve_batch:
         mse = jnp.mean(mse) # this is proper mse
     return mse
 
@@ -236,6 +273,6 @@ def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
     """
     p_ = jnp.clip(p, offset, 1 - offset)
     bce = -jnp.sum(x * jnp.log(p_) + (1.0 - x) * jnp.log(1.0 - p_),axis=1, keepdims=True)
-    if preserve_batch == False:
+    if preserve_batch:
         bce = jnp.mean(bce)
     return bce
