@@ -4,7 +4,7 @@ parameter mapping functions for standard initializers.
 """
 import numpy as np
 import jax
-from jax import numpy as jnp, jit, vmap, lax, nn
+from jax import numpy as jnp, jit, vmap, lax, nn, random
 from ngcsimlib.logger import critical
 
 ################################################################################
@@ -116,7 +116,9 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
                 "amin" (clip weights values to be >= amin);
                 "amax" (clip weights values to be <= amin);
                 "hollow" (zero out values along main diagonal);
-                "eye" (zero out off-diagonal values)
+                "eye" (zero out off-diagonal values);
+                "n_row_active" (keep only n random rows non-masked/zero);
+                "n_col_active" (keep only n random columns non-masked/zero)
 
         shape: tuple containing the dimensions/shape of the tensor to initialize
 
@@ -180,6 +182,8 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
     clip_max = _init_kernel.get("amax")
     is_hollow = _init_kernel.get("hollow", False)
     is_eye = _init_kernel.get("eye", False)
+    n_row_active = _init_kernel.get("n_row_active", None)
+    n_col_active = _init_kernel.get("n_col_active", None)
     if clip_min is not None: ## bound all values to be > clip_min
         if use_numpy:
             params = np.maximum(params, clip_min)
@@ -200,5 +204,16 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
             params = np.eye(N=shape[0], M=shape[1]) * params
         else:
             params = jnp.eye(N=shape[0], M=shape[1]) * params
+    if n_row_active is not None:  ## keep only n rows active (rest are zero)
+        row_ind = random.permutation(dkey, shape[0])[0:n_row_active]
+        mask = jnp.zeros(shape)
+        mask = mask.at[row_ind, :].set(jnp.ones((shape[0], 1))) ## only set keep rows to ones
+        params = params * mask
+    if n_col_active is not None:  ## keep only n cols active (rest are zero)
+        row_col = random.permutation(dkey, shape[1])[0:n_col_active]
+        mask = jnp.zeros(shape)
+        mask = mask.at[:, row_col].set(jnp.zeros((1, shape[0]))) ## only set keep cols to ones
+        params = params * mask
+
     return params ## return initial distribution conditions
 
