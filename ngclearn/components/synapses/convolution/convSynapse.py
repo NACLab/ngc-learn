@@ -74,7 +74,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.weights = Compartment(weights)
 
         ########################################################################
-        ## Shape error correction -- do shape correction inference
+        ## Shape error correction -- do shape correction inference (for local updates)
         '''
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
         _d = conv2d(_x, self.weights.value, stride_size=self.stride,
@@ -97,14 +97,6 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
     @staticmethod
     def _advance_state(padding, stride, weights, inputs):
         _x = inputs
-        #print("in calc_out _x.shape: ", _x.shape)
-        # if padding == "SAME":
-        #     ((p1, p2), (p3, p4)) = get_same_conv_padding(_x, weights, stride_size=stride)
-        #     jax_pad_args = ((p1.item(), p2.item()), (p3.item(), p4.item()))
-        # elif padding == "VALID":
-        #     ((p1, p2),(p3, p4)) = get_valid_conv_padding(_x, weights, stride_size=stride)
-        #     jax_pad_args = ((p1.item(), p2.item()), (p3.item(), p4.item()))
-        #print("in calc out : ", self.pad_args, jax_pad_args)
         return conv2d(_x, weights, stride_size=stride, padding=padding)
 
     @resolver(_advance_state)
