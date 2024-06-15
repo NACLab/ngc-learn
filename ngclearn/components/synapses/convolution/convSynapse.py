@@ -33,7 +33,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
 
     # Define Functions
     def __init__(self, name, shape, x_size, filter_init=None, bias_init=None, stride=1,
-                 padding=None, Rscale=1., **kwargs):
+                 padding=None, Rscale=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Synapse meta-parameters
@@ -64,7 +64,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         tmp_key, *subkeys = random.split(self.key.value, 4)
         weights = dist.initialize_params(subkeys[0], filter_init,
                                          shape)  ## filter tensor
-        self.batch_size = 1
+        self.batch_size = batch_size # 1
         ## Compartment setup and shape computation
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
         _d = conv2d(_x, weights, stride_size=stride, padding=padding) * 0
