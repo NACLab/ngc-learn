@@ -52,6 +52,35 @@ def measure_firingRate(spikes, preserve_batch=False):
         fireRates = jnp.mean(fireRates)
     return fireRates
 
+@partial(jit, static_argnums=[1])
+def measure_breadth_TC(spikes, preserve_batch=False):
+    """
+    Calculates the breath tuning curve (BTC) of a group of neurons given full
+    spike train.(s). BTC measures the neural selectivity such that the
+    sparse code distribution concentrates near zero with a heavy tail. For a
+    neural layer where most of the neurons fire, the activity distribution is
+    more uniformly spread and BTC > 0.5. When most of the neurons do not fire,
+    the firing distribution is peaked at zero and BTC < 0.5.
+
+    Args:
+        spikes: full spike train matrix; shape is (T x D) where D is number of
+            neurons in a group/cluster
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar average score
+
+    Returns:
+        a 1 x D Fano factor vector (one factor per neuron) OR a single
+        average Fano factor across the neuronal group
+    """
+    mu = jnp.mean(spikes, axis=0, keepdims=True)
+    sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
+    C = sigSqr/mu
+    BTC = 1./(1 + jnp.square(C))
+    if preserve_batch == False:
+        BTC = jnp.mean(BTC)
+    return BTC
+
 @jit
 def measure_sparsity(codes, tolerance=0.):
     """
