@@ -99,12 +99,12 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
     def _advance_state(padding, stride, weights, inputs):
         _x = inputs
         #print("in calc_out _x.shape: ", _x.shape)
-        if padding == "SAME":
-            ((p1, p2), (p3, p4)) = get_same_conv_padding(_x, weights, stride_size=stride)
-            jax_pad_args = ((p1.item(), p2.item()), (p3.item(), p4.item()))
-        elif padding == "VALID":
-            ((p1, p2),(p3, p4)) = get_valid_conv_padding(_x, weights, stride_size=stride)
-            jax_pad_args = ((p1.item(), p2.item()), (p3.item(), p4.item()))
+        # if padding == "SAME":
+        #     ((p1, p2), (p3, p4)) = get_same_conv_padding(_x, weights, stride_size=stride)
+        #     jax_pad_args = ((p1.item(), p2.item()), (p3.item(), p4.item()))
+        # elif padding == "VALID":
+        #     ((p1, p2),(p3, p4)) = get_valid_conv_padding(_x, weights, stride_size=stride)
+        #     jax_pad_args = ((p1.item(), p2.item()), (p3.item(), p4.item()))
         #print("in calc out : ", self.pad_args, jax_pad_args)
         return conv2d(_x, weights, stride_size=stride, padding=padding)
 
