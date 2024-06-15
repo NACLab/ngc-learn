@@ -101,7 +101,7 @@ def measure_sparsity(codes, tolerance=0.):
     rho = jnp.sum(m, axis=1, keepdims=True)/(codes.shape[1] * 1.)
     return rho
 
-@jit
+@partial(jit, static_argnums=[2])
 def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation statistics
     """
         Analyzes a set of prediction matrix and target/ground-truth matrix or vector.
