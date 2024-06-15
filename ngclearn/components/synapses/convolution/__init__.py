@@ -1,4 +1,5 @@
-#from .staticConvSynapse import StaticConvSynapse
+from .convSynapse import ConvSynapse
+from .staticConvSynapse import StaticConvSynapse
 #from .staticDeconvSynapse import StaticDeconvSynapse
 #from .hebbianConvSynapse import HebbianConvSynapse
 #from .hebbianDeconvSynapse import HebbianDeconvSynapse

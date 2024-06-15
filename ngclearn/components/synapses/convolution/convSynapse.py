@@ -5,8 +5,7 @@ from ngclearn.utils.conv_utils import *
 
 class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
     """
-    A static convolutional synaptic cable; no form of synaptic evolution/adaptation
-    is in-built to this component.
+    A base convolutional synaptic cable.
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)

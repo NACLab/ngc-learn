@@ -21,6 +21,8 @@ from .input_encoders.latencyCell import LatencyCell
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
+from .synapses.convolution.convSynapse import ConvSynapse
+from .synapses.convolution.staticConvSynapse import StaticConvSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
