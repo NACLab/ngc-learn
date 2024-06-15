@@ -1,9 +1,6 @@
-from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
 import ngclearn.utils.weight_distribution as dist
-#from ngclearn.utils.conv_utils import _conv_same_transpose_padding, _conv_valid_transpose_padding
 from ngclearn.utils.conv_utils import *
 
 class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
