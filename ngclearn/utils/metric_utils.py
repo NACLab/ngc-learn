@@ -4,7 +4,7 @@ for model-level/simulation analysis as well as experimental inspection and probi
 """
 from jax import numpy as jnp, jit
 from functools import partial
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_score, recall_score
 
 @partial(jit, static_argnums=[1])
 def measure_fanoFactor(spikes, preserve_batch=False):
@@ -121,19 +121,15 @@ def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation st
         Returns:
             confusion matrix, accuracy, precision, recall, misses (empty predictions/all-zero rows)
         """
-    misses = (jnp.sum(mu, axis=1, keepdims=True) == 0.) * 1. ## how many misses?
+    misses = jnp.sum((jnp.sum(mu, axis=1, keepdims=True) == 0.) * 1.) ## how many misses?
     labels = y
     if extract_label_indx:
         labels = jnp.argmax(y, axis=1)
     guesses = jnp.argmax(mu, axis=1)
     conf_matrix = confusion_matrix(labels, guesses)
     acc = measure_ACC(mu, y, extract_label_indx)
-    ## compute precision and recall based on confusion matrix above
-    true_pos = jnp.diag(conf_matrix)
-    false_pos = jnp.sum(conf_matrix, axis=0, keepdims=True) - true_pos
-    false_neg = jnp.sum(conf_matrix, axis=1, keepdims=True) - true_pos
-    precision = jnp.sum(true_pos / (true_pos + false_pos))
-    recall = jnp.sum(true_pos / (true_pos + false_neg))
+    precision = precision_score(labels, guesses, average='macro')
+    recall = recall_score(labels, guesses, average='macro')
     ## output analysis statistics
     return conf_matrix, acc, precision, recall, misses
 
