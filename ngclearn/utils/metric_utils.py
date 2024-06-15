@@ -130,8 +130,8 @@ def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation st
     acc = measure_ACC(mu, y, extract_label_indx)
     ## compute precision and recall based on confusion matrix above
     true_pos = jnp.diag(conf_matrix)
-    false_pos = jnp.sum(conf_matrix, axis=0) - true_pos
-    false_neg = jnp.sum(conf_matrix, axis=1) - true_pos
+    false_pos = jnp.sum(conf_matrix, axis=0, keepdims=True) - true_pos
+    false_neg = jnp.sum(conf_matrix, axis=1, keepdims=True) - true_pos
     precision = jnp.sum(true_pos / (true_pos + false_pos))
     recall = jnp.sum(true_pos / (true_pos + false_neg))
     ## output analysis statistics
