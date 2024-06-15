@@ -19,6 +19,8 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
     Args:
         name: the string name of this cell
 
+        x_size: dimension of input signal (assuming a square input)
+
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
             with number input channels, number output channels, filter height,
             filter width)
