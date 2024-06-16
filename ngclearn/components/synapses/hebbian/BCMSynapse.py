@@ -72,6 +72,8 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
         tau_theta: threshold variable evolution time constant
 
+        theta0: initial condition for synaptic threshold
+
         w_bound: maximum value to enforce over newly computed efficacies
             (default: 0.); must > 0. to be used
 
@@ -89,7 +91,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
 
     # Define Functions
-    def __init__(self, name, shape, tau_w, tau_theta, w_bound=0., w_decay=0.,
+    def __init__(self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0.,
                  weight_init=None, resist_scale=1., p_conn=1., **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale, p_conn, **kwargs)
 
@@ -100,7 +102,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.w_decay = w_decay ## synaptic decay factor
         self.w_bound = w_bound  ## soft weight constraint
         self.Rscale = resist_scale ## post-transformation scale factor
-        self.theta0 = -1. ## initial condition for theta/threshold variables
+        self.theta0 = theta0 #-1. ## initial condition for theta/threshold variables
 
         self.batch_size = 1
         ## Compartment setup
