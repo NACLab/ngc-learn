@@ -39,7 +39,7 @@ def evolve(dt, pre, post, theta, W, tau_w, tau_theta, w_bound=0., w_decay=0.):
         dW = dW * (w_bound - jnp.abs(W))
     _W = W + (-W * w_decay + dW) * dt/tau_w
     _theta = theta + (-theta + jnp.square(post)) * dt/tau_theta
-    return _W, _theta, dW
+    return _W, _theta, dW, post_term
 
 class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
@@ -110,20 +110,22 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         postVals = jnp.zeros((self.batch_size, shape[1]))
         self.pre = Compartment(preVals) ## pre-synaptic statistic
         self.post = Compartment(postVals) ## post-synaptic statistic
+        self.post_term = Compartment(postVals)
         self.theta = Compartment(postVals + self.theta0) ## synaptic threshold variables
         self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
     def _evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
-        weights, theta, dWeights = evolve(dt, pre, post, theta, weights, tau_w,
-                                          tau_theta, w_bound, w_decay)
-        return weights, theta, dWeights
+        weights, theta, dWeights, post_term = evolve(dt, pre, post, theta, weights, tau_w,
+                                                     tau_theta, w_bound, w_decay)
+        return weights, theta, dWeights, post_term
 
     @resolver(_evolve)
-    def evolve(self, weights, theta, dWeights):
+    def evolve(self, weights, theta, dWeights, post_term):
         self.weights.set(weights)
         self.theta.set(theta)
         self.dWeights.set(dWeights)
+        self.post_term.set(post_term)
 
     @staticmethod
     def _reset(batch_size, shape):
@@ -134,15 +136,17 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         pre = preVals
         post = postVals
         dWeights = jnp.zeros(shape)
-        return inputs, outputs, pre, post, dWeights
+        post_term = postVals
+        return inputs, outputs, pre, post, dWeights, post_term
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dWeights):
+    def reset(self, inputs, outputs, pre, post, dWeights, post_term):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
         self.dWeights.set(dWeights)
+        self.post_term.set(post_term)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
