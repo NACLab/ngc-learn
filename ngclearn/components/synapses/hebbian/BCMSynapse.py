@@ -37,7 +37,8 @@ def evolve(dt, pre, post, theta, W, tau_w, tau_theta, w_bound=0., w_decay=0.):
     dW = jnp.matmul(pre.T, post_term)
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
-    _W = W + (-W * w_decay + dW) * dt/tau_w
+    dW = -W * w_decay + dW
+    _W = W + dW * dt/tau_w
     _theta = theta + (-theta + jnp.square(post)) * dt/tau_theta
     return _W, _theta, dW, post_term
 
