@@ -33,7 +33,7 @@ def evolve(dt, pre, post, theta, W, tau_w, tau_theta, w_bound=0., w_decay=0.):
         the newly evolved synaptic threshold variables,
         the synaptic update matrix
     """
-    post_term = post - theta
+    post_term = post * (post - theta) # post - theta
     dW = jnp.matmul(pre.T, post_term)
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
