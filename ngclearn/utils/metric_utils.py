@@ -119,19 +119,27 @@ def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation st
                 of length N
 
         Returns:
-            confusion matrix, accuracy, precision, recall, misses (empty predictions/all-zero rows)
+            confusion matrix, precision, recall, misses (empty predictions/all-zero rows),
+            accuracy, adjusted-accuracy (counts all misses as incorrect)
         """
-    misses = jnp.sum((jnp.sum(mu, axis=1, keepdims=True) == 0.) * 1.) ## how many misses?
+    miss_mask = (jnp.sum(mu, axis=1, keepdims=True) == 0.) * 1.
+    misses = jnp.sum(miss_mask) ## how many misses?
     labels = y
     if extract_label_indx:
         labels = jnp.argmax(y, axis=1)
     guesses = jnp.argmax(mu, axis=1)
     conf_matrix = confusion_matrix(labels, guesses)
-    acc = measure_ACC(mu, y, extract_label_indx)
     precision = precision_score(labels, guesses, average='macro')
     recall = recall_score(labels, guesses, average='macro')
+    ## produce accuracy score measurements
+    guess = jnp.argmax(mu, axis=1) ## gather all model/output guesses
+    equality_mask = jnp.equal(guess, labels)
+    ### compute raw accuracy
+    acc = jnp.sum(equality_mask) / (y.shape[0] * 1.)
+    ### compute hit-masked accuracy (adjusted accuracy
+    adj_acc = jnp.sum(equality_mask * (1. - miss_mask)) / (y.shape[0] * 1.)
     ## output analysis statistics
-    return conf_matrix, acc, precision, recall, misses
+    return conf_matrix, precision, recall, misses, acc, adj_acc
 
 @partial(jit, static_argnums=[2])
 def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
