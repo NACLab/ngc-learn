@@ -54,15 +54,26 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     A synaptic cable that adjusts its efficacies in accordance with BCM
     (Bienenstock-Cooper-Munro) theory.
 
+    Mathematically, a synaptic update performed according to BCM theory is:
+    | tau_w d(W_{ij})/dt = -w_decay W_{ij} + x_j * [y_i * (y_i - theta_i)] / theta_i
+    | tau_theta d(theta_i)/dt = -theta_i + <(y_i)^2>_{batch}
+    | where x_j is the pre-synaptic input, y_i is the post-synaptic output
+
+    Note that, in most literature related to BCM, the average value used for
+    threshold `theta` can be assumed to be the average over all input patterns
+    (as in a full dataset batch update) but a temporal average maintained for
+    `theta` will "usually be equivalent" (and ngc-learn implements the threshold
+    `theta` in terms of a leaky ODE to dynamically compute the temporal mean).
+
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output signal (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
     | key - JAX RNG key
     | --- Synaptic Plasticity Compartments: ---
-    | pre - pre-synaptic spike to drive 1st term of BCM update (takes in external signals)
-    | post - post-synaptic spike to drive 2nd term of BCM update (takes in external signals)
-    | theta - synaptic threshold (post-synaptic) variables
+    | pre - pre-synaptic signal/value to drive 1st term of BCM update (x)
+    | post - post-synaptic signal/value to drive 2nd term of BCM update (y)
+    | theta - synaptic modification threshold (post-synaptic) variables
     | dWeights - current delta matrix containing changes to be applied to synapses
 
     | References:
@@ -80,7 +91,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
         tau_theta: threshold variable evolution time constant
 
-        theta0: initial condition for synaptic threshold
+        theta0: initial condition for synaptic modification threshold
 
         w_bound: maximum value to enforce over newly computed efficacies
             (default: 0.); must > 0. to be used
@@ -119,7 +130,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.pre = Compartment(preVals) ## pre-synaptic statistic
         self.post = Compartment(postVals) ## post-synaptic statistic
         self.post_term = Compartment(postVals)
-        self.theta = Compartment(postVals + self.theta0) ## synaptic threshold variables
+        self.theta = Compartment(postVals + self.theta0) ## synaptic modification thresholds
         self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
@@ -181,7 +192,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
                  "post": "Post-synaptic statistic for BCM (z_i)"},
             "outputs_compartments":
                 {"outputs": "Output of synaptic transformation",
-                 "theta": "Synaptic threshold variable",
+                 "theta": "Synaptic modification threshold variable",
                  "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
         }
         hyperparams = {
