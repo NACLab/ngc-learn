@@ -33,18 +33,37 @@ def evolve(dt, pre, post, theta, W, tau_w, tau_theta, w_bound=0., w_decay=0.):
         the newly evolved synaptic threshold variables,
         the synaptic update matrix
     """
-    post_term = post - theta
+    eps = 1e-7
+    #post_term = post * (post - theta) # post - theta
+    #theta = jnp.mean(post * post, axis=1, keepdims=True)
+    post_term = post * (post - theta) # post - theta
+    post_term = post_term * (1. / (theta + eps))
     dW = jnp.matmul(pre.T, post_term)
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
-    _W = W + (-W * w_decay + dW) * dt/tau_w
-    _theta = theta + (-theta + jnp.square(post)) * dt/tau_theta
-    return _W, _theta, dW
+    ## update synaptic efficacies according to a leaky ODE
+    dW = -W * w_decay + dW
+    _W = W + dW * dt/tau_w
+    ## update synaptic modification threshold as a leaky ODE
+    dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True) ## batch avg
+    _theta = theta + (-theta + dtheta) * dt/tau_theta
+    return _W, _theta, dW, post_term
 
 class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
     A synaptic cable that adjusts its efficacies in accordance with BCM
     (Bienenstock-Cooper-Munro) theory.
+
+    Mathematically, a synaptic update performed according to BCM theory is:
+    | tau_w d(W_{ij})/dt = -w_decay W_{ij} + x_j * [y_i * (y_i - theta_i)] / theta_i
+    | tau_theta d(theta_i)/dt = -theta_i + <(y_i)^2>_{batch}
+    | where x_j is the pre-synaptic input, y_i is the post-synaptic output
+
+    Note that, in most literature related to BCM, the average value used for
+    threshold `theta` can be assumed to be the average over all input patterns
+    (as in a full dataset batch update) but a temporal average maintained for
+    `theta` will "usually be equivalent" (and ngc-learn implements the threshold
+    `theta` in terms of a leaky ODE to dynamically compute the temporal mean).
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
@@ -52,9 +71,9 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     | weights - current value matrix of synaptic efficacies
     | key - JAX RNG key
     | --- Synaptic Plasticity Compartments: ---
-    | pre - pre-synaptic spike to drive 1st term of BCM update (takes in external signals)
-    | post - post-synaptic spike to drive 2nd term of BCM update (takes in external signals)
-    | theta - synaptic threshold (post-synaptic) variables
+    | pre - pre-synaptic signal/value to drive 1st term of BCM update (x)
+    | post - post-synaptic signal/value to drive 2nd term of BCM update (y)
+    | theta - synaptic modification threshold (post-synaptic) variables
     | dWeights - current delta matrix containing changes to be applied to synapses
 
     | References:
@@ -72,7 +91,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
         tau_theta: threshold variable evolution time constant
 
-        theta0: initial condition for synaptic threshold
+        theta0: initial condition for synaptic modification threshold
 
         w_bound: maximum value to enforce over newly computed efficacies
             (default: 0.); must > 0. to be used
@@ -110,20 +129,22 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         postVals = jnp.zeros((self.batch_size, shape[1]))
         self.pre = Compartment(preVals) ## pre-synaptic statistic
         self.post = Compartment(postVals) ## post-synaptic statistic
-        self.theta = Compartment(postVals + self.theta0) ## synaptic threshold variables
+        self.post_term = Compartment(postVals)
+        self.theta = Compartment(postVals + self.theta0) ## synaptic modification thresholds
         self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
     def _evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
-        weights, theta, dWeights = evolve(dt, pre, post, theta, weights, tau_w,
-                                          tau_theta, w_bound, w_decay)
-        return weights, theta, dWeights
+        weights, theta, dWeights, post_term = evolve(dt, pre, post, theta, weights, tau_w,
+                                                     tau_theta, w_bound, w_decay)
+        return weights, theta, dWeights, post_term
 
     @resolver(_evolve)
-    def evolve(self, weights, theta, dWeights):
+    def evolve(self, weights, theta, dWeights, post_term):
         self.weights.set(weights)
         self.theta.set(theta)
         self.dWeights.set(dWeights)
+        self.post_term.set(post_term)
 
     @staticmethod
     def _reset(batch_size, shape):
@@ -134,15 +155,17 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         pre = preVals
         post = postVals
         dWeights = jnp.zeros(shape)
-        return inputs, outputs, pre, post, dWeights
+        post_term = postVals
+        return inputs, outputs, pre, post, dWeights, post_term
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dWeights):
+    def reset(self, inputs, outputs, pre, post, dWeights, post_term):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
         self.dWeights.set(dWeights)
+        self.post_term.set(post_term)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -169,7 +192,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
                  "post": "Post-synaptic statistic for BCM (z_i)"},
             "outputs_compartments":
                 {"outputs": "Output of synaptic transformation",
-                 "theta": "Synaptic threshold variable",
+                 "theta": "Synaptic modification threshold variable",
                  "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
         }
         hyperparams = {
