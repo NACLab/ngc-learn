@@ -54,7 +54,7 @@ def get_valid_conv_padding(lhs, rhs, stride_size=1, rhs_dilation=(1, 1),
     dimension_numbers = ('NHWC', 'HWIO', 'NHWC')
     dnums = lax.conv_dimension_numbers(lhs.shape, rhs.shape, dimension_numbers)
     lhs_perm, rhs_perm, _ = dnums
-    rhs_shape =j.take(rhs.shape, rhs_perm)[2:]  # type: ignore[index]
+    rhs_shape = jnp.take(rhs.shape, rhs_perm)[2:]  # type: ignore[index]
     effective_rhs_shape = [core.dilate_dim(k, r) for k, r in
                            zip(rhs_shape, rhs_dilation)]
     padding = lax.padtype_to_pads(
@@ -68,7 +68,7 @@ def _conv_same_transpose_padding(inputs, output, kernel, stride):
     if stride > kernel:
         pad_a = kernel - 1
     else:
-        pad_a = int(jnp.ceil(pad_len / 2))
+        pad_a = jnp.squeeze(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
     pad_b = pad_len - pad_a
     return ((pad_a, pad_b), (pad_a, pad_b))
 
@@ -92,7 +92,7 @@ def _deconv_same_transpose_padding(inputs, output, kernel, stride):
     if stride >= output - 1:
         pad_a = output - 1
     else:
-        pad_a = int(jnp.ceil(pad_len / 2))
+        pad_a = jnp.squeeze(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
     pad_b = pad_len - pad_a
     return ((pad_a, pad_b), (pad_a, pad_b))
 
