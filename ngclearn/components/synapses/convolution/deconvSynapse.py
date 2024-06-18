@@ -164,10 +164,9 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.x_delta_shape = (dx, dy)
 
     @staticmethod
-    def _advance_state(resist_scale, padding, stride, weights, biases, inputs):
+    def _advance_state(Rscale, padding, stride, weights, biases, inputs):
         _x = inputs
-        out = (deconv2d(_x, weights, stride_size=stride, padding=padding)
-               * resist_scale) + biases
+        out = deconv2d(_x, weights, stride_size=stride, padding=padding) * Rscale + biases
         return out
 
     @resolver(_advance_state)
