@@ -126,8 +126,8 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         _d = deconv2d(_x, self.weights.value, stride_size=self.stride, padding=self.padding) * 0
         _dK = _calc_dK(_x, _d, stride_size=self.stride, out_size=k_size)
         ## get filter update correction
-        dx = _dK.shape[0] - self.K.shape[0]
-        dy = _dK.shape[1] - self.K.shape[1]
+        dx = _dK.shape[0] - self.weights.value.shape[0]
+        dy = _dK.shape[1] - self.weights.value.shape[1]
         self.delta_shape = (abs(dx), abs(dy))
 
         ## get input update correction
