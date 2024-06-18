@@ -182,7 +182,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             "synapse_type": "TraceSTDPSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
                             "synapses are adjusted with trace-based "
-                            "spike-timing-dependent plasticity"
+                            "spike-timing-dependent plasticity (STDP)"
         }
         compartment_props = {
             "input_compartments":

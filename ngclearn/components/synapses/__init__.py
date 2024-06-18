@@ -8,6 +8,8 @@ from .hebbian.BCMSynapse import BCMSynapse
 from .convolution.convSynapse import ConvSynapse
 from .convolution.staticConvSynapse import StaticConvSynapse
 from .convolution.hebbianConvSynapse import HebbianConvSynapse
+from .convolution.traceSTDPConvSynapse import TraceSTDPConvSynapse
 from .convolution.deconvSynapse import DeconvSynapse
 from .convolution.staticDeconvSynapse import StaticDeconvSynapse
 from .convolution.hebbianDeconvSynapse import HebbianDeconvSynapse
+from .convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse

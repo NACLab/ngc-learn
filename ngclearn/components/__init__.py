@@ -30,8 +30,10 @@ from .synapses.hebbian.BCMSynapse import BCMSynapse
 from .synapses.convolution.convSynapse import ConvSynapse
 from .synapses.convolution.staticConvSynapse import StaticConvSynapse
 from .synapses.convolution.hebbianConvSynapse import HebbianConvSynapse
+from .synapses.convolution.traceSTDPConvSynapse import TraceSTDPConvSynapse
 from .synapses.convolution.deconvSynapse import DeconvSynapse
 from .synapses.convolution.staticDeconvSynapse import StaticDeconvSynapse
 from .synapses.convolution.hebbianDeconvSynapse import HebbianDeconvSynapse
+from .synapses.convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 ## point to monitors
 from .monitor import Monitor

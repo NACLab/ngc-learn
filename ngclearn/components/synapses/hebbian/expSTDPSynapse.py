@@ -177,7 +177,7 @@ class ExpSTDPSynapse(DenseSynapse):
             "synapse_type": "ExpSTDPSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
                             "synapses are adjusted with exponential trace-based "
-                            "spike-timing-dependent plasticity"
+                            "spike-timing-dependent plasticity (STDP)"
         }
         compartment_props = {
             "input_compartments":

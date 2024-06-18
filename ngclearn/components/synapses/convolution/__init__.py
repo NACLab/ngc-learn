@@ -4,5 +4,5 @@ from .deconvSynapse import DeconvSynapse
 from .staticDeconvSynapse import StaticDeconvSynapse
 from .hebbianConvSynapse import HebbianConvSynapse
 from .hebbianDeconvSynapse import HebbianDeconvSynapse
-#from .STDPConvSynapse import STDPConvSynapse
-#from .STDPDeconvSynapse import STDPDeconvSynapse
+from .traceSTDPConvSynapse import TraceSTDPConvSynapse
+from .traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse

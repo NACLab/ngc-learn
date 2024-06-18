@@ -6,12 +6,11 @@ from ngclearn.components.synapses.convolution.ngcconv import (_conv_same_transpo
 from ngclearn.components.synapses.convolution.ngcconv import (conv2d, _calc_dX_conv,
                                                               _calc_dK_conv, calc_dX_conv,
                                                               calc_dK_conv)
-from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 
-class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
+class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
     """
-    A synaptic convolutional cable that adjusts its efficacies via a two-factor
-    Hebbian adjustment rule.
+    A synaptic convolutional cable that adjusts its filter efficacies via a
+    trace-based form of spike-timing-dependent plasticity (STDP).
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
@@ -20,12 +19,12 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
     | biases - current value vector of synaptic bias values
     | key - JAX RNG key
     | --- Synaptic Plasticity Compartments: ---
-    | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
-    | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
+    | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
+    | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
+    | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
+    | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
     | dWeights - delta tensor containing changes to be applied to synaptic efficacies
-    | dBiases - delta tensor containing changes to be applied to bias values
     | dInputs - delta tensor containing back-transmitted signal values ("backpropagating pulse")
-    | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
 
     Args:
         name: the string name of this cell
@@ -37,7 +36,14 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
             note that currently filters/kernels are assumed to be square
             (kernel.width = kernel.height)
 
+        A_plus: strength of long-term potentiation (LTP)
+
+        A_minus: strength of long-term depression (LTD)
+
         eta: global learning rate (default: 0)
+
+        pretrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
+                 (higher -> lower synaptic values)
 
         filter_init: a kernel to drive initialization of this synaptic cable's
             filter values
@@ -56,65 +62,42 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         w_bound: maximum weight to softly bound this cable's value matrix to; if
             set to 0, then no synaptic value bounding will be applied
 
-        is_nonnegative: enforce that synaptic efficacies are always non-negative
-            after each synaptic update (if False, no constraint will be applied)
-
         w_decay: degree to which (L2) synaptic weight decay is applied to the
-            computed Hebbian adjustment (Default: 0); note that decay is not
-            applied to any configured biases
-
-        sign_value: multiplicative factor to apply to final synaptic update before
-            it is applied to synapses; this is useful if gradient descent style
-            optimization is required (as Hebbian rules typically yield
-            adjustments for ascent)
-
-        optim_type: optimization scheme to physically alter synaptic values
-            once an update is computed (Default: "sgd"); supported schemes
-            include "sgd" and "adam"
-
-            :Note: technically, if "sgd" or "adam" is used but `signVal = 1`,
-                then the ascent form of each rule is employed (signVal = -1) or
-                a negative learning rate will mean a descent form of the
-                `optim_scheme` is being employed
+            computed STDP adjustment (Default: 0)
 
         batch_size: batch size dimension of this component
     """
 
     # Define Functions
-    def __init__(self, name, shape, x_size, eta=0., filter_init=None, bias_init=None,
-                 stride=1, padding=None, resist_scale=1., w_bound=0.,
-                 is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",
-                 batch_size=1, **kwargs):
+    def __init__(self, name, shape, x_size, A_plus, A_minus, eta=0.,
+                 pretrace_target=0., filter_init=None, stride=1, padding=None,
+                 resist_scale=1., w_bound=0., w_decay=0., batch_size=1, **kwargs):
         super().__init__(name, shape, x_size=x_size, filter_init=filter_init,
-                         bias_init=bias_init, resist_scale=resist_scale, stride=stride,
+                         bias_init=None, resist_scale=resist_scale, stride=stride,
                          padding=padding, batch_size=batch_size, **kwargs)
 
         self.eta = eta
-        self.w_bounds = w_bound
+        self.w_bounds = w_bound ## soft weight constraint
         self.w_decay = w_decay  ## synaptic decay
-        self.is_nonnegative = is_nonnegative
-        self.sign_value = sign_value
-        ## optimization / adjustment properties (given learning dynamics above)
-        self.opt = get_opt_step_fn(optim_type, eta=self.eta)
+        self.eta = eta  ## global learning rate governing plasticity
+        self.pretrace_target = pretrace_target  ## target (pre-synaptic) trace activity value # 0.7
+        self.Aplus = A_plus  ## LTP strength
+        self.Aminus = A_minus  ## LTD strength
 
         ######################### set up compartments ##########################
         ## Compartment setup and shape computation
         self.dWeights = Compartment(self.weights.value * 0)
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
-        self.dBiases = Compartment(self.biases.value * 0)
-        self.pre = Compartment(jnp.zeros(self.in_shape))
-        self.post = Compartment(jnp.zeros(self.out_shape))
+        self.preSpike = Compartment(jnp.zeros(self.in_shape))
+        self.preTrace = Compartment(jnp.zeros(self.in_shape))
+        self.postSpike = Compartment(jnp.zeros(self.out_shape))
+        self.postTrace = Compartment(jnp.zeros(self.out_shape))
 
         ########################################################################
         ## Shape error correction -- do shape correction inference for local updates
         self._init(self.batch_size, self.x_size, self.shape, self.stride,
                    self.padding, self.pad_args, self.weights)
         ########################################################################
-
-        ## set up outer optimization compartments
-        self.opt_params = Compartment(get_opt_init_fn(optim_type)(
-            [self.weights.value, self.biases.value]
-            if bias_init else [self.weights.value]))
 
     def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
               weights):
@@ -134,56 +117,47 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         self.x_delta_shape = (dx, dy)
 
     @staticmethod
-    def _evolve(opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init,
-                stride, pad_args, delta_shape, pre, post, weights, biases,
-                opt_params):
-        ## calc dFilters / dBiases - update to filters and biases
-        dWeights = calc_dK_conv(pre, post, delta_shape=delta_shape,
-                                stride_size=stride, padding=pad_args)
-        dWeights = dWeights * sign_value
+    def _evolve(eta, pretrace_target, Aplus, Aminus, w_decay, w_bounds,
+                stride, pad_args, delta_shape, preSpike, preTrace, postSpike,
+                postTrace, weights):
+        ## Compute long-term potentiation to filters
+        dW_ltp = calc_dK_conv(preTrace - pretrace_target, postSpike * Aplus,
+                              delta_shape=delta_shape, stride_size=stride,
+                              padding=pad_args)
+        ## Compute long-term depression to filters
+        dW_ltd = -calc_dK_conv(preSpike, postTrace * Aminus,
+                               delta_shape=delta_shape, stride_size=stride,
+                               padding=pad_args)
+        dWeights = (dW_ltp + dW_ltd) * eta
         if w_decay > 0.: ## apply synaptic decay
             dWeights = dWeights - weights * w_decay
-
-        dBiases = 0. #jnp.zeros((1,1))
-        if bias_init != None:
-            dBiases = jnp.sum(post, axis=0, keepdims=True) * sign_value
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases],
-                                                [dWeights, dBiases])
-        else: ## ignore dBiases since no biases configured
-            opt_params, [weights] = opt(opt_params, [weights], [dWeights])
-
-        ## apply any enforced filter constraints
+        weights = weights + dWeights ## conduct STDP-ascent
+        ## Apply any enforced filter constraints
         if w_bounds > 0.:
-            if is_nonnegative:
-                weights = jnp.clip(weights, 0., w_bounds)
-            else:
-                weights = jnp.clip(weights, -w_bounds, w_bounds)
-        return opt_params, weights, biases, dWeights, dBiases
+            ## enforce non-negativity
+            eps = 0.01  # 0.001
+            weights = jnp.clip(weights, eps, w_bounds - eps)
+        return weights, dWeights
 
     @resolver(_evolve)
-    def evolve(self, opt_params, weights, biases, dWeights, dBiases):
-        self.opt_params.set(opt_params)
+    def evolve(self, weights, dWeights):
         self.weights.set(weights)
-        self.biases.set(biases)
         self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
 
     @staticmethod
-    def _backtransmit(sign_value, x_size, shape, stride, padding, x_delta_shape,
-                      pre, post, weights): ## action-backpropagating routine
+    def _backtransmit(x_size, shape, stride, padding, x_delta_shape,
+                      preSpike, postSpike, weights): ## action-backpropagating routine
         ## calc dInputs - adjustment w.r.t. input signal
         k_size, k_size, n_in_chan, n_out_chan = shape
         antiPad = None
         if padding == "SAME":
-            antiPad = _conv_same_transpose_padding(post.shape[1], x_size,
+            antiPad = _conv_same_transpose_padding(postSpike.shape[1], x_size,
                                                    k_size, stride)
         elif padding == "VALID":
-            antiPad = _conv_valid_transpose_padding(post.shape[1], x_size,
+            antiPad = _conv_valid_transpose_padding(postSpike.shape[1], x_size,
                                                     k_size, stride)
-        dInputs = calc_dX_conv(weights, post, delta_shape=x_delta_shape,
+        dInputs = calc_dX_conv(weights, postSpike, delta_shape=x_delta_shape,
                                stride_size=stride, anti_padding=antiPad)
-        ## flip sign of back-transmitted signal (if applicable)
-        dInputs = dInputs * sign_value
         return dInputs
 
     @resolver(_backtransmit)
@@ -196,39 +170,42 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         postVals = jnp.zeros(out_shape)
         inputs = preVals
         outputs = postVals
-        pre = preVals
-        post = postVals
-        dInputs = preVals
-        return inputs, outputs, pre, post, dInputs
+        preSpike = preVals
+        postSpike = postVals
+        preTrace = preVals
+        postTrace = postVals
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dInputs):
+    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.dInputs.set(dInputs)
+        self.preSpike.set(preSpike)
+        self.postSpike.set(postSpike)
+        self.preTrace.set(preTrace)
+        self.postTrace.set(postTrace)
 
     def help(self): ## component help function
         properties = {
-            "synapse_type": "HebbianConvSynapse - performs a synaptic convolution "
+            "synapse_type": "TraceSTDPConvSynapse - performs a synaptic convolution "
                             "(@) of inputs  to produce output signals; synaptic "
-                            "filters are adjusted via two-term/factor Hebbian "
-                            "adjustment"
+                            "filters are adjusted via trace-based spike-timing-dependent "
+                            "plasticity (STDP)"
         }
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
                  "key": "JAX RNG key",
-                 "pre": "Pre-synaptic statistic for Hebb rule (z_j)",
-                 "post": "Post-synaptic statistic for Hebb rule (z_i)"},
+                 "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
+                 "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
+                 "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
+                 "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
             "parameter_compartments":
                 {"filters": "Synaptic filter parameter values",
                  "biases": "Base-rate/bias parameter values"},
             "output_compartments":
                 {"outputs": "Output of synaptic/filter transformation",
                  "dWeights": "Synaptic filter value adjustment 4D-tensor produced at time t",
-                 "dBiases": "Synaptic bias/base-rate value adjustment 3D-tensor produced at time t",
                  "dInputs": "Tensor containing back-transmitted signal values; backpropagating pulse"},
         }
         hyperparams = {
@@ -237,15 +214,17 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
             "weight_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
-            "is_nonnegative": "Should filters be constrained to be non-negative post-updates?",
-            "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
-            "w_bound": "Soft synaptic bound applied to filters post-update",
-            "w_decay": "Synaptic filter decay term"
+            "A_plus": "Strength of long-term potentiation (LTP)",
+            "A_minus": "Strength of long-term depression (LTD)",
+            "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+            "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "w_decay": "Synaptic filter decay term",
+            "w_bound": "Soft synaptic bound applied to filters post-update"
         }
         info = {self.name: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [K @ inputs] * R + b; "
-                            "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay",
+                            "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
                 "hyperparameters": hyperparams}
         return info
 
