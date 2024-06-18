@@ -123,15 +123,15 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         ## Shape error correction -- do shape correction inference (for local updates)
         #'''
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
-        _d = deconv2d(_x, self.K, stride_size=self.stride, padding=self.padding) * 0
-        _dK = _calc_dK(_x, _d, stride_size=self.stride, out_size=self.k_size)
+        _d = deconv2d(_x, self.weights.value, stride_size=self.stride, padding=self.padding) * 0
+        _dK = _calc_dK(_x, _d, stride_size=self.stride, out_size=k_size)
         ## get filter update correction
         dx = _dK.shape[0] - self.K.shape[0]
         dy = _dK.shape[1] - self.K.shape[1]
         self.delta_shape = (abs(dx), abs(dy))
 
         ## get input update correction
-        _dx = _calc_dX(self.K, _d, stride_size=self.stride, padding = self.padding)
+        _dx = _calc_dX(self.weights.value, _d, stride_size=self.stride, padding=self.padding)
         dx = (_dx.shape[1] - _x.shape[1]) # abs()
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
