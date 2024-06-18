@@ -3,7 +3,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.utils.conv_utils import *
 
-def calc_dK(x, d_out, delta_shape, stride_size=1, padding =((0, 0),(0, 0))): ## non-JIT wrapper
+def calc_dK(x, d_out, delta_shape, stride_size=1, padding=((0, 0),(0, 0))): ## non-JIT wrapper
     deX, deY = delta_shape
     if deX > 0:
         return _calc_dK_subset(x, d_out, delta_shape, stride_size=stride_size, padding = padding)
@@ -13,14 +13,15 @@ def calc_dK(x, d_out, delta_shape, stride_size=1, padding =((0, 0),(0, 0))): ## 
 @partial(jit, static_argnums=[2,3,4])
 def _calc_dK_subset(x, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))):
     deX, deY = delta_shape
+    #if deX > 0:
     ## apply a pre-computation trimming step ("negative padding")
     _x = x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :]
     return _calc_dK(_x, d_out, stride_size=stride_size, padding = padding)
 
-@partial(jit, static_argnums=[2,3])
-def _calc_dK(x, d_out, stride_size=1, padding = ((0,0),(0,0))):
-    xT = jnp.transpose(x, axes=[3,1,2,0])
-    d_out_T = jnp.transpose(d_out, axes=[1,2,0,3])
+@partial(jit, static_argnums=[2, 3])
+def _calc_dK(x, d_out, stride_size=1, padding=((0, 0), (0, 0))):
+    xT = jnp.transpose(x, axes=[3, 1, 2, 0])
+    d_out_T = jnp.transpose(d_out, axes=[1, 2, 0, 3])
     ## original conv2d
     dW = conv2d(inputs=xT,
                 filters=d_out_T,
@@ -127,7 +128,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
-        '''
+        #'''
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
         _d = conv2d(_x, self.weights.value, stride_size=self.stride,
                     padding=self.padding) * 0
@@ -143,7 +144,9 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         dx = (_dx.shape[1] - _x.shape[1])
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
-        '''
+        print("NGC-LEARN-CONV.delta = ")
+        print(self.x_delta_shape)
+        #'''
         ########################################################################
 
     @staticmethod

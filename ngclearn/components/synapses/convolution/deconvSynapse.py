@@ -14,17 +14,17 @@ def calc_dK(x, d_out, delta_shape, stride_size=1, out_size = 2, padding = "SAME"
         return _calc_dK_subset(x, d_out, delta_shape, stride_size=stride_size, out_size = out_size, padding = padding)
     return _calc_dK(x, d_out, stride_size=stride_size, out_size = out_size, padding=padding)
 
-@partial(jit, static_argnums=[2,3,4, 5])
+@partial(jit, static_argnums=[2, 3, 4, 5])
 def _calc_dK_subset(x, d_out, delta_shape, stride_size=1, out_size = 2, padding = "SAME"):
     deX, deY = delta_shape
     ## apply a pre-computation trimming step ("negative padding")
     _x = x[:,0:x.shape[1]-deX,0:x.shape[2]-deY,:]
     return _calc_dK(_x, d_out, stride_size=stride_size, out_size = out_size)
 
-@partial(jit, static_argnums=[2,3,4])
-def _calc_dK(x, d_out, stride_size=1, out_size = 2, padding = "SAME"):
-    xT = jnp.transpose(x, axes=[3,1,2,0])
-    d_out_T = jnp.transpose(d_out, axes=[1,2,0,3])
+@partial(jit, static_argnums=[2, 3, 4])
+def _calc_dK(x, d_out, stride_size=1, out_size=2, padding="SAME"):
+    xT = jnp.transpose(x, axes=[3, 1, 2, 0])
+    d_out_T = jnp.transpose(d_out, axes=[1, 2, 0, 3])
     if padding == "VALID":
         pad_args = _deconv_valid_transpose_padding(xT.shape[1], out_size, d_out_T.shape[1], stride_size)
     elif padding == "SAME":
@@ -37,10 +37,10 @@ def _calc_dK(x, d_out, stride_size=1, out_size = 2, padding = "SAME"):
     return dW
 ################################################################################
 # input update computation
-def calc_dX(K, d_out, delta_shape, stride_size=1, padding = ((0,0),(0,0))): ## non-JIT wrapper
+def calc_dX(K, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))): ## non-JIT wrapper
     deX, deY = delta_shape
     if abs(deX) > 0 and stride_size > 1:
-        return _calc_dX_subset(K, d_out, (abs(deX),abs(deY)), stride_size=stride_size, padding = padding)
+        return _calc_dX_subset(K, d_out, (abs(deX), abs(deY)), stride_size=stride_size, padding = padding)
     return _calc_dX(K, d_out, stride_size=stride_size, padding = padding)
 
 @partial(jit, static_argnums=[2,3,4])
@@ -121,7 +121,7 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
-        '''
+        #'''
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
         _d = deconv2d(_x, self.K, stride_size=self.stride, padding=self.padding) * 0
         _dK = _calc_dK(_x, _d, stride_size=self.stride, out_size=self.k_size)
@@ -135,7 +135,9 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         dx = (_dx.shape[1] - _x.shape[1]) # abs()
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
-        '''
+        print("NGC-LEARN-DECONV.delta = ")
+        print(self.x_delta_shape)
+        #'''
         ########################################################################
 
     @staticmethod
