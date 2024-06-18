@@ -177,7 +177,7 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         dInputs = dInputs * sign_value
         return dInputs
 
-    @resolver(_evolve)
+    @resolver(_backtransmit)
     def backtransmit(self, dInputs):
         self.dInputs.set(dInputs)
 

@@ -161,7 +161,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         dInputs = dInputs * sign_value
         return dInputs
 
-    @resolver(_evolve)
+    @resolver(_backtransmit)
     def backtransmit(self, dInputs):
         self.dInputs.set(dInputs)
 
