@@ -143,8 +143,6 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         dx = (_dx.shape[1] - _x.shape[1])
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
-        print("NGC-LEARN-CONV.delta = ")
-        print(self.x_delta_shape)
         ########################################################################
 
     @staticmethod
