@@ -68,7 +68,7 @@ def _conv_same_transpose_padding(inputs, output, kernel, stride):
     if stride > kernel:
         pad_a = kernel - 1
     else:
-        pad_a = jnp.squeeze(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
+        pad_a = int(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
     pad_b = pad_len - pad_a
     return ((pad_a, pad_b), (pad_a, pad_b))
 
@@ -92,7 +92,7 @@ def _deconv_same_transpose_padding(inputs, output, kernel, stride):
     if stride >= output - 1:
         pad_a = output - 1
     else:
-        pad_a = jnp.squeeze(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
+        pad_a = int(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
     pad_b = pad_len - pad_a
     return ((pad_a, pad_b), (pad_a, pad_b))
 
