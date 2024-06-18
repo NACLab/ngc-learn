@@ -3,6 +3,7 @@ Calculation toolbox that drives conv/deconv operations in the ngc-learn
 convolution components sub-branch; this contains routines/co-routines
 for `ngclearn.components.synapses.convolution`.
 """
+import numpy as np
 from jax import jit, numpy as jnp, random, nn, lax
 from functools import partial
 from jax._src import core
@@ -68,7 +69,7 @@ def _conv_same_transpose_padding(inputs, output, kernel, stride):
     if stride > kernel:
         pad_a = kernel - 1
     else:
-        pad_a = int(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
+        pad_a = int(np.ceil(pad_len / 2))
     pad_b = pad_len - pad_a
     return ((pad_a, pad_b), (pad_a, pad_b))
 
@@ -92,7 +93,7 @@ def _deconv_same_transpose_padding(inputs, output, kernel, stride):
     if stride >= output - 1:
         pad_a = output - 1
     else:
-        pad_a = int(jnp.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
+        pad_a = int(np.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
     pad_b = pad_len - pad_a
     return ((pad_a, pad_b), (pad_a, pad_b))
 
