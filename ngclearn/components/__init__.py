@@ -21,12 +21,17 @@ from .input_encoders.latencyCell import LatencyCell
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
-from .synapses.convolution.convSynapse import ConvSynapse
-from .synapses.convolution.staticConvSynapse import StaticConvSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .synapses.hebbian.BCMSynapse import BCMSynapse
-
+## point to convolutional component types
+from .synapses.convolution.convSynapse import ConvSynapse
+from .synapses.convolution.staticConvSynapse import StaticConvSynapse
+from .synapses.convolution.hebbianConvSynapse import HebbianConvSynapse
+from .synapses.convolution.deconvSynapse import DeconvSynapse
+from .synapses.convolution.staticDeconvSynapse import StaticDeconvSynapse
+from .synapses.convolution.hebbianDeconvSynapse import HebbianDeconvSynapse
+## point to monitors
 from .monitor import Monitor

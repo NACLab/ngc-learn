@@ -5,6 +5,5 @@ from . import io_utils
 from . import metric_utils
 from . import model_utils
 from . import patch_utils
-from . import conv_utils
 from . import weight_distribution
 from . import surrogate_fx
