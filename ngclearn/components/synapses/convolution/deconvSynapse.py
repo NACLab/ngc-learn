@@ -3,15 +3,9 @@ from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.utils.conv_utils import *
 from ngcsimlib.logger import info
-#from ngclearn.components.synapses.convolution.ngcconv import _deconv_same_transpose_padding, _deconv_valid_transpose_padding
-from ngclearn.components.synapses.convolution.ngcconv import (deconv2d, _calc_dX_deconv,
-                                                              _calc_dK_deconv, calc_dX_deconv,
-                                                              calc_dK_deconv)
-# from ngclearn.utils.conv_utils import (_deconv_same_transpose_padding,
-#                                        _deconv_valid_transpose_padding)
-# from ngclearn.utils.conv_utils import conv2d, deconv2d, rot180
+from ngclearn.components.synapses.convolution.ngcconv import deconv2d
 
-class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
+class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
     """
     A base deconvolutional (transposed convolutional) synaptic cable.
 
@@ -35,6 +29,7 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
             filter values
 
         bias_init: kernel to drive initialization of bias/base-rate values
+            (Default: None, which turns off/disables biases)
 
         stride: length/size of stride
 
@@ -79,42 +74,12 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.inputs = Compartment(jnp.zeros(self.in_shape))
         self.outputs = Compartment(jnp.zeros(self.out_shape))
         self.weights = Compartment(weights)
-        self.dWeights = Compartment(weights * 0)
-        self.dInputs = Compartment(jnp.zeros(self.in_shape))
-        self.pre = Compartment(jnp.zeros(self.in_shape))
-        self.post = Compartment(jnp.zeros(self.out_shape))
         if self.bias_init is None:
             info(self.name, "is using default bias value of zero (no bias "
                             "kernel provided)!")
         self.biases = Compartment(dist.initialize_params(subkeys[2], bias_init,
                                                          (1, shape[1]))
                                   if bias_init else 0.0)
-        self.dBiases = Compartment(self.biases.value * 0)
-
-        ########################################################################
-        ## Shape error correction -- do shape correction inference (for local updates)
-        self._init(self.batch_size, self.x_size, self.shape, self.stride,
-                   self.padding, self.pad_args, self.weights)
-        ########################################################################
-
-    def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
-              weights):
-        k_size, k_size, n_in_chan, n_out_chan = shape
-        _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
-        _d = deconv2d(_x, self.weights.value, stride_size=self.stride,
-                      padding=self.padding) * 0
-        _dK = _calc_dK_deconv(_x, _d, stride_size=self.stride, out_size=k_size)
-        ## get filter update correction
-        dx = _dK.shape[0] - self.weights.value.shape[0]
-        dy = _dK.shape[1] - self.weights.value.shape[1]
-        self.delta_shape = (abs(dx), abs(dy))
-
-        ## get input update correction
-        _dx = _calc_dX_deconv(self.weights.value, _d, stride_size=self.stride,
-                       padding=self.padding)
-        dx = (_dx.shape[1] - _x.shape[1])  # abs()
-        dy = (_dx.shape[2] - _x.shape[2])
-        self.x_delta_shape = (dx, dy)
 
     @staticmethod
     def _advance_state(Rscale, padding, stride, weights, biases, inputs):
@@ -127,42 +92,17 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.outputs.set(outputs)
 
     @staticmethod
-    def _evolve(bias_init, x_size, shape, stride, padding, pad_args, delta_shape,
-                x_delta_shape, pre, post, weights):
-        k_size, k_size, n_in_chan, n_out_chan = shape
-        ## calc dFilters
-        dWeights = calc_dK_deconv(pre, post, delta_shape=delta_shape,
-                           stride_size=stride, out_size=k_size, padding=padding)
-        dBiases = 0.  # jnp.zeros((1,1))
-        if bias_init != None:
-            dBiases = jnp.sum(post, axis=0, keepdims=True)
-        ## calc dInputs
-        dInputs = calc_dX_deconv(weights, post, delta_shape=x_delta_shape,
-                          stride_size=stride, padding=padding)
-        return dWeights, dBiases, dInputs
-
-    @resolver(_evolve)
-    def evolve(self, dWeights, dBiases, dInputs):
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
-        self.dInputs.set(dInputs)
-
-    @staticmethod
     def _reset(in_shape, out_shape):
         preVals = jnp.zeros(in_shape)
         postVals = jnp.zeros(out_shape)
         inputs = preVals
         outputs = postVals
-        pre = preVals
-        post = postVals
-        return inputs, outputs, pre, post
+        return inputs, outputs
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post):
+    def reset(self, inputs, outputs):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

@@ -26,7 +26,7 @@ def compute_layer(inp, weight, biases=0., Rscale=1.):
     """
     return jnp.matmul(inp, weight * Rscale) + biases
 
-class DenseSynapse(JaxComponent): ## static non-learnable synaptic cable
+class DenseSynapse(JaxComponent): ## base dense synaptic cable
     """
     A dense synaptic cable; no form of synaptic evolution/adaptation
     is in-built to this component.

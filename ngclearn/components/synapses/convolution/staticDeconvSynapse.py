@@ -1,9 +1,9 @@
-from .convSynapse import ConvSynapse
+from .deconvSynapse import DeconvSynapse
 
-class StaticConvSynapse(ConvSynapse):
+class StaticDeconvSynapse(DeconvSynapse):
     """
-    A static convolutional synaptic cable; no form of synaptic evolution/adaptation
-    is in-built to this component.
+    A static deconvolutional (transposed convolutional) synaptic cable; no form
+    of synaptic evolution/adaptation is in-built to this component.
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)

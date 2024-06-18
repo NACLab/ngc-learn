@@ -3,14 +3,9 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngcsimlib.logger import info
-from ngclearn.components.synapses.convolution.ngcconv import (_conv_same_transpose_padding,
-                                                              _conv_valid_transpose_padding)
-from ngclearn.components.synapses.convolution.ngcconv import (conv2d, _calc_dX_conv,
-                                                              _calc_dK_conv, calc_dX_conv,
-                                                              calc_dK_conv)
-#from ngclearn.utils.conv_utils import *
+from ngclearn.components.synapses.convolution.ngcconv import conv2d
 
-class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
+class ConvSynapse(JaxComponent): ## base-level convolutional cable
     """
     A base convolutional synaptic cable.
 
@@ -34,6 +29,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
             filter values
 
         bias_init: kernel to drive initialization of bias/base-rate values
+            (Default: None, which turns off/disables biases)
 
         stride: length/size of stride
 
@@ -90,40 +86,12 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.inputs = Compartment(jnp.zeros(self.in_shape))
         self.outputs = Compartment(jnp.zeros(self.out_shape))
         self.weights = Compartment(weights)
-        self.dWeights = Compartment(weights * 0)
-        self.dInputs = Compartment(jnp.zeros(self.in_shape))
-        self.pre = Compartment(jnp.zeros(self.in_shape))
-        self.post = Compartment(jnp.zeros(self.out_shape))
         if self.bias_init is None:
             info(self.name, "is using default bias value of zero (no bias "
                             "kernel provided)!")
         self.biases = Compartment(dist.initialize_params(subkeys[2], bias_init,
                                                          (1, shape[1]))
                                   if bias_init else 0.0)
-        self.dBiases = Compartment(self.biases.value * 0)
-
-        ########################################################################
-        ## Shape error correction -- do shape correction inference (for local updates)
-        self._init(self.batch_size, self.x_size, self.shape, self.stride,
-                   self.padding, self.pad_args, self.weights)
-        ########################################################################
-
-    def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
-              weights):
-        k_size, k_size, n_in_chan, n_out_chan = shape
-        _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
-        _d = conv2d(_x, weights.value, stride_size=stride, padding=padding) * 0
-        _dK = _calc_dK_conv(_x, _d, stride_size=stride, padding=pad_args)
-        ## get filter update correction
-        dx = _dK.shape[0] - weights.value.shape[0]
-        dy = _dK.shape[1] - weights.value.shape[1]
-        self.delta_shape = (dx, dy)
-        ## get input update correction
-        _dx = _calc_dX_conv(weights.value, _d, stride_size=stride,
-                            anti_padding=pad_args)
-        dx = (_dx.shape[1] - _x.shape[1])
-        dy = (_dx.shape[2] - _x.shape[2])
-        self.x_delta_shape = (dx, dy)
 
     @staticmethod
     def _advance_state(Rscale, padding, stride, weights, biases, inputs):
@@ -136,49 +104,17 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.outputs.set(outputs)
 
     @staticmethod
-    def _evolve(bias_init, x_size, shape, stride, padding, pad_args, delta_shape,
-                x_delta_shape, pre, post, weights): #, biases):
-        k_size, k_size, n_in_chan, n_out_chan = shape
-        ## calc dFilters
-        dWeights = calc_dK_conv(pre, post, delta_shape=delta_shape,
-                                stride_size=stride, padding=pad_args)
-        dBiases = 0. #jnp.zeros((1,1))
-        if bias_init != None:
-            dBiases = jnp.sum(post, axis=0, keepdims=True)
-        ## calc dInputs
-        antiPad = None
-        if padding == "SAME":
-            antiPad = _conv_same_transpose_padding(post.shape[1], x_size,
-                                                   k_size, stride)
-        elif padding == "VALID":
-            antiPad = _conv_valid_transpose_padding(post.shape[1], x_size,
-                                                    k_size, stride)
-        dInputs = calc_dX_conv(weights, post, delta_shape=x_delta_shape,
-                               stride_size=stride, anti_padding=antiPad)
-        return dWeights, dBiases, dInputs
-
-    @resolver(_evolve)
-    def evolve(self, dWeights, dBiases, dInputs):
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
-        self.dInputs.set(dInputs)
-
-    @staticmethod
     def _reset(in_shape, out_shape):
         preVals = jnp.zeros(in_shape)
         postVals = jnp.zeros(out_shape)
         inputs = preVals
         outputs = postVals
-        pre = preVals
-        post = postVals
-        return inputs, outputs, pre, post
+        return inputs, outputs
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post):
+    def reset(self, inputs, outputs):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
