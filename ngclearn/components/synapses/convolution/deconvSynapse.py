@@ -3,8 +3,10 @@ from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.utils.conv_utils import *
 from ngcsimlib.logger import info
-from ngcconv import _deconv_same_transpose_padding, _deconv_valid_transpose_padding
-from ngcconv import deconv2d, _calc_dX_deconv, _calc_dK_deconv, calc_dX_deconv, calc_dK_deconv
+#from ngclearn.components.synapses.convolution.ngcconv import _deconv_same_transpose_padding, _deconv_valid_transpose_padding
+from ngclearn.components.synapses.convolution.ngcconv import (deconv2d, _calc_dX_deconv,
+                                                              _calc_dK_deconv, calc_dX_deconv,
+                                                              calc_dK_deconv)
 # from ngclearn.utils.conv_utils import (_deconv_same_transpose_padding,
 #                                        _deconv_valid_transpose_padding)
 # from ngclearn.utils.conv_utils import conv2d, deconv2d, rot180

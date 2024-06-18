@@ -3,8 +3,11 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngcsimlib.logger import info
-from ngcconv import _conv_same_transpose_padding, _conv_valid_transpose_padding
-from ngcconv import conv2d, _calc_dX_conv, _calc_dK_conv, calc_dX_conv, calc_dK_conv
+from ngclearn.components.synapses.convolution.ngcconv import (_conv_same_transpose_padding,
+                                                              _conv_valid_transpose_padding)
+from ngclearn.components.synapses.convolution.ngcconv import (conv2d, _calc_dX_conv,
+                                                              _calc_dK_conv, calc_dX_conv,
+                                                              calc_dK_conv)
 #from ngclearn.utils.conv_utils import *
 
 class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
