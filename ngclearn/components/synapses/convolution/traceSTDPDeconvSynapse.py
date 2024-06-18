@@ -129,10 +129,11 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         dW_ltd = -calc_dK_deconv(preSpike, postTrace * Aminus,
                                  delta_shape=delta_shape, stride_size=stride,
                                  out_size=k_size, padding=padding)
-        dWeights = (dW_ltp + dW_ltd) * eta
+        dWeights = (dW_ltp + dW_ltd)
         if w_decay > 0.: ## apply synaptic decay
-            dWeights = dWeights - weights * w_decay
-        weights = weights + dWeights ## conduct STDP-ascent
+            weights = weights + dWeights * eta - weights * w_decay  ## conduct decayed STDP-ascent
+        else:
+            weights = weights + dWeights * eta ## conduct STDP-ascent
         ## Apply any enforced filter constraints
         if w_bounds > 0.:
             ## enforce non-negativity

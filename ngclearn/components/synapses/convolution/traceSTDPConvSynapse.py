@@ -128,10 +128,11 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         dW_ltd = -calc_dK_conv(preSpike, postTrace * Aminus,
                                delta_shape=delta_shape, stride_size=stride,
                                padding=pad_args)
-        dWeights = (dW_ltp + dW_ltd) * eta
-        if w_decay > 0.: ## apply synaptic decay
-            dWeights = dWeights - weights * w_decay
-        weights = weights + dWeights ## conduct STDP-ascent
+        dWeights = (dW_ltp + dW_ltd)
+        if w_decay > 0.:  ## apply synaptic decay
+            weights = weights + dWeights * eta - weights * w_decay  ## conduct decayed STDP-ascent
+        else:
+            weights = weights + dWeights * eta  ## conduct STDP-ascent
         ## Apply any enforced filter constraints
         if w_bounds > 0.:
             ## enforce non-negativity
