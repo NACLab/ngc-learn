@@ -3,7 +3,8 @@ from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.utils.conv_utils import *
 from ngcsimlib.logger import info
-from ngclearn.utils.conv_utils import _deconv_same_transpose_padding, _deconv_valid_transpose_padding
+from ngclearn.utils.conv_utils import (_deconv_same_transpose_padding,
+                                       _deconv_valid_transpose_padding)
 from ngclearn.utils.conv_utils import conv2d, deconv2d, rot180
 
 ################################################################################
@@ -25,28 +26,22 @@ def _calc_dK(x, d_out, stride_size=1, out_size=2, padding="SAME"):
         pad_args = _deconv_valid_transpose_padding(xT.shape[1], out_size, d_out_T.shape[1], stride_size)
     elif padding == "SAME":
         pad_args = _deconv_same_transpose_padding(xT.shape[1], out_size, d_out_T.shape[1], stride_size)
-    dW = deconv2d(inputs=xT,
-                filters=d_out_T,
-                stride_size=stride_size,
-                padding=pad_args)
-    dW = jnp.transpose(dW, axes=[1,2,0,3])
+    dW = deconv2d(inputs=xT, filters=d_out_T, stride_size=stride_size,
+                  padding=pad_args)
+    dW = jnp.transpose(dW, axes=[1, 2, 0, 3])
     return dW
 ################################################################################
 # input update computation
-def calc_dX(K, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))): ## non-JIT wrapper
+@partial(jit, static_argnums=[2, 3, 4])
+def calc_dX(K, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))):
     deX, deY = delta_shape
-    if abs(deX) > 0 and stride_size > 1:
-        return _calc_dX_subset(K, d_out, (abs(deX), abs(deY)), stride_size=stride_size, padding = padding)
-    return _calc_dX(K, d_out, stride_size=stride_size, padding = padding)
-
-@partial(jit, static_argnums=[2,3,4])
-def _calc_dX_subset(K, d_out, delta_shape, stride_size=1, padding = ((0,0),(0,0))):
-    deX, deY = delta_shape
+    # if abs(deX) > 0 and stride_size > 1:
+    #     return _calc_dX_subset(K, d_out, (abs(deX), abs(deY)), stride_size=stride_size, padding = padding)
     dx = _calc_dX(K, d_out, stride_size=stride_size, padding=padding)
     return dx
 
 @partial(jit, static_argnums=[2,3])
-def _calc_dX(K, d_out, stride_size=1, padding = ((0,0),(0,0))):
+def _calc_dX(K, d_out, stride_size=1, padding=((0, 0), (0, 0))):
     ## deconvolution is done to get "through" a convolution backwards
     w_size = K.shape[0]
     K_T = rot180(K) #jnp.transpose(K, axes=[1,0,3,2])
@@ -54,7 +49,7 @@ def _calc_dX(K, d_out, stride_size=1, padding = ((0,0),(0,0))):
     dx = conv2d(d_out,
                 filters=K_T,
                 stride_size=stride_size,
-                padding = padding)
+                padding=padding)
     return dx
 ################################################################################
 

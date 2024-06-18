@@ -2,10 +2,11 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngcsimlib.logger import info
-from ngclearn.utils.conv_utils import _conv_same_transpose_padding, _conv_valid_transpose_padding
+from ngclearn.utils.conv_utils import (_conv_same_transpose_padding,
+                                       _conv_valid_transpose_padding)
 from ngclearn.utils.conv_utils import *
 
-@partial(jit, static_argnums=[2,3,4])
+@partial(jit, static_argnums=[2, 3, 4])
 def calc_dK(x, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))):
     _x = x
     deX, deY = delta_shape
@@ -19,38 +20,28 @@ def _calc_dK(x, d_out, stride_size=1, padding=((0, 0), (0, 0))):
     xT = jnp.transpose(x, axes=[3, 1, 2, 0])
     d_out_T = jnp.transpose(d_out, axes=[1, 2, 0, 3])
     ## original conv2d
-    dW = conv2d(inputs=xT,
-                filters=d_out_T,
-                stride_size=1,
-                padding=padding,
-                rhs_dilation=(stride_size,stride_size)).astype(jnp.float32)
-    return jnp.transpose(dW, axes=[1,2,0,3])
+    dW = conv2d(inputs=xT, filters=d_out_T, stride_size=1, padding=padding,
+                rhs_dilation=(stride_size, stride_size)).astype(jnp.float32)
+    return jnp.transpose(dW, axes=[1, 2, 0, 3])
 
 ################################################################################
 # input update computation
-def calc_dX(K, d_out, delta_shape, stride_size=1, anti_padding=None): ## non-JIT wrapper
+@partial(jit, static_argnums=[2, 3, 4])
+def calc_dX(K, d_out, delta_shape, stride_size=1, anti_padding=None):
     deX, deY = delta_shape
-    if abs(deX) > 0 and stride_size > 1:
-        return _calc_dX_subset(K, d_out, (abs(deX),abs(deY)), stride_size=stride_size,
-                             anti_padding=anti_padding)
-    else:
-        return _calc_dX(K, d_out, stride_size=stride_size, anti_padding=anti_padding)
-
-@partial(jit, static_argnums=[2,3,4])
-def _calc_dX_subset(K, d_out, delta_shape, stride_size=1, anti_padding=None):
-    deX, deY = delta_shape
+    # if abs(deX) > 0 and stride_size > 1:
+    #     return _calc_dX_subset(K, d_out, (abs(deX),abs(deY)), stride_size=stride_size,
+    #                            anti_padding=anti_padding)
     dx = _calc_dX(K, d_out, stride_size=stride_size, anti_padding=anti_padding)
     return dx
 
-@partial(jit, static_argnums=[2,3])
+@partial(jit, static_argnums=[2, 3])
 def _calc_dX(K, d_out, stride_size=1, anti_padding=None):
     w_size = K.shape[0]
     K_T = rot180(K)  # Assuming rot180 is defined elsewhere.
     _pad = w_size - 1
-    return deconv2d(d_out,
-                  filters=K_T,
-                  stride_size=stride_size,
-                  padding=anti_padding).astype(jnp.float32)
+    return deconv2d(d_out, filters=K_T, stride_size=stride_size,
+                    padding=anti_padding).astype(jnp.float32)
 
 class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
     """
