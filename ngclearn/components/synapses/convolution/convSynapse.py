@@ -1,22 +1,18 @@
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
+
+from ngclearn.utils.conv_utils import _conv_same_transpose_padding, _conv_valid_transpose_padding
 from ngclearn.utils.conv_utils import *
 
-def calc_dK(x, d_out, delta_shape, stride_size=1, padding=((0, 0),(0, 0))): ## non-JIT wrapper
+@partial(jit, static_argnums=[2,3,4])
+def calc_dK(x, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))):
+    _x = x
     deX, deY = delta_shape
     if deX > 0:
-        return _calc_dK_subset(x, d_out, delta_shape, stride_size=stride_size, padding = padding)
-    else:
-        return _calc_dK(x, d_out, stride_size=stride_size, padding = padding)
-
-@partial(jit, static_argnums=[2,3,4])
-def _calc_dK_subset(x, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))):
-    deX, deY = delta_shape
-    #if deX > 0:
-    ## apply a pre-computation trimming step ("negative padding")
-    _x = x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :]
-    return _calc_dK(_x, d_out, stride_size=stride_size, padding = padding)
+        ## apply a pre-computation trimming step ("negative padding")
+        _x = x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :]
+    return _calc_dK(_x, d_out, stride_size=stride_size, padding=padding)
 
 @partial(jit, static_argnums=[2, 3])
 def _calc_dK(x, d_out, stride_size=1, padding=((0, 0), (0, 0))):
@@ -125,10 +121,11 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.inputs = Compartment(jnp.zeros(self.in_shape))
         self.outputs = Compartment(jnp.zeros(self.out_shape))
         self.weights = Compartment(weights)
+        self.dWeights = Compartment(weights * 0)
+        self.dInputs = Compartment(jnp.zeros(self.in_shape))
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
-        #'''
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
         _d = conv2d(_x, self.weights.value, stride_size=self.stride,
                     padding=self.padding) * 0
@@ -146,7 +143,6 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.x_delta_shape = (dx, dy)
         print("NGC-LEARN-CONV.delta = ")
         print(self.x_delta_shape)
-        #'''
         ########################################################################
 
     @staticmethod
@@ -157,6 +153,30 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
     @resolver(_advance_state)
     def advance_state(self, outputs):
         self.outputs.set(outputs)
+
+    @staticmethod
+    def _evolve(x_size, shape, stride, padding, pad_args, delta_shape, x_delta_shape,
+                pre, post, weights):
+        k_size, k_size, n_in_chan, n_out_chan = shape
+        ## calc dFilters
+        dWeights = calc_dK(pre, post, delta_shape=delta_shape,
+                           stride_size=stride, padding=pad_args)
+        ## calc dInputs
+        antiPad = None
+        if padding == "SAME":
+            antiPad = _conv_same_transpose_padding(post.shape[1], x_size,
+                                                   k_size, stride)
+        elif padding == "VALID":
+            antiPad = _conv_valid_transpose_padding(post.shape[1], x_size,
+                                                    k_size, stride)
+        dInputs = calc_dX(weights, post, delta_shape=x_delta_shape,
+                          stride_size=stride, anti_padding=antiPad)
+        return dWeights, dInputs
+
+    @resolver(_evolve)
+    def evolve(self, dWeights, dInputs):
+        self.dWeights.set(dWeights)
+        self.dInputs.set(dInputs)
 
     @staticmethod
     def _reset(in_shape, out_shape):

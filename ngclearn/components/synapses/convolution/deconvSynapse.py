@@ -8,17 +8,13 @@ from ngclearn.utils.conv_utils import conv2d, deconv2d, rot180
 
 ################################################################################
 # filter update computation
-def calc_dK(x, d_out, delta_shape, stride_size=1, out_size = 2, padding = "SAME"): ## non-JIT wrapper
+@partial(jit, static_argnums=[2, 3, 4, 5])
+def calc_dK(x, d_out, delta_shape, stride_size=1, out_size =2, padding="SAME"):
+    _x = x
     deX, deY = delta_shape
     if deX > 0:
-        return _calc_dK_subset(x, d_out, delta_shape, stride_size=stride_size, out_size = out_size, padding = padding)
-    return _calc_dK(x, d_out, stride_size=stride_size, out_size = out_size, padding=padding)
-
-@partial(jit, static_argnums=[2, 3, 4, 5])
-def _calc_dK_subset(x, d_out, delta_shape, stride_size=1, out_size = 2, padding = "SAME"):
-    deX, deY = delta_shape
-    ## apply a pre-computation trimming step ("negative padding")
-    _x = x[:,0:x.shape[1]-deX,0:x.shape[2]-deY,:]
+        ## apply a pre-computation trimming step ("negative padding")
+        _x = x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :]
     return _calc_dK(_x, d_out, stride_size=stride_size, out_size = out_size)
 
 @partial(jit, static_argnums=[2, 3, 4])
@@ -118,6 +114,8 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.inputs = Compartment(jnp.zeros(self.in_shape))
         self.outputs = Compartment(jnp.zeros(self.out_shape))
         self.weights = Compartment(weights)
+        self.dWeights = Compartment(weights * 0)
+        self.dInputs = Compartment(jnp.zeros(self.in_shape))
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
@@ -149,6 +147,23 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
     @resolver(_advance_state)
     def advance_state(self, outputs):
         self.outputs.set(outputs)
+
+    @staticmethod
+    def _evolve(x_size, shape, stride, padding, pad_args, delta_shape,
+                x_delta_shape, pre, post, weights):
+        k_size, k_size, n_in_chan, n_out_chan = shape
+        ## calc dFilters
+        dWeights = calc_dK(pre, post, delta_shape=delta_shape,
+                           stride_size=stride, out_size=k_size, padding=padding)
+        ## calc dInputs
+        dInputs = calc_dX(weights, post, delta_shape=x_delta_shape,
+                          stride_size=stride, padding=padding)
+        return dWeights, dInputs
+
+    @resolver(_evolve)
+    def evolve(self, dWeights, dInputs):
+        self.dWeights.set(dWeights)
+        self.dInputs.set(dInputs)
 
     @staticmethod
     def _reset(in_shape, out_shape):
