@@ -116,10 +116,11 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.weights = Compartment(weights)
         self.dWeights = Compartment(weights * 0)
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
+        self.pre = Compartment(jnp.zeros(self.in_shape))
+        self.post = Compartment(jnp.zeros(self.out_shape))
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
-        #'''
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
         _d = deconv2d(_x, self.weights.value, stride_size=self.stride, padding=self.padding) * 0
         _dK = _calc_dK(_x, _d, stride_size=self.stride, out_size=k_size)
@@ -135,7 +136,6 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.x_delta_shape = (dx, dy)
         print("NGC-LEARN-DECONV.delta = ")
         print(self.x_delta_shape)
-        #'''
         ########################################################################
 
     @staticmethod
@@ -171,9 +171,13 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         postVals = jnp.zeros(out_shape)
         inputs = preVals
         outputs = postVals
-        return inputs, outputs
+        pre = preVals
+        post = postVals
+        return inputs, outputs, pre, post
 
     @resolver(_reset)
-    def reset(self, inputs, outputs):
+    def reset(self, inputs, outputs, pre, post):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
+        self.pre.set(pre)
+        self.post.set(post)

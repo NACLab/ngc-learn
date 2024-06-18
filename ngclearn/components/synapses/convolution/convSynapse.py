@@ -123,6 +123,8 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.weights = Compartment(weights)
         self.dWeights = Compartment(weights * 0)
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
+        self.pre = Compartment(jnp.zeros(self.in_shape))
+        self.post = Compartment(jnp.zeros(self.out_shape))
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
@@ -184,9 +186,13 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         postVals = jnp.zeros(out_shape)
         inputs = preVals
         outputs = postVals
-        return inputs, outputs
+        pre = preVals
+        post = postVals
+        return inputs, outputs, pre, post
 
     @resolver(_reset)
-    def reset(self, inputs, outputs):
+    def reset(self, inputs, outputs, pre, post):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
+        self.pre.set(pre)
+        self.post.set(post)
