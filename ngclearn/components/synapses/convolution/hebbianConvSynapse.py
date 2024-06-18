@@ -138,11 +138,11 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         dBiases = 0. #jnp.zeros((1,1))
         if bias_init != None:
             dBiases = jnp.sum(post, axis=0, keepdims=True) * sign_value
-        #     opt_params, [weights, biases] = opt(opt_params, [weights, biases],
-        #                                         [dWeights, dBiases])
-        # else: ## ignore dBiases since no biases configured
-        #     opt_params, [weights] = opt(opt_params, [weights], [dWeights])
-        #
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases],
+                                                [dWeights, dBiases])
+        else: ## ignore dBiases since no biases configured
+            opt_params, [weights] = opt(opt_params, [weights], [dWeights])
+
         # ## apply any enforced filter constraints
         # if w_bounds > 0.:
         #     if is_nonnegative:
