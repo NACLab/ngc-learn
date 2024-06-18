@@ -134,14 +134,18 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     def help(self): ## component help function
         properties = {
-            "cell type": "DenseSynapse - performs a synaptic transformation of inputs to produce "
-                         "output signals (e.g., a scaled linear multivariate transformation)"
+            "synapse_type": "DenseSynapse - performs a synaptic transformation "
+                            "of inputs to produce  output signals (e.g., a "
+                            "scaled linear multivariate transformation)"
         }
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "parameter_compartments":
+                {"weights": "Synapse efficacy/strength parameter values",
+                 "biases": "Base-rate/bias parameter values"},
+            "output_compartments":
                 {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {

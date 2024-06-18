@@ -13,7 +13,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output
-    | weights - current value tensor of kernel efficacies
+    | filters - current value tensor of filter/kernel efficacies
     | biases - current base-rate/bias efficacies
 
     Args:
@@ -122,14 +122,17 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
 
     def help(self): ## component help function
         properties = {
-            "cell type": "DeconvSynapse - performs a synaptic deconvolution (@.T) of "
+            "synapse type": "DeconvSynapse - performs a synaptic deconvolution (@.T) of "
                          "inputs to produce output signals"
         }
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "parameter_compartments":
+                {"filters": "Synaptic filter parameter values",
+                 "biases": "Base-rate/bias parameter values"},
+            "output_compartments":
                 {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {

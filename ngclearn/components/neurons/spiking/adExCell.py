@@ -205,14 +205,14 @@ class AdExCell(JaxComponent):
 
     def help(self): ## component help function
         properties = {
-            "cell type": "AdExCell - evolves neurons according to nonlinear, "
+            "cell_type": "AdExCell - evolves neurons according to nonlinear, "
                          "adaptive exponential dual-ODE spiking cell dynamics."
         }
         compartment_props = {
             "input_compartments":
                 {"j": "External input electrical current",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "output_compartments":
                 {"v": "Membrane potential/voltage at time t",
                  "w": "Recovery variable at time t",
                  "s": "Emitted spikes/pulses at time t",

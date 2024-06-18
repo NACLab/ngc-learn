@@ -8,13 +8,22 @@ from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 
 class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional cable
     """
-    A base deconvolutional (transposed convolutional) synaptic cable.
+    A synaptic deconvolutional (transposed convolutional) cable that adjusts its
+    efficacies via a two-factor Hebbian adjustment rule.
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output
-    | weights - current value tensor of kernel efficacies
-    | biases - current base-rate/bias efficacies
+    | outputs - output signal (transformation induced by filters)
+    | filters - current value matrix of synaptic filter efficacies
+    | biases - current value vector of synaptic bias values
+    | key - JAX RNG key
+    | --- Synaptic Plasticity Compartments: ---
+    | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
+    | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
+    | dWeights - delta tensor containing changes to be applied to synaptic efficacies
+    | dBiases - delta tensor containing changes to be applied to bias values
+    | dInputs - delta tensor containing back-transmitted signal values ("backpropagating pulse")
+    | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
 
     Args:
         name: the string name of this cell
@@ -192,22 +201,36 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
 
     def help(self): ## component help function
         properties = {
-            "cell type": "DeconvSynapse - performs a synaptic deconvolution (@.T) of "
-                         "inputs to produce output signals"
+            "synapse_type": "DeconvSynapse - performs a synaptic deconvolution "
+                            "(@.T) of inputs to produce output signals; synaptic "
+                            "filters are adjusted via two-term/factor Hebbian "
+                            "adjustment"
         }
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "outputs_compartments":
-                {"outputs": "Output of synaptic transformation"},
+                 "key": "JAX RNG key",
+                 "pre": "Pre-synaptic statistic for Hebb rule (z_j)",
+                 "post": "Post-synaptic statistic for Hebb rule (z_i)"},
+            "parameter_compartments":
+                {"filters": "Synaptic filter parameter values",
+                 "biases": "Base-rate/bias parameter values"},
+            "output_compartments":
+                {"outputs": "Output of synaptic/filter transformation",
+                 "dWeights": "Synaptic filter value adjustment 4D-tensor produced at time t",
+                 "dBiases": "Synaptic bias/base-rate value adjustment 3D-tensor produced at time t",
+                 "dInputs": "Tensor containing back-transmitted signal values; backpropagating pulse"},
         }
         hyperparams = {
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
             "weight_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level output scaling factor (R)"
+            "resist_scale": "Resistance level output scaling factor (R)",
+            "is_nonnegative": "Should filters be constrained to be non-negative post-updates?",
+            "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
+            "w_bound": "Soft synaptic bound applied to filters post-update",
+            "w_decay": "Synaptic filter decay term"
         }
         info = {self.name: properties,
                 "compartments": compartment_props,
