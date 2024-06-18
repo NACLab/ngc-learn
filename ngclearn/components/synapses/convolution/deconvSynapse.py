@@ -2,7 +2,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.utils.conv_utils import *
-
+from ngcsimlib.logger import info
 from ngclearn.utils.conv_utils import _deconv_same_transpose_padding, _deconv_valid_transpose_padding
 from ngclearn.utils.conv_utils import conv2d, deconv2d, rot180
 
@@ -60,12 +60,13 @@ def _calc_dX(K, d_out, stride_size=1, padding = ((0,0),(0,0))):
 
 class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
     """
-    A base deconvolutional synaptic cable.
+    A base deconvolutional (transposed convolutional) synaptic cable.
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output
     | weights - current value tensor of kernel efficacies
+    | biases - current base-rate/bias efficacies
 
     Args:
         name: the string name of this cell
@@ -73,27 +74,38 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         x_size: dimension of input signal (assuming a square input)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
-            with number input channels, number output channels, filter height,
-            filter width)
+            with number `filter height x filter width x input channels x number output channels`);
+            note that currently filters/kernels are assumed to be square
+            (kernel.width = kernel.height)
 
-        weight_init: a kernel to drive initialization of this synaptic cable's
+        filter_init: a kernel to drive initialization of this synaptic cable's
             filter values
 
         bias_init: kernel to drive initialization of bias/base-rate values
 
-        Rscale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+        stride: length/size of stride
+
+        padding: pre-operator padding to use -- "VALID" (none), "SAME"
+
+        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((W @.T Rscale) * in) + b
+            where `@.T` denotes deconvolution
+
+        batch_size: batch size dimension of this component
     """
 
     # Define Functions
     def __init__(self, name, shape, x_size, filter_init=None, bias_init=None, stride=1,
-                 padding=None, Rscale=1., batch_size=1, **kwargs):
+                 padding=None, resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
+
+        self.filter_init = filter_init
+        self.bias_init = bias_init
 
         ## Synapse meta-parameters
         self.shape = shape ## shape of synaptic filter tensor
         self.x_size = x_size
-        self.Rscale = Rscale ## post-transformation scale factor
+        self.Rscale = resist_scale ## post-transformation scale factor
         self.padding = padding
         self.stride = stride
 
@@ -118,11 +130,26 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
         self.pre = Compartment(jnp.zeros(self.in_shape))
         self.post = Compartment(jnp.zeros(self.out_shape))
+        if self.bias_init is None:
+            info(self.name, "is using default bias value of zero (no bias "
+                            "kernel provided)!")
+        self.biases = Compartment(dist.initialize_params(subkeys[2], bias_init,
+                                                         (1, shape[1]))
+                                  if bias_init else 0.0)
+        self.dBiases = Compartment(self.biases.value * 0)
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
+        self._init(self.batch_size, self.x_size, self.shape, self.stride,
+                   self.padding, self.pad_args, self.weights)
+        ########################################################################
+
+    def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
+              weights):
+        k_size, k_size, n_in_chan, n_out_chan = shape
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
-        _d = deconv2d(_x, self.weights.value, stride_size=self.stride, padding=self.padding) * 0
+        _d = deconv2d(_x, self.weights.value, stride_size=self.stride,
+                      padding=self.padding) * 0
         _dK = _calc_dK(_x, _d, stride_size=self.stride, out_size=k_size)
         ## get filter update correction
         dx = _dK.shape[0] - self.weights.value.shape[0]
@@ -130,16 +157,17 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.delta_shape = (abs(dx), abs(dy))
 
         ## get input update correction
-        _dx = _calc_dX(self.weights.value, _d, stride_size=self.stride, padding=self.padding)
-        dx = (_dx.shape[1] - _x.shape[1]) # abs()
+        _dx = _calc_dX(self.weights.value, _d, stride_size=self.stride,
+                       padding=self.padding)
+        dx = (_dx.shape[1] - _x.shape[1])  # abs()
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
-        ########################################################################
 
     @staticmethod
-    def _advance_state(padding, stride, weights, inputs):
+    def _advance_state(resist_scale, padding, stride, weights, biases, inputs):
         _x = inputs
-        out = deconv2d(_x, weights, stride_size=stride, padding=padding)
+        out = (deconv2d(_x, weights, stride_size=stride, padding=padding)
+               * resist_scale) + biases
         return out
 
     @resolver(_advance_state)
@@ -147,20 +175,24 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.outputs.set(outputs)
 
     @staticmethod
-    def _evolve(x_size, shape, stride, padding, pad_args, delta_shape,
+    def _evolve(bias_init, x_size, shape, stride, padding, pad_args, delta_shape,
                 x_delta_shape, pre, post, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         ## calc dFilters
         dWeights = calc_dK(pre, post, delta_shape=delta_shape,
                            stride_size=stride, out_size=k_size, padding=padding)
+        dBiases = 0.  # jnp.zeros((1,1))
+        if bias_init != None:
+            dBiases = jnp.sum(post, axis=0, keepdims=True)
         ## calc dInputs
         dInputs = calc_dX(weights, post, delta_shape=x_delta_shape,
                           stride_size=stride, padding=padding)
-        return dWeights, dInputs
+        return dWeights, dBiases, dInputs
 
     @resolver(_evolve)
-    def evolve(self, dWeights, dInputs):
+    def evolve(self, dWeights, dBiases, dInputs):
         self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
         self.dInputs.set(dInputs)
 
     @staticmethod
@@ -179,3 +211,43 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
+
+    def save(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        if self.bias_init != None:
+            jnp.savez(file_name, weights=self.weights.value,
+                      biases=self.biases.value)
+        else:
+            jnp.savez(file_name, weights=self.weights.value)
+
+    def load(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        self.weights.set(data['weights'])
+        if "biases" in data.keys():
+            self.biases.set(data['biases'])
+
+    def help(self): ## component help function
+        properties = {
+            "cell type": "DeconvSynapse - performs a synaptic deconvolution (@.T) of "
+                         "inputs to produce output signals"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"outputs": "Output of synaptic transformation"},
+        }
+        hyperparams = {
+            "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
+                     "x `number input channels` x `number output channels`",
+            "weight_init": "Initialization conditions for synaptic filter (K) values",
+            "bias_init": "Initialization conditions for bias/base-rate (b) values",
+            "resist_scale": "Resistance level output scaling factor (R)"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "outputs = [K @.T inputs] * R + b",
+                "hyperparameters": hyperparams}
+        return info

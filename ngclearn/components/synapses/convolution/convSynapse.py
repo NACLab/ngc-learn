@@ -1,7 +1,7 @@
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
-
+from ngcsimlib.logger import info
 from ngclearn.utils.conv_utils import _conv_same_transpose_padding, _conv_valid_transpose_padding
 from ngclearn.utils.conv_utils import *
 
@@ -60,6 +60,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
     | inputs - input (takes in external signals)
     | outputs - output
     | weights - current value tensor of kernel efficacies
+    | biases - current base-rate/bias efficacies
 
     Args:
         name: the string name of this cell
@@ -67,27 +68,38 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         x_size: dimension of input signal (assuming a square input)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
-            with number input channels, number output channels, filter height,
-            filter width)
+            with number `filter height x filter width x input channels x number output channels`);
+            note that currently filters/kernels are assumed to be square
+            (kernel.width = kernel.height)
 
-        weight_init: a kernel to drive initialization of this synaptic cable's
+        filter_init: a kernel to drive initialization of this synaptic cable's
             filter values
 
         bias_init: kernel to drive initialization of bias/base-rate values
 
-        Rscale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+        stride: length/size of stride
+
+        padding: pre-operator padding to use -- "VALID" (none), "SAME"
+
+        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
+            where `@` denotes convolution
+
+        batch_size: batch size dimension of this component
     """
 
     # Define Functions
     def __init__(self, name, shape, x_size, filter_init=None, bias_init=None, stride=1,
-                 padding=None, Rscale=1., batch_size=1, **kwargs):
+                 padding=None, resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
+
+        self.filter_init = filter_init
+        self.bias_init = bias_init
 
         ## Synapse meta-parameters
         self.shape = shape ## shape of synaptic filter tensor
         self.x_size = x_size
-        self.Rscale = Rscale ## post-transformation scale factor
+        self.Rscale = resist_scale ## post-transformation scale factor
         self.padding = padding
         self.stride = stride
 
@@ -110,8 +122,7 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
 
         ## set up compartments
         tmp_key, *subkeys = random.split(self.key.value, 4)
-        weights = dist.initialize_params(subkeys[0], filter_init,
-                                         shape)  ## filter tensor
+        weights = dist.initialize_params(subkeys[0], filter_init, shape) ## filter tensor
         self.batch_size = batch_size # 1
         ## Compartment setup and shape computation
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
@@ -125,42 +136,58 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
         self.pre = Compartment(jnp.zeros(self.in_shape))
         self.post = Compartment(jnp.zeros(self.out_shape))
+        if self.bias_init is None:
+            info(self.name, "is using default bias value of zero (no bias "
+                            "kernel provided)!")
+        self.biases = Compartment(dist.initialize_params(subkeys[2], bias_init,
+                                                         (1, shape[1]))
+                                  if bias_init else 0.0)
+        self.dBiases = Compartment(self.biases.value * 0)
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
-        _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
-        _d = conv2d(_x, self.weights.value, stride_size=self.stride,
-                    padding=self.padding) * 0
-        _dK = _calc_dK(_x, _d, stride_size=self.stride,
-                       padding=self.pad_args)
+        self._init(self.batch_size, self.x_size, self.shape, self.stride,
+                   self.padding, self.pad_args, self.weights)
+        ########################################################################
+
+    def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
+              weights):
+        k_size, k_size, n_in_chan, n_out_chan = shape
+        _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
+        _d = conv2d(_x, weights.value, stride_size=stride, padding=padding) * 0
+        _dK = _calc_dK(_x, _d, stride_size=stride, padding=pad_args)
         ## get filter update correction
-        dx = _dK.shape[0] - self.weights.value.shape[0]
-        dy = _dK.shape[1] - self.weights.value.shape[1]
+        dx = _dK.shape[0] - weights.value.shape[0]
+        dy = _dK.shape[1] - weights.value.shape[1]
         self.delta_shape = (dx, dy)
         ## get input update correction
-        _dx = _calc_dX(self.weights.value, _d, stride_size=self.stride,
-                       anti_padding=self.pad_args)
+        _dx = _calc_dX(weights.value, _d, stride_size=stride,
+                       anti_padding=pad_args)
         dx = (_dx.shape[1] - _x.shape[1])
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
-        ########################################################################
 
     @staticmethod
-    def _advance_state(padding, stride, weights, inputs):
+    def _advance_state(resist_scale, padding, stride, weights, biases, inputs):
         _x = inputs
-        return conv2d(_x, weights, stride_size=stride, padding=padding)
+        outputs = (conv2d(_x, weights, stride_size=stride, padding=padding)
+                   * resist_scale) + biases
+        return outputs
 
     @resolver(_advance_state)
     def advance_state(self, outputs):
         self.outputs.set(outputs)
 
     @staticmethod
-    def _evolve(x_size, shape, stride, padding, pad_args, delta_shape, x_delta_shape,
-                pre, post, weights):
+    def _evolve(bias_init, x_size, shape, stride, padding, pad_args, delta_shape,
+                x_delta_shape, pre, post, weights): #, biases):
         k_size, k_size, n_in_chan, n_out_chan = shape
         ## calc dFilters
         dWeights = calc_dK(pre, post, delta_shape=delta_shape,
                            stride_size=stride, padding=pad_args)
+        dBiases = 0. #jnp.zeros((1,1))
+        if bias_init != None:
+            dBiases = jnp.sum(post, axis=0, keepdims=True)
         ## calc dInputs
         antiPad = None
         if padding == "SAME":
@@ -171,11 +198,12 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
                                                     k_size, stride)
         dInputs = calc_dX(weights, post, delta_shape=x_delta_shape,
                           stride_size=stride, anti_padding=antiPad)
-        return dWeights, dInputs
+        return dWeights, dBiases, dInputs
 
     @resolver(_evolve)
-    def evolve(self, dWeights, dInputs):
+    def evolve(self, dWeights, dBiases, dInputs):
         self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
         self.dInputs.set(dInputs)
 
     @staticmethod
@@ -194,3 +222,43 @@ class ConvSynapse(JaxComponent): ## static non-learnable synaptic cable
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
+
+    def save(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        if self.bias_init != None:
+            jnp.savez(file_name, weights=self.weights.value,
+                      biases=self.biases.value)
+        else:
+            jnp.savez(file_name, weights=self.weights.value)
+
+    def load(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        self.weights.set(data['weights'])
+        if "biases" in data.keys():
+            self.biases.set(data['biases'])
+
+    def help(self): ## component help function
+        properties = {
+            "cell type": "ConvSynapse - performs a synaptic convolution (@) of inputs "
+                         "to produce output signals"
+        }
+        compartment_props = {
+            "input_compartments":
+                {"inputs": "Takes in external input signal values",
+                 "key": "JAX RNG key"},
+            "outputs_compartments":
+                {"outputs": "Output of synaptic transformation"},
+        }
+        hyperparams = {
+            "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
+                     "x `number input channels` x `number output channels`",
+            "weight_init": "Initialization conditions for synaptic filter (K) values",
+            "bias_init": "Initialization conditions for bias/base-rate (b) values",
+            "resist_scale": "Resistance level output scaling factor (R)"
+        }
+        info = {self.name: properties,
+                "compartments": compartment_props,
+                "dynamics": "outputs = [K @ inputs] * R + b",
+                "hyperparameters": hyperparams}
+        return info
