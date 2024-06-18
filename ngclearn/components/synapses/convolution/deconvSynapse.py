@@ -3,55 +3,11 @@ from ngclearn.components.jaxComponent import JaxComponent
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.utils.conv_utils import *
 from ngcsimlib.logger import info
-from ngclearn.utils.conv_utils import (_deconv_same_transpose_padding,
-                                       _deconv_valid_transpose_padding)
-from ngclearn.utils.conv_utils import conv2d, deconv2d, rot180
-
-################################################################################
-# filter update computation
-@partial(jit, static_argnums=[2, 3, 4, 5])
-def calc_dK(x, d_out, delta_shape, stride_size=1, out_size =2, padding="SAME"):
-    _x = x
-    deX, deY = delta_shape
-    if deX > 0:
-        ## apply a pre-computation trimming step ("negative padding")
-        _x = x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :]
-    return _calc_dK(_x, d_out, stride_size=stride_size, out_size = out_size)
-
-@partial(jit, static_argnums=[2, 3, 4])
-def _calc_dK(x, d_out, stride_size=1, out_size=2, padding="SAME"):
-    xT = jnp.transpose(x, axes=[3, 1, 2, 0])
-    d_out_T = jnp.transpose(d_out, axes=[1, 2, 0, 3])
-    if padding == "VALID":
-        pad_args = _deconv_valid_transpose_padding(xT.shape[1], out_size, d_out_T.shape[1], stride_size)
-    elif padding == "SAME":
-        pad_args = _deconv_same_transpose_padding(xT.shape[1], out_size, d_out_T.shape[1], stride_size)
-    dW = deconv2d(inputs=xT, filters=d_out_T, stride_size=stride_size,
-                  padding=pad_args)
-    dW = jnp.transpose(dW, axes=[1, 2, 0, 3])
-    return dW
-################################################################################
-# input update computation
-@partial(jit, static_argnums=[2, 3, 4])
-def calc_dX(K, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0))):
-    deX, deY = delta_shape
-    # if abs(deX) > 0 and stride_size > 1:
-    #     return _calc_dX_subset(K, d_out, (abs(deX), abs(deY)), stride_size=stride_size, padding = padding)
-    dx = _calc_dX(K, d_out, stride_size=stride_size, padding=padding)
-    return dx
-
-@partial(jit, static_argnums=[2,3])
-def _calc_dX(K, d_out, stride_size=1, padding=((0, 0), (0, 0))):
-    ## deconvolution is done to get "through" a convolution backwards
-    w_size = K.shape[0]
-    K_T = rot180(K) #jnp.transpose(K, axes=[1,0,3,2])
-    _pad = w_size - 1
-    dx = conv2d(d_out,
-                filters=K_T,
-                stride_size=stride_size,
-                padding=padding)
-    return dx
-################################################################################
+from ngcconv import _deconv_same_transpose_padding, _deconv_valid_transpose_padding
+from ngcconv import deconv2d, _calc_dX_deconv, _calc_dK_deconv, calc_dX_deconv, calc_dK_deconv
+# from ngclearn.utils.conv_utils import (_deconv_same_transpose_padding,
+#                                        _deconv_valid_transpose_padding)
+# from ngclearn.utils.conv_utils import conv2d, deconv2d, rot180
 
 class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
     """
@@ -108,7 +64,7 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         k_size, k_size, n_in_chan, n_out_chan = shape
         self.pad_args = None
 
-        ## set up compartments
+        ######################### set up compartments ##########################
         tmp_key, *subkeys = random.split(self.key.value, 4)
         weights = dist.initialize_params(subkeys[0], filter_init,
                                          shape)  ## filter tensor
@@ -145,14 +101,14 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
         _d = deconv2d(_x, self.weights.value, stride_size=self.stride,
                       padding=self.padding) * 0
-        _dK = _calc_dK(_x, _d, stride_size=self.stride, out_size=k_size)
+        _dK = _calc_dK_deconv(_x, _d, stride_size=self.stride, out_size=k_size)
         ## get filter update correction
         dx = _dK.shape[0] - self.weights.value.shape[0]
         dy = _dK.shape[1] - self.weights.value.shape[1]
         self.delta_shape = (abs(dx), abs(dy))
 
         ## get input update correction
-        _dx = _calc_dX(self.weights.value, _d, stride_size=self.stride,
+        _dx = _calc_dX_deconv(self.weights.value, _d, stride_size=self.stride,
                        padding=self.padding)
         dx = (_dx.shape[1] - _x.shape[1])  # abs()
         dy = (_dx.shape[2] - _x.shape[2])
@@ -173,13 +129,13 @@ class DeconvSynapse(JaxComponent): ## static non-learnable synaptic cable
                 x_delta_shape, pre, post, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         ## calc dFilters
-        dWeights = calc_dK(pre, post, delta_shape=delta_shape,
+        dWeights = calc_dK_deconv(pre, post, delta_shape=delta_shape,
                            stride_size=stride, out_size=k_size, padding=padding)
         dBiases = 0.  # jnp.zeros((1,1))
         if bias_init != None:
             dBiases = jnp.sum(post, axis=0, keepdims=True)
         ## calc dInputs
-        dInputs = calc_dX(weights, post, delta_shape=x_delta_shape,
+        dInputs = calc_dX_deconv(weights, post, delta_shape=x_delta_shape,
                           stride_size=stride, padding=padding)
         return dWeights, dBiases, dInputs
 
