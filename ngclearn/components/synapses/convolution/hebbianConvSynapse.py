@@ -73,7 +73,7 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
 
     # Define Functions
     def __init__(self, name, shape, x_size, eta=0., filter_init=None, bias_init=None,
-                 stride=1, padding=None, resist_scale=1., w_bound=1.,
+                 stride=1, padding=None, resist_scale=1., w_bound=0.,
                  is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",
                  batch_size=1, **kwargs):
         super().__init__(name, shape, x_size=x_size, filter_init=filter_init,
@@ -143,12 +143,12 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         else: ## ignore dBiases since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
 
-        # ## apply any enforced filter constraints
-        # if w_bounds > 0.:
-        #     if is_nonnegative:
-        #         weights = jnp.clip(weights, 0., w_bounds)
-        #     else:
-        #         weights = jnp.clip(weights, -w_bounds, w_bounds)
+        ## apply any enforced filter constraints
+        if w_bounds > 0.:
+            if is_nonnegative:
+                weights = jnp.clip(weights, 0., w_bounds)
+            else:
+                weights = jnp.clip(weights, -w_bounds, w_bounds)
         return opt_params, weights, biases, dWeights, dBiases
 
     @resolver(_evolve)

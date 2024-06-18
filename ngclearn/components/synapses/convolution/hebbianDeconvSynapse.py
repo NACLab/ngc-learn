@@ -71,7 +71,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
 
     # Define Functions
     def __init__(self, name, shape, x_size, eta=0., filter_init=None, bias_init=None,
-                 stride=1, padding=None, resist_scale=1., w_bound=1., is_nonnegative=False,
+                 stride=1, padding=None, resist_scale=1., w_bound=0., is_nonnegative=False,
                  w_decay=0., sign_value=1., optim_type="sgd", batch_size=1, **kwargs):
         super().__init__(name, shape, x_size=x_size, filter_init=filter_init,
                          bias_init=bias_init, resist_scale=resist_scale,
@@ -79,6 +79,12 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
                          **kwargs)
 
         self.eta = eta
+        self.w_bounds = w_bound
+        self.w_decay = w_decay  ## synaptic decay
+        self.is_nonnegative = is_nonnegative
+        self.sign_value = sign_value
+        ## optimization / adjustment properties (given learning dynamics above)
+        self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
         self.dWeights = Compartment(self.weights.weights * 0)
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
