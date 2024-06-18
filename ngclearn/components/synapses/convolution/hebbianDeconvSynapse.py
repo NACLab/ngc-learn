@@ -86,7 +86,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
-        self.dWeights = Compartment(self.weights.weights * 0)
+        self.dWeights = Compartment(self.weights.value * 0)
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
         self.pre = Compartment(jnp.zeros(self.in_shape))
         self.post = Compartment(jnp.zeros(self.out_shape))
