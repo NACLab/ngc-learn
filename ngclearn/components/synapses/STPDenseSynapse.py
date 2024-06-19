@@ -20,6 +20,10 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
     | u - release probability; fraction of resources ready for use
     | x - fraction of resources available after neurotransmitter depletion
 
+    | Dynamics note:
+    | If tau_d >> tau_f and resources U are large, then synapse is STD-dominated
+    | If tau_d << tau_f and resources U are small, then synases is STF-dominated
+
     Args:
         name: the string name of this cell
 
