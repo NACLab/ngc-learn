@@ -192,7 +192,7 @@ class FitzhughNagumoCell(JaxComponent):
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, alpha, beta, gamma,
-                       intgFlag, j, v, w, s, tols):
+                       intgFlag, j, v, w, tols):
         v, w, s = run_cell(dt, j * R_m, v, w, v_thr, tau_m, tau_w, alpha, beta,
                            gamma, intgFlag)
         tols = update_times(t, s, tols)

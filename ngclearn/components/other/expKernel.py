@@ -59,7 +59,7 @@ class ExpKernel(JaxComponent): ## exponential kernel
         self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units)))
 
     @staticmethod
-    def _advance_state(t, dt, tau_w, win_len, inputs, epsp, tf):
+    def _advance_state(t, tau_w, win_len, inputs, tf):
         s = inputs
         ## update spike time window and corresponding window volume
         tf, epsp = apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,

@@ -173,7 +173,7 @@ class HebbianSynapse(DenseSynapse):
             if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _evolve(t, dt, opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _evolve(opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dW, db = calc_update(pre, post,

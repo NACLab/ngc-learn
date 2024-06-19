@@ -1,4 +1,4 @@
-import matplotlib #.pyplot as plt
+import matplotlib
 import matplotlib.pyplot as plt
 cmap = plt.cm.jet
 import jax.numpy as jnp

@@ -68,7 +68,7 @@ class BernoulliCell(JaxComponent):
         self.tols = Compartment(restVals) # time of last spike
 
     @staticmethod
-    def _advance_state(t, dt, key, inputs, tols):
+    def _advance_state(t, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
         outputs = sample_bernoulli(subkeys[0], data=inputs)
         timeOfLastSpike = update_times(t, outputs, tols)
