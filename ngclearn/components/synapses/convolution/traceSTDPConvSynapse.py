@@ -108,7 +108,8 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         ## get filter update correction
         dx = _dK.shape[0] - weights.value.shape[0]
         dy = _dK.shape[1] - weights.value.shape[1]
-        self.delta_shape = (dx, dy)
+        #self.delta_shape = (dx, dy)
+        self.delta_shape = (max(dx, 0), max(dy, 0))
         ## get input update correction
         _dx = _calc_dX_conv(weights.value, _d, stride_size=stride,
                             anti_padding=pad_args)

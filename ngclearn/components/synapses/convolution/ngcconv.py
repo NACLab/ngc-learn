@@ -355,7 +355,11 @@ def calc_dK_conv(x, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0)))
     deX, deY = delta_shape
 
     # Apply a pre-computation trimming step ("negative padding") if needed
-    _x = jnp.where(deX > 0, x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :], x)
+
+    #_x = jnp.where(deX > 0, x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :], x)
+    # _deX = jnp.maximum(deX, 0).astype(jnp.int32)
+    # _deY = jnp.maximum(deY, 0).astype(jnp.int32)
+    _x = x[:, 0:x.shape[1]-deX, 0:x.shape[2]-deY, :]
 
     # Calculate the gradient with respect to the kernel
     return _calc_dK_conv(_x, d_out, stride_size=stride_size, padding=padding)
@@ -419,7 +423,8 @@ def calc_dK_deconv(x, d_out, delta_shape, stride_size=1, out_size=2, padding="SA
     deX, deY = delta_shape
 
     # Apply a pre-computation trimming step ("negative padding") if needed
-    _x = jnp.where(deX > 0, x[:, :x.shape[1]-deX, :x.shape[2]-deY, :], x)
+    #_x = jnp.where(deX > 0, x[:, :x.shape[1]-deX, :x.shape[2]-deY, :], x)
+    _x = x[:, :x.shape[1]-deX, :x.shape[2]-deY, :]
 
     # Calculate the gradient with respect to the kernel
     return _calc_dK_deconv(_x, d_out, stride_size=stride_size, out_size=out_size, padding=padding)
