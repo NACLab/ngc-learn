@@ -101,142 +101,203 @@ def get_valid_conv_padding(lhs, rhs, stride_size=1, rhs_dilation=(1, 1),
         window_strides, padding)
     return padding
 
-# def _conv_same_transpose_padding(inputs, output, kernel, stride):
-#     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
-#     if stride > kernel:
-#         pad_a = kernel - 1
-#     else:
-#         pad_a = int(np.ceil(pad_len / 2))
-#     pad_b = pad_len - pad_a
-#     return ((pad_a, pad_b), (pad_a, pad_b))
-
-## Better optimized version of conv_same_padding
-@jit
 def _conv_same_transpose_padding(inputs, output, kernel, stride):
     """
-    Calculate the padding for a transpose convolution operation to achieve 'same' padding.
+    Calculate the padding for a transpose convolution operation to achieve 'SAME' padding.
 
-    Parameters:
-    inputs (int): The size of the input.
-    output (int): The size of the output.
-    kernel (int): The size of the convolution kernel.
-    stride (int): The stride length of the convolution.
+    Args:
+        inputs (int): The size of the input.
+
+        output (int): The size of the output.
+
+        kernel (int): The size of the convolution kernel.
+
+        stride (int): The stride length of the convolution.
 
     Returns:
-    tuple: The padding for the height and width dimensions.
+        tuple: The padding for the height and width dimensions.
     """
-    # Calculate the total padding length required
     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
-    
-    # Determine padding based on stride and kernel size
-    pad_a = jnp.where(stride > kernel, kernel - 1, jnp.ceil(pad_len / 2).astype(int))
+    if stride > kernel:
+        pad_a = kernel - 1
+    else:
+        pad_a = int(np.ceil(pad_len / 2))
     pad_b = pad_len - pad_a
-    
-    # Return the padding for height and width as tuples
     return ((pad_a, pad_b), (pad_a, pad_b))
 
-
-# def _conv_valid_transpose_padding(inputs, output, kernel, stride):
+## Better optimized version of conv_same_padding
+#@jit
+# def _conv_same_transpose_padding(inputs, output, kernel, stride):
+#     """
+#     Calculate the padding for a transpose convolution operation to achieve 'same' padding.
+#
+#     Parameters:
+#     inputs (int): The size of the input.
+#     output (int): The size of the output.
+#     kernel (int): The size of the convolution kernel.
+#     stride (int): The stride length of the convolution.
+#
+#     Returns:
+#     tuple: The padding for the height and width dimensions.
+#     """
+#     # Calculate the total padding length required
 #     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
-#     pad_a = kernel - 1
+#
+#     # Determine padding based on stride and kernel size
+#     pad_a = jnp.where(stride > kernel, kernel - 1, jnp.ceil(pad_len / 2).astype(int))
 #     pad_b = pad_len - pad_a
+#
+#     # Return the padding for height and width as tuples
 #     return ((pad_a, pad_b), (pad_a, pad_b))
 
-## Optimized version version2 for conv_valid_transpose_padding
-@jit
+
 def _conv_valid_transpose_padding(inputs, output, kernel, stride):
     """
-    Calculate the padding for a transpose convolution operation to achieve 'valid' padding.
+    Calculate the padding for a transpose convolution operation to achieve 'VALID' padding.
 
-    Parameters:
-    inputs (int): The size of the input.
-    output (int): The size of the output.
-    kernel (int): The size of the convolution kernel.
-    stride (int): The stride length of the convolution.
+    Args:
+        inputs (int): The size of the input.
+
+        output (int): The size of the output.
+
+        kernel (int): The size of the convolution kernel.
+
+        stride (int): The stride length of the convolution.
 
     Returns:
-    tuple: The padding for the height and width dimensions.
+        tuple: The padding for the height and width dimensions.
     """
-    # Calculate the total padding length required
     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
-    
-    # Set the padding value
     pad_a = kernel - 1
     pad_b = pad_len - pad_a
-
-    # Ensure values are cast to integers
-    pad_a = jnp.int32(pad_a)
-    pad_b = jnp.int32(pad_b)
-    
-    # Return the padding for height and width as tuples
     return ((pad_a, pad_b), (pad_a, pad_b))
 
-
-@jit
-def _deconv_valid_transpose_padding(inputs, output, kernel, stride):
-    """
-    Calculate the padding for a transpose deconvolution operation to achieve 'valid' padding.
-
-    Parameters:
-    inputs (int): The size of the input.
-    output (int): The size of the output.
-    kernel (int): The size of the deconvolution kernel.
-    stride (int): The stride length of the deconvolution.
-
-    Returns:
-    tuple: The padding for the height and width dimensions.
-    """
-    # Calculate the total padding length required
-    pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
-    
-    # Set the padding value
-    pad_a = output - 1
-    pad_b = pad_len - pad_a
-
-    # Ensure values are cast to integers
-    pad_a = jnp.int32(pad_a)
-    pad_b = jnp.int32(pad_b)
-    
-    # Return the padding for height and width as tuples
-    return ((pad_a, pad_b), (pad_a, pad_b))
-    
-# def _deconv_valid_transpose_padding(inputs, output, kernel, stride):
+# ## Optimized version version2 for conv_valid_transpose_padding
+# @jit
+# def _conv_valid_transpose_padding(inputs, output, kernel, stride):
+#     """
+#     Calculate the padding for a transpose convolution operation to achieve 'valid' padding.
+#
+#     Parameters:
+#     inputs (int): The size of the input.
+#     output (int): The size of the output.
+#     kernel (int): The size of the convolution kernel.
+#     stride (int): The stride length of the convolution.
+#
+#     Returns:
+#     tuple: The padding for the height and width dimensions.
+#     """
+#     # Calculate the total padding length required
 #     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
+#
+#     # Set the padding value
+#     pad_a = kernel - 1
+#     pad_b = pad_len - pad_a
+#
+#     # Ensure values are cast to integers
+#     pad_a = jnp.int32(pad_a)
+#     pad_b = jnp.int32(pad_b)
+#
+#     # Return the padding for height and width as tuples
+#     return ((pad_a, pad_b), (pad_a, pad_b))
+
+
+# @jit
+# def _deconv_valid_transpose_padding(inputs, output, kernel, stride):
+#     """
+#     Calculate the padding for a transpose deconvolution operation to achieve 'valid' padding.
+#
+#     Parameters:
+#     inputs (int): The size of the input.
+#     output (int): The size of the output.
+#     kernel (int): The size of the deconvolution kernel.
+#     stride (int): The stride length of the deconvolution.
+#
+#     Returns:
+#     tuple: The padding for the height and width dimensions.
+#     """
+#     # Calculate the total padding length required
+#     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
+#
+#     # Set the padding value
 #     pad_a = output - 1
 #     pad_b = pad_len - pad_a
+#
+#     # Ensure values are cast to integers
+#     pad_a = jnp.int32(pad_a)
+#     pad_b = jnp.int32(pad_b)
+#
+#     # Return the padding for height and width as tuples
 #     return ((pad_a, pad_b), (pad_a, pad_b))
-
-@jit
-def _deconv_same_transpose_padding(inputs, output, kernel, stride):
+    
+def _deconv_valid_transpose_padding(inputs, output, kernel, stride):
     """
-    Calculate the padding for a transpose deconvolution operation to achieve 'same' padding.
+    Calculate the padding for a transpose deconvolution operation to achieve 'VALID' padding.
 
-    Parameters:
-    inputs (int): The size of the input.
-    output (int): The size of the output.
-    kernel (int): The size of the deconvolution kernel.
-    stride (int): The stride length of the deconvolution.
+    Args::
+        inputs (int): The size of the input.
+
+        output (int: The size of the output.
+
+        kernel (int): The size of the deconvolution kernel.
+
+        stride (int): The stride length of the deconvolution.
 
     Returns:
-    tuple: The padding for the height and width dimensions.
+        tuple: The padding for the height and width dimensions.
     """
-    # Calculate the total padding length required
     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
-    
-    # Determine padding values
-    pad_a = jnp.where(stride >= output - 1, output - 1, jnp.ceil(pad_len / 2)).astype(int)
+    pad_a = output - 1
     pad_b = pad_len - pad_a
-    
-    # Return the padding for height and width as tuples
     return ((pad_a, pad_b), (pad_a, pad_b))
+
+# @jit
 # def _deconv_same_transpose_padding(inputs, output, kernel, stride):
+#     """
+#     Calculate the padding for a transpose deconvolution operation to achieve 'same' padding.
+#
+#     Parameters:
+#     inputs (int): The size of the input.
+#     output (int): The size of the output.
+#     kernel (int): The size of the deconvolution kernel.
+#     stride (int): The stride length of the deconvolution.
+#
+#     Returns:
+#     tuple: The padding for the height and width dimensions.
+#     """
+#     # Calculate the total padding length required
 #     pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
-#     if stride >= output - 1:
-#         pad_a = output - 1
-#     else:
-#         pad_a = int(np.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
+#
+#     # Determine padding values
+#     pad_a = jnp.where(stride >= output - 1, output - 1, jnp.ceil(pad_len / 2)).astype(int)
 #     pad_b = pad_len - pad_a
+#
+#     # Return the padding for height and width as tuples
 #     return ((pad_a, pad_b), (pad_a, pad_b))
+
+def _deconv_same_transpose_padding(inputs, output, kernel, stride):
+    """
+    Calculate the padding for a transpose deconvolution operation to achieve 'SAME' padding.
+
+    Args:
+        inputs (int): The size of the input.
+
+        output (int): The size of the output.
+
+        kernel (int): The size of the deconvolution kernel.
+
+        stride (int): The stride length of the deconvolution.
+
+    Returns:
+        tuple: The padding for the height and width dimensions.
+    """
+    pad_len = output - ((stride - 1) * (inputs - 1) + inputs - (kernel - 1))
+    if stride >= output - 1:
+        pad_a = output - 1
+    else:
+        pad_a = int(np.ceil(pad_len / 2)) # int(jnp.ceil(pad_len / 2))
+    pad_b = pad_len - pad_a
+    return ((pad_a, pad_b), (pad_a, pad_b))
 
 @partial(jit, static_argnums=[2, 3, 4])
 def deconv2d(inputs, filters, stride_size=1, rhs_dilation=(1, 1),
