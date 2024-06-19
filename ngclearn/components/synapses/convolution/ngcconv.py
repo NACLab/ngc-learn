@@ -13,13 +13,14 @@ def _pad(x, padding):
     """
     Jit-i-fied padding function.
 
-    Parameters:
-    x (ndarray): The input array to be padded.
-    padding (tuple): A tuple containing the amounts of padding to apply to each dimension.
-                     Format: (pad_bottom, pad_top, pad_left, pad_right).
+    Args:
+        x (ndarray): The input array to be padded.
+
+        padding (tuple): A tuple containing the amounts of padding to apply to each dimension;
+            Format: (pad_bottom, pad_top, pad_left, pad_right).
 
     Returns:
-    _x (ndarray): The padded array.
+        _x (ndarray): The padded array.
     """
     
     # Unpack the padding amounts for each dimension
@@ -45,11 +46,11 @@ def rot180(tensor):
     """
     Rotate the input tensor by 180 degrees.
 
-    Parameters:
-    tensor (ndarray): The input tensor to be rotated.
+    Args:
+        tensor (ndarray): The input tensor to be rotated.
 
     Returns:
-    ndarray: The tensor rotated by 180 degrees.
+        ndarray: The tensor rotated by 180 degrees.
     """
     
     # Flip the tensor along the first two axes (height and width) to achieve a 180-degree rotation
@@ -342,15 +343,19 @@ def calc_dK_conv(x, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0)))
     """
     Calculate the gradient with respect to the kernel for a convolution operation.
     
-    Parameters:
-    x (ndarray): The input array.
-    d_out (ndarray): The gradient with respect to the output.
-    delta_shape (tuple): The shape difference (deX, deY) between the input and output.
-    stride_size (int): The stride size for the convolution. Defaults to 1.
-    padding (tuple): Padding to apply to the input. Defaults to ((0, 0), (0, 0)).
+    Args:
+        x (ndarray): The input array.
+
+        d_out (ndarray): The gradient with respect to the output.
+
+        delta_shape (tuple): The shape difference (deX, deY) between the input and output.
+
+        stride_size (int): The stride size for the convolution. Defaults to 1.
+
+        padding (tuple): Padding to apply to the input. Defaults to ((0, 0), (0, 0)).
     
     Returns:
-    ndarray: The gradient with respect to the kernel.
+        ndarray: The gradient with respect to the kernel.
     """
     deX, deY = delta_shape
 
@@ -409,16 +414,21 @@ def calc_dK_deconv(x, d_out, delta_shape, stride_size=1, out_size=2, padding="SA
     """
     Calculate the gradient with respect to the kernel for a deconvolution operation.
     
-    Parameters:
-    x (ndarray): The input array.
-    d_out (ndarray): The gradient with respect to the output.
-    delta_shape (tuple): The shape difference (deX, deY) between the input and output.
-    stride_size (int): The stride size for the deconvolution. Defaults to 1.
-    out_size (int): The output size for the deconvolution.
-    padding (str): Padding to apply to the input. Defaults to "SAME".
+    Args:
+        x (ndarray): The input array.
+
+        d_out (ndarray): The gradient with respect to the output.
+
+        delta_shape (tuple): The shape difference (deX, deY) between the input and output.
+
+        stride_size (int): The stride size for the deconvolution. Defaults to 1.
+
+        out_size (int): The output size for the deconvolution.
+
+        padding (str): Padding to apply to the input. Defaults to "SAME".
     
     Returns:
-    ndarray: The gradient with respect to the kernel.
+        ndarray: The gradient with respect to the kernel.
     """
     deX, deY = delta_shape
 
@@ -452,15 +462,19 @@ def calc_dX_deconv(K, d_out, delta_shape, stride_size=1, padding=((0, 0), (0, 0)
     This version takes into account the shape difference (delta_shape) between
     the input and the output of the convolution.
 
-    Parameters:
-    K (ndarray): The convolution kernel.
-    d_out (ndarray): The gradient with respect to the output of the convolution.
-    delta_shape (tuple): The shape difference (deX, deY) between the input and output.
-    stride_size (int): The stride size for the deconvolution. Defaults to 1.
-    padding (tuple): Padding to apply to the input. Defaults to ((0, 0), (0, 0)).
+    Args:
+        K (ndarray): The convolution kernel.
+
+        d_out (ndarray): The gradient with respect to the output of the convolution.
+
+        delta_shape (tuple): The shape difference (deX, deY) between the input and output.
+
+        stride_size (int): The stride size for the deconvolution. Defaults to 1.
+
+        padding (tuple): Padding to apply to the input. Defaults to ((0, 0), (0, 0)).
 
     Returns:
-    dx (ndarray): The gradient with respect to the input.
+        dx (ndarray): The gradient with respect to the input.
     """
     
     # Extract the shape difference in the x and y dimensions
@@ -482,14 +496,17 @@ def _calc_dX_deconv(K, d_out, stride_size=1, padding=((0, 0), (0, 0))):
     Perform a deconvolution to get the gradient with respect to the input (dX)
     from the gradient with respect to the output (d_out) using the kernel (K).
 
-    Parameters:
-    K (ndarray): The convolution kernel.
-    d_out (ndarray): The gradient with respect to the output of the convolution.
-    stride_size (int): The stride size for the deconvolution. Defaults to 1.
-    padding (tuple): Padding to apply to the input. Defaults to ((0, 0), (0, 0)).
+    Args:
+        K (ndarray): The convolution kernel.
+
+        d_out (ndarray): The gradient with respect to the output of the convolution.
+
+        stride_size (int): The stride size for the deconvolution. Defaults to 1.
+
+        padding (tuple): Padding to apply to the input. Defaults to ((0, 0), (0, 0)).
 
     Returns:
-    dx (ndarray): The gradient with respect to the input.
+        dx (ndarray): The gradient with respect to the input.
     """
 
     # The size of the kernel
