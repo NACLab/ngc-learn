@@ -237,7 +237,7 @@ class LatencyCell(JaxComponent):
 
     def help(self): ## component help function
         properties = {
-            "cell type": "LatencyCell - samples input to produce spikes via latency "
+            "cell_type": "LatencyCell - samples input to produce spikes via latency "
                          "coding, where each dimension's magnitude determines how "
                          "early in the spike train a value occurs. This is a "
                          "temporal/order encoder."
@@ -246,7 +246,7 @@ class LatencyCell(JaxComponent):
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "output_compartments":
                 {"tols": "Time-of-last-spike",
                  "outputs": "Binary spike values emitted at time t",
                  "mask": "Spike ordering mask",

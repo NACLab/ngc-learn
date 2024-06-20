@@ -30,6 +30,38 @@ used for fixed value (dense) synaptic connections.
     :noindex:
 ```
 
+### Static Convolutional Synapse
+
+This synapse performs a convolutional transform of its input signals.
+Note that this synaptic cable does not evolve and is meant to be 
+used for fixed value convolution synaptic filters.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.ConvSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### Static Deconvolutional Synapse
+
+This synapse performs a deconvolutional transform of its input signals.
+Note that this synaptic cable does not evolve and is meant to be 
+used for fixed value deconvolution/transposed convolution synaptic filters.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.DeconvSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ## Simple Factor Learning Synapse Types
 
 Hebbian rules operate in a local manner -- they generally use information more
@@ -72,6 +104,44 @@ statistics.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.BCMSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### (Two-Factor) Hebbian Convolutional Synapse
+
+This synapse performs a convolutional transform of its input signals and evolves
+according to a two-factor update rule. The underlying synaptic filters are 
+changed according to products between pre-synaptic compartment values (`pre`) 
+and post-synaptic compartment (`post`) values.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.HebbianConvSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### (Two-Factor) Hebbian Deconvolutional Synapse
+
+This synapse performs a deconvolutional (transposed convolutional) transform of 
+its input signals and evolves according to a two-factor update rule. The 
+underlying synaptic filters are changed according to products between 
+pre-synaptic compartment values (`pre`) and post-synaptic compartment (`post`) values.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.HebbianDeconvSynapse
   :noindex:
 
   .. automethod:: advance_state
@@ -141,13 +211,56 @@ described above.
     :noindex:
 ```
 
-### Event-Driven Post-Synaptic STDP
+### Event-Driven Post-Synaptic STDP Synapse
 
-This is a two-factor STDP rule that is driven by only spike events. 
+This is a synaptic evolved under a  two-factor STDP rule that is driven by 
+only spike events. 
 
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.EventSTDPSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### Trace-based STDP Convolutional Synapse
+
+This is a four-factor STDP rule for convolutional synapses that adjusts the 
+underlying filters via a weighted combination of long-term depression (LTD) and 
+long-term potentiation (LTP). For the LTP portion of the update, a pre-synaptic 
+trace and a post-synaptic event/spike-trigger are used, and for the LTD portion 
+of the update, a pre-synaptic event/spike-trigger and a post-synaptic trace are
+utilized. 
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.TraceSTDPConvSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### Trace-based STDP Deonvolutional Synapse
+
+This is a four-factor STDP rule for deconvolutional (transposed convolutional) 
+synapses that adjusts the underlying filters via a weighted combination of
+long-term depression (LTD) and long-term potentiation (LTP). For the LTP portion 
+of the update, a pre-synaptic trace and a post-synaptic event/spike-trigger are 
+used, and for the LTD portion of the update, a pre-synaptic event/spike-trigger 
+and a post-synaptic trace are utilized. 
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.TraceSTDPDeonvSynapse
   :noindex:
 
   .. automethod:: advance_state

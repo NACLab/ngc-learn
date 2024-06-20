@@ -217,7 +217,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     def help(self): ## component help function
         properties = {
-            "cell type": "RateCell - evolves neurons according to rate-coded/"
+            "cell_type": "RateCell - evolves neurons according to rate-coded/"
                          "continuous dynamics "
         }
         compartment_props = {
@@ -225,7 +225,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                 {"j": "External input stimulus value(s)",
                  "j_td": "External top-down input stimulus value(s); these get "
                          "multiplied by the derivative of f(x), i.e., df(x)"},
-            "outputs_compartments":
+            "output_compartments":
                 {"z": "Update to rate-coded continuous dynamics; value at time t",
                  "zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)"},
         }
