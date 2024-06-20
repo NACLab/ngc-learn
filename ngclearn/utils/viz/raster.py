@@ -63,7 +63,7 @@ def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
             e = spike_train[t,:].nonzero()
             events.append(e[0])
     _ax.eventplot(events, linelengths=s, colors=c)
-    if ax is not None:
+    if ax is None:
         _ax.yticks(ticks=[i for i in (range(n_count if indices is None else len(indices)))],
                   labels=["N" + str(i) for i in (range(n_count) if indices is None else indices)])
         _ax.xticks(ticks=[i for i in range(0, step_count+1, max(int(step_count / 5), 1))])
