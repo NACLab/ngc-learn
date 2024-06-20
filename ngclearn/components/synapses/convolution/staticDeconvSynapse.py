@@ -14,7 +14,7 @@ class StaticDeconvSynapse(DeconvSynapse):
     Args:
         name: the string name of this cell
 
-        x_size: dimension of input signal (assuming a square input)
+        x_shape: dimension of input signal (assuming a square input)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
             with number `filter height x filter width x input channels x number output channels`);
@@ -31,7 +31,7 @@ class StaticDeconvSynapse(DeconvSynapse):
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
             where `@` denotes convolution
 

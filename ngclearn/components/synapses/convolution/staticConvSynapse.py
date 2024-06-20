@@ -14,7 +14,7 @@ class StaticConvSynapse(ConvSynapse):
     Args:
         name: the string name of this cell
 
-        x_size: dimension of input signal (assuming a square input)
+        x_shape: 2d shape of input map signal (component currently assumess a square input maps)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
             with number `filter height x filter width x input channels x number output channels`);
@@ -31,7 +31,7 @@ class StaticConvSynapse(ConvSynapse):
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
             where `@` denotes convolution
 
