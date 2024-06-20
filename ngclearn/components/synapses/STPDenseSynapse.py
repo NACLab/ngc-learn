@@ -106,9 +106,9 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
         outputs = postVals
-        u0 = preVals
-        x0 = preVals
-        return inputs, outputs, u0, x0
+        u = preVals
+        x = preVals
+        return inputs, outputs, u, x
 
     @resolver(_reset)
     def reset(self, inputs, outputs, u, x):
