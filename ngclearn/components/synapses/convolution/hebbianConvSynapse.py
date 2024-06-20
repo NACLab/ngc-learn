@@ -109,6 +109,15 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         ## Shape error correction -- do shape correction inference for local updates
         self._init(self.batch_size, self.x_size, self.shape, self.stride,
                    self.padding, self.pad_args, self.weights)
+        self.antiPad = None
+        k_size, k_size, n_in_chan, n_out_chan = self.shape
+        if padding == "SAME":
+            self.antiPad = _conv_same_transpose_padding(self.post.value.shape[1],
+                                                        self.x_size, k_size, stride)
+        elif padding == "VALID":
+            self.antiPad = _conv_valid_transpose_padding(self.post.value.shape[1],
+                                                         self.x_size, k_size, stride)
+
         ########################################################################
 
         ## set up outer optimization compartments
@@ -170,16 +179,16 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
 
     @staticmethod
     def _backtransmit(sign_value, x_size, shape, stride, padding, x_delta_shape,
-                      pre, post, weights): ## action-backpropagating routine
+                      antiPad, post, weights): ## action-backpropagating routine
         ## calc dInputs - adjustment w.r.t. input signal
         k_size, k_size, n_in_chan, n_out_chan = shape
-        antiPad = None
-        if padding == "SAME":
-            antiPad = _conv_same_transpose_padding(post.shape[1], x_size,
-                                                   k_size, stride)
-        elif padding == "VALID":
-            antiPad = _conv_valid_transpose_padding(post.shape[1], x_size,
-                                                    k_size, stride)
+        # antiPad = None
+        # if padding == "SAME":
+        #     antiPad = _conv_same_transpose_padding(post.shape[1], x_size,
+        #                                            k_size, stride)
+        # elif padding == "VALID":
+        #     antiPad = _conv_valid_transpose_padding(post.shape[1], x_size,
+        #                                             k_size, stride)
         dInputs = calc_dX_conv(weights, post, delta_shape=x_delta_shape,
                                stride_size=stride, anti_padding=antiPad)
         ## flip sign of back-transmitted signal (if applicable)

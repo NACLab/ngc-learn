@@ -97,6 +97,15 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         ## Shape error correction -- do shape correction inference for local updates
         self._init(self.batch_size, self.x_size, self.shape, self.stride,
                    self.padding, self.pad_args, self.weights)
+        k_size, k_size, n_in_chan, n_out_chan = self.shape
+        if padding == "SAME":
+            self.antiPad = _conv_same_transpose_padding(
+                self.postSpike.value.shape[1],
+                self.x_size, k_size, stride)
+        elif padding == "VALID":
+            self.antiPad = _conv_valid_transpose_padding(
+                self.postSpike.value.shape[1],
+                self.x_size, k_size, stride)
         ########################################################################
 
     def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
@@ -147,17 +156,17 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         self.dWeights.set(dWeights)
 
     @staticmethod
-    def _backtransmit(x_size, shape, stride, padding, x_delta_shape,
-                      preSpike, postSpike, weights): ## action-backpropagating routine
+    def _backtransmit(x_size, shape, stride, padding, x_delta_shape, antiPad,
+                      postSpike, weights): ## action-backpropagating routine
         ## calc dInputs - adjustment w.r.t. input signal
         k_size, k_size, n_in_chan, n_out_chan = shape
-        antiPad = None
-        if padding == "SAME":
-            antiPad = _conv_same_transpose_padding(postSpike.shape[1], x_size,
-                                                   k_size, stride)
-        elif padding == "VALID":
-            antiPad = _conv_valid_transpose_padding(postSpike.shape[1], x_size,
-                                                    k_size, stride)
+        # antiPad = None
+        # if padding == "SAME":
+        #     antiPad = _conv_same_transpose_padding(postSpike.shape[1], x_size,
+        #                                            k_size, stride)
+        # elif padding == "VALID":
+        #     antiPad = _conv_valid_transpose_padding(postSpike.shape[1], x_size,
+        #                                             k_size, stride)
         dInputs = calc_dX_conv(weights, postSpike, delta_shape=x_delta_shape,
                                stride_size=stride, anti_padding=antiPad)
         return dInputs
