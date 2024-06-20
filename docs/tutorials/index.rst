@@ -44,3 +44,4 @@ to configuration).
   lava/lava_components
   lava/lava_context
   lava/hebbian_learning
+  lava/monitors
