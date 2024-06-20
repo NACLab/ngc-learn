@@ -321,14 +321,14 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
     def help(self): ## component help function
         properties = {
-            "cell type": "SLIFCell - evolves neurons according to simplified "
+            "cell_type": "SLIFCell - evolves neurons according to simplified "
                          "leaky integrate-and-fire spiking dynamics."
         }
         compartment_props = {
             "input_compartments":
                 {"j": "External input electrical current",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "output_compartments":
                 {"v": "Membrane potential/voltage at time t",
                  "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",

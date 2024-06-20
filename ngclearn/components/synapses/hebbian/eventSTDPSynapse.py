@@ -125,9 +125,10 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
 
     def help(self): ## component help function
         properties = {
-            "cell type": "EventSTDPSynapse - performs an adaptable synaptic transformation "
-                         "of inputs to produce output signals; synapses are adjusted with "
-                         "event-based post-synaptic spike-timing-dependent plasticity"
+            "synapse_type": "EventSTDPSynapse - performs an adaptable synaptic "
+                            "transformation of inputs to produce output signals; "
+                            "synapses are adjusted with event-based post-synaptic "
+                            "spike-timing-dependent plasticity (STDP)"
         }
         compartment_props = {
             "input_compartments":
@@ -135,7 +136,10 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
                  "key": "JAX RNG key",
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)"},
-            "outputs_compartments":
+            "parameter_compartments":
+                {"weights": "Synapse efficacy/strength parameter values",
+                 "biases": "Base-rate/bias parameter values"},
+            "output_compartments":
                 {"outputs": "Output of synaptic transformation",
                  "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
         }

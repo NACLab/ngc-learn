@@ -1,8 +1,8 @@
 # NGC Monitors
 
-Ngc-monitors are a way of storing a rolling window of compartment values
-automatically. Their intended purpose is not to be used inside of a model but 
-just as an auxiliary way to view the internal state of the module even when it is 
+NGC-monitors are a way of storing a rolling window of compartment values
+automatically. Their intended purpose is not to be used "inside" of a model but 
+just as an auxiliary way to view the internal state of the model even when it is 
 compiled. A monitor will track the last `n` values it has observed within the
 compartment with the oldest value being at `index=0` and the newest being at
 `index=n-1`.
@@ -10,8 +10,8 @@ compartment with the oldest value being at `index=0` and the newest being at
 ## Building a Monitor
 
 Monitors are constructed exactly like regular components are for general models. 
-Simply import the monitor `from ngclearn.components import Monitor`. Now, 
-inside of your model, build it like a regular component.
+To use one, simply import the monitor `from ngclearn.components import Monitor`. Now, 
+inside of your model, build it like a regular component:
 
 ```python
 with Context("model") as model:

@@ -109,13 +109,13 @@ class VarTrace(JaxComponent): ## low-pass filter
 
     def help(self): ## component help function
         properties = {
-            "cell type": "VarTrace - maintains a low pass filter over incoming signal "
+            "cell_type": "VarTrace - maintains a low pass filter over incoming signal "
                          "values (such as sequences of discrete pulses)"
         }
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values"},
-            "outputs_compartments":
+            "output_compartments":
                 {"trace": "Continuous low-pass filtered signal values, at time t",
                  "outputs": "Continuous low-pass filtered signal values, "
                             "at time t (same as `trace`)"},

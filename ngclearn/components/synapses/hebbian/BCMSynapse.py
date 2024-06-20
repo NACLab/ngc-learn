@@ -180,9 +180,9 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     def help(self): ## component help function
         properties = {
-            "cell type": "BCMSTDPSynapse - performs an adaptable synaptic transformation "
-                         "of inputs to produce output signals; synapses are adjusted via "
-                         "BCM theory"
+            "synapse_type": "BCMSTDPSynapse - performs an adaptable synaptic "
+                            "transformation  of inputs to produce output signals; "
+                            "synapses are adjusted via BCM theory"
         }
         compartment_props = {
             "input_compartments":
@@ -190,7 +190,10 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
                  "key": "JAX RNG key",
                  "pre": "Pre-synaptic statistic for BCM (z_j)",
                  "post": "Post-synaptic statistic for BCM (z_i)"},
-            "outputs_compartments":
+            "parameter_compartments":
+                {"weights": "Synapse efficacy/strength parameter values",
+                 "biases": "Base-rate/bias parameter values"},
+            "output_compartments":
                 {"outputs": "Output of synaptic transformation",
                  "theta": "Synaptic modification threshold variable",
                  "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
