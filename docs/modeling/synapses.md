@@ -263,7 +263,7 @@ used, and for the LTD portion of the update, a pre-synaptic event/spike-trigger
 and a post-synaptic trace are utilized. 
 
 ```{eval-rst}
-.. autoclass:: ngclearn.components.TraceSTDPDeonvSynapse
+.. autoclass:: ngclearn.components.TraceSTDPDeconvSynapse
   :noindex:
 
   .. automethod:: advance_state
