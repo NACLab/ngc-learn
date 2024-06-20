@@ -1,6 +1,5 @@
 from jax import numpy as jnp, random, jit
 from functools import partial
-import time, math
 from ngclearn.utils import tensorstats
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent

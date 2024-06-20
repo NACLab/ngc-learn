@@ -184,6 +184,7 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
     is_eye = _init_kernel.get("eye", False)
     n_row_active = _init_kernel.get("n_row_active", None)
     n_col_active = _init_kernel.get("n_col_active", None)
+    ## run any configured post-processing to condition the final value matrix
     if clip_min is not None: ## bound all values to be > clip_min
         if use_numpy:
             params = np.maximum(params, clip_min)
