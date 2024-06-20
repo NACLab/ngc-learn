@@ -69,7 +69,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
                                          shape)  ## filter tensor
         self.batch_size = batch_size # 1
         ## Compartment setup and shape computation
-        _x = jnp.zeros((self.batch_size, x_shape, x_shape, n_in_chan))
+        _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
         _d = deconv2d(_x, weights, stride_size=stride, padding=padding) * 0
         self.in_shape = _x.shape
         self.out_shape = _d.shape

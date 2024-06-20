@@ -63,10 +63,10 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
         k_size, k_size, n_in_chan, n_out_chan = shape
         self.pad_args = None
         if self.padding is not None and self.padding == "SAME":
-            if (x_shape % stride == 0):
+            if (x_size % stride == 0):
                 pad_along_height = max(k_size - stride, 0)
             else:
-                pad_along_height = max(k_size - (x_shape % stride), 0)
+                pad_along_height = max(k_size - (x_size % stride), 0)
             pad_bottom = pad_along_height // 2
             pad_top = pad_along_height - pad_bottom
             pad_left = pad_bottom
@@ -81,7 +81,7 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
         weights = dist.initialize_params(subkeys[0], filter_init, shape) ## filter tensor
         self.batch_size = batch_size # 1
         ## Compartment setup and shape computation
-        _x = jnp.zeros((self.batch_size, x_shape, x_shape, n_in_chan))
+        _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
         _d = conv2d(_x, weights, stride_size=stride, padding=padding) * 0
         self.in_shape = _x.shape
         self.out_shape = _d.shape
