@@ -3,14 +3,15 @@
 The synapse is a key building blocks for connecting/wiring together the various
 component cells that one would use for characterizing a biomimetic neural system.
 These particular objects are meant to perform, per simulated time step, a
-specific type of transformation utilizing their underlying synaptic parameters.
-Most times, a synaptic cable will be represented by a set of matrices that
-used to conduct a projection of an input signal (a value presented to its
+specific type of transformation -- such as a linear transform or a 
+convolution -- utilizing their underlying synaptic parameters.
+Most times, a synaptic cable will be represented by a set of matrices (or filters) 
+that are used to conduct a projection of an input signal (a value presented to a
 pre-synaptic/input compartment) resulting in an output signal (a value that
-appears within its post-synaptic compartment). Notably, a synapse component is
+appears within one of its post-synaptic compartments). Notably, a synapse component is
 typically associated with a local plasticity rule, e.g., a Hebbian-type
-update, that either is either triggered online (at some or all simulation time
-steps) or by integrating a differential equation, e.g., via eligibility traces.
+update, that either is triggered online, i.e., at some or all simulation time
+steps, or by integrating a differential equation, e.g., via eligibility traces.
 
 ## Non-Plastic Synapse Types
 
@@ -62,20 +63,21 @@ used for fixed value deconvolution/transposed convolution synaptic filters.
     :noindex:
 ```
 
-## Simple Factor Learning Synapse Types
+## Multi-Factor Learning Synapse Types
 
 Hebbian rules operate in a local manner -- they generally use information more
 immediately available to synapses in both space and time -- and can come in a
 wide variety of flavors. One general way to categorize variants of Hebbian learning
 is to clarify what (neural) statistics they operate on, e.g, do they work with
 real-valued information or discrete spikes, and how many factors (or distinct
-terms) are involved in calculating the rule. (Note that, in principle, all
-forms of plasticity in ngc-learn are technically local, factor-based rules. )
+terms) are involved in calculating the update to synaptic values by the 
+relevant learning rule. <!--(Note that, in principle, all forms of plasticity in 
+ngc-learn technically work like local, factor-based rules. )-->
 
 ### (Two-Factor) Hebbian Synapse
 
 This synapse performs a linear transform of its input signals and evolves
-according to a simple, strictly two-factor update rule. In other words, the
+according to a strictly two-factor update rule. In other words, the
 underlying synaptic efficacy matrix is changed according to a product between
 pre-synaptic compartment values (`pre`) and post-synaptic compartment (`post`)
 values, which can contain any type of vector/matrix statistics.
@@ -95,10 +97,10 @@ values, which can contain any type of vector/matrix statistics.
 ### (Two-Factor) BCM Synapse
 
 This synapse performs a linear transform of its input signals and evolves
-according to multi-factor Bienenstock-Cooper-Munro (BCM) update rule. The
+according to a multi-factor, Bienenstock-Cooper-Munro (BCM) update rule. The
 underlying synaptic efficacy matrix is changed according to an evolved 
 synaptic threshold parameter `theta` and a product between
-pre-synaptic compartment values (`pre`) and nonlinear function of post-synaptic 
+pre-synaptic compartment values (`pre`) and a nonlinear function of post-synaptic 
 compartment (`post`) values, which can contain any type of vector/matrix 
 statistics.
 
@@ -119,7 +121,7 @@ statistics.
 This synapse performs a convolutional transform of its input signals and evolves
 according to a two-factor update rule. The underlying synaptic filters are 
 changed according to products between pre-synaptic compartment values (`pre`) 
-and post-synaptic compartment (`post`) values.
+and post-synaptic compartment (`post`)  feature map values.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.HebbianConvSynapse
@@ -138,7 +140,8 @@ and post-synaptic compartment (`post`) values.
 This synapse performs a deconvolutional (transposed convolutional) transform of 
 its input signals and evolves according to a two-factor update rule. The 
 underlying synaptic filters are changed according to products between 
-pre-synaptic compartment values (`pre`) and post-synaptic compartment (`post`) values.
+pre-synaptic compartment values (`pre`) and post-synaptic compartment (`post`) 
+feature map values.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.HebbianDeconvSynapse
@@ -154,12 +157,12 @@ pre-synaptic compartment values (`pre`) and post-synaptic compartment (`post`) v
 
 ## Spike-Timing-Dependent Plasticity (STDP) Synapse Types
 
-Synapse that evolve according to a spike-timing-dependent plasticity (STDP)
+Synapses that evolve according to a spike-timing-dependent plasticity (STDP)
 process operate, at a high level, much like multi-factor Hebbian rules (given
 that STDP is a generalization of Hebbian adjustment to spike trains) and share
 many of their properties. Nevertheless, a distinguishing factor for STDP-based
-synapses is that they must involve action potentials (spikes) in their
-calculations and are typically computing synaptic change according to the
+synapses is that they must involve action potential pulses (spikes) in their
+calculations and they typically compute synaptic change according to the
 relative timing of spikes. In principle, any of the synapses in this grouping
 of components adapt their efficacies according to rules that are at least special
 four-factor terms, i.e., a pre-synaptic spike (an "event"), a pre-synaptic delta
@@ -167,7 +170,7 @@ timing (which can come in the form of a trace), a post-synaptic spike (or event)
 and a post-synaptic delta timing (also can be a trace). In addition, STDP rules
 in ngc-learn typically enforce soft/hard synaptic strength bounding, i.e., there
 is a maximum magnitude allowed for any single synaptic efficacy, and, by default,
-enforce that synaptic strengths are non-negative.
+an STDP synapse enforces that its synaptic strengths are non-negative.
 
 ### Trace-based STDP
 
@@ -213,7 +216,7 @@ described above.
 
 ### Event-Driven Post-Synaptic STDP Synapse
 
-This is a synaptic evolved under a  two-factor STDP rule that is driven by 
+This is a synaptic evolved under a two-factor STDP rule that is driven by 
 only spike events. 
 
 
