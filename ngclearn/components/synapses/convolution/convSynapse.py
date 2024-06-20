@@ -19,7 +19,7 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
     Args:
         name: the string name of this cell
 
-        x_size: dimension of input signal (assuming a square input)
+        x_shape: 2d shape of input map signal (component currently assumess a square input maps)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
             with number `filter height x filter width x input channels x number output channels`);
@@ -36,7 +36,7 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
             where `@` denotes convolution
 
@@ -44,7 +44,7 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
     """
 
     # Define Functions
-    def __init__(self, name, shape, x_size, filter_init=None, bias_init=None, stride=1,
+    def __init__(self, name, shape, x_shape, filter_init=None, bias_init=None, stride=1,
                  padding=None, resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -53,6 +53,7 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
 
         ## Synapse meta-parameters
         self.shape = shape ## shape of synaptic filter tensor
+        x_size, x_size = x_shape
         self.x_size = x_size
         self.Rscale = resist_scale ## post-transformation scale factor
         self.padding = padding
@@ -150,9 +151,12 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
         hyperparams = {
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
+            "x_shape": "Shape of any single incoming/input feature map",
             "weight_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level output scaling factor (R)"
+            "resist_scale": "Resistance level output scaling factor (R)",
+            "stride": "length / size of stride",
+            "padding": "pre-operator padding to use, i.e., `VALID` `SAME`"
         }
         info = {self.name: properties,
                 "compartments": compartment_props,

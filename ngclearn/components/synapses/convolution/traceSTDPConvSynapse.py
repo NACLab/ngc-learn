@@ -29,7 +29,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
     Args:
         name: the string name of this cell
 
-        x_size: dimension of input signal (assuming a square input)
+        x_shape: 2d shape of input map signal (component currently assumess a square input maps)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
             with number `filter height x filter width x input channels x number output channels`);
@@ -55,7 +55,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
             where `@` denotes convolution
 
@@ -69,10 +69,10 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
     """
 
     # Define Functions
-    def __init__(self, name, shape, x_size, A_plus, A_minus, eta=0.,
+    def __init__(self, name, shape, x_shape, A_plus, A_minus, eta=0.,
                  pretrace_target=0., filter_init=None, stride=1, padding=None,
                  resist_scale=1., w_bound=0., w_decay=0., batch_size=1, **kwargs):
-        super().__init__(name, shape, x_size=x_size, filter_init=filter_init,
+        super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
                          bias_init=None, resist_scale=resist_scale, stride=stride,
                          padding=padding, batch_size=batch_size, **kwargs)
 
@@ -97,6 +97,15 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         ## Shape error correction -- do shape correction inference for local updates
         self._init(self.batch_size, self.x_size, self.shape, self.stride,
                    self.padding, self.pad_args, self.weights)
+        k_size, k_size, n_in_chan, n_out_chan = self.shape
+        if padding == "SAME":
+            self.antiPad = _conv_same_transpose_padding(
+                self.postSpike.value.shape[1],
+                self.x_size, k_size, stride)
+        elif padding == "VALID":
+            self.antiPad = _conv_valid_transpose_padding(
+                self.postSpike.value.shape[1],
+                self.x_size, k_size, stride)
         ########################################################################
 
     def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
@@ -147,17 +156,17 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         self.dWeights.set(dWeights)
 
     @staticmethod
-    def _backtransmit(x_size, shape, stride, padding, x_delta_shape,
-                      preSpike, postSpike, weights): ## action-backpropagating routine
+    def _backtransmit(x_size, shape, stride, padding, x_delta_shape, antiPad,
+                      postSpike, weights): ## action-backpropagating routine
         ## calc dInputs - adjustment w.r.t. input signal
         k_size, k_size, n_in_chan, n_out_chan = shape
-        antiPad = None
-        if padding == "SAME":
-            antiPad = _conv_same_transpose_padding(postSpike.shape[1], x_size,
-                                                   k_size, stride)
-        elif padding == "VALID":
-            antiPad = _conv_valid_transpose_padding(postSpike.shape[1], x_size,
-                                                    k_size, stride)
+        # antiPad = None
+        # if padding == "SAME":
+        #     antiPad = _conv_same_transpose_padding(postSpike.shape[1], x_size,
+        #                                            k_size, stride)
+        # elif padding == "VALID":
+        #     antiPad = _conv_valid_transpose_padding(postSpike.shape[1], x_size,
+        #                                             k_size, stride)
         dInputs = calc_dX_conv(weights, postSpike, delta_shape=x_delta_shape,
                                stride_size=stride, anti_padding=antiPad)
         return dInputs
@@ -213,9 +222,12 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         hyperparams = {
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
+            "x_shape": "Shape of any single incoming/input feature map",
             "weight_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
+            "stride": "length / size of stride",
+            "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
             "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",

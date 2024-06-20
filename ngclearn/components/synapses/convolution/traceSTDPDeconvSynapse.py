@@ -27,7 +27,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
     Args:
         name: the string name of this cell
 
-        x_size: dimension of input signal (assuming a square input)
+        x_shape: dimension of input signal (assuming a square input)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
             with number `filter height x filter width x input channels x number output channels`);
@@ -53,7 +53,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
             where `@` denotes convolution
 
@@ -67,11 +67,11 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
     """
 
     # Define Functions
-    def __init__(self, name, shape, x_size, A_plus, A_minus, eta=0.,
+    def __init__(self, name, shape, x_shape, A_plus, A_minus, eta=0.,
                  pretrace_target=0., filter_init=None, stride=1, padding=None,
                  resist_scale=1., w_bound=0., w_decay=0., batch_size=1,
                  **kwargs):
-        super().__init__(name, shape, x_size=x_size, filter_init=filter_init,
+        super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
                          bias_init=None, resist_scale=resist_scale, stride=stride,
                          padding=padding, batch_size=batch_size, **kwargs)
 
@@ -205,9 +205,12 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         hyperparams = {
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
+            "x_shape": "Shape of any single incoming/input feature map",
             "weight_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
+            "stride": "length / size of stride",
+            "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
             "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",

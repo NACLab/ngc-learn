@@ -28,7 +28,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
     Args:
         name: the string name of this cell
 
-        x_size: dimension of input signal (assuming a square input)
+        x_shape: dimension of input signal (assuming a square input)
 
         shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
             with number `filter height x filter width x input channels x number output channels`);
@@ -47,7 +47,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: aa fixed (resistance) scaling factor to apply to synaptic
+        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((W @.T Rscale) * in) + b
             where `@.T` denotes deconvolution
 
@@ -79,10 +79,10 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
     """
 
     # Define Functions
-    def __init__(self, name, shape, x_size, eta=0., filter_init=None, bias_init=None,
+    def __init__(self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None,
                  stride=1, padding=None, resist_scale=1., w_bound=0., is_nonnegative=False,
                  w_decay=0., sign_value=1., optim_type="sgd", batch_size=1, **kwargs):
-        super().__init__(name, shape, x_size=x_size, filter_init=filter_init,
+        super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
                          bias_init=bias_init, resist_scale=resist_scale,
                          stride=stride, padding=padding, batch_size=batch_size,
                          **kwargs)
@@ -224,9 +224,12 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         hyperparams = {
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
+            "x_shape": "Shape of any single incoming/input feature map",
             "weight_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
+            "stride": "length / size of stride",
+            "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",
             "is_nonnegative": "Should filters be constrained to be non-negative post-updates?",
             "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
             "w_bound": "Soft synaptic bound applied to filters post-update",
