@@ -3,6 +3,7 @@ from .jaxComponent import JaxComponent
 from .neurons.graded.rateCell import RateCell
 from .neurons.graded.gaussianErrorCell import GaussianErrorCell
 from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
+from .neurons.graded.rewardErrorCell import RewardErrorCell
 ## point to standard spiking cell component types
 from .neurons.spiking.sLIFCell import SLIFCell
 from .neurons.spiking.LIFCell import LIFCell
