@@ -34,6 +34,7 @@ to configuration).
   foundations/contexts
   foundations/commands
   foundations/operations
+  foundations/monitors
 
 .. toctree::
   :maxdepth: 1
