@@ -26,7 +26,7 @@ def measure_fanoFactor(spikes, preserve_batch=False):
     mu = jnp.mean(spikes, axis=0, keepdims=True)
     sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
     fano = sigSqr/mu
-    if preserve_batch:
+    if preserve_batch is False:
         fano = jnp.mean(fano)
     return fano
 
@@ -49,7 +49,7 @@ def measure_firingRate(spikes, preserve_batch=False):
     counts = jnp.sum(spikes, axis=0, keepdims=True)
     T = spikes.shape[0] * 1.
     fireRates = counts/T
-    if preserve_batch:
+    if preserve_batch is False:
         fireRates = jnp.mean(fireRates)
     return fireRates
 
@@ -78,7 +78,7 @@ def measure_breadth_TC(spikes, preserve_batch=False):
     sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
     C = sigSqr/mu
     BTC = 1./(1 + jnp.square(C))
-    if preserve_batch:
+    if preserve_batch is False:
         BTC = jnp.mean(BTC)
     return BTC
 
@@ -199,7 +199,7 @@ def measure_KLD(p_xHat, p_x, preserve_batch=False):
     term1 = jnp.sum(_p_x * jnp.log(_p_x), axis=1, keepdims=True) # * (1/N)
     term2 = -jnp.sum(_p_x * jnp.log(_p_xHat), axis=1, keepdims=True) # * (1/N)
     kld = (term1 + term2) * (1/N)
-    if preserve_batch:
+    if preserve_batch is False:
         kld = jnp.mean(kld)
     return kld
 
@@ -226,7 +226,7 @@ def measure_CatNLL(p, x, offset=1e-7, preserve_batch=False):
     p_ = jnp.clip(p, offset, 1.0 - offset)
     loss = -(x * jnp.log(p_))
     nll = jnp.sum(loss, axis=1, keepdims=True) #/(y_true.shape[0] * 1.0)
-    if preserve_batch:
+    if preserve_batch is False:
         nll = jnp.mean(nll)
     return nll #tf.reduce_mean(nll)
 
@@ -251,7 +251,7 @@ def measure_MSE(mu, x, preserve_batch=False):
     diff = mu - x
     se = jnp.square(diff) ## squared error
     mse = jnp.sum(se, axis=1, keepdims=True) # technically se at this point
-    if preserve_batch:
+    if preserve_batch is False:
         mse = jnp.mean(mse) # this is proper mse
     return mse
 
@@ -277,6 +277,6 @@ def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
     """
     p_ = jnp.clip(p, offset, 1 - offset)
     bce = -jnp.sum(x * jnp.log(p_) + (1.0 - x) * jnp.log(1.0 - p_),axis=1, keepdims=True)
-    if preserve_batch:
+    if preserve_batch is False:
         bce = jnp.mean(bce)
     return bce
