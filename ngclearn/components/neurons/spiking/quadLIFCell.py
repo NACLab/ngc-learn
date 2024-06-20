@@ -245,14 +245,14 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
 
     def help(self): ## component help function
         properties = {
-            "cell type": "QuadLIFCell - evolves neurons according to quadratic "
+            "cell_type": "QuadLIFCell - evolves neurons according to quadratic "
                          "leaky integrate-and-fire spiking dynamics."
         }
         compartment_props = {
             "input_compartments":
                 {"j": "External input electrical current",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "output_compartments":
                 {"v": "Membrane potential/voltage at time t",
                  "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",

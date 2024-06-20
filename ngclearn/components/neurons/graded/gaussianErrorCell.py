@@ -85,7 +85,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
 
     @staticmethod
-    def _advance_state(t, dt, mu, dmu, target, dtarget, modulator):
+    def _advance_state(dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
         dmu, dtarget, L = run_cell(dt, target, mu)
         dmu = dmu * modulator
@@ -119,7 +119,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
     def help(self): ## component help function
         properties = {
-            "cell type": "GaussianErrorcell - computes mismatch/error signals at "
+            "cell_type": "GaussianErrorcell - computes mismatch/error signals at "
                          "each time step t (between a `target` and a prediction `mu`)"
         }
         compartment_props = {
@@ -127,7 +127,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
                 {"mu": "External input prediction value(s)",
                  "target": "External input target signal value(s)",
                  "modulator": "External input modulatory/scaling signal(s)"},
-            "outputs_compartments":
+            "output_compartments":
                 {"L": "Local loss value computed/embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},

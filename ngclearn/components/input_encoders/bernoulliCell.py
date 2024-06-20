@@ -68,7 +68,7 @@ class BernoulliCell(JaxComponent):
         self.tols = Compartment(restVals) # time of last spike
 
     @staticmethod
-    def _advance_state(t, dt, key, inputs, tols):
+    def _advance_state(t, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
         outputs = sample_bernoulli(subkeys[0], data=inputs)
         timeOfLastSpike = update_times(t, outputs, tols)
@@ -102,7 +102,7 @@ class BernoulliCell(JaxComponent):
 
     def help(self): ## component help function
         properties = {
-            "cell type": "BernoulliCell - samples input to produce spikes, "
+            "cell_type": "BernoulliCell - samples input to produce spikes, "
                           "where dimension is a probability proportional to "
                           "the dimension's magnitude/value/intensity"
         }
@@ -110,7 +110,7 @@ class BernoulliCell(JaxComponent):
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "output_compartments":
                 {"tols": "Time-of-last-spike",
                  "outputs": "Binary spike values emitted at time t"},
         }

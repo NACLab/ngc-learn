@@ -29,14 +29,12 @@ Writing the above 3-component system can be in the following manner:
 
 ```python
 from jax import numpy as jnp, random, jit
-import time
-
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
 from ngcsimlib.compilers import compile_command, wrap_command
 ## import model-specific mechanisms
 from ngclearn.components.other.varTrace import VarTrace
 from ngclearn.components.synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
+import ngclearn.utils.weight_distribution as dist
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(231)
@@ -49,7 +47,7 @@ with Context("Model") as model:
     tr0 = VarTrace("tr0", n_units=1, tau_tr=8., a_delta=1.)
     tr1 = VarTrace("tr1", n_units=1, tau_tr=8., a_delta=1.)
     W = TraceSTDPSynapse("W1", shape=(1, 1), eta=0., A_plus=1., A_minus=0.8,
-                         wInit=("uniform", 0.0, 0.3), key=subkeys[0])
+                         weight_init=dist.uniform(0.0, 0.3), key=subkeys[0])
 
     # wire only relevant compartments to synaptic cable W for demo purposes
     W.preTrace << tr0.trace

@@ -8,8 +8,9 @@ from ngcsimlib.logger import warn, critical
 
 class Base_Monitor(Component):
     """
-    An abstract base for monitors for both ngclearn and ngclava. Compartments wired directly into this component will
-    have their value tracked during `advance_state` loops automatically.
+    An abstract base for monitors for both ngclearn and ngclava. Compartments
+    wired directly into this component will have their value tracked during
+    `advance_state` loops automatically.
 
     Note the monitor only works for compiled methods currently
 

@@ -34,6 +34,7 @@ to configuration).
   foundations/contexts
   foundations/commands
   foundations/operations
+  foundations/monitors
 
 .. toctree::
   :maxdepth: 1
@@ -44,3 +45,4 @@ to configuration).
   lava/lava_components
   lava/lava_context
   lava/hebbian_learning
+  lava/monitors

@@ -131,7 +131,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.tols = Compartment(restVals) ## time-of-last-spike
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, s, thr, rfr, tols):
+    def _advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols):
         v, s, thr, rfr = run_cell(dt, j, v, rfr, thr, tau_m, R_m, thr_gain, refract_T)
         tols = update_times(t, s, tols) ## update tols
         return v, s, thr, rfr, tols
@@ -173,14 +173,14 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
 
     def help(self): ## component help function
         properties = {
-            "cell type": "WTASCell - evolves neurons according to winner-take-all "
+            "cell_type": "WTASCell - evolves neurons according to winner-take-all "
                          "spiking dynamics "
         }
         compartment_props = {
             "input_compartments":
                 {"j": "External input electrical current",
                  "key": "JAX RNG key"},
-            "outputs_compartments":
+            "output_compartments":
                 {"v": "Membrane potential/voltage at time t",
                  "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",

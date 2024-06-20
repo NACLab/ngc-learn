@@ -137,7 +137,7 @@ class ExpSTDPSynapse(DenseSynapse):
         self.dWeights = Compartment(self.weights.value * 0)
 
     @staticmethod
-    def _evolve(t, dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
+    def _evolve(dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
                     preSpike, postSpike, preTrace, postTrace, weights):
         weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
                              w_bound=w_bound, eta=eta, x_tar=preTrace_target,
@@ -174,9 +174,10 @@ class ExpSTDPSynapse(DenseSynapse):
 
     def help(self): ## component help function
         properties = {
-            "cell type": "ExpSTDPSynapse - performs an adaptable synaptic transformation "
-                         "of inputs to produce output signals; synapses are adjusted with "
-                         "exponential trace-based spike-timing-dependent plasticity"
+            "synapse_type": "ExpSTDPSynapse - performs an adaptable synaptic "
+                            "transformation of inputs to produce output signals; "
+                            "synapses are adjusted with exponential trace-based "
+                            "spike-timing-dependent plasticity (STDP)"
         }
         compartment_props = {
             "input_compartments":
@@ -186,7 +187,10 @@ class ExpSTDPSynapse(DenseSynapse):
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
                  "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
-            "outputs_compartments":
+            "parameter_compartments":
+                {"weights": "Synapse efficacy/strength parameter values",
+                 "biases": "Base-rate/bias parameter values"},
+            "output_compartments":
                 {"outputs": "Output of synaptic transformation",
                  "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
         }

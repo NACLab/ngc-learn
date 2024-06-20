@@ -83,7 +83,7 @@ class HebbianSynapse(DenseSynapse):
     | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
     | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
     | dW - current delta matrix containing changes to be applied to synaptic efficacies
-    | db - current delta vector containing changes to be applied to bias value
+    | db - current delta vector containing changes to be applied to bias values
     | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
 
     Args:
@@ -167,12 +167,14 @@ class HebbianSynapse(DenseSynapse):
         self.dW = Compartment(jnp.zeros(shape))
         self.db = Compartment(jnp.zeros(shape[1]))
 
-        key, subkey = random.split(self.key.value)
-        self.opt_params = Compartment(get_opt_init_fn(optim_type)([self.weights.value, self.biases.value] if bias_init else [self.weights.value]))
+        #key, subkey = random.split(self.key.value)
+        self.opt_params = Compartment(get_opt_init_fn(optim_type)(
+            [self.weights.value, self.biases.value]
+            if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _evolve(t, dt, opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
-                post_wght, bias_init, pre, post, weights, biases, dW, db, opt_params):
+    def _evolve(opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
+                post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dW, db = calc_update(pre, post,
                              weights, w_bounds, is_nonnegative=is_nonnegative,
@@ -195,7 +197,7 @@ class HebbianSynapse(DenseSynapse):
         self.biases.set(biases)
 
     @staticmethod
-    def _reset(batch_size, shape, weight_init, bias_init):
+    def _reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         return (
@@ -209,20 +211,23 @@ class HebbianSynapse(DenseSynapse):
 
     def help(self): ## component help function
         properties = {
-            "cell type": "HebbianSynapse - performs an adaptable synaptic transformation "
-                         "of inputs to produce output signals; synapses are adjusted via "
-                         "two-term/factor Hebbian adjustment"
+            "synapse_type": "HebbianSynapse - performs an adaptable synaptic "
+                            "transformation of inputs to produce output signals; "
+                            "synapses are adjusted via two-term/factor Hebbian adjustment"
         }
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
                  "key": "JAX RNG key",
-                 "pre": "Pre-synaptic statistic for BCM (z_j)",
-                 "post": "Post-synaptic statistic for BCM (z_i)"},
-            "outputs_compartments":
+                 "pre": "Pre-synaptic statistic for Hebb rule (z_j)",
+                 "post": "Post-synaptic statistic for Hebb rule (z_i)"},
+            "parameter_compartments":
+                {"weights": "Synapse efficacy/strength parameter values",
+                 "biases": "Base-rate/bias parameter values"},
+            "output_compartments":
                 {"outputs": "Output of synaptic transformation",
-                 "theta": "Synaptic threshold variable",
-                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+                 "dWeights": "Synaptic weight value adjustment matrix produced at time t",
+                 "dBiases": "Synaptic bias/base-rate value adjustment vector produced at time t"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
@@ -232,8 +237,8 @@ class HebbianSynapse(DenseSynapse):
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "is_nonnegative": "Should synapses be constrained to be non-negative post-updates?",
             "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
-            "pre_wght" : "Pre-synaptic weighting coefficient (q_pre)",
-            "post_wght" : "Post-synaptic weighting coefficient (q_post)",
+            "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
+            "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
             "w_decay": "Synaptic decay term"
         }

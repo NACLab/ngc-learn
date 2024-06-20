@@ -115,7 +115,7 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
 
     @staticmethod
     def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
-                       theta_plus, j_exc, j_inh, v, s, rfr, thr_theta): #, tols):
+                       theta_plus, j_exc, j_inh, v, s, rfr, thr_theta):
         #j = j * (tau_m/dt) ## scale electrical current
         j = j_exc - j_inh ## sum the excitatory and inhibitory input channels
         mask = (rfr >= refract_T) * 1. #numpy.greater_equal(rfr, refract_T) * 1.

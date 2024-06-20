@@ -8,10 +8,11 @@ two simple graded cells that are connected by one synaptic cable.
 While building our dynamical system we will set up a Context and then add the three different components to it.
 
 ```python
-from ngclearn import Context
-from ngclearn.components import RateCell, HebbianSynapse
-from ngclearn.commands import Reset, Clamp, AdvanceState
 from jax import numpy as jnp, random
+from ngclearn import Context
+from ngclearn.commands import Reset, Clamp, AdvanceState
+from ngclearn.components import RateCell, HebbianSynapse
+import ngclearn.utils.weight_distribution as dist
 
 ## create seeding keys
 dkey = random.PRNGKey(1234)
@@ -24,7 +25,7 @@ with Context("model") as model:
    b = RateCell(name="b", n_units=1, tau_m=20.,
                 act_fx="identity", key=subkeys[1])
    Wab = HebbianSynapse(name="Wab", shape=(1, 1),
-                        weight_init=("constant", 1., None), key=subkeys[2])
+                        weight_init=dist.constant(value=1.), key=subkeys[2])
 ```
 
 Next, we will want to wire together the three components we have embedded into

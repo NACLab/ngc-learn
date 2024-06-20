@@ -1,6 +1,5 @@
 from jax import numpy as jnp, random, jit
 from functools import partial
-import time, math
 from ngclearn.utils import tensorstats
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
@@ -172,8 +171,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.z = Compartment(restVals) # rate activity
 
     @staticmethod
-    def _advance_state(t, dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
-                       thresholdType, thr_lmbda, j, j_td, z, zF):
+    def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
+                       thresholdType, thr_lmbda, j, j_td, z):
         if tau_m > 0.:
             ### run a step of integration over neuronal dynamics
             ## Notes:
@@ -217,7 +216,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     def help(self): ## component help function
         properties = {
-            "cell type": "RateCell - evolves neurons according to rate-coded/"
+            "cell_type": "RateCell - evolves neurons according to rate-coded/"
                          "continuous dynamics "
         }
         compartment_props = {
@@ -225,7 +224,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                 {"j": "External input stimulus value(s)",
                  "j_td": "External top-down input stimulus value(s); these get "
                          "multiplied by the derivative of f(x), i.e., df(x)"},
-            "outputs_compartments":
+            "output_compartments":
                 {"z": "Update to rate-coded continuous dynamics; value at time t",
                  "zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)"},
         }

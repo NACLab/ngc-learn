@@ -1,9 +1,6 @@
 """
 Raster visualization functions/utilities.
 """
-import math
-import random
-#import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
@@ -58,22 +55,23 @@ def create_raster_plot(spike_train, ax=None, s=0.5, c="black",
         # plt.ylabel("Neuron Index")
         save = True
 
-    ax = ax if ax is not None else plt
+    _ax = ax if ax is not None else plt
 
     events = []
     for t in range(n_count):
         if indices is None or t in indices:
             e = spike_train[t,:].nonzero()
             events.append(e[0])
-    ax.eventplot(events, linelengths=s, colors=c)
-    ax.yticks(ticks=[i for i in (range(n_count if indices is None else len(indices)))],
-              labels=["N" + str(i) for i in (range(n_count) if indices is None else indices)])
-    ax.xticks(ticks=[i for i in range(0, step_count+1, max(int(step_count / 5), 1))])
+    _ax.eventplot(events, linelengths=s, colors=c)
+    if ax is None:
+        _ax.yticks(ticks=[i for i in (range(n_count if indices is None else len(indices)))],
+                  labels=["N" + str(i) for i in (range(n_count) if indices is None else indices)])
+        _ax.xticks(ticks=[i for i in range(0, step_count+1, max(int(step_count / 5), 1))])
 
     if save:
-        ax.savefig(plot_fname)
-        ax.clf()
-        ax.close()
+        _ax.savefig(plot_fname)
+        _ax.clf()
+        _ax.close()
         plt.close()
 
 def create_overlay_raster_plot(spike_train, targ_train, Y, idxs, s=1.5, c="black", marker="|",

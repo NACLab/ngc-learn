@@ -17,14 +17,11 @@ compute a simple Hebbian adjustment.
 We do this specifically as follows:
 
 ```python
+from jax import numpy as jnp, random, jit
 from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
-
 from ngclearn.components import HebbianSynapse, RateCell
-
-from jax import numpy as jnp, random, jit
-import numpy as np
+import ngclearn.utils.weight_distribution as dist
 
 ## create seeding keys
 dkey = random.PRNGKey(1234)
@@ -38,7 +35,7 @@ with Context("Circuit") as circuit:
                act_fx="identity", key=subkeys[1])
 
   Wab = HebbianSynapse(name="Wab", shape=(1, 1), eta=1.,
-                       sign_value=-1., weight_init=("constant", 1., None),
+                       sign_value=-1., weight_init=dist.constant(value=1.),
                        w_bound=0., key=subkeys[3])
 
   # wire output compartment (rate-coded output zF) of RateCell `a` to input compartment of HebbianSynapse `Wab`

@@ -2,7 +2,8 @@ from ngclearn.components.base_monitor import Base_Monitor
 
 class Monitor(Base_Monitor):
     """
-    A jax implementation of `Base_Monitor`. Designed to be used with all non-lava ngclearn components
+    A jax implementation of `Base_Monitor`. Designed to be used with all
+    non-lava ngclearn components
     """
     @staticmethod
     def build_advance(compartments):

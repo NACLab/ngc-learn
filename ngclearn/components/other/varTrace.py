@@ -79,7 +79,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.trace = Compartment(restVals)
 
     @staticmethod
-    def _advance_state(t, dt, decay_type, tau_tr, a_delta, inputs, trace):
+    def _advance_state(dt, decay_type, tau_tr, a_delta, inputs, trace):
         ## compute the decay factor
         decayFactor = 0. ## <-- pulse filter decay (default)
         if "exp" in decay_type:
@@ -109,13 +109,13 @@ class VarTrace(JaxComponent): ## low-pass filter
 
     def help(self): ## component help function
         properties = {
-            "cell type": "VarTrace - maintains a low pass filter over incoming signal "
+            "cell_type": "VarTrace - maintains a low pass filter over incoming signal "
                          "values (such as sequences of discrete pulses)"
         }
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values"},
-            "outputs_compartments":
+            "output_compartments":
                 {"trace": "Continuous low-pass filtered signal values, at time t",
                  "outputs": "Continuous low-pass filtered signal values, "
                             "at time t (same as `trace`)"},

@@ -87,7 +87,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
 
     @staticmethod
-    def _advance_state(t, dt, mu, dmu, target, dtarget, modulator):
+    def _advance_state(dt, mu, target, modulator):
         ## compute Laplacian error cell output
         dmu, dtarget, L = run_cell(dt, target, mu)
         dmu = dmu * modulator
@@ -121,7 +121,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
 
     def help(self): ## component help function
         properties = {
-            "cell type": "LaplacianErrorcell - computes mismatch/error signals at "
+            "cell_type": "LaplacianErrorcell - computes mismatch/error signals at "
                          "each time step t (between a `target` and a prediction `mu`)"
         }
         compartment_props = {
@@ -129,7 +129,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
                 {"mu": "External input prediction value(s)",
                  "target": "External input target signal value(s)",
                  "modulator": "External input modulatory/scaling signal(s)"},
-            "outputs_compartments":
+            "output_compartments":
                 {"L": "Local loss value computed/embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},

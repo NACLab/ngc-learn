@@ -2,8 +2,6 @@
 Synaptic/receptive field visualization functions/utilities.
 """
 import math
-import random
-#import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np

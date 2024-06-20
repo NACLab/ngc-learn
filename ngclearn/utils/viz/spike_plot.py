@@ -1,8 +1,5 @@
-import matplotlib #.pyplot as plt
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 cmap = plt.cm.jet
-import jax.numpy as jnp
 import numpy as np
 
 def plot_spiking_neuron(curr, mem, spike, ref, dt, thr_line=False,
