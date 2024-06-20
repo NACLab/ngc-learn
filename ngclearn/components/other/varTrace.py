@@ -36,8 +36,9 @@ class VarTrace(JaxComponent): ## low-pass filter
     """
     A variable trace (filter) functional node.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | --- Cell Output Compartments: ---
     | outputs - output signal (same as "trace" compartment)
     | trace - traced value signal
 

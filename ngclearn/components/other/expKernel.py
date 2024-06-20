@@ -23,8 +23,9 @@ class ExpKernel(JaxComponent): ## exponential kernel
     A spiking function based on an exponential kernel applied to
     a moving window of spike times.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | --- Cell Output Compartments: ---
     | epsp - excitatory postsynaptic potential/pulse
     | tf - maintained local window of pulse signals
 

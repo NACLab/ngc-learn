@@ -108,8 +108,9 @@ class FitzhughNagumoCell(JaxComponent):
     | tau_m * dv/dt = v - (v^3)/3 - w + j
     | tau_w * dw/dt = v + a - b * w
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell Output Compartments: ---
     | v - membrane potential/voltage state
     | w - recovery variable state
     | s - emitted binary spikes/action potentials

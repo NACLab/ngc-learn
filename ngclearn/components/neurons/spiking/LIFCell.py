@@ -149,15 +149,16 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     | where R is the membrane resistance and v_rest is the resting potential
     | also, if a spike occurs, v is set to v_reset
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | key - JAX RNG key
+    | --- Cell Output Compartments: ---
     | v - membrane potential/voltage state
     | s - emitted binary spikes/action potentials
     | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | rfr - (relative) refractory variable state
     | thr_theta - homeostatic/adaptive threshold increment state
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell

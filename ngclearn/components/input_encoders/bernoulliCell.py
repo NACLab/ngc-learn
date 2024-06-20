@@ -41,11 +41,12 @@ class BernoulliCell(JaxComponent):
     """
     A Bernoulli cell that produces Bernoulli-distributed spikes on-the-fly.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | key - JAX RNG key
+    | --- Cell Output Compartments: ---
     | outputs - output
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell

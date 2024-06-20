@@ -21,7 +21,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
     | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
     | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
-    | dWeights - delta tensor containing changes to be applied to synaptic efficacies
+    | dWeights - delta tensor containing changes to be applied to synaptic filter efficacies
     | dInputs - delta tensor containing back-transmitted signal values ("backpropagating pulse")
 
     Args:

@@ -155,15 +155,16 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     |   a0 - scaling factor for voltage accumulation
     |   V_c - critical voltage (value)
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | key - JAX RNG key
+    | --- Cell Output Compartments: ---
     | v - membrane potential/voltage state
     | s - emitted binary spikes/action potentials
     | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | rfr - (relative) refractory variable state
     | thr_theta - homeostatic/adaptive threshold increment state
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell

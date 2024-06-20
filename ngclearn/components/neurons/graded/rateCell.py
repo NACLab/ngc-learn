@@ -103,9 +103,10 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     | where j is the set of general incoming input signals (e.g., message-passed signals)
     | and j_td is taken to be the set of top-down pressure signals
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - input (takes in external signals)
     | j_td - input/top-down pressure input (takes in external signals)
+    | --- Cell Output Compartments: ---
     | z - rate activity
     | zF - post-activation function activity, i.e., fx(z)
 

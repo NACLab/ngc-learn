@@ -137,8 +137,9 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
     | tau_m * dv/dt = 0.04 v^2 + 5v + 140 - w + j * R_m
     | tau_w * dw/dt = (v * b - w),  where tau_w = 1/a
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell Output Compartments: ---
     | v - membrane potential/voltage state
     | w - recovery variable state
     | s - emitted binary spikes/action potentials

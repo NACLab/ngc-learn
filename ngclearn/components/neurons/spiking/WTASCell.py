@@ -71,14 +71,15 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
     | tau_m * dv/dt = j * R  ;  v_p = softmax(v)
     | where R is membrane resistance and v_p is a voltage probability vector
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | key - JAX RNG key
+    | --- Cell Output Compartments: ---
     | v - membrane potential/voltage state
     | s - emitted binary spikes/action potentials
     | rfr - (relative) refractory variable state
     | thr - (adaptive) threshold state
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell

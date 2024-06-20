@@ -117,12 +117,13 @@ class LatencyCell(JaxComponent):
     A (nonlinear) latency encoding (spike) cell; produces a time-lagged set of
     spikes on-the-fly.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | key - JAX RNG key
+    | --- Cell Output Compartments: ---
     | outputs - output
     | tols - time-of-last-spike
     | targ_sp_times - target-spike-time
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell

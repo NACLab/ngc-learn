@@ -82,8 +82,9 @@ class AdExCell(JaxComponent):
     | tau_w * dw/dt =  -w + (v - v_rest) * a
     | where w = w + s * (w + b) [in the event of a spike]
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell Output Compartments: ---
     | v - membrane potential/voltage state
     | w - recovery variable state
     | s - emitted binary spikes/action potentials
