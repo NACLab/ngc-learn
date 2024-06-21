@@ -66,7 +66,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         tmp_key, *subkeys = random.split(self.key.value, 4)
         preVals = jnp.zeros((self.batch_size, shape[0]))
         self.u = Compartment(preVals) ## release prob variables
-        self.x = Compartment(preVals + 1.) ## resource availability variables
+        self.x = Compartment(preVals + 1) ## resource availability variables
         if self.resources_init is None:
             info(self.name, "is using default resources value initializer!")
             self.weight_init = {"dist": "uniform", "amin": 0.125, "amax": 0.175} # 0.15
@@ -83,15 +83,21 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         W = W_full * u * x * s ## synaptic current change
         x = [x + (1. - x)/tau_d - u * x] * s #+ (1. - s) * (x + (1. - x)/tau_d) ## STD
         '''
-        # are values changing at all?
         s = inputs
         ## compute short-term facilitation
-        u = jnp.sum(u - u * (1./tau_f) + (resources * (1. - u)) * s, axis=0, keepdims=True)
+        #print("u.before = ",u)
+        #print("s = ",s)
+        u = u - u * (1./tau_f) + (resources * (1. - u)) * s #jnp.sum(..., axis=1, keepdims=True)
+        #print("u.after = ",u)
         ## compute dynamic synaptic values/conductances
         weights_dyn = weights_dyn * u * x ## OR: -W/tau_w + W * u * x
         if tau_d > 0.:
+            #print("x.before = ",x)
             ## compute short-term depression
             x = x + (1. - x) * (1./tau_d) - u * x * s
+            #print("x.after = ",x)
+        #exit()
+        #print("......")
         outputs = jnp.matmul(inputs, weights_dyn * Rscale) + biases
         return outputs, u, x
 
