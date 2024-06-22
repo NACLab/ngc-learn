@@ -114,7 +114,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         inputs = preVals
         outputs = postVals
         u = preVals
-        x = preVals
+        x = preVals + 1
         return inputs, outputs, u, x
 
     @resolver(_reset)
