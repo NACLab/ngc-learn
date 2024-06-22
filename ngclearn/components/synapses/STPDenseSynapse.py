@@ -76,8 +76,8 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         ) ## matrix U - synaptic resources matrix
 
     @staticmethod
-    def _advance_state(tau_f, tau_d, Rscale, inputs, weights, biases, resources, u, x):
-        weights_dyn = weights
+    def _advance_state(tau_f, tau_d, Rscale, inputs, weights, biases, resources,
+                       u, x, Wdyn):
         '''
         ## u and x: both column vectors of length = num pre-syn nodes
         u = [u - u/tau_f + U * (1. - u)] * s # + (1. - s) * (u - u/tau_f) ## STF
@@ -86,21 +86,14 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         '''
         s = inputs
         ## compute short-term facilitation
-        #print("u.before = ",u)
-        #print("s = ",s)
         u = u - u * (1./tau_f) + (resources * (1. - u)) * s #jnp.sum(..., axis=1, keepdims=True)
-        #print("u.after = ",u)
         ## compute dynamic synaptic values/conductances
-        weights_dyn = weights_dyn * u * x ## OR: -W/tau_w + W * u * x
+        Wdyn = (weights * u * x) * s + Wdyn * (1. - s) ## OR: -W/tau_w + W * u * x
         if tau_d > 0.:
-            #print("x.before = ",x)
             ## compute short-term depression
             x = x + (1. - x) * (1./tau_d) - u * x * s
-            #print("x.after = ",x)
-        #exit()
-        #print("......")
-        outputs = jnp.matmul(inputs, weights_dyn * Rscale) + biases
-        return outputs, u, x, weights_dyn
+        outputs = jnp.matmul(inputs, Wdyn * Rscale) + biases
+        return outputs, u, x, Wdyn
 
     @resolver(_advance_state)
     def advance_state(self, outputs, u, x, Wdyn):
