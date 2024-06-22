@@ -67,6 +67,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         preVals = jnp.zeros((self.batch_size, shape[0]))
         self.u = Compartment(preVals) ## release prob variables
         self.x = Compartment(preVals + 1) ## resource availability variables
+        self.Wdyn = Compartment(self.weights.value * 0)
         if self.resources_init is None:
             info(self.name, "is using default resources value initializer!")
             self.weight_init = {"dist": "uniform", "amin": 0.125, "amax": 0.175} # 0.15
@@ -99,13 +100,14 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         #exit()
         #print("......")
         outputs = jnp.matmul(inputs, weights_dyn * Rscale) + biases
-        return outputs, u, x
+        return outputs, u, x, weights_dyn
 
     @resolver(_advance_state)
-    def advance_state(self, outputs, u, x):
+    def advance_state(self, outputs, u, x, Wdyn):
         self.outputs.set(outputs)
         self.u.set(u)
         self.x.set(x)
+        self.Wdyn.set(Wdyn)
 
     @staticmethod
     def _reset(batch_size, shape):
@@ -115,14 +117,16 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         outputs = postVals
         u = preVals
         x = preVals + 1
-        return inputs, outputs, u, x
+        Wdyn = jnp.zeros(shape)
+        return inputs, outputs, u, x, Wdyn
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, u, x):
+    def reset(self, inputs, outputs, u, x, Wdyn):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.u.set(u)
         self.x.set(x)
+        self.Wdyn.set(Wdyn)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
