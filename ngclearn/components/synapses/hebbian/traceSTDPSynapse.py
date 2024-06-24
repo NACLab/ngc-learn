@@ -89,7 +89,6 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
 
         ## Synaptic hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
-        #self.eta = eta ## global learning rate governing plasticity
         self.mu = mu ## controls power-scaling of STDP rule
         self.preTrace_target = pretrace_target ## target (pre-synaptic) trace activity value # 0.7
         self.Aplus = A_plus ## LTP strength
@@ -106,7 +105,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
         self.dWeights = Compartment(self.weights.value * 0)
-        self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate governing plasticity
+        self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate
 
     @staticmethod
     def _compute_update(dt, w_bound, preTrace_target, mu, Aplus, Aminus,

@@ -82,8 +82,8 @@ class HebbianSynapse(DenseSynapse):
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
     | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
-    | dW - current delta matrix containing changes to be applied to synaptic efficacies
-    | db - current delta vector containing changes to be applied to bias values
+    | dWweights - current delta matrix containing changes to be applied to synaptic efficacies
+    | dBiases - current delta vector containing changes to be applied to bias values
     | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
 
     Args:
@@ -165,7 +165,7 @@ class HebbianSynapse(DenseSynapse):
         self.pre = Compartment(self.preVals)
         self.post = Compartment(self.postVals)
         self.dWeights = Compartment(jnp.zeros(shape))
-        self.dbiases = Compartment(jnp.zeros(shape[1]))
+        self.dBiases = Compartment(jnp.zeros(shape[1]))
 
         #key, subkey = random.split(self.key.value)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)(
@@ -186,27 +186,27 @@ class HebbianSynapse(DenseSynapse):
     def _evolve(opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
-        dWeights, dbiases = HebbianSynapse._compute_update(
+        dWeights, dBiases = HebbianSynapse._compute_update(
             w_bounds, is_nonnegative, sign_value, w_decay, pre_wght, post_wght,
             pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dbiases])
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
         else:
             # ignore db since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
         weights = enforce_constraints(weights, w_bounds, is_nonnegative=is_nonnegative)
-        return opt_params, weights, biases, dWeights, dbiases
+        return opt_params, weights, biases, dWeights, dBiases
 
     @resolver(_evolve)
-    def evolve(self, opt_params, weights, biases, dWeights, dbiases):
+    def evolve(self, opt_params, weights, biases, dWeights, dBiases):
         self.opt_params.set(opt_params)
         self.weights.set(weights)
         self.biases.set(biases)
         self.dWeights.set(dWeights)
-        self.dbiases.set(dbiases)
+        self.dBiases.set(dBiases)
 
     @staticmethod
     def _reset(batch_size, shape):
@@ -265,13 +265,13 @@ class HebbianSynapse(DenseSynapse):
         return info
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dW, db):
+    def reset(self, inputs, outputs, pre, post, dWeights, dBiases):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
-        self.dWeights.set(dW)
-        self.dbiases.set(db)
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

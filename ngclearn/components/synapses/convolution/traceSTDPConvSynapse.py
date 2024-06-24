@@ -17,6 +17,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
     | outputs - output signals (transformation induced by filters)
     | filters - current value matrix of synaptic filter efficacies
     | biases - current value vector of synaptic bias values
+    | eta - learning rate global scale
     | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
