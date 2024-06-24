@@ -213,8 +213,8 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
-                 theta_plus, one_spike, v_c, a0, key, j, v, s, rfr, thr,
-                 thr_theta, tols):
+                       theta_plus, one_spike, intgFlag, v_c, a0, key, j, v, s,
+                       rfr, thr, thr_theta, tols):
         ## Note: this runs quadratic LIF neuronal dynamics but constrained to be
         ## similar to the general form of LIF dynamics
         skey = None ## this is an empty dkey if single_spike mode turned off
@@ -225,7 +225,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         j = _modify_current(j, dt, tau_m) ## get ODE re-scaled current
         v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
                                          v_c, a0, tau_m, R_m, v_rest, v_reset,
-                                         refract_T)
+                                         refract_T, intgFlag)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
             thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
