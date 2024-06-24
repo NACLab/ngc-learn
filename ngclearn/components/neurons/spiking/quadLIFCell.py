@@ -215,8 +215,9 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T,
-                       thr, tau_theta, theta_plus, one_spike, v_c, a0, intgFlag,
+                       thr, tau_theta, theta_plus, one_spike, intgFlag,
                        key, j, v, s, rfr, thr_theta, tols):
+        v_c = a0 = 1.
         ## Note: this runs quadratic LIF neuronal dynamics but constrained to be
         ## similar to the general form of LIF dynamics
         skey = None ## this is an empty dkey if single_spike mode turned off
