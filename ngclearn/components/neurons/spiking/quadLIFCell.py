@@ -203,20 +203,20 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
-                 v_reset=60., v_scale=-41.6, critical_V=1., tau_theta=1e7,
-                 theta_plus=0.05, refract_time=5., one_spike=False, **kwargs):
+                 v_reset=60., v_scale=-41.6, v_decay=1., critical_V=1., tau_theta=1e7,
+                 theta_plus=0.05, refract_time=5., thr_jitter=0., one_spike=False,
+                 integration_type="euler", **kwargs):
         super().__init__(name, n_units, tau_m, resist_m, thr, v_rest, v_reset,
-                         tau_theta, theta_plus, refract_time, one_spike, **kwargs)
+                         v_decay, tau_theta, theta_plus, refract_time, thr_jitter,
+                         one_spike, integration_type, **kwargs)
         ## only two distinct additional constants distinguish the Quad-LIF cell
         self.v_c = v_scale
         self.a0 = critical_V
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T,
-                       thr, tau_theta, theta_plus, one_spike, intgFlag,
+                       thr, tau_theta, theta_plus, one_spike, v_c, a0, intgFlag,
                        key, j, v, s, rfr, thr_theta, tols):
-        v_c = 1.
-        a0 = 1.
         ## Note: this runs quadratic LIF neuronal dynamics but constrained to be
         ## similar to the general form of LIF dynamics
         skey = None ## this is an empty dkey if single_spike mode turned off
