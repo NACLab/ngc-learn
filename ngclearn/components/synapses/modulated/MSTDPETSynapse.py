@@ -6,32 +6,33 @@ from ngclearn.utils import tensorstats
 class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligility traces
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
-                 pretrace_target=0., elg_tau=0., elg_decay=1., update_scale=1.,
+                 pretrace_target=0., tau_elg=0., elg_decay=1.,
                  weight_init=None, resist_scale=1., p_conn=1., **kwargs):
         super().__init__(name,shape, A_plus, A_minus, eta=eta, mu=mu,
                          pretrace_target=pretrace_target, weight_init=weight_init,
                          resist_scale=resist_scale, p_conn=p_conn, **kwargs)
         ## MSTDP/MSTDP-ET meta-parameters
-        self.elg_tau = elg_tau
+        self.elg_tau = tau_elg
         self.elg_decay = elg_decay
-        self.update_scale = update_scale
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
         self.eligiblity = Compartment(jnp.zeros(shape))
 
     @staticmethod
-    def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus, elg_tau,
-                elg_decay, update_scale, preSpike, postSpike, preTrace, postTrace,
+    def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg,
+                elg_decay, preSpike, postSpike, preTrace, postTrace,
                 weights, eta, modulator, eligiblity):
         ## compute local synaptic update (via STDP)
         dW_dt = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
             preSpike, postSpike, preTrace, postTrace, weights
         )
-        if elg_tau > 0.: ## perform dynamics of M-STDP-ET
+        if tau_elg > 0.: ## perform dynamics of M-STDP-ET
             ## update eligibility trace given current local update
-            dElg_dt = -eligiblity * elg_decay + dW_dt * update_scale
-            eligiblity = eligiblity + dElg_dt * dt/elg_tau
+            # dElg_dt = -eligiblity * elg_decay + dW_dt * update_scale
+            # eligiblity = eligiblity + dElg_dt * dt/elg_tau
+            #z = z * np.exp(-dt / tau_z) + zeta
+            eligiblity = eligiblity * jnp.exp(-dt / tau_elg) + dW_dt
         else: ## recovers M-STDP
             eligiblity = dW_dt
         dWeights = eligiblity * modulator ## trace/update times modulatory signal (e.g., reward)
