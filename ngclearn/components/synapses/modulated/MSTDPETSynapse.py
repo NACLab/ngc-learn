@@ -36,12 +36,12 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             eligiblity = dW_dt
         dWeights = eligiblity * modulator ## trace/update times modulatory signal (e.g., reward)
 
-        if eta > 0.: ## perform physical adjustment of synapses
-            ## do a gradient ascent update/shift
-            weights = weights + dWeights * eta ## modulate update
-            ## enforce non-negativity
-            eps = 0.01 # 0.001
-            weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
+        #if eta > 0.: ## perform physical adjustment of synapses
+        ## do a gradient ascent update/shift
+        weights = weights + dWeights * eta ## modulate update
+        ## enforce non-negativity
+        eps = 0.01 # 0.001
+        weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
         return weights, dWeights
 
     @resolver(_evolve)
