@@ -43,28 +43,33 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         ## enforce non-negativity
         eps = 0.01 # 0.001
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
-        return weights, dWeights
+        return weights, dWeights, eligibility
 
     @resolver(_evolve)
-    def evolve(self, weights, dWeights):
+    def evolve(self, weights, dWeights, eligibility):
         self.weights.set(weights)
         self.dWeights.set(dWeights)
+        self.eligibility.set(eligibility)
 
     @staticmethod
     def _reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
+        synVals = jnp.zeros(shape)
         inputs = preVals
         outputs = postVals
         preSpike = preVals
         postSpike = postVals
         preTrace = preVals
         postTrace = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights
+        dWeights = synVals
+        eligibility = synVals
+        return (inputs, outputs, preSpike, postSpike, preTrace, postTrace,
+                dWeights, eligibility)
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights):
+    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace,
+              dWeights, eligibility):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.preSpike.set(preSpike)
@@ -72,6 +77,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         self.preTrace.set(preTrace)
         self.postTrace.set(postTrace)
         self.dWeights.set(dWeights)
+        self.eligibility.set(eligibility)
 
     def help(self): ## component help function
         properties = {
