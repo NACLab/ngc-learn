@@ -3,52 +3,6 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-def evolve(dt, pre, post, theta, W, tau_w, tau_theta, w_bound=0., w_decay=0.):
-    """
-    Evolves/changes the synpatic value matrix and threshold variables underlying
-    this synaptic cable, given relevant statistics.
-
-    Args:
-        dt: integration time constant
-
-        pre: pre-synaptic statistic to drive update (e.g., could be a trace)
-
-        post: post-synaptic statistic to drive update (e.g., could be a trace)
-
-        theta: the current state of the synaptic threshold variables
-
-        W: synaptic weight values (at time t)
-
-        tau_w: synaptic update time constant
-
-        tau_theta: threshold variable evolution time constant
-
-        w_bound: maximum value to enforce over newly computed efficacies
-            (default: 0.); must > 0. to be used
-
-        w_decay: synaptic decay factor (default: 0.)
-
-    Returns:
-        the newly evolved synaptic weight value matrix,
-        the newly evolved synaptic threshold variables,
-        the synaptic update matrix
-    """
-    eps = 1e-7
-    #post_term = post * (post - theta) # post - theta
-    #theta = jnp.mean(post * post, axis=1, keepdims=True)
-    post_term = post * (post - theta) # post - theta
-    post_term = post_term * (1. / (theta + eps))
-    dW = jnp.matmul(pre.T, post_term)
-    if w_bound > 0.:
-        dW = dW * (w_bound - jnp.abs(W))
-    ## update synaptic efficacies according to a leaky ODE
-    dW = -W * w_decay + dW
-    _W = W + dW * dt/tau_w
-    ## update synaptic modification threshold as a leaky ODE
-    dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True) ## batch avg
-    _theta = theta + (-theta + dtheta) * dt/tau_theta
-    return _W, _theta, dW, post_term
-
 class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
     A synaptic cable that adjusts its efficacies in accordance with BCM
@@ -135,8 +89,19 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     @staticmethod
     def _evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
-        weights, theta, dWeights, post_term = evolve(dt, pre, post, theta, weights, tau_w,
-                                                     tau_theta, w_bound, w_decay)
+        eps = 1e-7
+        post_term = post * (post - theta)  # post - theta
+        post_term = post_term * (1. / (theta + eps))
+        dWeights = jnp.matmul(pre.T, post_term)
+        if w_bound > 0.:
+            dWeights = dWeights * (w_bound - jnp.abs(weights))
+        ## update synaptic efficacies according to a leaky ODE
+        dWeights = -weights * w_decay + dWeights
+        _W = weights + dWeights * dt / tau_w
+        ## update synaptic modification threshold as a leaky ODE
+        dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True)  ## batch avg
+        theta = theta + (-theta + dtheta) * dt / tau_theta
+
         return weights, theta, dWeights, post_term
 
     @resolver(_evolve)
