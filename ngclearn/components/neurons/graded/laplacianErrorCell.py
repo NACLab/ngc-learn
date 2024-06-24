@@ -120,17 +120,18 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator.set(modulator)
         self.L.set(L)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "LaplacianErrorcell - computes mismatch/error signals at "
                          "each time step t (between a `target` and a prediction `mu`)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"mu": "External input prediction value(s)",
                  "target": "External input target signal value(s)",
                  "modulator": "External input modulatory/scaling signal(s)"},
-            "output_compartments":
+            "outputs":
                 {"L": "Local loss value computed/embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},
@@ -138,7 +139,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         hyperparams = {
             "n_units": "Number of neurons to model in this layer"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "Laplacian(x=target; shift=mu, scale=1)",
                 "hyperparameters": hyperparams}

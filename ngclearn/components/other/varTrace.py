@@ -38,9 +38,11 @@ class VarTrace(JaxComponent): ## low-pass filter
 
     | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | --- Cell State Compartments: ---
+    | trace - traced value signal
     | --- Cell Output Compartments: ---
     | outputs - output signal (same as "trace" compartment)
-    | trace - traced value signal
+    | trace - traced value signal (can be treated as output compartment)
 
     Args:
         name: the string name of this operator
@@ -108,17 +110,19 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.outputs.set(outputs)
         self.trace.set(trace)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "VarTrace - maintains a low pass filter over incoming signal "
                          "values (such as sequences of discrete pulses)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values"},
-            "output_compartments":
-                {"trace": "Continuous low-pass filtered signal values, at time t",
-                 "outputs": "Continuous low-pass filtered signal values, "
+            "states":
+                {"trace": "Continuous low-pass filtered signal values, at time t"},
+            "outputs":
+                {"outputs": "Continuous low-pass filtered signal values, "
                             "at time t (same as `trace`)"},
         }
         hyperparams = {
@@ -129,7 +133,7 @@ class VarTrace(JaxComponent): ## low-pass filter
             "decay_type": "Indicator of what type of decay dynamics to use "
                           "as filter is updated at time t"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_tr * dz/dt ~ -z + inputs",
                 "hyperparameters": hyperparams}

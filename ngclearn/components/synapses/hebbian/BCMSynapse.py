@@ -21,9 +21,9 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by synapses)
+    | outputs - output signals (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
-    | key - JAX RNG key
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal/value to drive 1st term of BCM update (x)
     | post - post-synaptic signal/value to drive 2nd term of BCM update (y)
@@ -143,7 +143,8 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.weights.set(data['weights'])
         self.theta.set(data['theta'])
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "BCMSTDPSynapse - performs an adaptable synaptic "
                             "transformation  of inputs to produce output signals; "
@@ -152,7 +153,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
+                 "key": "JAX PRNG key",
                  "pre": "Pre-synaptic statistic for BCM (z_j)",
                  "post": "Post-synaptic statistic for BCM (z_i)"},
             "parameter_compartments":
@@ -173,7 +174,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
             "w_bound": "Soft synaptic bound applied to synapses post-update",
             "w_decay": "Synaptic decay term"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
                             "tau_w dW_{ij}/dt = z_j * (z_i - theta) - W_{ij} * w_decay;"

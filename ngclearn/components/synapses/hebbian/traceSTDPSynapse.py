@@ -33,9 +33,9 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by synapses)
+    | outputs - output signals (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
-    | key - JAX RNG key
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
@@ -119,16 +119,16 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     @staticmethod
     def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus,
                 preSpike, postSpike, preTrace, postTrace, weights, eta):
-        dW = TraceSTDPSynapse._compute_update(
+        dWeights = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
             preSpike, postSpike, preTrace, postTrace, weights
         )
         ## do a gradient ascent update/shift
-        weights = weights + dW * eta
+        weights = weights + dWeights * eta
         ## enforce non-negativity
         eps = 0.01 # 0.001
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
-        return weights, dW
+        return weights, dWeights
 
     @resolver(_evolve)
     def evolve(self, weights, dWeights):
@@ -158,7 +158,8 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.postTrace.set(postTrace)
         self.dWeights.set(dWeights)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "TraceSTDPSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
@@ -166,20 +167,21 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
                             "spike-timing-dependent plasticity (STDP)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
-                 "postTrace": "Post-synaptic trace value term for STDP (z_i)",
-                 "eta": "Global learning rate (multiplier beyond A_plus and A_minus)"},
-            "parameter_compartments":
+                 "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
-                {"outputs": "Output of synaptic transformation",
-                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+                 "biases": "Base-rate/bias parameter values",
+                 "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+                 "key": "JAX PRNG key"},
+            "analytics":
+                {"dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+            "outputs":
+                {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
@@ -192,7 +194,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             "mu": "Power factor for STDP adjustment",
             "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
                             "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",

@@ -106,8 +106,9 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     | --- Cell Input Compartments: ---
     | j - input (takes in external signals)
     | j_td - input/top-down pressure input (takes in external signals)
-    | --- Cell Output Compartments: ---
+    | --- Cell State Compartments ---
     | z - rate activity
+    | --- Cell Output Compartments: ---
     | zF - post-activation function activity, i.e., fx(z)
 
     Args:
@@ -215,19 +216,21 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.j_td.set(j_td) # top-down electrical current - pressure
         self.z.set(z) # rate activity
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "RateCell - evolves neurons according to rate-coded/"
                          "continuous dynamics "
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"j": "External input stimulus value(s)",
                  "j_td": "External top-down input stimulus value(s); these get "
                          "multiplied by the derivative of f(x), i.e., df(x)"},
-            "output_compartments":
-                {"z": "Update to rate-coded continuous dynamics; value at time t",
-                 "zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)"},
+            "states":
+                {"z": "Update to rate-coded continuous dynamics; value at time t"},
+            "outputs":
+                {"zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
@@ -237,7 +240,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             "threshold": "What kind of iterative thresholding function to place over neuronal dynamics?",
             "integration_type": "Type of numerical integration to use for the cell dynamics",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dz/dt = Prior(z; gamma) + (j + j_td)",
                 "hyperparameters": hyperparams}

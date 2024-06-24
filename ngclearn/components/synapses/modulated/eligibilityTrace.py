@@ -121,11 +121,12 @@ class EligibilityTrace(JaxComponent): ## eligibility trace
                          "trace values over time"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "modulator": "Takes in external modulatory signal values",
-                 "key": "JAX RNG key"},
-            "outputs_compartments":
+                 "modulator": "Takes in external modulatory signal values"},
+            "states":
+                {"key": "JAX PRNG key"},
+            "outputs":
                 {"eligibility": "Current state of eligibility trace at time `t` (Elg)",
                  "modded_outputs": "Current eligibility scaled by external "
                                    "(neuro)modulatory signal (mod)"},

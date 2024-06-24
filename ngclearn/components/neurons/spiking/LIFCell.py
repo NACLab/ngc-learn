@@ -151,13 +151,14 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
     | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
-    | key - JAX RNG key
-    | --- Cell Output Compartments: ---
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
-    | s - emitted binary spikes/action potentials
-    | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | rfr - (relative) refractory variable state
     | thr_theta - homeostatic/adaptive threshold increment state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
+    | s - emitted binary spikes/action potentials
+    | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | tols - time-of-last-spike
 
     Args:
@@ -313,20 +314,22 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         if seeded == True:
             self.key.set( data['key'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "LIFCell - evolves neurons according to leaky integrate-"
                          "and-fire spiking dynamics."
         }
         compartment_props = {
-            "input_compartments":
-                {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"j": "External input electrical current"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",
                  "thr": "Current state of voltage threshold at time t",
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
@@ -344,7 +347,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = (v_rest - v) + j * resist_m",
                 "hyperparameters": hyperparams}

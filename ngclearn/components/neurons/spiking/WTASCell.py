@@ -73,12 +73,13 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
 
     | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
-    | key - JAX RNG key
-    | --- Cell Output Compartments: ---
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
-    | s - emitted binary spikes/action potentials
     | rfr - (relative) refractory variable state
     | thr - (adaptive) threshold state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
+    | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
 
     Args:
@@ -172,20 +173,22 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         data = jnp.load(file_name)
         self.thr.set( data['threshold'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "WTASCell - evolves neurons according to winner-take-all "
                          "spiking dynamics "
         }
         compartment_props = {
-            "input_compartments":
-                {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"j": "External input electrical current"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",
                  "thr": "Current state of voltage threshold at time t",
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
@@ -197,7 +200,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
             "refract_time": "Length of relative refractory period (ms)",
             "thr_jitter": "Scale of random uniform noise to apply to initial condition of threshold"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = j * resist_m",
                 "hyperparameters": hyperparams}

@@ -12,7 +12,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output
+    | outputs - output signals
     | filters - current value tensor of filter/kernel efficacies
     | biases - current base-rate/bias efficacies
 
@@ -121,19 +121,20 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         if "biases" in data.keys():
             self.biases.set(data['biases'])
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse type": "DeconvSynapse - performs a synaptic deconvolution (@.T) of "
-                         "inputs to produce output signals"
+                            "inputs to produce output signals"
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "parameter_compartments":
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
                 {"filters": "Synaptic filter parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
+                 "biases": "Base-rate/bias parameter values",
+                 "key": "JAX PRNG key"},
+            "outputs":
                 {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
@@ -146,7 +147,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
             "stride": "length / size of stride",
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [K @.T inputs] * R + b",
                 "hyperparameters": hyperparams}

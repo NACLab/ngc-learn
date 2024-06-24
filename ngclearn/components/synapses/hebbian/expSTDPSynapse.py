@@ -3,56 +3,22 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=0.00005,
-            x_tar=0.7, exp_beta=1., Aplus=1., Aminus=0.):
-    """
-    Evolves/changes the synpatic value matrix underlying this synaptic cable,
-    given relevant statistics.
-
-    Args:
-        pre: pre-synaptic statistic to drive update
-
-        x_pre: pre-synaptic trace value
-
-        post: post-synaptic statistic to drive update
-
-        x_post: post-synaptic trace value
-
-        W: synaptic weight values (at time t)
-
-        w_bound: maximum value to enforce over newly computed efficacies
-
-        eta: global learning rate to apply to the Hebbian update
-
-        x_tar: controls degree of pre-synaptic disconnect
-
-        exp_beta: controls effect of exponential Hebbian shift/dependency
-
-        Aplus: strength of long-term potentiation (LTP)
-
-        Aminus: strength of long-term depression (LTD)
-
-    Returns:
-        the newly evolved synaptic weight value matrix, synaptic update matrix
-    """
+def _calc_update(dt, pre, x_pre, post, x_post, W, w_bound=1., x_tar=0.7,
+                 exp_beta=1., Aplus=1., Aminus=0.): ## internal dynamics method
     ## equations 4 from Diehl and Cook - full exponential weight-dependent STDP
     ## calculate post-synaptic term
     post_term1 = jnp.exp(-exp_beta * W) * jnp.matmul(x_pre.T, post)
-    x_tar_vec = x_pre * 0 + x_tar # need to broadcast scalar x_tar to mat/vec form
-    post_term2 = jnp.exp(-exp_beta * (w_bound - W)) * jnp.matmul(x_tar_vec.T, post)
+    x_tar_vec = x_pre * 0 + x_tar  # need to broadcast scalar x_tar to mat/vec form
+    post_term2 = jnp.exp(-exp_beta * (w_bound - W)) * jnp.matmul(x_tar_vec.T,
+                                                                 post)
     dWpost = (post_term1 - post_term2) * Aplus
     ## calculate pre-synaptic term
     dWpre = 0.
     if Aminus > 0.:
         dWpre = -jnp.exp(-exp_beta * W) * jnp.matmul(pre.T, x_post) * Aminus
-
     ## calc final weighted adjustment
     dW = (dWpost + dWpre)
-    _W = W + dW * eta
-    ## enforce non-negativity
-    eps = 0.01 # 0.001
-    _W = jnp.clip(_W, eps, w_bound - eps)
-    return _W, dW
+    return dW
 
 class ExpSTDPSynapse(DenseSynapse):
     """
@@ -62,9 +28,9 @@ class ExpSTDPSynapse(DenseSynapse):
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by synapses)
+    | outputs - output signals (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
-    | key - JAX RNG key
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
@@ -135,13 +101,28 @@ class ExpSTDPSynapse(DenseSynapse):
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
         self.dWeights = Compartment(self.weights.value * 0)
+        self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate governing plasticity
 
     @staticmethod
-    def _evolve(dt, w_bound, eta, preTrace_target, exp_beta, Aplus, Aminus,
-                    preSpike, postSpike, preTrace, postTrace, weights):
-        weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
-                             w_bound=w_bound, eta=eta, x_tar=preTrace_target,
-                             exp_beta=exp_beta, Aplus=Aplus, Aminus=Aminus)
+    def _compute_update(dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus,
+                        preSpike, postSpike, preTrace, postTrace, weights):
+        dW = _calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
+                          w_bound=w_bound, x_tar=preTrace_target, exp_beta=exp_beta,
+                          Aplus=Aplus, Aminus=Aminus)
+        return dW
+
+    @staticmethod
+    def _evolve(dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus,
+                preSpike, postSpike, preTrace, postTrace, weights, eta):
+        dW = ExpSTDPSynapse._compute_update(
+            dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus,
+            preSpike, postSpike, preTrace, postTrace, weights
+        )
+        ## do a gradient ascent update/shift
+        _W = weights + dW * eta
+        ## enforce non-negativity
+        eps = 0.01
+        _W = jnp.clip(_W, eps, w_bound - eps)
         return weights, dW
 
     @resolver(_evolve)
@@ -172,7 +153,8 @@ class ExpSTDPSynapse(DenseSynapse):
         self.postTrace.set(postTrace)
         self.dWeights.set(dWeights)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "ExpSTDPSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
@@ -180,19 +162,21 @@ class ExpSTDPSynapse(DenseSynapse):
                             "spike-timing-dependent plasticity (STDP)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
                  "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
-            "parameter_compartments":
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
-                {"outputs": "Output of synaptic transformation",
-                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+                 "biases": "Base-rate/bias parameter values",
+                 "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+                 "key": "JAX PRNG key"},
+            "analytics":
+                {"dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+            "outputs":
+                {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
@@ -202,10 +186,10 @@ class ExpSTDPSynapse(DenseSynapse):
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
             "exp_beta": "Controls effect of exponential Hebbian shift / dependency (B)",
-            "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+            "eta": "Global learning rate initial condition",
             "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
                             "dW_{ij}/dt = A_plus * [z_j * exp(-B w) - x_tar * exp(-B(w_max - w))] * s_i -"

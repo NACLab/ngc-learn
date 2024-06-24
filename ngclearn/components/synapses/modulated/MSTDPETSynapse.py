@@ -26,7 +26,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         dW_dt = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
             preSpike, postSpike, preTrace, postTrace, weights
-        )
+        ) ## produce dW/dt (ODE for synaptic change dynamics)
         if tau_elg > 0.: ## perform dynamics of M-STDP-ET
             ## update eligibility trace given current local update
             # dElg_dt = -eligibility * elg_decay + dW_dt * update_scale
@@ -88,22 +88,23 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                             "MSTDP w/ eligibility traces (MSTDP-ET)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
                  "postTrace": "Post-synaptic trace value term for STDP (z_i)",
-                 "modulator": "External modulatory signal values (e.g., reward values) (r)",
-                 "eta": "Global learning rate"},
-            "parameter_compartments":
+                 "modulator": "External modulatory signal values (e.g., reward values) (r)"},
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values (W)",
-                 "eligibility": "Current state of eligibility trace at time `t` (Elg)"},
-            "output_compartments":
-                {"outputs": "Output of synaptic transformation",
-                 "dWeights": "Modulated synaptic weight value adjustment matrix "
+                 "eligibility": "Current state of eligibility trace at time `t` (Elg)",
+                 "eta": "Global learning rate",
+                 "key": "JAX PRNG key",},
+            "analytics":
+                {"dWeights": "Modulated synaptic weight value adjustment matrix "
                              "produced at time t dW^{stdp}_{ij}/dt"},
+            "outputs":
+                {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",

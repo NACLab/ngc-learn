@@ -65,11 +65,11 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
                          "at each time step `t`; this is an online RPE estimator"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"reward": "External reward signals/values"},
-            "output_compartments":
+            "outputs":
                 {"mu": "Current state of reward predictor",
-                 "rpe": "Current value of reward prediction error at time `t`",},
+                 "rpe": "Current value of reward prediction error at time `t`"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",

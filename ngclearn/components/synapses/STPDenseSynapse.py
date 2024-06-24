@@ -12,7 +12,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output
+    | outputs - output signals
     | weights - current value matrix of synaptic efficacies
     | biases - current value vector of synaptic bias values
     | --- Short-Term Plasticity Compartments: ---
@@ -143,16 +143,16 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
                             "this synapse is dynamic, adapting via a form of short-term plasticity"
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "parameter_compartments":
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",
                  "resources": "Synaptic resource paramter values (U)",
                  "u": "Release probability variables",
-                 "x": "Resource depletion variables"},
-            "outputs_compartments":
+                 "x": "Resource depletion variables",
+                 "key": "JAX PRNG key"},
+            "outputs":
                 {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {

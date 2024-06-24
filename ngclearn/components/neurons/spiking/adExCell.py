@@ -84,9 +84,11 @@ class AdExCell(JaxComponent):
 
     | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
-    | --- Cell Output Compartments: ---
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
     | w - recovery variable state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
     | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
 
@@ -204,21 +206,21 @@ class AdExCell(JaxComponent):
         self.s.set(s)
         self.tols.set(tols)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "AdExCell - evolves neurons according to nonlinear, "
                          "adaptive exponential dual-ODE spiking cell dynamics."
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+                 "key": "JAX PRNG key"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "w": "Recovery variable at time t",
-                 "s": "Emitted spikes/pulses at time t",
-                 "rfr": "Current state of (relative) refractory variable",
-                 "thr": "Current state of voltage threshold at time t",
+                 "w": "Recovery variable at time t"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
@@ -237,7 +239,7 @@ class AdExCell(JaxComponent):
             "w0": "Initial condition for recovery variable",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = -(v - v_rest) + sharpV * exp((v - vT)/sharpV) - resist_m * w + resist_m * j; "
                             "tau_w * dw/dt =  -w + (v - v_rest) * a; where w = w + s * (w + b)",

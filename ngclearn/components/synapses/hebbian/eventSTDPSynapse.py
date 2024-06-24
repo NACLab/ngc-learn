@@ -4,35 +4,6 @@ from ngclearn.utils import tensorstats
 ## import parent synapse class/component
 from ngclearn.components.synapses import DenseSynapse
 
-def evolve(pre, post, W, eta=0.00005, lmbda=0., w_bound=1.):
-    """
-    Evolves/changes the synpatic value matrix underlying this synaptic cable,
-    given relevant statistics.
-
-    Args:
-        pre: pre-synaptic statistic to drive update
-
-        post: post-synaptic statistic to drive update
-
-        W: synaptic weight values (at time t)
-
-        w_bound: maximum value to enforce over newly computed efficacies
-
-        eta: global learning rate to apply to the Hebbian update
-
-        lmbda: synaptic change control coefficient ("lambda")
-
-    Returns:
-        the newly evolved synaptic weight value matrix, synaptic update matrix
-    """
-    pos_shift = w_bound - W * (1. + lmbda) # this follows rule in eqn 18 of the paper
-    neg_shift = -W * (1. + lmbda)
-    dW = jnp.where(pre.T, pos_shift, neg_shift)
-    dW = (dW * post)
-    W = W + dW * eta #* (1. - w) * eta
-    W = jnp.clip(W, 0.01, w_bound) # not in source paper
-    return W, dW
-
 class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     """
     A synaptic cable that adjusts its efficacies via event-driven, post-synaptic
@@ -40,9 +11,9 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by synapses)
+    | outputs - output signals (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
-    | key - JAX RNG key
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
@@ -61,7 +32,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
-        eta: global learning rate
+        eta: global learning rate initial condition
 
         lmbda: controls degree of synaptic disconnect ("lambda")
 
@@ -93,10 +64,23 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         self.preSpike = Compartment(preVals)
         self.postSpike = Compartment(postVals)
         self.dWeights = Compartment(self.weights.value * 0)
+        self.eta = Compartment(jnp.ones((1, 1)) * eta)  ## global learning rate governing plasticity
 
     @staticmethod
-    def _evolve(eta, lmbda, w_bound, preSpike, postSpike, weights):
-        weights, dWeights = evolve(preSpike, postSpike, weights, eta, lmbda, w_bound)
+    def _compute_update(lmbda, w_bound, preSpike, postSpike, weights):
+        pos_shift = w_bound - weights * (1. + lmbda)  # this follows rule in eqn 18 of the paper
+        neg_shift = -weights * (1. + lmbda)
+        dW = jnp.where(preSpike.T, pos_shift, neg_shift)
+        dW = (dW * postSpike)
+        return dW
+
+    @staticmethod
+    def _evolve(lmbda, w_bound, preSpike, postSpike, weights, eta):
+        dWeights = EventSTDPSynapse._compute_update(
+            lmbda, w_bound, preSpike, postSpike, weights
+        )
+        weights = weights + dWeights * eta  # * (1. - w) * eta
+        weights = jnp.clip(weights, 0.01, w_bound)  # not in source paper
         return weights, dWeights
 
     @resolver(_evolve)
@@ -123,7 +107,8 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         self.postSpike.set(postSpike)
         self.dWeights.set(dWeights)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "EventSTDPSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
@@ -131,17 +116,19 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
                             "spike-timing-dependent plasticity (STDP)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)"},
-            "parameter_compartments":
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
-                {"outputs": "Output of synaptic transformation",
-                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+                 "biases": "Base-rate/bias parameter values",
+                 "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+                 "key": "JAX PRNG key"},
+            "analytics":
+                {"dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+            "outputs":
+                {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
@@ -151,7 +138,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
             "lmbda": "Degree of synaptic disconnect",
             "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
                             "dW_{ij}/dt = eta * [ (1 - W_{ij}(1 + lmbda)) * s_j - W_{ij} * (1 + lmbda) * s_j ]",

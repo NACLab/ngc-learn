@@ -50,7 +50,8 @@ class PoissonCell(JaxComponent):
 
     | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
-    | key - JAX RNG key
+    | --- Cell State Compartments: ---
+    | key - JAX PRNG key
     | --- Cell Output Compartments: ---
     | outputs - output
     | tols - time-of-last-spike
@@ -113,7 +114,8 @@ class PoissonCell(JaxComponent):
         data = jnp.load(file_name)
         self.key.set( data['key'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "PoissonCell - samples input to produce spikes, "
                           "where dimension is a probability proportional to "
@@ -122,10 +124,11 @@ class PoissonCell(JaxComponent):
                          "a Poisson distribution)"
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
+                {"key": "JAX PRNG key"},
+            "outputs":
                 {"tols": "Time-of-last-spike",
                  "outputs": "Binary spike values emitted at time t"},
         }
@@ -133,7 +136,7 @@ class PoissonCell(JaxComponent):
             "n_units": "Number of neuronal cells to model in this layer",
             "max_freq": "Maximum spike frequency of the train produced",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "~ Poisson(x; max_freq)",
                 "hyperparameters": hyperparams}

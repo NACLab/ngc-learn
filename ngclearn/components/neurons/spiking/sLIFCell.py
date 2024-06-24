@@ -156,12 +156,13 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
     | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
-    | key - JAX RNG key
-    | --- Cell Output Compartments: ---
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
-    | s - emitted binary spikes/action potentials
     | rfr - (relative) refractory variable state
     | thr - (adaptive) threshold state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
+    | s - emitted binary spikes/action potentials
     | surrogate - state of surrogate function output signals (currently, the secant LIF estimator)
     | tols - time-of-last-spike
 
@@ -320,20 +321,22 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.thr.set(data['threshold'])
         self.threshold0 = self.thr.value + 0
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "SLIFCell - evolves neurons according to simplified "
                          "leaky integrate-and-fire spiking dynamics."
         }
         compartment_props = {
-            "input_compartments":
-                {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"j": "External input electrical current"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",
                  "thr": "Current state of voltage threshold at time t",
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike",
                  "surrogate": "State/value of surrogate function at time t"},
         }
@@ -351,7 +354,7 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "thr_jitter": "Scale of random uniform noise to apply to initial condition of threshold",
             "sticky_spikes": "Should spikes be allowed to persist during refractory period?"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = -v + j * resist_m",
                 "hyperparameters": hyperparams}

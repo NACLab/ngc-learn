@@ -33,7 +33,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output
+    | outputs - output signals
     | weights - current value matrix of synaptic efficacies
     | biases - current value vector of synaptic bias values
 
@@ -132,20 +132,21 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         if "biases" in data.keys():
             self.biases.set(data['biases'])
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "DenseSynapse - performs a synaptic transformation "
                             "of inputs to produce  output signals (e.g., a "
                             "scaled linear multivariate transformation)"
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "parameter_compartments":
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
+                 "biases": "Base-rate/bias parameter values",
+                 "key": "JAX PRNG key"},
+            "outputs":
                 {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
@@ -155,7 +156,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] + b",
                 "hyperparameters": hyperparams}

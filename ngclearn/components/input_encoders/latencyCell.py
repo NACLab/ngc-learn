@@ -119,11 +119,13 @@ class LatencyCell(JaxComponent):
 
     | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
-    | key - JAX RNG key
+    | --- Cell State Compartments: ---
+    | targ_sp_times - target-spike-time
+    | mask - spike-ordering mask
+    | key - JAX PRNG key
     | --- Cell Output Compartments: ---
     | outputs - output
     | tols - time-of-last-spike
-    | targ_sp_times - target-spike-time
 
     Args:
         name: the string name of this cell
@@ -236,7 +238,8 @@ class LatencyCell(JaxComponent):
         data = jnp.load(file_name)
         self.key.set( data['key'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "LatencyCell - samples input to produce spikes via latency "
                          "coding, where each dimension's magnitude determines how "
@@ -244,14 +247,15 @@ class LatencyCell(JaxComponent):
                          "temporal/order encoder."
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "output_compartments":
-                {"tols": "Time-of-last-spike",
-                 "outputs": "Binary spike values emitted at time t",
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
+                {"targ_sp_times": "Target spike times",
                  "mask": "Spike ordering mask",
-                 "targ_sp_times": "Target spike times"},
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"tols": "Time-of-last-spike",
+                 "outputs": "Binary spike values emitted at time t"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
@@ -261,7 +265,7 @@ class LatencyCell(JaxComponent):
             "num_steps": "Number of total time steps of simulation to consider ("
                          "useful for target spike time computation",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "~ Latency(x)",
                 "hyperparameters": hyperparams}

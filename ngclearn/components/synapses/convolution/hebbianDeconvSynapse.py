@@ -13,10 +13,10 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by filters)
+    | outputs - output signals (transformation induced by filters)
     | filters - current value matrix of synaptic filter efficacies
     | biases - current value vector of synaptic bias values
-    | key - JAX RNG key
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
     | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
@@ -132,20 +132,31 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         self.x_delta_shape = (dx, dy)
 
     @staticmethod
-    def _evolve(opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init,
-                shape, stride, padding, delta_shape, pre, post, weights, biases,
-                opt_params):
+    def _compute_update(sign_value, w_decay, bias_init, shape, stride, padding,
+                        delta_shape, pre, post, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
-        ## calc dFilters
+        ## compute adjustment to filters
         dWeights = calc_dK_deconv(pre, post, delta_shape=delta_shape,
-                                  stride_size=stride, out_size=k_size, padding=padding)
+                                  stride_size=stride, out_size=k_size,
+                                  padding=padding)
         dWeights = dWeights * sign_value
-        if w_decay > 0.: ## apply synaptic decay
+        if w_decay > 0.:  ## apply synaptic decay
             dWeights = dWeights - weights * w_decay
-
+        ## compute adjustment to base-rates (if applicable)
         dBiases = 0.  # jnp.zeros((1,1))
         if bias_init != None:
             dBiases = jnp.sum(post, axis=0, keepdims=True) * sign_value
+        return dWeights, dBiases
+
+    @staticmethod
+    def _evolve(opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init,
+                shape, stride, padding, delta_shape, pre, post, weights, biases,
+                opt_params):
+        dWeights, dBiases = HebbianDeconvSynapse._compute_update(
+            sign_value, w_decay, bias_init, shape, stride, padding, delta_shape,
+            pre, post, weights
+        )
+        if bias_init != None:
             opt_params, [weights, biases] = opt(opt_params, [weights, biases],
                                                 [dWeights, dBiases])
         else: ## ignore dBiases since no biases configured
@@ -199,7 +210,8 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         self.post.set(post)
         self.dInputs.set(dInputs)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "DeconvSynapse - performs a synaptic deconvolution "
                             "(@.T) of inputs to produce output signals; synaptic "
@@ -207,18 +219,19 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
                             "adjustment"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
                  "pre": "Pre-synaptic statistic for Hebb rule (z_j)",
                  "post": "Post-synaptic statistic for Hebb rule (z_i)"},
-            "parameter_compartments":
+            "states":
                 {"filters": "Synaptic filter parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
+                 "biases": "Base-rate/bias parameter values",
+                 "key": "JAX PRNG key"},
+            "analytics":
+                {"dWeights": "Synaptic filter value adjustment 4D-tensor produced at time t",
+                 "dBiases": "Synaptic bias/base-rate value adjustment 3D-tensor produced at time t"},
+            "outputs":
                 {"outputs": "Output of synaptic/filter transformation",
-                 "dWeights": "Synaptic filter value adjustment 4D-tensor produced at time t",
-                 "dBiases": "Synaptic bias/base-rate value adjustment 3D-tensor produced at time t",
                  "dInputs": "Tensor containing back-transmitted signal values; backpropagating pulse"},
         }
         hyperparams = {
@@ -232,10 +245,11 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",
             "is_nonnegative": "Should filters be constrained to be non-negative post-updates?",
             "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
+            "eta": "Global (fixed) learning rate",
             "w_bound": "Soft synaptic bound applied to filters post-update",
             "w_decay": "Synaptic filter decay term"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [K @.T inputs] * R + b; "
                             "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay",
