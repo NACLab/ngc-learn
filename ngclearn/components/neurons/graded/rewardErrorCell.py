@@ -94,9 +94,3 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
                 line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
-
-if __name__ == '__main__':
-    from ngcsimlib.context import Context
-    with Context("Bar") as bar:
-        X = GaussianErrorCell("X", 9)
-    print(X)

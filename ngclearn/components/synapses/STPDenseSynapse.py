@@ -184,9 +184,3 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
                 line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
-
-if __name__ == '__main__':
-    from ngcsimlib.context import Context
-    with Context("Bar") as bar:
-        Wab = STPDenseSynapse("Wab", (2, 3))
-    print(Wab)

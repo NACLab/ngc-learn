@@ -20,8 +20,8 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
 
     @staticmethod
     def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg,
-                elg_decay, preSpike, postSpike, preTrace, postTrace,
-                weights, eta, modulator, eligibility):
+                elg_decay, preSpike, postSpike, preTrace, postTrace, weights,
+                eta, modulator, eligibility):
         ## compute local synaptic update (via STDP)
         dW_dt = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
@@ -32,8 +32,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             # dElg_dt = -eligibility * elg_decay + dW_dt * update_scale
             # eligibility = eligibility + dElg_dt * dt/elg_tau
             eligibility = eligibility * jnp.exp(-dt / tau_elg) + dW_dt
-            print("ELG: ",eligibility, " dW: ",dW_dt)
-        else: ## recovers M-STDP
+        else: ## perform dynamics of M-STDP (no eligibility trace)
             eligibility = dW_dt
         ## Perform a trace/update times a modulatory signal (e.g., reward)
         dWeights = eligibility * modulator
