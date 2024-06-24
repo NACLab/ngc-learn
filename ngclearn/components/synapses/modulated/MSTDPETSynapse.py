@@ -4,11 +4,72 @@ from ngclearn.components.synapses.hebbian import TraceSTDPSynapse
 from ngclearn.utils import tensorstats
 
 class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligility traces
+    """
+    A synaptic cable that adjusts its efficacies via trace-based form of
+    three-factor learning, i.e., modulated spike-timing-dependent plasticity
+    (M-STDP) or modulated STDP with eligibility traces (M-STDP-ET).
+
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output signals (transformation induced by synapses)
+    | weights - current value matrix of synaptic efficacies
+    | modulator - external modulatory signal values (e.g., a reward value)
+    | key - JAX PRNG key
+    | --- Synaptic Plasticity Compartments: ---
+    | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
+    | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
+    | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
+    | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
+    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+    | eligibility - current state of eligibility trace
+    | eta - global learning rate (multiplier beyond A_plus and A_minus)
+
+    | References:
+    | Morrison, Abigail, Ad Aertsen, and Markus Diesmann. "Spike-timing-dependent
+    | plasticity in balanced random networks." Neural computation 19.6 (2007): 1437-1467.
+    |
+    | Bi, Guo-qiang, and Mu-ming Poo. "Synaptic modification by correlated
+    | activity: Hebb's postulate revisited." Annual review of neuroscience 24.1
+    | (2001): 139-166.
+
+    Args:
+        name: the string name of this cell
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
+
+        A_plus: strength of long-term potentiation (LTP)
+
+        A_minus: strength of long-term depression (LTD)
+
+        eta: global learning rate initial value/condition (default: 1)
+
+        mu: controls the power scale of the Hebbian shift
+
+        pretrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
+                 (higher -> lower synaptic values)
+
+        tau_elg: eligibility trace time constant (default: 0); must be >0,
+            otherwise, the trace is disabled and this synapse evolves via M-STDP
+
+        elg_decay: eligibility decay constant (default: 1)
+
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use
+
+        resist_scale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+
+        p_conn: probability of a connection existing (default: 1.); setting
+            this to < 1. will result in a sparser synaptic structure
+    """
+
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
                  pretrace_target=0., tau_elg=0., elg_decay=1.,
                  weight_init=None, resist_scale=1., p_conn=1., **kwargs):
-        super().__init__(name,shape, A_plus, A_minus, eta=eta, mu=mu,
+        super().__init__(name, shape, A_plus, A_minus, eta=eta, mu=mu,
                          pretrace_target=pretrace_target, weight_init=weight_init,
                          resist_scale=resist_scale, p_conn=p_conn, **kwargs)
         ## MSTDP/MSTDP-ET meta-parameters
@@ -99,7 +160,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                 {"weights": "Synapse efficacy/strength parameter values (W)",
                  "eligibility": "Current state of eligibility trace at time `t` (Elg)",
                  "eta": "Global learning rate",
-                 "key": "JAX PRNG key",},
+                 "key": "JAX PRNG key"},
             "analytics":
                 {"dWeights": "Modulated synaptic weight value adjustment matrix "
                              "produced at time t dW^{stdp}_{ij}/dt"},
@@ -123,7 +184,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
                             "dW_{ij}/dt = Elg * r * eta; " 
-                            "dElg/dt = -Elg * elg_decay + dW_{ij}/dt" 
+                            "dElg/dt = -Elg * elg_decay + dW^{stdp}_{ij}/dt" 
                             "dW^{stdp}_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
                 "hyperparameters": hyperparams}
         return info
