@@ -58,7 +58,8 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         self.mu.set(mu)
         self.rpe.set(rpe)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "RewardErrorCell - computes the reward prediction error "
                          "at each time step `t`; this is an online RPE estimator"
@@ -74,7 +75,7 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
             "n_units": "Number of neuronal cells to model in this layer",
             "alpha": "Moving average decay factor"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "rpe = reward - mu; mu = mu * (1 - alpha) + reward * alpha",
                 "hyperparameters": hyperparams}

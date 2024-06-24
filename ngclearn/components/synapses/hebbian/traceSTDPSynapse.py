@@ -42,6 +42,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
     | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
     | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+    | eta - global learning rate (multiplier beyond A_plus and A_minus)
 
     | References:
     | Morrison, Abigail, Ad Aertsen, and Markus Diesmann. "Spike-timing-dependent
@@ -61,7 +62,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
 
         A_minus: strength of long-term depression (LTD)
 
-        eta: global learning rate
+        eta: global learning rate initial value/condition (default: 1)
 
         mu: controls the power scale of the Hebbian shift
 
@@ -122,10 +123,6 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
             preSpike, postSpike, preTrace, postTrace, weights
         )
-        # dW = calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
-        #                  w_bound=w_bound, x_tar=preTrace_target, mu=mu,
-        #                  Aplus=Aplus, Aminus=Aminus)
-        #if eta > 0.:
         ## do a gradient ascent update/shift
         weights = weights + dW * eta
         ## enforce non-negativity
@@ -175,7 +172,8 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
-                 "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
+                 "postTrace": "Post-synaptic trace value term for STDP (z_i)",
+                 "eta": "Global learning rate (multiplier beyond A_plus and A_minus)"},
             "parameter_compartments":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values"},
@@ -190,7 +188,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
-            "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+            "eta": "Global learning rate initial condition",
             "mu": "Power factor for STDP adjustment",
             "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
         }

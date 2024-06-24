@@ -7,36 +7,40 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
 @jit
-def _dfv_internal(inputs, Elg, tau_elg, elg_decay=1.): ## raw eligbility dynamics
-    dElg_dt = -Elg * elg_decay + inputs
+def _dfv_internal(inputs, Elg, tau_elg, elg_decay=1., input_scale=1.): ## raw eligbility dynamics
+    dElg_dt = -Elg * elg_decay + inputs * input_scale
     dElg_dt = dElg_dt * (1./tau_elg)
     return dElg_dt
 
 def _dfElg(t, Elg, params): ## eligbility trace dynamics wrapper
-    inputs, tau_elg, elg_decay = params
-    dElg_dt = _dfv_internal(inputs, Elg, tau_elg, elg_decay)
+    inputs, tau_elg, elg_decay, input_scale = params
+    dElg_dt = _dfv_internal(inputs, Elg, tau_elg, elg_decay, input_scale)
     return dElg_dt
 
 class EligibilityTrace(JaxComponent): ## eligibility trace
     """
-    A generic eligibility trace construct. Note that an eligibility trace can
-    be viewed as a dynamic parameter tensor.
+    A generic eligibility trace construct for tracking dynamics of a tensor
+    object.
 
     | --- Cell/Op Input Compartments: ---
-    | inputs - input (takes in external signals)
+    | inputs - input (takes in external signals/tensor)
+    | modulator - scalar (neuro)modulatory signal (takes in external signals)
     | --- Cell/Op Output Compartments: ---
-    | Elg - current eligibility trace at time `t`
+    | eligibility - current eligibility trace at time `t`
+    | modded_outputs - neuro-modulated eligibility output signals
 
     Args:
         name: the string name of this trace
 
-        shape: tuple specifying shape of this trace cable (note tuple can
+        shape: tuple specifying shape of this trace cable (note that this tuple can
             specify N-D tensor shapes)
 
         tau_elg: eligibility time constant
 
         elg_decay: eligiblity decacy magnitude/constant; (must be non-zero,
             default 1.)
+
+        input_scale: input (at time `t`) scaling factor (default: 1.)
 
         integration_type: type of integration to use for this cell's dynamics;
             current supported forms include "euler" (Euler/RK-1 integration)
@@ -45,7 +49,7 @@ class EligibilityTrace(JaxComponent): ## eligibility trace
     """
 
     # Define Functions
-    def __init__(self, name, shape, tau_elg=100., elg_decay=1.,
+    def __init__(self, name, shape, tau_elg=100., elg_decay=1., input_scale=1.,
                  integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
 
@@ -59,45 +63,59 @@ class EligibilityTrace(JaxComponent): ## eligibility trace
         self.shape = shape
         self.tau_elg = tau_elg ## eligiblity time constant
         self.elg_decay = elg_decay ## trace decay time constant
+        self.input_scale = input_scale
 
         ## Set up eligibility trace compartment values
         initVals = jnp.zeros(shape)
         self.inputs = Compartment(initVals)  ## input that this trace tracks
-        self.Elg = Compartment(initVals)  ## eligibility trace condition matrix
+        self.modulator = Compartment(jnp.ones((1, 1)))
+        self.eligibility = Compartment(initVals)  ## eligibility trace condition matrix
+        self.modded_outputs = Compartment(initVals)
 
     @staticmethod
-    def _advance_state(t, dt, intgFlag, tau_elg, elg_decay, inputs, Elg):
-        elg_params = (inputs, tau_elg, elg_decay)
+    def _advance_state(t, dt, intgFlag, input_scale, tau_elg, elg_decay,
+                       inputs, eligibility):
+        elg_params = (inputs, tau_elg, elg_decay, input_scale)
         if intgFlag == 1:
-            _, Elg = step_rk2(0., Elg, _dfElg, dt, elg_params)
+            _, eligibility = step_rk2(0., eligibility, _dfElg, dt, elg_params)
         else:
-            _, Elg = step_euler(0., Elg, _dfElg, dt, elg_params)
-        return Elg
+            _, eligibility = step_euler(0., eligibility, _dfElg, dt, elg_params)
+        return eligibility
 
     @resolver(_advance_state)
-    def advance_state(self, Elg):
-        self.Elg.set(Elg)
+    def advance_state(self, eligibility):
+        self.eligibility.set(eligibility)
+
+    @staticmethod
+    def _evolve(t, dt, eligibility, modulator):
+        return eligibility * modulator
+
+    @resolver(_evolve)
+    def evolve(self, modded_outputs):
+        self.modded_outputs.set(modded_outputs)
 
     @staticmethod
     def _reset(shape):
         initVals = jnp.zeros(shape)
-        return initVals, initVals
+        return initVals, initVals, initVals
 
     @resolver(_reset)
-    def reset(self, Elg, inputs):
-        self.Elg.set(Elg)
+    def reset(self, eligibility, inputs, modded_outputs):
+        self.eligibility.set(eligibility)
         self.inputs.set(inputs)
+        self.modded_outputs.set(modded_outputs)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, Elg=self.Elg.value)
+        jnp.savez(file_name, eligibility=self.eligibility.value)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.Elg.set(data['Elg'])
+        self.eligibility.set(data['eligibility'])
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "EligibilityTrace - maintains a set/tensor of eligibility "
                          "trace values over time"
@@ -105,19 +123,23 @@ class EligibilityTrace(JaxComponent): ## eligibility trace
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
+                 "modulator": "Takes in external modulatory signal values",
                  "key": "JAX RNG key"},
             "outputs_compartments":
-                {"Elg": "Current state of eligibility trace at time `t`"},
+                {"eligibility": "Current state of eligibility trace at time `t` (Elg)",
+                 "modded_outputs": "Current eligibility scaled by external "
+                                   "(neuro)modulatory signal (mod)"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "tau_elg": "Eligibility time constant",
-            "tau_d": "Eligibility decay magnitude/constant"
+            "tau_d": "Eligibility decay magnitude/constant",
+            "input_scale": "Input signal scaling factor",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "outputs = [(W * Rscale) * inputs] + b; "
-                            "dW/dt = W_full * u * x * inputs",
+                "dynamics": "modded_outputs = Elg * mod; "
+                            "dElg/dt = -Elg * elg_decay + inputs * input_scale",
                 "hyperparameters": hyperparams}
         return info
 

@@ -35,13 +35,13 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             print("ELG: ",eligibility, " dW: ",dW_dt)
         else: ## recovers M-STDP
             eligibility = dW_dt
-        dWeights = eligibility * modulator ## trace/update times modulatory signal (e.g., reward)
+        ## Perform a trace/update times a modulatory signal (e.g., reward)
+        dWeights = eligibility * modulator
 
-        #if eta > 0.: ## perform physical adjustment of synapses
         ## do a gradient ascent update/shift
         weights = weights + dWeights * eta ## modulate update
         ## enforce non-negativity
-        eps = 0.01 # 0.001
+        eps = 0.01
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
         return weights, dWeights, eligibility
 
@@ -79,12 +79,14 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         self.dWeights.set(dWeights)
         self.eligibility.set(eligibility)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
-            "synapse_type": "TraceSTDPSynapse - performs an adaptable synaptic "
+            "synapse_type": "MSTDPETSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
-                            "synapses are adjusted with trace-based "
-                            "spike-timing-dependent plasticity (STDP)"
+                            "synapses are adjusted with a form of modulated "
+                            "spike-timing-dependent plasticity (MSTDP) or "
+                            "MSTDP w/ eligibility traces (MSTDP-ET)"
         }
         compartment_props = {
             "input_compartments":
@@ -93,13 +95,16 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
-                 "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
+                 "postTrace": "Post-synaptic trace value term for STDP (z_i)",
+                 "modulator": "External modulatory signal values (e.g., reward values) (r)",
+                 "eta": "Global learning rate"},
             "parameter_compartments":
-                {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values"},
+                {"weights": "Synapse efficacy/strength parameter values (W)",
+                 "eligibility": "Current state of eligibility trace at time `t` (Elg)"},
             "output_compartments":
                 {"outputs": "Output of synaptic transformation",
-                 "dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+                 "dWeights": "Modulated synaptic weight value adjustment matrix "
+                             "produced at time t dW^{stdp}_{ij}/dt"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
@@ -108,14 +113,18 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
-            "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+            "eta": "Global learning rate initial condition",
             "mu": "Power factor for STDP adjustment",
             "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "tau_elg": "Eligibility trace time constant",
+            "elg_decay": "Eligibility decay factor"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
-                            "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
+                            "dW_{ij}/dt = Elg * r * eta; " 
+                            "dElg/dt = -Elg * elg_decay + dW_{ij}/dt" 
+                            "dW^{stdp}_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
                 "hyperparameters": hyperparams}
         return info
 
