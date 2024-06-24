@@ -12,7 +12,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                          pretrace_target=pretrace_target, weight_init=weight_init,
                          resist_scale=resist_scale, p_conn=p_conn, **kwargs)
         ## MSTDP/MSTDP-ET meta-parameters
-        self.elg_tau = tau_elg
+        self.tau_elg = tau_elg
         self.elg_decay = elg_decay
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
