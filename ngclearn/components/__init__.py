@@ -38,5 +38,7 @@ from .synapses.convolution.deconvSynapse import DeconvSynapse
 from .synapses.convolution.staticDeconvSynapse import StaticDeconvSynapse
 from .synapses.convolution.hebbianDeconvSynapse import HebbianDeconvSynapse
 from .synapses.convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
+## point to modulated component types
+from .synapses.modulated.MSTDPETSynapse import MSTDPETSynapse
 ## point to monitors
 from .monitor import Monitor

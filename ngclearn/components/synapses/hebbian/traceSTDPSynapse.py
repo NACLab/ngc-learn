@@ -3,38 +3,8 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
-           mu=0., Aplus=1., Aminus=0.):
-    """
-    Evolves/changes the synpatic value matrix underlying this synaptic cable,
-    given relevant statistics.
-
-    Args:
-        pre: pre-synaptic statistic to drive update
-
-        x_pre: pre-synaptic trace value
-
-        post: post-synaptic statistic to drive update
-
-        x_post: post-synaptic trace value
-
-        W: synaptic weight values (at time t)
-
-        w_bound: maximum value to enforce over newly computed efficacies
-
-        eta: global learning rate to apply to the Hebbian update
-
-        x_tar: controls degree of pre-synaptic disconnect
-
-        mu: controls the power scale of the Hebbian shift
-
-        Aplus: strength of long-term potentiation (LTP)
-
-        Aminus: strength of long-term depression (LTD)
-
-    Returns:
-        the newly evolved synaptic weight value matrix, synaptic update matrix
-    """
+def calc_update(dt, pre, x_pre, post, x_post, W, w_bound=1., x_tar=0.0, mu=0.,
+                Aplus=1., Aminus=0.):
     if mu > 0.:
         ## equations 3, 5, & 6 from Diehl and Cook - full power-law STDP
         post_shift = jnp.power(w_bound - W, mu)
@@ -52,13 +22,8 @@ def evolve(dt, pre, x_pre, post, x_post, W, w_bound=1., eta=1., x_tar=0.0,
             dWpre = -jnp.matmul(pre.T, x_post * Aminus)
     ## calc final weighted adjustment
     dW = (dWpost + dWpre)
-    ## do a gradient ascent update/shift
-    _W = W + dW * eta
-    ## enforce non-negativity
-    eps = 0.01 # 0.001
-    _W = jnp.clip(_W, eps, w_bound - eps) #jnp.abs(w_bound)) # 0.01, w_bound)
-    #print(_W)
-    return _W, dW
+    return dW
+
 class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     """
     A synaptic cable that adjusts its efficacies via trace-based form of
@@ -123,7 +88,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
 
         ## Synaptic hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
-        self.eta = eta ## global learning rate governing plasticity
+        #self.eta = eta ## global learning rate governing plasticity
         self.mu = mu ## controls power-scaling of STDP rule
         self.preTrace_target = pretrace_target ## target (pre-synaptic) trace activity value # 0.7
         self.Aplus = A_plus ## LTP strength
@@ -140,13 +105,32 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
         self.dWeights = Compartment(self.weights.value * 0)
+        self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate governing plasticity
 
     @staticmethod
-    def _evolve(dt, w_bound, eta, preTrace_target, mu, Aplus, Aminus,
+    def _compute_update(dt, w_bound, preTrace_target, mu, Aplus, Aminus,
                 preSpike, postSpike, preTrace, postTrace, weights):
-        weights, dW = evolve(dt, preSpike, preTrace, postSpike, postTrace, weights,
-                             w_bound=w_bound, eta=eta, x_tar=preTrace_target, mu=mu,
-                             Aplus=Aplus, Aminus=Aminus)
+        dW = calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
+                         w_bound=w_bound, x_tar=preTrace_target, mu=mu,
+                         Aplus=Aplus, Aminus=Aminus)
+        return dW
+
+    @staticmethod
+    def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus,
+                preSpike, postSpike, preTrace, postTrace, weights, eta):
+        dW = TraceSTDPSynapse._compute_update(
+            dt, w_bound, preTrace_target, mu, Aplus, Aminus,
+            preSpike, postSpike, preTrace, postTrace, weights
+        )
+        # dW = calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
+        #                  w_bound=w_bound, x_tar=preTrace_target, mu=mu,
+        #                  Aplus=Aplus, Aminus=Aminus)
+        if eta > 0.:
+            ## do a gradient ascent update/shift
+            weights = weights + dW * eta
+            ## enforce non-negativity
+            eps = 0.01 # 0.001
+            weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
         return weights, dW
 
     @resolver(_evolve)
