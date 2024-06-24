@@ -125,12 +125,12 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         # dW = calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
         #                  w_bound=w_bound, x_tar=preTrace_target, mu=mu,
         #                  Aplus=Aplus, Aminus=Aminus)
-        if eta > 0.:
-            ## do a gradient ascent update/shift
-            weights = weights + dW * eta
-            ## enforce non-negativity
-            eps = 0.01 # 0.001
-            weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
+        #if eta > 0.:
+        ## do a gradient ascent update/shift
+        weights = weights + dW * eta
+        ## enforce non-negativity
+        eps = 0.01 # 0.001
+        weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
         return weights, dW
 
     @resolver(_evolve)
