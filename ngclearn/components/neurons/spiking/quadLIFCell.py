@@ -234,17 +234,17 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     #     ## update tols
     #     tols = update_times(t, s, tols)
     #     return j, v, s, rfr, thr, thr_theta, tols, key
-    #
-    # @resolver(_advance_state)
-    # def advance_state(self, j, v, s, rfr, thr, thr_theta, tols, key):
-    #     self.j.set(j)
-    #     self.v.set(v)
-    #     self.s.set(s)
-    #     self.rfr.set(rfr)
-    #     self.thr.set(thr)
-    #     self.thr_theta.set(thr_theta)
-    #     self.tols.set(tols)
-    #     self.key.set(key)
+
+    @resolver(LIFCell._advance_state)
+    def advance_state(self, j, v, s, rfr, thr, thr_theta, tols, key):
+        self.j.set(j)
+        self.v.set(v)
+        self.s.set(s)
+        self.rfr.set(rfr)
+        self.thr.set(thr)
+        self.thr_theta.set(thr_theta)
+        self.tols.set(tols)
+        self.key.set(key)
 
     def help(self): ## component help function
         properties = {
