@@ -24,7 +24,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                 elg_decay, update_scale, preSpike, postSpike, preTrace, postTrace,
                 weights, eta, modulator, eligiblity):
         ## compute local synaptic update (via STDP)
-        dW_dt = super()._compute_update(
+        dW_dt = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
             preSpike, postSpike, preTrace, postTrace, weights
         )
