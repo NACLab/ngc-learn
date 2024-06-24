@@ -78,12 +78,6 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
     @staticmethod
     def _advance_state(tau_f, tau_d, Rscale, inputs, weights, biases, resources,
                        u, x, Wdyn):
-        '''
-        ## u and x: both column vectors of length = num pre-syn nodes
-        u = [u - u/tau_f + U * (1. - u)] * s # + (1. - s) * (u - u/tau_f) ## STF
-        W = W_full * u * x * s ## synaptic current change
-        x = [x + (1. - x)/tau_d - u * x] * s #+ (1. - s) * (x + (1. - x)/tau_d) ## STD
-        '''
         s = inputs
         ## compute short-term facilitation
         u = u - u * (1./tau_f) + (resources * (1. - u)) * s #jnp.sum(..., axis=1, keepdims=True)
@@ -141,9 +135,10 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         if "biases" in data.keys():
             self.biases.set(data['biases'])
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
-            "synapse_type": "DenseSynapse - performs a synaptic transformation of inputs to produce "
+            "synapse_type": "STPDenseSynapse - performs a synaptic transformation of inputs to produce "
                             "output signals (e.g., a scaled linear multivariate transformation); "
                             "this synapse is dynamic, adapting via a form of short-term plasticity"
         }
@@ -169,7 +164,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
             "tau_f": "Short-term facilitation time constant",
             "tau_d": "Short-term depression time constant"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] + b; "
                             "dW/dt = W_full * u * x * inputs",
