@@ -213,29 +213,29 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
         self.v_c = v_scale
         self.a0 = critical_V
 
-    # @staticmethod
-    # def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T,
-    #                    thr, tau_theta, theta_plus, one_spike, v_c, a0, intgFlag,
-    #                    key, j, v, s, rfr, thr_theta, tols):
-    #     ## Note: this runs quadratic LIF neuronal dynamics but constrained to be
-    #     ## similar to the general form of LIF dynamics
-    #     skey = None ## this is an empty dkey if single_spike mode turned off
-    #     if one_spike: ## old code ~> if self.one_spike is False:
-    #         key, *subkeys = random.split(key, 2)
-    #         skey = subkeys[0]
-    #     ## run one integration step for neuronal dynamics
-    #     j = _modify_current(j, dt, tau_m) ## get ODE re-scaled current
-    #     v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-    #                                      v_c, a0, tau_m, R_m, v_rest, v_reset,
-    #                                      refract_T, intgFlag)
-    #     if tau_theta > 0.:
-    #         ## run one integration step for threshold dynamics
-    #         thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
-    #     ## update tols
-    #     tols = update_times(t, s, tols)
-    #     return j, v, s, rfr, thr, thr_theta, tols, key
+    @staticmethod
+    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T,
+                       thr, tau_theta, theta_plus, one_spike, v_c, a0, intgFlag,
+                       key, j, v, s, rfr, thr_theta, tols):
+        ## Note: this runs quadratic LIF neuronal dynamics but constrained to be
+        ## similar to the general form of LIF dynamics
+        skey = None ## this is an empty dkey if single_spike mode turned off
+        if one_spike: ## old code ~> if self.one_spike is False:
+            key, *subkeys = random.split(key, 2)
+            skey = subkeys[0]
+        ## run one integration step for neuronal dynamics
+        j = _modify_current(j, dt, tau_m) ## get ODE re-scaled current
+        v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
+                                         v_c, a0, tau_m, R_m, v_rest, v_reset,
+                                         refract_T, intgFlag)
+        if tau_theta > 0.:
+            ## run one integration step for threshold dynamics
+            thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
+        ## update tols
+        tols = update_times(t, s, tols)
+        return j, v, s, rfr, thr, thr_theta, tols, key
 
-    @resolver(LIFCell._advance_state)
+    @resolver(_advance_state)
     def advance_state(self, j, v, s, rfr, thr, thr_theta, tols, key):
         self.j.set(j)
         self.v.set(v)

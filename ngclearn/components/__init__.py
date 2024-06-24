@@ -15,7 +15,7 @@ from .neurons.spiking.izhikevichCell import IzhikevichCell
 ## point to transformer/operater component types
 from .other.varTrace import VarTrace
 from .other.expKernel import ExpKernel
-from .other.eligibilityTrace import EligibilityTrace
+from ngclearn.components.synapses.modulated.eligibilityTrace import EligibilityTrace
 ## point to input encoder component types
 from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
