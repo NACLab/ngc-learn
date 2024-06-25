@@ -142,7 +142,7 @@ we first aggregate each STDP into another variable (the eligibility) according
 to the following ODE:
 
 $$
-\tau_{elg} \frac{\partial \mathbf{E}_{ij}}{\partial t} &= -\mathbf{E}_{ij} + 
+\tau_{elg} \frac{\partial \mathbf{E}_{ij}}{\partial t} = -\mathbf{E}_{ij} + 
 \beta \frac{\partial \mathbf{W}_{ij}}{\partial t}
 $$
 
