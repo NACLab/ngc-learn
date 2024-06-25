@@ -93,7 +93,8 @@ for ts in range(current.shape[1]):
     curr_in.append(j_t)
     mem_rec.append(v)
     spk_rec.append(s)
-    print(" {}: s {} ; v {}".format(ts, s, v))
+    print("\r {}: s {} ; v {}".format(ts, s, v), end="")
+print()
 ```
 
 Then, we can plot the input current, the neuron's voltage `v`, and its output
