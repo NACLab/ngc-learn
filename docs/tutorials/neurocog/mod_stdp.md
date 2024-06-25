@@ -24,7 +24,7 @@ to a different condition of STDP:
 3. the third and final one will change its synapse's strength via modulated STDP 
    equipped with an eligibility trace (MSTDP-ET). 
 The second and third model above will make use of ngc-learn's in-built 
-[MSTDPETSynapse](ngclearn.components.synapses.modulated.MSSTDPETSynapse), which 
+[MSTDPETSynapse](ngclearn.components.synapses.modulated.MSTDPETSynapse), which 
 is an STDP cable component that sub-classes the `TraceSTDPSynapse` cable component 
 and will offer the additional machinery we will need to carry out modulated 
 forms of STDP. 
