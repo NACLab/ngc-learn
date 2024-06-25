@@ -1,34 +1,33 @@
 from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
-from ngclearn.components.synapses.convolution import TraceSTDPConvSynapse
-from ngclearn.utils import tensorstats
+from ngclearn.components.synapses.convolution import TraceSTDPDeconvSynapse
 
-class MSTDPETConvSynapse(TraceSTDPConvSynapse): # modulated trace-based conv STDP w/ eligility traces
+class TraceSTDPDeconvSynapse(TraceSTDPDeconvSynapse): ## modulated trace-based deconv STDP cable
 
     # Define Functions
     def __init__(self, name, shape, x_shape, A_plus, A_minus, eta=0.,
                  pretrace_target=0., tau_elg=0., elg_decay=1., filter_init=None,
                  stride=1, padding=None, resist_scale=1., w_bound=0., w_decay=0.,
                  batch_size=1, **kwargs):
-        super().__init__(name, shape, x_shape=x_shape,
-                         A_plus=A_plus, A_minus=A_minus, eta=eta,
-                         pretrace_target=pretrace_target, w_bound=w_bound, w_decay=w_decay,
-                         filter_init=filter_init, bias_init=None, resist_scale=resist_scale,
-                         stride=stride, padding=padding, batch_size=batch_size, **kwargs)
+        super().__init__(name, shape, x_shape=x_shape, A_plus=A_plus, A_minus=A_minus,
+                         eta=eta, pretrace_target=pretrace_target, filter_init=filter_init,
+                         bias_init=None, stride=stride, padding=padding,
+                         resist_scale=resist_scale, w_bound=w_bound, w_decay=w_decay,
+                         batch_size=batch_size,**kwargs)
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
         self.eligibility = Compartment(jnp.zeros(shape))
+        ########################################################################
 
     @staticmethod
-    def _evolve(dt, pretrace_target, Aplus, Aminus, w_decay, w_bound,
-                stride, pad_args, delta_shape, tau_elg, elg_decay, preSpike,
-                preTrace, postSpike, postTrace, weights, eta, modulator, eligibility):
-        ## compute local synaptic update (via STDP)
-        dW_dt = TraceSTDPConvSynapse._compute_update(
-            pretrace_target, Aplus, Aminus, stride, pad_args, delta_shape,
+    def _evolve(dt, pretrace_target, Aplus, Aminus, w_decay, w_bound, shape, stride,
+                padding, delta_shape, tau_elg, elg_decay, preSpike, preTrace,
+                postSpike, postTrace, weights, eta, modulator, eligibility):
+        dW_dt = TraceSTDPDeconvSynapse._compute_update(
+            pretrace_target, Aplus, Aminus, shape, stride, padding, delta_shape,
             preSpike, preTrace, postSpike, postTrace
         ) ## produce dW/dt (ODE for synaptic change dynamics)
         if tau_elg > 0.: ## perform dynamics of M-STDP-ET
@@ -82,8 +81,8 @@ class MSTDPETConvSynapse(TraceSTDPConvSynapse): # modulated trace-based conv STD
     @classmethod
     def help(cls): ## component help function
         properties = {
-            "synapse_type": "MSTDPETConvSynapse - performs a synaptic convolution "
-                            "(@) of inputs  to produce output signals; synaptic "
+            "synapse_type": "MSTDPETDeconvSynapse - performs a synaptic deconvolution "
+                            "(@.T) of inputs to produce output signals; synaptic "
                             "filters are adjusted via a form of modulated "
                             "spike-timing-dependent plasticity (MSTDP) or "
                             "MSTDP w/ eligibility traces (MSTDP-ET)"
@@ -128,23 +127,9 @@ class MSTDPETConvSynapse(TraceSTDPConvSynapse): # modulated trace-based conv STD
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "outputs = [K @ inputs] * R + b; "
+                "dynamics": "outputs = [K @.T inputs] * R + b; "
                             "dW_{ij}/dt = Elg * r * eta; " 
                             "dElg/dt = -Elg * elg_decay + dW^{stdp}_{ij}/dt" 
-                            "dW^{stdp}_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
+                            "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines

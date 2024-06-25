@@ -36,12 +36,14 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
 
         lmbda: controls degree of synaptic disconnect ("lambda")
 
+        w_bound: maximum value/magnitude any synaptic efficacy can be (default: 1)
+
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
         resist_scale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+            (Default: 1), i.e., yields: out = ((W * Rscale) * in) + b
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure

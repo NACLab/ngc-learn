@@ -78,7 +78,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
                          padding=padding, batch_size=batch_size, **kwargs)
 
         self.eta = eta
-        self.w_bounds = w_bound ## soft weight constraint
+        self.w_bound = w_bound ## soft weight constraint
         self.w_decay = w_decay  ## synaptic decay
         self.eta = eta  ## global learning rate governing plasticity
         self.pretrace_target = pretrace_target  ## target (pre-synaptic) trace activity value # 0.7
@@ -143,7 +143,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         return dWeights
 
     @staticmethod
-    def _evolve(pretrace_target, Aplus, Aminus, w_decay, w_bounds,
+    def _evolve(pretrace_target, Aplus, Aminus, w_decay, w_bound,
                 stride, pad_args, delta_shape, preSpike, preTrace, postSpike,
                 postTrace, weights, eta):
         dWeights = TraceSTDPConvSynapse._compute_update(
@@ -155,10 +155,9 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         else:
             weights = weights + dWeights * eta  ## conduct STDP-ascent
         ## Apply any enforced filter constraints
-        if w_bounds > 0.:
-            ## enforce non-negativity
+        if w_bound > 0.: ## enforce non-negativity
             eps = 0.01  # 0.001
-            weights = jnp.clip(weights, eps, w_bounds - eps)
+            weights = jnp.clip(weights, eps, w_bound - eps)
         return weights, dWeights
 
     @resolver(_evolve)

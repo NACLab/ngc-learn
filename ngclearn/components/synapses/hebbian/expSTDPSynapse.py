@@ -73,12 +73,14 @@ class ExpSTDPSynapse(DenseSynapse):
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
+
+        w_bound: maximum value/magnitude any synaptic efficacy can be (default: 1)
     """
 
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, exp_beta, eta=1.,
                  pretrace_target=0., weight_init=None, resist_scale=1.,
-                 p_conn=1., **kwargs):
+                 p_conn=1., w_bound=1., **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale,
                          p_conn, **kwargs)
 
@@ -90,7 +92,7 @@ class ExpSTDPSynapse(DenseSynapse):
         self.Aplus = A_plus ## LTP strength
         self.Aminus = A_minus ## LTD strength
         self.Rscale = resist_scale ## post-transformation scale factor
-        self.w_bound = 1. ## soft weight constraint
+        self.w_bound = w_bound #1. ## soft weight constraint
 
         self.batch_size = 1
         ## Compartment setup

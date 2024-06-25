@@ -147,7 +147,7 @@ class HebbianSynapse(DenseSynapse):
         ## synaptic plasticity properties and characteristics
         self.shape = shape
         self.Rscale = resist_scale
-        self.w_bounds = w_bound
+        self.w_bound = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.pre_wght = pre_wght
         self.post_wght = post_wght
@@ -173,21 +173,21 @@ class HebbianSynapse(DenseSynapse):
             if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _compute_update(w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _compute_update(w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
                         post_wght, pre, post, weights):
         ## calculate synaptic update values
         dW, db = _calc_update(
-            pre, post, weights, w_bounds, is_nonnegative=is_nonnegative,
+            pre, post, weights, w_bound, is_nonnegative=is_nonnegative,
             signVal=sign_value, w_decay=w_decay, pre_wght=pre_wght,
             post_wght=post_wght)
         return dW, db
 
     @staticmethod
-    def _evolve(opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _evolve(opt, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dWeights, dBiases = HebbianSynapse._compute_update(
-            w_bounds, is_nonnegative, sign_value, w_decay, pre_wght, post_wght,
+            w_bound, is_nonnegative, sign_value, w_decay, pre_wght, post_wght,
             pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
@@ -197,7 +197,7 @@ class HebbianSynapse(DenseSynapse):
             # ignore db since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = enforce_constraints(weights, w_bounds, is_nonnegative=is_nonnegative)
+        weights = enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
         return opt_params, weights, biases, dWeights, dBiases
 
     @resolver(_evolve)

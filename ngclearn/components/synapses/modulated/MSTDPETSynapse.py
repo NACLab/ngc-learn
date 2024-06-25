@@ -68,10 +68,12 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
                  pretrace_target=0., tau_elg=0., elg_decay=1.,
-                 weight_init=None, resist_scale=1., p_conn=1., **kwargs):
+                 weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
+                 **kwargs):
         super().__init__(name, shape, A_plus, A_minus, eta=eta, mu=mu,
                          pretrace_target=pretrace_target, weight_init=weight_init,
-                         resist_scale=resist_scale, p_conn=p_conn, **kwargs)
+                         resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound,
+                         **kwargs)
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
