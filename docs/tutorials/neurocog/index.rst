@@ -59,6 +59,7 @@ work towards more advanced concepts.
   hebbian
   stdp
   mod_stdp
+  short_term_plasticity
 
 .. toctree::
   :maxdepth: 1
