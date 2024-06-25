@@ -58,6 +58,7 @@ work towards more advanced concepts.
 
   hebbian
   stdp
+  mod_stdp
 
 .. toctree::
   :maxdepth: 1

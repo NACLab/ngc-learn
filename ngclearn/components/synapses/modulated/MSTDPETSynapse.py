@@ -94,7 +94,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             ## update eligibility trace given current local update
             # dElg_dt = -eligibility * elg_decay + dW_dt * update_scale
             # eligibility = eligibility + dElg_dt * dt/elg_tau
-            eligibility = eligibility * jnp.exp(-dt / tau_elg) + dW_dt
+            eligibility = eligibility * jnp.exp(-dt / tau_elg) * elg_decay + dW_dt
         else: ## perform dynamics of M-STDP (no eligibility trace)
             eligibility = dW_dt
         ## Perform a trace/update times a modulatory signal (e.g., reward)

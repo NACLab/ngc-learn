@@ -32,7 +32,7 @@ class TraceSTDPDeconvSynapse(TraceSTDPDeconvSynapse): ## modulated trace-based d
         ) ## produce dW/dt (ODE for synaptic change dynamics)
         if tau_elg > 0.: ## perform dynamics of M-STDP-ET
             ## update eligibility trace given current local update
-            eligibility = eligibility * jnp.exp(-dt / tau_elg) + dW_dt
+            eligibility = eligibility * jnp.exp(-dt / tau_elg) * elg_decay + dW_dt
         else: ## perform dynamics of M-STDP (no eligibility trace)
             eligibility = dW_dt
         ## Perform a trace/update times a modulatory signal (e.g., reward)
