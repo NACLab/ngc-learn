@@ -69,7 +69,7 @@ class Base_Monitor(Component):
         @staticmethod
         def _reset(**kwargs):
             return_vals = []
-            for _, comp in compartments:
+            for comp in compartments:
                 current_store = kwargs[comp + "*store"]
                 return_vals.append(np.zeros(current_store.shape))
             return return_vals if len(compartments) > 1 else return_vals[0]
@@ -127,7 +127,7 @@ class Base_Monitor(Component):
         compartments = []
         for comp in self.compartments:
             output_compartments.append(comp.split("/")[-1] + "*store")
-            compartments.append((0, comp.split("/")[-1]))
+            compartments.append(comp.split("/")[-1])
 
         args = []
         parameters = []
@@ -135,11 +135,11 @@ class Base_Monitor(Component):
         add_component_resolver(self.__class__.__name__, "advance_state",
                                (self.build_advance(compartments), output_compartments))
         add_resolver_meta(self.__class__.__name__, "advance_state",
-                          (args, parameters, compartments + [(0, o) for o in output_compartments], False))
+                          (args, parameters, compartments + [o for o in output_compartments], False))
 
         add_component_resolver(self.__class__.__name__, "reset", (self.build_reset(compartments), output_compartments))
         add_resolver_meta(self.__class__.__name__, "reset",
-                          (args, parameters, [(0, o) for o in output_compartments], False))
+                          (args, parameters, [o for o in output_compartments], False))
 
     def _add_path(self, path):
         _path = path.split("/")[1:]
