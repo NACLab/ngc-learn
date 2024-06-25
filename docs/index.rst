@@ -7,7 +7,7 @@ Welcome to ngc-learn's documentation!
 
 **ngc-learn** is a Python library for building, simulating, and analyzing
 biomimetic computational models, arbitrary predictive processing/coding models,
-and spiking neural networks. This toolkit is built on top of
+and spiking neural networks. This toolkit is built on top of 
 `JAX <https://github.com/google/jax>`_ and is distributed under the 3-Clause BSD license.
 
 .. toctree::
