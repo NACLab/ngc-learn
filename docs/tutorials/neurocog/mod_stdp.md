@@ -134,6 +134,7 @@ about the models we have constructed above are:
    STDP/Hebbian synaptic updates, simply another set of dynamics (i.e., another 
    ordinary differential equation) that we maintain as STDP synaptic updates 
    are computed. 
+
 With respect to the second point made about eligibility traces, formally, we note 
 that under MSTDP-ET, instead of computing a trace-based STDP update at 
 each and every single time step `t` and updating the synapses immediately, 
@@ -149,7 +150,7 @@ where $i$ denotes the index of the post-synpatic spiking neuron (which emits
 a spike we label as $f_i$) and $j$ denotes the index of the pre-synaptic 
 spiking neuron (which emits a spike we label as $f_j$), $\mathbf{W}_{ij}$ is 
 the synapse that connects neuron $j$ to $i$, $\mathbf{E}_{ij}$ is the eligibility 
-trace we maintain for synapse $\mathbf{W}_{ij}$, and $\beta is control factor
+trace we maintain for synapse $\mathbf{W}_{ij}$, and $\beta$ is control factor
 (typically set to one) for scaling the magnitude of the STDP update's effect. 
 Finally, note that $\frac{\partial \mathbf{W}_{ij}}{\partial t}$ is the actual 
 synaptic update produced by our trace-based STDP at time $t$.
