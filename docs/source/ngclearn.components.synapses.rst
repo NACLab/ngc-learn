@@ -9,9 +9,18 @@ Subpackages
 
    ngclearn.components.synapses.convolution
    ngclearn.components.synapses.hebbian
+   ngclearn.components.synapses.modulated
 
 Submodules
 ----------
+
+ngclearn.components.synapses.STPDenseSynapse module
+---------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.STPDenseSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 ngclearn.components.synapses.denseSynapse module
 ------------------------------------------------
