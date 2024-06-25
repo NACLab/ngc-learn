@@ -4,6 +4,69 @@ from ngclearn.components.synapses.convolution import TraceSTDPConvSynapse
 from ngclearn.utils import tensorstats
 
 class MSTDPETConvSynapse(TraceSTDPConvSynapse): # modulated trace-based conv STDP w/ eligility traces
+    """
+    A synaptic convolutional cable that adjusts its
+    filter efficacies through a form of modulated spike-timing-dependent
+    plasticity (MSTDP) or modulated STDP with eligibility traces (MSTDP-ET).
+
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output signals (transformation induced by filters)
+    | filters - current value matrix of synaptic filter efficacies
+    | biases - current value vector of synaptic bias values
+    | eta - learning rate global scale
+    | key - JAX PRNG key
+    | --- Synaptic Plasticity Compartments: ---
+    | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
+    | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
+    | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
+    | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
+    | dWeights - delta tensor containing changes to be applied to synaptic filter efficacies
+    | dInputs - delta tensor containing back-transmitted signal values ("backpropagating pulse")
+
+    Args:
+        name: the string name of this cell
+
+        x_shape: 2d shape of input map signal (component currently assumess a square input maps)
+
+        shape: tuple specifying shape of this synaptic cable (usually a 4-tuple
+            with number `filter height x filter width x input channels x number output channels`);
+            note that currently filters/kernels are assumed to be square
+            (kernel.width = kernel.height)
+
+        A_plus: strength of long-term potentiation (LTP)
+
+        A_minus: strength of long-term depression (LTD)
+
+        eta: global learning rate (default: 0)
+
+        pretrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
+                 (higher -> lower synaptic values)
+
+        tau_elg: eligibility trace time constant (default: 0); must be >0,
+            otherwise, the trace is disabled and this synapse evolves via M-STDP
+
+        elg_decay: eligibility decay constant (default: 1)
+
+        filter_init: a kernel to drive initialization of this synaptic cable's
+            filter values
+
+        stride: length/size of stride
+
+        padding: pre-operator padding to use -- "VALID" (none), "SAME"
+
+        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
+            where `@` denotes convolution
+
+        w_bound: maximum weight to softly bound this cable's value matrix to; if
+            set to 0, then no synaptic value bounding will be applied
+
+        w_decay: degree to which (L2) synaptic weight decay is applied to the
+            computed STDP adjustment (Default: 0)
+
+        batch_size: batch size dimension of this component
+    """
 
     # Define Functions
     def __init__(self, name, shape, x_shape, A_plus, A_minus, eta=0.,
