@@ -22,12 +22,6 @@ to configuration).
 
 .. toctree::
   :maxdepth: 1
-  :caption: II. Neurocognitive Modeling Lessons
-
-  neurocog/index
-
-.. toctree::
-  :maxdepth: 1
   :caption: II. NGC-Learn/Sim-Lib Foundations
 
   foundations

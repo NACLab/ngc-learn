@@ -59,10 +59,11 @@ work towards more advanced concepts.
   hebbian
   stdp
   mod_stdp
+  short_term_plasticity
 
 .. toctree::
   :maxdepth: 1
-  :caption: Model Tools
+  :caption: Model and Analysis Tools
 
   plotting
   metrics

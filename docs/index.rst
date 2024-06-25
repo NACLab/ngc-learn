@@ -24,6 +24,7 @@ and spiking neural networks. This toolkit is built on top of
   tutorials/intro
   tutorials/theory
   tutorials/index
+  tutorials/neurocog/index
 
 .. toctree::
   :maxdepth: 1
