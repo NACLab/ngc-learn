@@ -103,10 +103,12 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     | where j is the set of general incoming input signals (e.g., message-passed signals)
     | and j_td is taken to be the set of top-down pressure signals
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - input (takes in external signals)
     | j_td - input/top-down pressure input (takes in external signals)
+    | --- Cell State Compartments ---
     | z - rate activity
+    | --- Cell Output Compartments: ---
     | zF - post-activation function activity, i.e., fx(z)
 
     Args:
@@ -142,7 +144,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
-                 threshold=("none", 0.), integration_type="euler", **kwargs):
+                 threshold=("none", 0.), integration_type="euler",
+                 batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -160,7 +163,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         ## Layer size setup
         self.n_units = n_units
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.fx, self.dfx = create_function(fun_name=act_fx)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
@@ -214,29 +217,32 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.j_td.set(j_td) # top-down electrical current - pressure
         self.z.set(z) # rate activity
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "RateCell - evolves neurons according to rate-coded/"
                          "continuous dynamics "
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"j": "External input stimulus value(s)",
                  "j_td": "External top-down input stimulus value(s); these get "
                          "multiplied by the derivative of f(x), i.e., df(x)"},
-            "output_compartments":
-                {"z": "Update to rate-coded continuous dynamics; value at time t",
-                 "zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)"},
+            "states":
+                {"z": "Update to rate-coded continuous dynamics; value at time t"},
+            "outputs":
+                {"zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "tau_m": "Cell state/membrane time constant",
             "prior": "What kind of kurtotic prior to place over neuronal dynamics?",
             "act_fx": "Elementwise activation function to apply over cell state `z`",
             "threshold": "What kind of iterative thresholding function to place over neuronal dynamics?",
             "integration_type": "Type of numerical integration to use for the cell dynamics",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dz/dt = Prior(z; gamma) + (j + j_td)",
                 "hyperparameters": hyperparams}

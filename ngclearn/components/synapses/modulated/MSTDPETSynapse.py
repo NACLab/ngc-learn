@@ -1,40 +1,19 @@
 from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
-from ngclearn.components.synapses import DenseSynapse
+from ngclearn.components.synapses.hebbian import TraceSTDPSynapse
 from ngclearn.utils import tensorstats
 
-def calc_update(dt, pre, x_pre, post, x_post, W, w_bound=1., x_tar=0.0, mu=0.,
-                Aplus=1., Aminus=0.):
-    if mu > 0.:
-        ## equations 3, 5, & 6 from Diehl and Cook - full power-law STDP
-        post_shift = jnp.power(w_bound - W, mu)
-        pre_shift = jnp.power(W, mu)
-        dWpost = (post_shift * jnp.matmul((x_pre - x_tar).T, post)) * Aplus
-        dWpre = 0.
-        if Aminus > 0.:
-            dWpre = -(pre_shift * jnp.matmul(pre.T, x_post)) * Aminus
-    else:
-        ## calculate post-synaptic term
-        dWpost = jnp.matmul((x_pre - x_tar).T, post * Aplus)
-        dWpre = 0.
-        if Aminus > 0.:
-            ## calculate pre-synaptic term
-            dWpre = -jnp.matmul(pre.T, x_post * Aminus)
-    ## calc final weighted adjustment
-    dW = (dWpost + dWpre)
-    return dW
-
-class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
+class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligility traces
     """
     A synaptic cable that adjusts its efficacies via trace-based form of
-    spike-timing-dependent plasticity (STDP), including an optional power-scale
-    dependence that can be equipped to the Hebbian adjustment (the strength of
-    which is controlled by a scalar factor).
+    three-factor learning, i.e., modulated spike-timing-dependent plasticity
+    (M-STDP) or modulated STDP with eligibility traces (M-STDP-ET).
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output signals (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
+    | modulator - external modulatory signal values (e.g., a reward value)
     | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
@@ -42,6 +21,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
     | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
     | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+    | eligibility - current state of eligibility trace
     | eta - global learning rate (multiplier beyond A_plus and A_minus)
 
     | References:
@@ -69,6 +49,11 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         pretrace_target: controls degree of pre-synaptic disconnect, i.e., amount of decay
                  (higher -> lower synaptic values)
 
+        tau_elg: eligibility trace time constant (default: 0); must be >0,
+            otherwise, the trace is disabled and this synapse evolves via M-STDP
+
+        elg_decay: eligibility decay constant (default: 1)
+
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use
@@ -76,80 +61,77 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         resist_scale: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
 
-        p_conn: probability of a connection existing (default: 1); setting
+        p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
-
-        w_bound: maximum value/magnitude any synaptic efficacy can be (default: 1)
     """
 
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
-                 pretrace_target=0., weight_init=None, resist_scale=1.,
-                 p_conn=1., w_bound=1., batch_size=1, **kwargs):
-        super().__init__(name, shape, weight_init, None, resist_scale,
-                         p_conn, batch_size=batch_size, **kwargs)
-
-        ## Synaptic hyper-parameters
-        self.shape = shape ## shape of synaptic efficacy matrix
-        self.mu = mu ## controls power-scaling of STDP rule
-        self.preTrace_target = pretrace_target ## target (pre-synaptic) trace activity value # 0.7
-        self.Aplus = A_plus ## LTP strength
-        self.Aminus = A_minus ## LTD strength
-        self.Rscale = resist_scale ## post-transformation scale factor
-        self.w_bound = w_bound #1. ## soft weight constraint
-
-        ## Compartment setup
-        preVals = jnp.zeros((self.batch_size, shape[0]))
-        postVals = jnp.zeros((self.batch_size, shape[1]))
-        self.preSpike = Compartment(preVals)
-        self.postSpike = Compartment(postVals)
-        self.preTrace = Compartment(preVals)
-        self.postTrace = Compartment(postVals)
-        self.dWeights = Compartment(self.weights.value * 0)
-        self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate
+                 pretrace_target=0., tau_elg=0., elg_decay=1.,
+                 weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
+                 batch_size=1, **kwargs):
+        super().__init__(name, shape, A_plus, A_minus, eta=eta, mu=mu,
+                         pretrace_target=pretrace_target, weight_init=weight_init,
+                         resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound,
+                         batch_size=batch_size, **kwargs)
+        ## MSTDP/MSTDP-ET meta-parameters
+        self.tau_elg = tau_elg
+        self.elg_decay = elg_decay
+        ## MSTDP/MSTDP-ET compartments
+        self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
+        self.eligibility = Compartment(jnp.zeros(shape))
 
     @staticmethod
-    def _compute_update(dt, w_bound, preTrace_target, mu, Aplus, Aminus,
-                preSpike, postSpike, preTrace, postTrace, weights):
-        dW = calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
-                         w_bound=w_bound, x_tar=preTrace_target, mu=mu,
-                         Aplus=Aplus, Aminus=Aminus)
-        return dW
-
-    @staticmethod
-    def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus,
-                preSpike, postSpike, preTrace, postTrace, weights, eta):
-        dWeights = TraceSTDPSynapse._compute_update(
+    def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg,
+                elg_decay, preSpike, postSpike, preTrace, postTrace, weights,
+                eta, modulator, eligibility):
+        ## compute local synaptic update (via STDP)
+        dW_dt = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
             preSpike, postSpike, preTrace, postTrace, weights
-        )
+        ) ## produce dW/dt (ODE for synaptic change dynamics)
+        if tau_elg > 0.: ## perform dynamics of M-STDP-ET
+            ## update eligibility trace given current local update
+            # dElg_dt = -eligibility * elg_decay + dW_dt * update_scale
+            # eligibility = eligibility + dElg_dt * dt/elg_tau
+            eligibility = eligibility * jnp.exp(-dt / tau_elg) * elg_decay + dW_dt
+        else: ## perform dynamics of M-STDP (no eligibility trace)
+            eligibility = dW_dt
+        ## Perform a trace/update times a modulatory signal (e.g., reward)
+        dWeights = eligibility * modulator
+
         ## do a gradient ascent update/shift
-        weights = weights + dWeights * eta
+        weights = weights + dWeights * eta ## modulate update
         ## enforce non-negativity
-        eps = 0.01 # 0.001
+        eps = 0.01
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
-        return weights, dWeights
+        return weights, dWeights, eligibility
 
     @resolver(_evolve)
-    def evolve(self, weights, dWeights):
+    def evolve(self, weights, dWeights, eligibility):
         self.weights.set(weights)
         self.dWeights.set(dWeights)
+        self.eligibility.set(eligibility)
 
     @staticmethod
     def _reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
+        synVals = jnp.zeros(shape)
         inputs = preVals
         outputs = postVals
         preSpike = preVals
         postSpike = postVals
         preTrace = preVals
         postTrace = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights
+        dWeights = synVals
+        eligibility = synVals
+        return (inputs, outputs, preSpike, postSpike, preTrace, postTrace,
+                dWeights, eligibility)
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights):
+    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace,
+              dWeights, eligibility):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.preSpike.set(preSpike)
@@ -157,14 +139,16 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.preTrace.set(preTrace)
         self.postTrace.set(postTrace)
         self.dWeights.set(dWeights)
+        self.eligibility.set(eligibility)
 
     @classmethod
     def help(cls): ## component help function
         properties = {
-            "synapse_type": "TraceSTDPSynapse - performs an adaptable synaptic "
+            "synapse_type": "MSTDPETSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
-                            "synapses are adjusted with trace-based "
-                            "spike-timing-dependent plasticity (STDP)"
+                            "synapses are adjusted with a form of modulated "
+                            "spike-timing-dependent plasticity (MSTDP) or "
+                            "MSTDP w/ eligibility traces (MSTDP-ET)"
         }
         compartment_props = {
             "inputs":
@@ -172,33 +156,39 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
-                 "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
+                 "postTrace": "Post-synaptic trace value term for STDP (z_i)",
+                 "modulator": "External modulatory signal values (e.g., reward values) (r)"},
             "states":
-                {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values",
-                 "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+                {"weights": "Synapse efficacy/strength parameter values (W)",
+                 "eligibility": "Current state of eligibility trace at time `t` (Elg)",
+                 "eta": "Global learning rate",
                  "key": "JAX PRNG key"},
             "analytics":
-                {"dWeights": "Synaptic weight value adjustment matrix produced at time t"},
+                {"dWeights": "Modulated synaptic weight value adjustment matrix "
+                             "produced at time t dW^{stdp}_{ij}/dt"},
             "outputs":
                 {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
-            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
+            "batch_size": "Batch size dimension of this component",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
             "eta": "Global learning rate initial condition",
             "mu": "Power factor for STDP adjustment",
-            "pretrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "tau_elg": "Eligibility trace time constant",
+            "elg_decay": "Eligibility decay factor"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
-                            "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
+                            "dW_{ij}/dt = Elg * r * eta; " 
+                            "dElg/dt = -Elg * elg_decay + dW^{stdp}_{ij}/dt" 
+                            "dW^{stdp}_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
                 "hyperparameters": hyperparams}
         return info
 
@@ -215,9 +205,3 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
                 line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
-
-if __name__ == '__main__':
-    from ngcsimlib.context import Context
-    with Context("Bar") as bar:
-        Wab = TraceSTDPSynapse("Wab", (2, 3), 1, 1, 0.0004)
-    print(Wab)

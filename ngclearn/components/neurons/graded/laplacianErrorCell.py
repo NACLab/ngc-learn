@@ -48,13 +48,14 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
     A simple (non-spiking) Laplacian error cell - this is a fixed-point solution
     of a mismatch/error signal.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | mu - predicted value (takes in external signals)
     | target - desired/goal value (takes in external signals)
+    | modulator - modulation signal (takes in optional external signals)
+    | --- Cell Output Compartments: ---
     | L - local loss function embodied by this cell
     | dmu - derivative of L w.r.t. mu
     | dtarget - derivative of L w.r.t. target
-    | modulator - modulation signal (takes in optional external signals)
 
     Args:
         name: the string name of this cell
@@ -67,12 +68,12 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
     """
 
     # Define Functions
-    def __init__(self, name, n_units, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size setup
         self.n_units = n_units
-        self.batch_size = 1
+        self.batch_size = batch_size
 
         ## Convolution shape setup
         self.width = self.height = n_units
@@ -119,25 +120,27 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator.set(modulator)
         self.L.set(L)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "LaplacianErrorcell - computes mismatch/error signals at "
                          "each time step t (between a `target` and a prediction `mu`)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"mu": "External input prediction value(s)",
                  "target": "External input target signal value(s)",
                  "modulator": "External input modulatory/scaling signal(s)"},
-            "output_compartments":
+            "outputs":
                 {"L": "Local loss value computed/embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},
         }
         hyperparams = {
-            "n_units": "Number of neurons to model in this layer"
+            "n_units": "Number of neurons to model in this layer",
+            "batch_size": "Batch size dimension of this component"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "Laplacian(x=target; shift=mu, scale=1)",
                 "hyperparameters": hyperparams}

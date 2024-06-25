@@ -12,16 +12,17 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by filters)
+    | outputs - output signals (transformation induced by filters)
     | filters - current value matrix of synaptic filter efficacies
     | biases - current value vector of synaptic bias values
-    | key - JAX RNG key
+    | eta - learning rate global scale
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
     | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
     | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
-    | dWeights - delta tensor containing changes to be applied to synaptic efficacies
+    | dWeights - delta tensor containing changes to be applied to synaptic filter efficacies
     | dInputs - delta tensor containing back-transmitted signal values ("backpropagating pulse")
 
     Args:
@@ -76,7 +77,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
                          padding=padding, batch_size=batch_size, **kwargs)
 
         self.eta = eta
-        self.w_bounds = w_bound  ## soft weight constraint
+        self.w_bound = w_bound  ## soft weight constraint
         self.w_decay = w_decay  ## synaptic decay
         self.eta = eta  ## global learning rate governing plasticity
         self.pretrace_target = pretrace_target  ## target (pre-synaptic) trace activity value # 0.7
@@ -91,6 +92,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         self.preTrace = Compartment(jnp.zeros(self.in_shape))
         self.postSpike = Compartment(jnp.zeros(self.out_shape))
         self.postTrace = Compartment(jnp.zeros(self.out_shape))
+        self.eta = Compartment(jnp.ones((1, 1)) * eta)  ## global learning rate
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
@@ -118,9 +120,8 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         self.x_delta_shape = (dx, dy)
 
     @staticmethod
-    def _evolve(eta, pretrace_target, Aplus, Aminus, w_decay, w_bounds,
-                shape, stride, padding, delta_shape, preSpike, preTrace, postSpike,
-                postTrace, weights):
+    def _compute_update(pretrace_target, Aplus, Aminus, shape, stride, padding,
+                        delta_shape, preSpike, preTrace, postSpike, postTrace):
         k_size, k_size, n_in_chan, n_out_chan = shape
         ## calc dFilters
         dW_ltp = calc_dK_deconv(preTrace - pretrace_target, postSpike * Aplus,
@@ -130,15 +131,24 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
                                  delta_shape=delta_shape, stride_size=stride,
                                  out_size=k_size, padding=padding)
         dWeights = (dW_ltp + dW_ltd)
+        return dWeights
+
+    @staticmethod
+    def _evolve(pretrace_target, Aplus, Aminus, w_decay, w_bound,
+                shape, stride, padding, delta_shape, preSpike, preTrace, postSpike,
+                postTrace, weights, eta):
+        dWeights = TraceSTDPDeconvSynapse._compute_update(
+            pretrace_target, Aplus, Aminus, shape, stride, padding, delta_shape,
+            preSpike, preTrace, postSpike, postTrace
+        )
         if w_decay > 0.: ## apply synaptic decay
             weights = weights + dWeights * eta - weights * w_decay  ## conduct decayed STDP-ascent
         else:
             weights = weights + dWeights * eta ## conduct STDP-ascent
         ## Apply any enforced filter constraints
-        if w_bounds > 0.:
-            ## enforce non-negativity
+        if w_bound > 0.: ## enforce non-negativity
             eps = 0.01  # 0.001
-            weights = jnp.clip(weights, eps, w_bounds - eps)
+            weights = jnp.clip(weights, eps, w_bound - eps)
         return weights, dWeights
 
     @resolver(_evolve)
@@ -179,7 +189,8 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         self.preTrace.set(preTrace)
         self.postTrace.set(postTrace)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "TraceSTDPDeconvSynapse - performs a synaptic deconvolution "
                             "(@.T) of inputs to produce output signals; synaptic "
@@ -187,38 +198,41 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
                             "plasticity (STDP)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
                  "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)",
                  "preTrace": "Pre-synaptic trace value term for STDP (z_j)",
                  "postTrace": "Post-synaptic trace value term for STDP (z_i)"},
-            "parameter_compartments":
+            "states":
                 {"filters": "Synaptic filter parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
-                {"outputs": "Output of synaptic/filter transformation",
-                 "dWeights": "Synaptic filter value adjustment 4D-tensor produced at time t",
+                 "biases": "Base-rate/bias parameter values",
+                 "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+                 "key": "JAX PRNG key"},
+            "analytics":
+                {"dWeights": "Synaptic filter value adjustment 4D-tensor produced at time t",
                  "dInputs": "Tensor containing back-transmitted signal values; backpropagating pulse"},
+            "outputs":
+                {"outputs": "Output of synaptic/filter transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
             "x_shape": "Shape of any single incoming/input feature map",
-            "weight_init": "Initialization conditions for synaptic filter (K) values",
+            "batch_size": "Batch size dimension of this component",
+            "filter_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
             "stride": "length / size of stride",
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
-            "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
-            "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "eta": "Global learning rate initial condition",
+            "pretrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
             "w_decay": "Synaptic filter decay term",
             "w_bound": "Soft synaptic bound applied to filters post-update"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [K @.T inputs] * R + b; "
                             "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",

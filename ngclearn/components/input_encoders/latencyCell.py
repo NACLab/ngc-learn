@@ -117,12 +117,15 @@ class LatencyCell(JaxComponent):
     A (nonlinear) latency encoding (spike) cell; produces a time-lagged set of
     spikes on-the-fly.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | --- Cell State Compartments: ---
+    | targ_sp_times - target-spike-time
+    | mask - spike-ordering mask
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
     | outputs - output
     | tols - time-of-last-spike
-    | targ_sp_times - target-spike-time
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell
@@ -151,7 +154,8 @@ class LatencyCell(JaxComponent):
 
     # Define Functions
     def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
-                 linearize=False, normalize=False, num_steps=1., **kwargs):
+                 linearize=False, normalize=False, num_steps=1.,
+                 batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## latency meta-parameters
@@ -164,7 +168,7 @@ class LatencyCell(JaxComponent):
         self.num_steps = num_steps
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## Compartment setup
@@ -235,7 +239,8 @@ class LatencyCell(JaxComponent):
         data = jnp.load(file_name)
         self.key.set( data['key'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "LatencyCell - samples input to produce spikes via latency "
                          "coding, where each dimension's magnitude determines how "
@@ -243,24 +248,27 @@ class LatencyCell(JaxComponent):
                          "temporal/order encoder."
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "output_compartments":
-                {"tols": "Time-of-last-spike",
-                 "outputs": "Binary spike values emitted at time t",
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
+                {"targ_sp_times": "Target spike times",
                  "mask": "Spike ordering mask",
-                 "targ_sp_times": "Target spike times"},
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"tols": "Time-of-last-spike",
+                 "outputs": "Binary spike values emitted at time t"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "threshold": "Spike threshold (constant and shared across neurons)",
             "linearize": "Should a linear latency encoding be used?",
             "normalize": "Should the latency code(s) be normalized?",
             "num_steps": "Number of total time steps of simulation to consider ("
                          "useful for target spike time computation",
+            "first_spike_time": "Time of first allowable spike"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "~ Latency(x)",
                 "hyperparameters": hyperparams}

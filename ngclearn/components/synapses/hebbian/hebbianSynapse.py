@@ -6,8 +6,8 @@ from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8])
-def calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
-                pre_wght=1., post_wght=1.):
+def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
+                 pre_wght=1., post_wght=1.):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
 
@@ -75,15 +75,15 @@ class HebbianSynapse(DenseSynapse):
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by synapses)
+    | outputs - output signals (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
     | biases - current value vector of synaptic bias values
-    | key - JAX RNG key
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
     | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
-    | dW - current delta matrix containing changes to be applied to synaptic efficacies
-    | db - current delta vector containing changes to be applied to bias values
+    | dWweights - current delta matrix containing changes to be applied to synaptic efficacies
+    | dBiases - current delta vector containing changes to be applied to bias values
     | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
 
     Args:
@@ -140,14 +140,14 @@ class HebbianSynapse(DenseSynapse):
     def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
                  w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
-                 resist_scale=1., **kwargs):
+                 resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
-                         p_conn, **kwargs)
+                         p_conn, batch_size=batch_size, **kwargs)
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
         self.Rscale = resist_scale
-        self.w_bounds = w_bound
+        self.w_bound = w_bound
         self.w_decay = w_decay ## synaptic decay
         self.pre_wght = pre_wght
         self.post_wght = post_wght
@@ -155,7 +155,6 @@ class HebbianSynapse(DenseSynapse):
         self.is_nonnegative = is_nonnegative
         self.sign_value = sign_value
 
-        self.batch_size = 1
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
@@ -164,8 +163,8 @@ class HebbianSynapse(DenseSynapse):
         self.postVals = jnp.zeros((self.batch_size, shape[1]))
         self.pre = Compartment(self.preVals)
         self.post = Compartment(self.postVals)
-        self.dW = Compartment(jnp.zeros(shape))
-        self.db = Compartment(jnp.zeros(shape[1]))
+        self.dWeights = Compartment(jnp.zeros(shape))
+        self.dBiases = Compartment(jnp.zeros(shape[1]))
 
         #key, subkey = random.split(self.key.value)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)(
@@ -173,28 +172,40 @@ class HebbianSynapse(DenseSynapse):
             if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _evolve(opt, w_bounds, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _compute_update(w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
+                        post_wght, pre, post, weights):
+        ## calculate synaptic update values
+        dW, db = _calc_update(
+            pre, post, weights, w_bound, is_nonnegative=is_nonnegative,
+            signVal=sign_value, w_decay=w_decay, pre_wght=pre_wght,
+            post_wght=post_wght)
+        return dW, db
+
+    @staticmethod
+    def _evolve(opt, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
-        dW, db = calc_update(pre, post,
-                             weights, w_bounds, is_nonnegative=is_nonnegative,
-                             signVal=sign_value, w_decay=w_decay,
-                             pre_wght=pre_wght, post_wght=post_wght)
+        dWeights, dBiases = HebbianSynapse._compute_update(
+            w_bound, is_nonnegative, sign_value, w_decay, pre_wght, post_wght,
+            pre, post, weights
+        )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dW, db])
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
         else:
             # ignore db since no biases configured
-            opt_params, [weights] = opt(opt_params, [weights], [dW])
+            opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = enforce_constraints(weights, w_bounds, is_nonnegative=is_nonnegative)
-        return opt_params, weights, biases
+        weights = enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
+        return opt_params, weights, biases, dWeights, dBiases
 
     @resolver(_evolve)
-    def evolve(self, opt_params, weights, biases):
+    def evolve(self, opt_params, weights, biases, dWeights, dBiases):
         self.opt_params.set(opt_params)
         self.weights.set(weights)
         self.biases.set(biases)
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
 
     @staticmethod
     def _reset(batch_size, shape):
@@ -209,40 +220,45 @@ class HebbianSynapse(DenseSynapse):
             jnp.zeros(shape[1]), # db
         )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "HebbianSynapse - performs an adaptable synaptic "
                             "transformation of inputs to produce output signals; "
                             "synapses are adjusted via two-term/factor Hebbian adjustment"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
                  "pre": "Pre-synaptic statistic for Hebb rule (z_j)",
                  "post": "Post-synaptic statistic for Hebb rule (z_i)"},
-            "parameter_compartments":
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
-                {"outputs": "Output of synaptic transformation",
-                 "dWeights": "Synaptic weight value adjustment matrix produced at time t",
+                 "biases": "Base-rate/bias parameter values",
+                 "key": "JAX PRNG key"},
+            "analytics":
+                {"dWeights": "Synaptic weight value adjustment matrix produced at time t",
                  "dBiases": "Synaptic bias/base-rate value adjustment vector produced at time t"},
+            "outputs":
+                {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "is_nonnegative": "Should synapses be constrained to be non-negative post-updates?",
             "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
+            "eta": "Global (fixed) learning rate",
             "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
-            "w_decay": "Synaptic decay term"
+            "w_decay": "Synaptic decay term",
+            "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] + b ;"
                             "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay",
@@ -250,13 +266,13 @@ class HebbianSynapse(DenseSynapse):
         return info
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dW, db):
+    def reset(self, inputs, outputs, pre, post, dWeights, dBiases):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.pre.set(pre)
         self.post.set(post)
-        self.dW.set(dW)
-        self.db.set(db)
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

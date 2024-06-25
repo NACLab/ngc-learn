@@ -23,10 +23,12 @@ class ExpKernel(JaxComponent): ## exponential kernel
     A spiking function based on an exponential kernel applied to
     a moving window of spike times.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
-    | epsp - excitatory postsynaptic potential/pulse
+    | --- Cell State Compartments: ---
     | tf - maintained local window of pulse signals
+    | --- Cell Output Compartments: ---
+    | epsp - excitatory postsynaptic potential/pulse
 
     Args:
         name: the string name of this operator
@@ -41,7 +43,7 @@ class ExpKernel(JaxComponent): ## exponential kernel
     """
 
     # Define Functions
-    def __init__(self, name, n_units, dt, tau_w=500., nu=4., **kwargs):
+    def __init__(self, name, n_units, dt, tau_w=500., nu=4., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         self.tau_w = tau_w ## kernel window time constant
@@ -49,7 +51,7 @@ class ExpKernel(JaxComponent): ## exponential kernel
         self.win_len = int(nu/dt) + 1 ## window length
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -83,25 +85,28 @@ class ExpKernel(JaxComponent): ## exponential kernel
         self.epsp.set(epsp)
         self.tf.set(tf)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "ExpKernel - maintains an exponential kernel over "
                          "incoming signal values (such as sequences of discrete pulses)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values"},
-            "output_compartments":
-                {"epsp": "Excitatory postsynaptic potential/pulse emitted at time t",
-                 "tr": "Value signal (rolling) time window"},
+            "states":
+                {"tr": "Value signal (rolling) time window"},
+            "outputs":
+                {"epsp": "Excitatory postsynaptic potential/pulse emitted at time t"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "dt": "Integration time constant (kernel needs knowledge of `dt`)",
             "nu": "Spike time interval for window",
             "tau_w": "Spike window time constant"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "epsp ~ Sum_{tf} exp(-(t - tf)/tau_w)",
                 "hyperparameters": hyperparams}

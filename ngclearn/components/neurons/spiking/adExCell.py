@@ -82,10 +82,13 @@ class AdExCell(JaxComponent):
     | tau_w * dw/dt =  -w + (v - v_rest) * a
     | where w = w + s * (w + b) [in the event of a spike]
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
     | w - recovery variable state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
     | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
 
@@ -135,7 +138,7 @@ class AdExCell(JaxComponent):
     def __init__(self, name, n_units, tau_m=15., resist_m=1., tau_w=400.,
                  v_sharpness=2., intrinsic_mem_thr=-55., v_thr=5., v_rest=-72.,
                  v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0.,
-                 integration_type="euler", **kwargs):
+                 integration_type="euler", batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -158,7 +161,7 @@ class AdExCell(JaxComponent):
         self.v_thr = v_thr
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## Compartment setup
@@ -203,25 +206,26 @@ class AdExCell(JaxComponent):
         self.s.set(s)
         self.tols.set(tols)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "AdExCell - evolves neurons according to nonlinear, "
                          "adaptive exponential dual-ODE spiking cell dynamics."
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+                 "key": "JAX PRNG key"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "w": "Recovery variable at time t",
-                 "s": "Emitted spikes/pulses at time t",
-                 "rfr": "Current state of (relative) refractory variable",
-                 "thr": "Current state of voltage threshold at time t",
+                 "w": "Recovery variable at time t"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "tau_m": "Cell membrane time constant",
             "resist_m": "Membrane resistance value",
             "tau_w": "Recovery variable time constant",
@@ -236,7 +240,7 @@ class AdExCell(JaxComponent):
             "w0": "Initial condition for recovery variable",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = -(v - v_rest) + sharpV * exp((v - vT)/sharpV) - resist_m * w + resist_m * j; "
                             "tau_w * dw/dt =  -w + (v - v_rest) * a; where w = w + s * (w + b)",

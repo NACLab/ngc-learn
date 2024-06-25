@@ -48,11 +48,13 @@ class PoissonCell(JaxComponent):
     """
     A Poisson cell that produces approximately Poisson-distributed spikes on-the-fly.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | --- Cell State Compartments: ---
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
     | outputs - output
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell
@@ -63,14 +65,14 @@ class PoissonCell(JaxComponent):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, max_freq=63.75, **kwargs):
+    def __init__(self, name, n_units, max_freq=63.75, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Poisson meta-parameters
         self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## Compartment setup
@@ -112,7 +114,8 @@ class PoissonCell(JaxComponent):
         data = jnp.load(file_name)
         self.key.set( data['key'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "PoissonCell - samples input to produce spikes, "
                           "where dimension is a probability proportional to "
@@ -121,18 +124,20 @@ class PoissonCell(JaxComponent):
                          "a Poisson distribution)"
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
+                {"key": "JAX PRNG key"},
+            "outputs":
                 {"tols": "Time-of-last-spike",
                  "outputs": "Binary spike values emitted at time t"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "max_freq": "Maximum spike frequency of the train produced",
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "~ Poisson(x; max_freq)",
                 "hyperparameters": hyperparams}

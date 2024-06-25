@@ -41,11 +41,13 @@ class BernoulliCell(JaxComponent):
     """
     A Bernoulli cell that produces Bernoulli-distributed spikes on-the-fly.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
+    | --- Cell State Compartments: ---
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
     | outputs - output
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell
@@ -54,11 +56,11 @@ class BernoulliCell(JaxComponent):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         # Compartments (state of the cell, parameters, will be updated through stateless calls)
@@ -100,7 +102,8 @@ class BernoulliCell(JaxComponent):
         data = jnp.load(file_name)
         self.key.set( data['key'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "BernoulliCell - samples input to produce spikes, "
                           "where dimension is a probability proportional to "
@@ -108,16 +111,18 @@ class BernoulliCell(JaxComponent):
         }
         compartment_props = {
             "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
+                {"inputs": "Takes in external input signal values"},
+            "states":
+                {"key": "JAX PRNG key"},
             "output_compartments":
                 {"tols": "Time-of-last-spike",
                  "outputs": "Binary spike values emitted at time t"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "~ Bernoulli(x)",
                 "hyperparameters": hyperparams}

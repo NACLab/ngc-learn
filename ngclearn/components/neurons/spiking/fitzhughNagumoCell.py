@@ -108,10 +108,13 @@ class FitzhughNagumoCell(JaxComponent):
     | tau_m * dv/dt = v - (v^3)/3 - w + j
     | tau_w * dw/dt = v + a - b * w
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
     | w - recovery variable state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
     | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
 
@@ -224,21 +227,21 @@ class FitzhughNagumoCell(JaxComponent):
         self.s.set(s)
         self.tols.set(tols)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "FitzhughNagumoCell - evolves neurons according to nonlinear, "
                          "Fizhugh-Nagumo dual-ODE spiking cell dynamics."
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+                 "key": "JAX PRNG key"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "w": "Recovery variable at time t",
-                 "s": "Emitted spikes/pulses at time t",
-                 "rfr": "Current state of (relative) refractory variable",
-                 "thr": "Current state of voltage threshold at time t",
+                 "w": "Recovery variable at time t"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
@@ -254,7 +257,7 @@ class FitzhughNagumoCell(JaxComponent):
             "w0": "Initial condition for recovery variable",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = v - (v^3)/3 - w + j * resist_m; "
                             "tau_w * dw/dt = v + a - b * w",

@@ -16,7 +16,7 @@ Now let's set up the model for this lesson's simulation and construct a
 3-component system made up of two variable traces (`VarTrace`) connected by
 one single synapse that is capable of producing changes in connection strength
 in accordance with STDP, specifically with a form of the update rule known 
-as [trace-based STDP](ngclearn.components.synapses.hebbian.eventSTDPSynapse). 
+as [trace-based STDP](ngclearn.components.synapses.hebbian.traceSTDPSynapse). 
 Note that the trace components do not really do 
 anything meaningful unless they receive some input and we will provide
 carefully controlled input spike values in order to control their behavior
