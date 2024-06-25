@@ -3,8 +3,8 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-def calc_update(dt, pre, x_pre, post, x_post, W, w_bound=1., x_tar=0.0, mu=0.,
-                Aplus=1., Aminus=0.):
+def _calc_update(dt, pre, x_pre, post, x_post, W, w_bound=1., x_tar=0.0, mu=0.,
+                 Aplus=1., Aminus=0.):
     if mu > 0.:
         ## equations 3, 5, & 6 from Diehl and Cook - full power-law STDP
         post_shift = jnp.power(w_bound - W, mu)
@@ -111,9 +111,9 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     @staticmethod
     def _compute_update(dt, w_bound, preTrace_target, mu, Aplus, Aminus,
                 preSpike, postSpike, preTrace, postTrace, weights):
-        dW = calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
-                         w_bound=w_bound, x_tar=preTrace_target, mu=mu,
-                         Aplus=Aplus, Aminus=Aminus)
+        dW = _calc_update(dt, preSpike, preTrace, postSpike, postTrace, weights,
+                          w_bound=w_bound, x_tar=preTrace_target, mu=mu,
+                          Aplus=Aplus, Aminus=Aminus)
         return dW
 
     @staticmethod

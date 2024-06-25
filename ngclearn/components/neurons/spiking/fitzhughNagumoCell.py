@@ -6,7 +6,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -50,36 +50,7 @@ def _emit_spike(v, v_thr):
     s = (v > v_thr).astype(jnp.float32)
     return s
 
-def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
-    """
-
-    Args:
-        dt: integration time constant
-
-        j: electrical current
-
-        v: membrane potential / voltage
-
-        w: recovery variable value(s)
-
-        v_thr: voltage/membrane threshold (to obtain action potentials in terms
-            of binary spikes)
-
-        tau_m: membrane time constant
-
-        tau_w: recover variable time constant (Default: 12.5 ms)
-
-        a: dimensionless recovery variable shift factor "alpha" (Default: 0.7)
-
-        b: dimensionless recovery variable scale factor "beta" (Default: 0.8)
-
-        g: power-term divisor 'gamma' (Default: 3.)
-
-        integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
-
-    Returns:
-        updated voltage, updated recovery, spikes
-    """
+def _run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
     if integType == 1:
         v_params = (j, w, a, b, g, tau_m)
         _, _v = step_rk2(0., v, _dfv, dt, v_params) #_v = step_rk2(v, v_params, _dfv, dt)
@@ -90,7 +61,6 @@ def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, g=3., integType=0):
         _, _v = step_euler(0., v, _dfv, dt, v_params) #_v = step_euler(v, v_params, _dfv, dt)
         w_params = (j, v, a, b, g, tau_w)
         _, _w = step_euler(0., w, _dfw, dt, w_params) #_w = step_euler(w, w_params, _dfw, dt)
-    #s = (_v > v_thr).astype(jnp.float32)
     s = _emit_spike(_v, v_thr)
     return _v, _w, s
 
@@ -196,9 +166,9 @@ class FitzhughNagumoCell(JaxComponent):
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, alpha, beta, gamma,
                        intgFlag, j, v, w, tols):
-        v, w, s = run_cell(dt, j * R_m, v, w, v_thr, tau_m, tau_w, alpha, beta,
-                           gamma, intgFlag)
-        tols = update_times(t, s, tols)
+        v, w, s = _run_cell(dt, j * R_m, v, w, v_thr, tau_m, tau_w, alpha, beta,
+                            gamma, intgFlag)
+        tols = _update_times(t, s, tols)
         return j, v, w, s, tols
 
     @resolver(_advance_state)

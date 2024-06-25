@@ -5,7 +5,7 @@ from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import softmax
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -22,7 +22,7 @@ def update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 @jit
-def run_cell(dt, j, v, rfr, v_thr, tau_m, R_m, thr_gain=0.002, refract_T=0.):
+def _run_cell(dt, j, v, rfr, v_thr, tau_m, R_m, thr_gain=0.002, refract_T=0.):
     """
     Runs leaky integrator neuronal dynamics
 
@@ -134,8 +134,8 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols):
-        v, s, thr, rfr = run_cell(dt, j, v, rfr, thr, tau_m, R_m, thr_gain, refract_T)
-        tols = update_times(t, s, tols) ## update tols
+        v, s, thr, rfr = _run_cell(dt, j, v, rfr, thr, tau_m, R_m, thr_gain, refract_T)
+        tols = _update_times(t, s, tols) ## update tols
         return v, s, thr, rfr, tols
 
     @resolver(_advance_state)

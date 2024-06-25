@@ -3,7 +3,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
 
-def run_cell(dt, targ, mu):
+def _run_cell(dt, targ, mu):
     """
     Moves cell dynamics one step forward.
 
@@ -17,10 +17,10 @@ def run_cell(dt, targ, mu):
     Returns:
         derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, local loss
     """
-    return run_gaussian_cell(dt, targ, mu)
+    return _run_gaussian_cell(dt, targ, mu)
 
 @jit
-def run_gaussian_cell(dt, targ, mu):
+def _run_gaussian_cell(dt, targ, mu):
     """
     Moves Gaussian cell dynamics one step forward. Specifically, this
     routine emulates the error unit behavior of the local cost functional:
@@ -88,7 +88,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     @staticmethod
     def _advance_state(dt, mu, dmu, target, dtarget, modulator):
         ## compute Gaussian error cell output
-        dmu, dtarget, L = run_cell(dt, target, mu)
+        dmu, dtarget, L = _run_cell(dt, target, mu)
         dmu = dmu * modulator
         dtarget = dtarget * modulator
         return dmu, dtarget, L

@@ -6,7 +6,7 @@ from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
 
 @jit
-def compute_layer(inp, weight, biases=0., Rscale=1.):
+def _compute_layer(inp, weight, biases=0., Rscale=1.):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -98,7 +98,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     @staticmethod
     def _advance_state(Rscale, inputs, weights, biases):
-        outputs = compute_layer(inputs, weights, biases, Rscale)
+        outputs = _compute_layer(inputs, weights, biases, Rscale)
         return outputs
 
     @resolver(_advance_state)
@@ -152,6 +152,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",

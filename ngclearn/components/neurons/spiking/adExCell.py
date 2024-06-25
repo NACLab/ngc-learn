@@ -6,7 +6,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -51,8 +51,8 @@ def _emit_spike(v, v_thr):
     return s
 
 #@partial(jit, static_argnums=[10])
-def run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
-             v_rest, v_reset, R_m, integType=0):
+def _run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
+              v_rest, v_reset, R_m, integType=0):
     if integType == 1: ## RK-2/midpoint
         v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
         _, _v = step_rk2(0., v, _dfv, dt, v_params)
@@ -175,9 +175,9 @@ class AdExCell(JaxComponent):
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,
                      v_rest, v_reset, intgFlag, j, v, w, tols):
-        v, w, s = run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
-                           v_rest, v_reset, R_m, intgFlag)
-        tols = update_times(t, s, tols)
+        v, w, s = _run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
+                            v_rest, v_reset, R_m, intgFlag)
+        tols = _update_times(t, s, tols)
         return j, v, w, s, tols
 
     @resolver(_advance_state)

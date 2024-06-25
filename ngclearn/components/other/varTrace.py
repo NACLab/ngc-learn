@@ -5,7 +5,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 
 @partial(jit, static_argnums=[4])
-def run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
+def _run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
     """
     Run variable trace filter (low-pass filter) dynamics one step forward.
 
@@ -91,7 +91,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         elif "lin" in decay_type:
             decayFactor = (1. - dt/tau_tr)
         ## else "step" == decay_type, yielding a step/pulse-like filter
-        trace = run_varfilter(dt, inputs, trace, decayFactor, a_delta)
+        trace = _run_varfilter(dt, inputs, trace, decayFactor, a_delta)
         outputs = trace
         return outputs, trace
 

@@ -5,7 +5,7 @@ from jax import numpy as jnp, random, jit
 from functools import partial
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -23,7 +23,7 @@ def update_times(t, s, tols):
     return _tols
 
 @partial(jit, static_argnums=[3])
-def sample_poisson(dkey, data, dt, fmax=63.75):
+def _sample_poisson(dkey, data, dt, fmax=63.75):
     """
     Samples a Poisson spike train on-the-fly.
 
@@ -84,8 +84,8 @@ class PoissonCell(JaxComponent):
     @staticmethod
     def _advance_state(t, dt, max_freq, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
-        outputs = sample_poisson(subkeys[0], data=inputs, dt=dt, fmax=max_freq)
-        tols = update_times(t, outputs, tols)
+        outputs = _sample_poisson(subkeys[0], data=inputs, dt=dt, fmax=max_freq)
+        tols = _update_times(t, outputs, tols)
         return outputs, tols, key
 
     @resolver(_advance_state)

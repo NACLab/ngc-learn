@@ -5,7 +5,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 
 @partial(jit, static_argnums=[5,6])
-def apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
+def _apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
     idx_sub = tf_curr.shape[0]-1
     tf_new = (s * t) ## track new spike time(s)
     tf = tf_curr.at[idx_sub,:,:].set(tf_new)
@@ -64,8 +64,8 @@ class ExpKernel(JaxComponent): ## exponential kernel
     def _advance_state(t, tau_w, win_len, inputs, tf):
         s = inputs
         ## update spike time window and corresponding window volume
-        tf, epsp = apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,
-                                krn_end=win_len-1) #0:win_len-1)
+        tf, epsp = _apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,
+                                 krn_end=win_len-1) #0:win_len-1)
         return epsp, tf
 
     @resolver(_advance_state)

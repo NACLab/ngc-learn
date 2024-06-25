@@ -9,7 +9,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
 from ngclearn.components.neurons.spiking.LIFCell import LIFCell
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -45,8 +45,8 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     return dv_dt
 
 #@partial(jit, static_argnums=[7,8,9,10,11,12,13,14])
-def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, v_rest,
-             v_reset, refract_T, integType=0):
+def _run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, v_rest,
+              v_reset, refract_T, integType=0):
     """
     Runs quadratic leaky integrator neuronal dynamics
 
@@ -115,7 +115,7 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, v_rest,
     return _v, s, raw_s, _rfr
 
 @partial(jit, static_argnums=[3,4])
-def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
+def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     """
     Runs homeostatic threshold update dynamics one step.
 
@@ -224,15 +224,15 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
             skey = subkeys[0]
         ## run one integration step for neuronal dynamics
         j = j * R_m
-        v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-                                         v_c, a0, tau_m, v_rest, v_reset,
-                                         refract_T, intgFlag)
+        v, s, raw_spikes, rfr = _run_cell(dt, j, v, thr, thr_theta, rfr, skey,
+                                          v_c, a0, tau_m, v_rest, v_reset,
+                                          refract_T, intgFlag)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta,
-                                     theta_plus)
+            thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta,
+                                      theta_plus)
         ## update tols
-        tols = update_times(t, s, tols)
+        tols = _update_times(t, s, tols)
         return v, s, raw_spikes, rfr, thr_theta, tols, key
 
     @resolver(_advance_state)

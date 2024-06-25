@@ -4,7 +4,7 @@ from jax import numpy as jnp, random, jit
 from ngclearn.utils import tensorstats
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -22,7 +22,7 @@ def update_times(t, s, tols):
     return _tols
 
 @jit
-def sample_bernoulli(dkey, data):
+def _sample_bernoulli(dkey, data):
     """
     Samples a Bernoulli spike train on-the-fly
 
@@ -72,8 +72,8 @@ class BernoulliCell(JaxComponent):
     @staticmethod
     def _advance_state(t, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
-        outputs = sample_bernoulli(subkeys[0], data=inputs)
-        timeOfLastSpike = update_times(t, outputs, tols)
+        outputs = _sample_bernoulli(subkeys[0], data=inputs)
+        timeOfLastSpike = _update_times(t, outputs, tols)
         return outputs, timeOfLastSpike, key
 
     @resolver(_advance_state)

@@ -28,7 +28,7 @@ def _dfz(t, z, params): ## diff-eq dynamics wrapper
     return dz_dt
 
 @jit
-def modulate(j, dfx_val):
+def _modulate(j, dfx_val):
     """
     Apply a signal modulator to j (typically of the form of a derivative/dampening function)
 
@@ -42,7 +42,7 @@ def modulate(j, dfx_val):
     """
     return j * dfx_val
 
-def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
+def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
     """
     Runs leaky rate-coded state dynamics one step in time.
 
@@ -78,7 +78,7 @@ def run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
     return _z
 
 @jit
-def run_cell_stateless(j):
+def _run_cell_stateless(j):
     """
     A simplification of running a stateless set of dynamics over j (an identity
     functional form of dynamics).
@@ -182,10 +182,10 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal
             dfx_val = dfx(z)
-            j = modulate(j, dfx_val)
-            tmp_z = run_cell(dt, j, j_td, z,
-                         tau_m, leak_gamma=priorLeakRate,
-                         integType=intgFlag, priorType=priorType)
+            j = _modulate(j, dfx_val)
+            tmp_z = _run_cell(dt, j, j_td, z,
+                              tau_m, leak_gamma=priorLeakRate,
+                              integType=intgFlag, priorType=priorType)
             ## apply optional thresholding sub-dynamics
             if thresholdType == "soft_threshold":
                 tmp_z = threshold_soft(tmp_z, thr_lmbda)
@@ -195,7 +195,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             zF = fx(z) ## post-activation function value(s)
         else:
             ## run in "stateless" mode (when no membrane time constant provided)
-            z = run_cell_stateless(j)
+            z = _run_cell_stateless(j)
             zF = fx(z)
         return j, j_td, z, zF
 

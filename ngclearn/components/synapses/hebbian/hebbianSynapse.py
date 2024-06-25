@@ -45,7 +45,7 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
-def enforce_constraints(W, w_bound, is_nonnegative=True):
+def _enforce_constraints(W, w_bound, is_nonnegative=True):
     """
     Enforces constraints that the (synaptic) efficacies/values within matrix
     `W` must adhere to.
@@ -196,7 +196,7 @@ class HebbianSynapse(DenseSynapse):
             # ignore db since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
+        weights = _enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
         return opt_params, weights, biases, dWeights, dBiases
 
     @resolver(_evolve)

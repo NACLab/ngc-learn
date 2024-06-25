@@ -6,7 +6,7 @@ from jax import numpy as jnp, random, jit
 from functools import partial
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -24,8 +24,8 @@ def update_times(t, s, tols):
     return _tols
 
 @partial(jit, static_argnums=[5])
-def calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
-                            normalize=False):
+def _calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
+                             normalize=False):
     """
     Computes spike times from data according to a linear latency encoding scheme.
 
@@ -56,8 +56,8 @@ def calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
     return stimes + first_spk_t
 
 @partial(jit, static_argnums=[6])
-def calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
-                               num_steps=1., normalize=False):
+def _calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
+                                num_steps=1., normalize=False):
     """
     Computes spike times from data according to a logarithmic encoding scheme.
 
@@ -92,7 +92,7 @@ def calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
     return stimes
 
 @jit
-def extract_spike(spk_times, t, mask):
+def _extract_spike(spk_times, t, mask):
     """
     Extracts a spike from a latency-coded spike train.
 
@@ -186,15 +186,15 @@ class LatencyCell(JaxComponent):
         ## would call this function before processing a spike train (at start)
         data = inputs
         if linearize == True: ## linearize spike time calculation
-            stimes = calc_spike_times_linear(data, tau, threshold,
-                                             first_spike_time,
-                                             num_steps, normalize)
+            stimes = _calc_spike_times_linear(data, tau, threshold,
+                                              first_spike_time,
+                                              num_steps, normalize)
             targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
         else: ## standard nonlinear spike time calculation
-            stimes = calc_spike_times_nonlinear(data, tau, threshold,
-                                                first_spike_time,
-                                                num_steps=num_steps,
-                                                normalize=normalize)
+            stimes = _calc_spike_times_nonlinear(data, tau, threshold,
+                                                 first_spike_time,
+                                                 num_steps=num_steps,
+                                                 normalize=normalize)
             targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
         return targ_sp_times
 
@@ -206,7 +206,7 @@ class LatencyCell(JaxComponent):
     def _advance_state(t, dt, key, inputs, mask, targ_sp_times, tols):
         key, *subkeys = random.split(key, 2)
         data = inputs ## get sensory pattern data / features
-        spikes, spk_mask = extract_spike(targ_sp_times, t, mask) ## get spikes at t
+        spikes, spk_mask = _extract_spike(targ_sp_times, t, mask) ## get spikes at t
         return spikes, tols, spk_mask, targ_sp_times, key
 
     @resolver(_advance_state)

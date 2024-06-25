@@ -7,7 +7,7 @@ from ngclearn.utils.surrogate_fx import secant_lif_estimator
 from ngclearn.utils import tensorstats
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -25,7 +25,7 @@ def update_times(t, s, tols):
     return _tols
 
 @partial(jit, static_argnums=[3,4])
-def modify_current(j, spikes, inh_weights, R_m, inh_R):
+def _modify_current(j, spikes, inh_weights, R_m, inh_R):
     """
     A simple function that modifies electrical current j via application of a
     scalar membrane resistance value and an approximate form of lateral inhibition.
@@ -97,8 +97,8 @@ def _update_refract_and_spikes(dt, rfr, s, refract_T, sticky_spikes=False):
         _s = s * mask + (1. - mask)
     return _rfr, _s
 
-def run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
-             thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
+def _run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
+              thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
     """
     Runs leaky integrator neuronal dynamics
 
@@ -264,15 +264,15 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         ## run one step of Euler integration over neuronal dynamics
         j_curr = j
         ## apply simplified inhibitory pressure
-        j_curr = modify_current(j_curr, s, inh_weights, R_m, inh_R)
+        j_curr = _modify_current(j_curr, s, inh_weights, R_m, inh_R)
         j = j_curr # None ## store electrical current
         surrogate = d_spike_fx(j_curr, c1=0.82, c2=0.08)
         v, s, thr, rfr = \
-            run_cell(dt, j_curr, v, thr, tau_m,
-                     rfr, spike_fx, refract_T, thrGain, thrLeak,
-                     rho_b, sticky_spikes=sticky_spikes, v_min=v_min)
+            _run_cell(dt, j_curr, v, thr, tau_m,
+                      rfr, spike_fx, refract_T, thrGain, thrLeak,
+                      rho_b, sticky_spikes=sticky_spikes, v_min=v_min)
         ## update tols
-        tols = update_times(t, s, tols)
+        tols = _update_times(t, s, tols)
         return j, s, tols, v, thr, rfr, surrogate
 
     @resolver(_advance_state)
