@@ -76,10 +76,11 @@ for ts in range(T):
     model.clamp(probs)
     model.advance(t=ts*1., dt=dt)
 
-    print("{}  {}".format(cell.outputs.value, trace.trace.value))
+    print("{}  {}".format(cell.outputs.value, trace.trace.value), end="")
     spikes.append( cell.outputs.value )
     traceVals.append( trace.trace.value )
     time_span.append(ts * dt)
+print()
 spikes = jnp.concatenate(spikes,axis=0)
 traceVals = jnp.concatenate(traceVals,axis=0)
 ```

@@ -3,52 +3,6 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-def evolve(dt, pre, post, theta, W, tau_w, tau_theta, w_bound=0., w_decay=0.):
-    """
-    Evolves/changes the synpatic value matrix and threshold variables underlying
-    this synaptic cable, given relevant statistics.
-
-    Args:
-        dt: integration time constant
-
-        pre: pre-synaptic statistic to drive update (e.g., could be a trace)
-
-        post: post-synaptic statistic to drive update (e.g., could be a trace)
-
-        theta: the current state of the synaptic threshold variables
-
-        W: synaptic weight values (at time t)
-
-        tau_w: synaptic update time constant
-
-        tau_theta: threshold variable evolution time constant
-
-        w_bound: maximum value to enforce over newly computed efficacies
-            (default: 0.); must > 0. to be used
-
-        w_decay: synaptic decay factor (default: 0.)
-
-    Returns:
-        the newly evolved synaptic weight value matrix,
-        the newly evolved synaptic threshold variables,
-        the synaptic update matrix
-    """
-    eps = 1e-7
-    #post_term = post * (post - theta) # post - theta
-    #theta = jnp.mean(post * post, axis=1, keepdims=True)
-    post_term = post * (post - theta) # post - theta
-    post_term = post_term * (1. / (theta + eps))
-    dW = jnp.matmul(pre.T, post_term)
-    if w_bound > 0.:
-        dW = dW * (w_bound - jnp.abs(W))
-    ## update synaptic efficacies according to a leaky ODE
-    dW = -W * w_decay + dW
-    _W = W + dW * dt/tau_w
-    ## update synaptic modification threshold as a leaky ODE
-    dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True) ## batch avg
-    _theta = theta + (-theta + dtheta) * dt/tau_theta
-    return _W, _theta, dW, post_term
-
 class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
     A synaptic cable that adjusts its efficacies in accordance with BCM
@@ -67,9 +21,9 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (transformation induced by synapses)
+    | outputs - output signals (transformation induced by synapses)
     | weights - current value matrix of synaptic efficacies
-    | key - JAX RNG key
+    | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal/value to drive 1st term of BCM update (x)
     | post - post-synaptic signal/value to drive 2nd term of BCM update (y)
@@ -111,8 +65,9 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     # Define Functions
     def __init__(self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0.,
-                 weight_init=None, resist_scale=1., p_conn=1., **kwargs):
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, **kwargs)
+                 weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs):
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
+                         batch_size=batch_size, **kwargs)
 
         ## Synapse and BCM hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
@@ -123,7 +78,6 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.Rscale = resist_scale ## post-transformation scale factor
         self.theta0 = theta0 #-1. ## initial condition for theta/threshold variables
 
-        self.batch_size = 1
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
@@ -135,8 +89,19 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     @staticmethod
     def _evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
-        weights, theta, dWeights, post_term = evolve(dt, pre, post, theta, weights, tau_w,
-                                                     tau_theta, w_bound, w_decay)
+        eps = 1e-7
+        post_term = post * (post - theta)  # post - theta
+        post_term = post_term * (1. / (theta + eps))
+        dWeights = jnp.matmul(pre.T, post_term)
+        if w_bound > 0.:
+            dWeights = dWeights * (w_bound - jnp.abs(weights))
+        ## update synaptic efficacies according to a leaky ODE
+        dWeights = -weights * w_decay + dWeights
+        _W = weights + dWeights * dt / tau_w
+        ## update synaptic modification threshold as a leaky ODE
+        dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True)  ## batch avg
+        theta = theta + (-theta + dtheta) * dt / tau_theta
+
         return weights, theta, dWeights, post_term
 
     @resolver(_evolve)
@@ -178,7 +143,8 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.weights.set(data['weights'])
         self.theta.set(data['theta'])
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "BCMSTDPSynapse - performs an adaptable synaptic "
                             "transformation  of inputs to produce output signals; "
@@ -187,7 +153,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         compartment_props = {
             "input_compartments":
                 {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key",
+                 "key": "JAX PRNG key",
                  "pre": "Pre-synaptic statistic for BCM (z_j)",
                  "post": "Post-synaptic statistic for BCM (z_i)"},
             "parameter_compartments":
@@ -200,15 +166,18 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "tau_theta": "Time constant for synaptic threshold variable `theta`",
             "tau_w": "Time constant for BCM synaptic adjustment",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
-            "w_decay": "Synaptic decay term"
+            "w_decay": "Synaptic decay term",
+            "eta": "Global learning rate",
+            "theta0": "Initial condition for theta/threshold variables"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] ;"
                             "tau_w dW_{ij}/dt = z_j * (z_i - theta) - W_{ij} * w_decay;"

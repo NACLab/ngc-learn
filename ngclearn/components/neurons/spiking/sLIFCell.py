@@ -7,7 +7,7 @@ from ngclearn.utils.surrogate_fx import secant_lif_estimator
 from ngclearn.utils import tensorstats
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -25,7 +25,7 @@ def update_times(t, s, tols):
     return _tols
 
 @partial(jit, static_argnums=[3,4])
-def modify_current(j, spikes, inh_weights, R_m, inh_R):
+def _modify_current(j, spikes, inh_weights, R_m, inh_R):
     """
     A simple function that modifies electrical current j via application of a
     scalar membrane resistance value and an approximate form of lateral inhibition.
@@ -97,8 +97,8 @@ def _update_refract_and_spikes(dt, rfr, s, refract_T, sticky_spikes=False):
         _s = s * mask + (1. - mask)
     return _rfr, _s
 
-def run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
-             thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
+def _run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
+              thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
     """
     Runs leaky integrator neuronal dynamics
 
@@ -154,15 +154,17 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
     threshold (per unit) scheme. (Note that this particular spiking cell only
     supports Euler integration of its voltage dynamics.)
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
-    | s - emitted binary spikes/action potentials
     | rfr - (relative) refractory variable state
     | thr - (adaptive) threshold state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
+    | s - emitted binary spikes/action potentials
     | surrogate - state of surrogate function output signals (currently, the secant LIF estimator)
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     | Reference:
     | Samadi, Arash, Timothy P. Lillicrap, and Douglas B. Tweed. "Deep learning with
@@ -262,15 +264,15 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         ## run one step of Euler integration over neuronal dynamics
         j_curr = j
         ## apply simplified inhibitory pressure
-        j_curr = modify_current(j_curr, s, inh_weights, R_m, inh_R)
+        j_curr = _modify_current(j_curr, s, inh_weights, R_m, inh_R)
         j = j_curr # None ## store electrical current
         surrogate = d_spike_fx(j_curr, c1=0.82, c2=0.08)
         v, s, thr, rfr = \
-            run_cell(dt, j_curr, v, thr, tau_m,
-                     rfr, spike_fx, refract_T, thrGain, thrLeak,
-                     rho_b, sticky_spikes=sticky_spikes, v_min=v_min)
+            _run_cell(dt, j_curr, v, thr, tau_m,
+                      rfr, spike_fx, refract_T, thrGain, thrLeak,
+                      rho_b, sticky_spikes=sticky_spikes, v_min=v_min)
         ## update tols
-        tols = update_times(t, s, tols)
+        tols = _update_times(t, s, tols)
         return j, s, tols, v, thr, rfr, surrogate
 
     @resolver(_advance_state)
@@ -319,20 +321,22 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.thr.set(data['threshold'])
         self.threshold0 = self.thr.value + 0
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "SLIFCell - evolves neurons according to simplified "
                          "leaky integrate-and-fire spiking dynamics."
         }
         compartment_props = {
-            "input_compartments":
-                {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"j": "External input electrical current"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",
                  "thr": "Current state of voltage threshold at time t",
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike",
                  "surrogate": "State/value of surrogate function at time t"},
         }
@@ -350,7 +354,7 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "thr_jitter": "Scale of random uniform noise to apply to initial condition of threshold",
             "sticky_spikes": "Should spikes be allowed to persist during refractory period?"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = -v + j * resist_m",
                 "hyperparameters": hyperparams}

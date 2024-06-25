@@ -109,7 +109,8 @@ for ts in range(current.shape[1]):
     curr_in.append(j_t)
     mem_rec.append(v)
     spk_rec.append(s)
-    print(" {}: s {} ; v {}".format(ts, s, v))
+    print(" {}: s {} ; v {}".format(ts, s, v), end="")
+print()
 
 import numpy as np
 curr_in = np.squeeze(np.asarray(curr_in))

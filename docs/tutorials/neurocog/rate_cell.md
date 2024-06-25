@@ -134,7 +134,8 @@ for ts in range(current.shape[1]):
    nonlinear_z = cell.zF.value
    lin_out.append(linear_z)
    nonlin_out.append(nonlinear_z)
-   print(" {}: s {} ; v {}".format(ts, linear_z, nonlinear_z))
+   print("\r {}: s {} ; v {}".format(ts, linear_z, nonlinear_z), end="")
+print()
 
 import numpy as np
 lin_out = np.squeeze(np.asarray(lin_out))

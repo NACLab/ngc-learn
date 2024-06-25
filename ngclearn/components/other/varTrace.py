@@ -5,7 +5,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 
 @partial(jit, static_argnums=[4])
-def run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
+def _run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
     """
     Run variable trace filter (low-pass filter) dynamics one step forward.
 
@@ -36,10 +36,13 @@ class VarTrace(JaxComponent): ## low-pass filter
     """
     A variable trace (filter) functional node.
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signal (same as "trace" compartment)
+    | --- Cell State Compartments: ---
     | trace - traced value signal
+    | --- Cell Output Compartments: ---
+    | outputs - output signal (same as "trace" compartment)
+    | trace - traced value signal (can be treated as output compartment)
 
     Args:
         name: the string name of this operator
@@ -61,7 +64,8 @@ class VarTrace(JaxComponent): ## low-pass filter
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", **kwargs):
+    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp",
+                 batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Trace control coefficients
@@ -70,7 +74,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -87,7 +91,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         elif "lin" in decay_type:
             decayFactor = (1. - dt/tau_tr)
         ## else "step" == decay_type, yielding a step/pulse-like filter
-        trace = run_varfilter(dt, inputs, trace, decayFactor, a_delta)
+        trace = _run_varfilter(dt, inputs, trace, decayFactor, a_delta)
         outputs = trace
         return outputs, trace
 
@@ -107,28 +111,31 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.outputs.set(outputs)
         self.trace.set(trace)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "VarTrace - maintains a low pass filter over incoming signal "
                          "values (such as sequences of discrete pulses)"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values"},
-            "output_compartments":
-                {"trace": "Continuous low-pass filtered signal values, at time t",
-                 "outputs": "Continuous low-pass filtered signal values, "
+            "states":
+                {"trace": "Continuous low-pass filtered signal values, at time t"},
+            "outputs":
+                {"outputs": "Continuous low-pass filtered signal values, "
                             "at time t (same as `trace`)"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "tau_tr": "Trace/filter time constant",
             "a_delta": "Increment to apply to trace (if not set to 0); "
                        "otherwise, traces clamp to 1 and then decay",
             "decay_type": "Indicator of what type of decay dynamics to use "
                           "as filter is updated at time t"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_tr * dz/dt ~ -z + inputs",
                 "hyperparameters": hyperparams}

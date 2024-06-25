@@ -7,7 +7,7 @@ class StaticConvSynapse(ConvSynapse):
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output
+    | outputs - output signals
     | weights - current value tensor of kernel efficacies
     | biases - current base-rate/bias efficacies
 

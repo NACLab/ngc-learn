@@ -7,7 +7,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -44,8 +44,8 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     return dv_dt
 
 #@partial(jit, static_argnums=[7, 8, 9, 10, 11, 12])
-def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
-             v_decay, refract_T, integType=0):
+def _run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
+              v_decay, refract_T, integType=0):
     """
     Runs leaky integrator (or leaky integrate-and-fire; LIF) neuronal dynamics.
 
@@ -102,16 +102,17 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
     raw_s = s + 0 ## preserve un-altered spikes
     ############################################################################
     ## this is a spike post-processing step
-    if skey is not None: ## FIXME: this would not work for mini-batches!!!!!!!
+    if skey is not None:
         m_switch = (jnp.sum(s) > 0.).astype(jnp.float32)
-        rS = random.choice(skey, s.shape[1], p=jnp.squeeze(s, axis=0))
-        rS = nn.one_hot(rS, num_classes=s.shape[1], dtype=jnp.float32)
+        rS = s * random.uniform(skey, s.shape)
+        rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
+                        dtype=jnp.float32)
         s = s * (1. - m_switch) + rS * m_switch
     ############################################################################
     return _v, s, raw_s, _rfr
 
 @partial(jit, static_argnums=[3, 4])
-def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
+def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     """
     Runs homeostatic threshold update dynamics one step (via Euler integration).
 
@@ -149,15 +150,17 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     | where R is the membrane resistance and v_rest is the resting potential
     | also, if a spike occurs, v is set to v_reset
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
-    | s - emitted binary spikes/action potentials
-    | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | rfr - (relative) refractory variable state
     | thr_theta - homeostatic/adaptive threshold increment state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
+    | s - emitted binary spikes/action potentials
+    | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell
@@ -257,14 +260,14 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         ## run one integration step for neuronal dynamics
         #j = _modify_current(j, dt, tau_m, R_m) ## re-scale current in prep for volt ODE
         j = j * R_m
-        v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-                                         tau_m, v_rest, v_reset, v_decay, refract_T,
-                                         intgFlag)
+        v, s, raw_spikes, rfr = _run_cell(dt, j, v, thr, thr_theta, rfr, skey,
+                                          tau_m, v_rest, v_reset, v_decay, refract_T,
+                                          intgFlag)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
+            thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
-        tols = update_times(t, s, tols)
+        tols = _update_times(t, s, tols)
         return v, s, raw_spikes, rfr, thr_theta, tols, key
 
     @resolver(_advance_state)
@@ -312,20 +315,22 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         if seeded == True:
             self.key.set( data['key'] )
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "LIFCell - evolves neurons according to leaky integrate-"
                          "and-fire spiking dynamics."
         }
         compartment_props = {
-            "input_compartments":
-                {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"j": "External input electrical current"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",
                  "thr": "Current state of voltage threshold at time t",
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
@@ -343,7 +348,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = (v_rest - v) + j * resist_m",
                 "hyperparameters": hyperparams}

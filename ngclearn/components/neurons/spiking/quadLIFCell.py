@@ -9,7 +9,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
 from ngclearn.components.neurons.spiking.LIFCell import LIFCell
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -44,9 +44,9 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_c, a0)
     return dv_dt
 
-@partial(jit, static_argnums=[7,8,9,10,11,12,13,14])
-def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, R_m, v_rest,
-             v_reset, refract_T, integType=0):
+#@partial(jit, static_argnums=[7,8,9,10,11,12,13,14])
+def _run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, v_rest,
+              v_reset, refract_T, integType=0):
     """
     Runs quadratic leaky integrator neuronal dynamics
 
@@ -73,8 +73,6 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, R_m, v_rest,
         a0: critical voltage value
 
         tau_m: cell membrane time constant
-
-        R_m: membrane resistance value
 
         v_rest: membrane resting potential (in mV)
 
@@ -117,7 +115,7 @@ def run_cell(dt, j, v, v_thr, v_theta, rfr, skey, v_c, a0, tau_m, R_m, v_rest,
     return _v, s, raw_s, _rfr
 
 @partial(jit, static_argnums=[3,4])
-def update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
+def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     """
     Runs homeostatic threshold update dynamics one step.
 
@@ -155,15 +153,17 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     |   a0 - scaling factor for voltage accumulation
     |   V_c - critical voltage (value)
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
-    | s - emitted binary spikes/action potentials
-    | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | rfr - (relative) refractory variable state
     | thr_theta - homeostatic/adaptive threshold increment state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
+    | s - emitted binary spikes/action potentials
+    | s_raw - raw spike signals before post-processing (only if one_spike = True, else s_raw = s)
     | tols - time-of-last-spike
-    | key - JAX RNG key
 
     Args:
         name: the string name of this cell
@@ -203,17 +203,19 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
     # Define Functions
     def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
                  v_reset=60., v_scale=-41.6, critical_V=1., tau_theta=1e7,
-                 theta_plus=0.05, refract_time=5., one_spike=False, **kwargs):
+                 theta_plus=0.05, refract_time=5., thr_jitter=0., one_spike=False,
+                 integration_type="euler", **kwargs):
         super().__init__(name, n_units, tau_m, resist_m, thr, v_rest, v_reset,
-                         tau_theta, theta_plus, refract_time, one_spike, **kwargs)
+                         1., tau_theta, theta_plus, refract_time, thr_jitter,
+                         one_spike, integration_type, **kwargs)
         ## only two distinct additional constants distinguish the Quad-LIF cell
         self.v_c = v_scale
         self.a0 = critical_V
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, tau_theta,
-                 theta_plus, one_spike, v_c, a0, key, j, v, s, rfr, thr,
-                 thr_theta, tols):
+    def _advance_state(t, dt, tau_m, R_m, v_rest, v_reset, refract_T, thr,
+                       tau_theta, theta_plus, one_spike, v_c, a0, intgFlag, key,
+                       j, v, s, rfr, thr_theta, tols):
         ## Note: this runs quadratic LIF neuronal dynamics but constrained to be
         ## similar to the general form of LIF dynamics
         skey = None ## this is an empty dkey if single_spike mode turned off
@@ -221,42 +223,44 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
             key, *subkeys = random.split(key, 2)
             skey = subkeys[0]
         ## run one integration step for neuronal dynamics
-        j = _modify_current(j, dt, tau_m) ## get ODE re-scaled current
-        v, s, raw_spikes, rfr = run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-                                         v_c, a0, tau_m, R_m, v_rest, v_reset,
-                                         refract_T)
+        j = j * R_m
+        v, s, raw_spikes, rfr = _run_cell(dt, j, v, thr, thr_theta, rfr, skey,
+                                          v_c, a0, tau_m, v_rest, v_reset,
+                                          refract_T, intgFlag)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
+            thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta,
+                                      theta_plus)
         ## update tols
-        tols = update_times(t, s, tols)
-        return j, v, s, rfr, thr, thr_theta, tols, key
+        tols = _update_times(t, s, tols)
+        return v, s, raw_spikes, rfr, thr_theta, tols, key
 
     @resolver(_advance_state)
-    def advance_state(self, j, v, s, rfr, thr, thr_theta, tols, key):
-        self.j.set(j)
+    def advance_state(self, v, s, s_raw, rfr, thr_theta, tols, key):
         self.v.set(v)
         self.s.set(s)
+        self.s_raw.set(s_raw)
         self.rfr.set(rfr)
-        self.thr.set(thr)
         self.thr_theta.set(thr_theta)
         self.tols.set(tols)
         self.key.set(key)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "QuadLIFCell - evolves neurons according to quadratic "
                          "leaky integrate-and-fire spiking dynamics."
         }
         compartment_props = {
-            "input_compartments":
-                {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"j": "External input electrical current"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
-                 "s": "Emitted spikes/pulses at time t",
                  "rfr": "Current state of (relative) refractory variable",
                  "thr": "Current state of voltage threshold at time t",
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
@@ -276,7 +280,7 @@ class QuadLIFCell(LIFCell): ## quadratic (leaky) LIF cell; inherits from LIFCell
             "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = (v_rest - v) + j * resist_m",
                 "hyperparameters": hyperparams}

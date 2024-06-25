@@ -6,7 +6,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
 @jit
-def update_times(t, s, tols):
+def _update_times(t, s, tols):
     """
     Updates time-of-last-spike (tols) variable.
 
@@ -65,43 +65,8 @@ def _modify_current(j, R_m):
     _j = j * R_m
     return _j
 
-def run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
-             R_m=1., integType=0):
-    """
-    Runs Izhikevich neuronal dynamics
-
-    Args:
-        dt: integration time constant (milliseconds, or ms)
-
-        j: electrical current value
-
-        v: membrane potential (voltage, in milliVolts or mV) value (at t)
-
-        s: previously measured spikes/action potentials (binary values)
-
-        w: recovery variable/state
-
-        v_thr: voltage threshold value (in mV)
-
-        tau_m: membrane time constant
-
-        tau_w: (tau_recovery) time scale/constant of recovery variable; note
-            that this is the inverse of Izhikevich's scale variable `a` (tau_w = 1/a)
-
-        b: (coupling factor) how sensitive is recovery to subthreshold voltage
-            fluctuations
-
-        c: (reset_voltage) voltage to reset to after spike emitted (in mV)
-
-        d: (reset_recovery) recovery value to reset to after a spike
-
-        R_m: membrane resistance value (Default: 1 mega-Ohm)
-
-        integType: integration type to use (0 --> Euler/RK1, 1 --> Midpoint/RK2)
-
-    Returns:
-        updated voltage, updated recovery, spikes
-    """
+def _run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
+              R_m=1., integType=0):
     ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
     a = 1./tau_w ## we map time constant to variable "a" (a = 1/tau_w)
     _j = _modify_current(j, R_m)
@@ -137,10 +102,13 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
     | tau_m * dv/dt = 0.04 v^2 + 5v + 140 - w + j * R_m
     | tau_w * dw/dt = (v * b - w),  where tau_w = 1/a
 
-    | --- Cell Compartments: ---
+    | --- Cell Input Compartments: ---
     | j - electrical current input (takes in external signals)
+    | --- Cell State Compartments: ---
     | v - membrane potential/voltage state
     | w - recovery variable state
+    | key - JAX PRNG key
+    | --- Cell Output Compartments: ---
     | s - emitted binary spikes/action potentials
     | tols - time-of-last-spike
 
@@ -232,9 +200,9 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
     @staticmethod
     def _advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
                        intgFlag, j, v, w, s, tols):
-        v, w, s = run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
-                           b=coupling, c=v_reset, d=w_reset, R_m=R_m, integType=intgFlag)
-        tols = update_times(t, s, tols)
+        v, w, s = _run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
+                            b=coupling, c=v_reset, d=w_reset, R_m=R_m, integType=intgFlag)
+        tols = _update_times(t, s, tols)
         return j, v, w, s, tols
 
     @resolver(_advance_state)
@@ -263,27 +231,28 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         self.s.set(s)
         self.tols.set(tols)
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "cell_type": "IzhikevichCell - evolves neurons according to nonlinear, "
                          "dual-ODE Izhikevich spiking cell dynamics."
         }
         compartment_props = {
-            "input_compartments":
-                {"j": "External input electrical current",
-                 "key": "JAX RNG key"},
-            "output_compartments":
+            "inputs":
+                {"j": "External input electrical current"},
+            "states":
                 {"v": "Membrane potential/voltage at time t",
                  "w": "Recovery variable at time t",
-                 "s": "Emitted spikes/pulses at time t",
-                 "rfr": "Current state of (relative) refractory variable",
-                 "thr": "Current state of voltage threshold at time t",
+                 "key": "JAX PRNG key"},
+            "outputs":
+                {"s": "Emitted spikes/pulses at time t",
                  "tols": "Time-of-last-spike"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
             "tau_m": "Cell membrane time constant",
             "resist_m": "Membrane resistance value",
+            "tau_w": "Recovery variable time constant",
             "v_thr": "Base voltage threshold value",
             "v_rest": "Resting membrane potential value",
             "v_reset": "Reset membrane potential value",
@@ -294,7 +263,7 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
             "w0": "Initial condition for recovery variable",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = 0.04 v^2 + 5v + 140 - w + j * resist_m; "
                             "tau_w * dw/dt = (v * b - w),  where tau_w = 1/a",

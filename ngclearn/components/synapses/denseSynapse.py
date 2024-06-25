@@ -6,7 +6,7 @@ from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
 
 @jit
-def compute_layer(inp, weight, biases=0., Rscale=1.):
+def _compute_layer(inp, weight, biases=0., Rscale=1.):
     """
     Applies the transformation/projection induced by the synaptic efficacie
     associated with this synaptic cable
@@ -33,7 +33,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output
+    | outputs - output signals
     | weights - current value matrix of synaptic efficacies
     | biases - current value vector of synaptic bias values
 
@@ -60,9 +60,10 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     # Define Functions
     def __init__(self, name, shape, weight_init=None, bias_init=None,
-                 resist_scale=1., p_conn=1., **kwargs):
+                 resist_scale=1., p_conn=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
+        self.batch_size = batch_size
         self.weight_init = weight_init
         self.bias_init = bias_init
 
@@ -97,7 +98,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     @staticmethod
     def _advance_state(Rscale, inputs, weights, biases):
-        outputs = compute_layer(inputs, weights, biases, Rscale)
+        outputs = _compute_layer(inputs, weights, biases, Rscale)
         return outputs
 
     @resolver(_advance_state)
@@ -132,30 +133,32 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         if "biases" in data.keys():
             self.biases.set(data['biases'])
 
-    def help(self): ## component help function
+    @classmethod
+    def help(cls): ## component help function
         properties = {
             "synapse_type": "DenseSynapse - performs a synaptic transformation "
                             "of inputs to produce  output signals (e.g., a "
                             "scaled linear multivariate transformation)"
         }
         compartment_props = {
-            "input_compartments":
-                {"inputs": "Takes in external input signal values",
-                 "key": "JAX RNG key"},
-            "parameter_compartments":
+            "inputs":
+                {"inputs": "Takes in external input signal values"},
+            "states":
                 {"weights": "Synapse efficacy/strength parameter values",
-                 "biases": "Base-rate/bias parameter values"},
-            "output_compartments":
+                 "biases": "Base-rate/bias parameter values",
+                 "key": "JAX PRNG key"},
+            "outputs":
                 {"outputs": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)"
         }
-        info = {self.name: properties,
+        info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] + b",
                 "hyperparameters": hyperparams}
