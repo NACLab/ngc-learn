@@ -244,7 +244,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
             "eta": "Global learning rate initial condition",
-            "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "pretrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
             "w_decay": "Synaptic filter decay term",
             "w_bound": "Soft synaptic bound applied to filters post-update"
         }

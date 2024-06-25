@@ -65,14 +65,14 @@ class PoissonCell(JaxComponent):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, max_freq=63.75, **kwargs):
+    def __init__(self, name, n_units, max_freq=63.75, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Poisson meta-parameters
         self.max_freq = max_freq ## maximum frequency (in Hertz/Hz)
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## Compartment setup
@@ -134,6 +134,7 @@ class PoissonCell(JaxComponent):
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "max_freq": "Maximum spike frequency of the train produced",
         }
         info = {cls.__name__: properties,

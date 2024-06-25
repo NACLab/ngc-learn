@@ -144,7 +144,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
-                 threshold=("none", 0.), integration_type="euler", **kwargs):
+                 threshold=("none", 0.), integration_type="euler",
+                 batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -162,7 +163,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         ## Layer size setup
         self.n_units = n_units
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.fx, self.dfx = create_function(fun_name=act_fx)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
@@ -234,6 +235,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "tau_m": "Cell state/membrane time constant",
             "prior": "What kind of kurtotic prior to place over neuronal dynamics?",
             "act_fx": "Elementwise activation function to apply over cell state `z`",

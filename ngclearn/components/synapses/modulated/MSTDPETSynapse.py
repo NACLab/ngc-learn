@@ -69,11 +69,11 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
     def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
                  pretrace_target=0., tau_elg=0., elg_decay=1.,
                  weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
-                 **kwargs):
+                 batch_size=1, **kwargs):
         super().__init__(name, shape, A_plus, A_minus, eta=eta, mu=mu,
                          pretrace_target=pretrace_target, weight_init=weight_init,
                          resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound,
-                         **kwargs)
+                         batch_size=batch_size, **kwargs)
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
@@ -172,6 +172,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
+            "batch_size": "Batch size dimension of this component",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "A_plus": "Strength of long-term potentiation (LTP)",

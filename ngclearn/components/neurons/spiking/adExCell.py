@@ -138,7 +138,7 @@ class AdExCell(JaxComponent):
     def __init__(self, name, n_units, tau_m=15., resist_m=1., tau_w=400.,
                  v_sharpness=2., intrinsic_mem_thr=-55., v_thr=5., v_rest=-72.,
                  v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0.,
-                 integration_type="euler", **kwargs):
+                 integration_type="euler", batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -161,7 +161,7 @@ class AdExCell(JaxComponent):
         self.v_thr = v_thr
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## Compartment setup
@@ -225,6 +225,7 @@ class AdExCell(JaxComponent):
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "tau_m": "Cell membrane time constant",
             "resist_m": "Membrane resistance value",
             "tau_w": "Recovery variable time constant",

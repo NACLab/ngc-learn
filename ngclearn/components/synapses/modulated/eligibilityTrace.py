@@ -50,10 +50,10 @@ class EligibilityTrace(JaxComponent): ## eligibility trace
 
     # Define Functions
     def __init__(self, name, shape, tau_elg=100., elg_decay=1., input_scale=1.,
-                 integration_type="euler", **kwargs):
+                 integration_type="euler", batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
-        self.batch_size = 1 ## Note: batch size technically means nothing to an eligibility trace
+        self.batch_size = batch_size ## Note: batch size technically means nothing to an eligibility trace
 
         ## Integration properties
         self.integrationType = integration_type
@@ -136,6 +136,7 @@ class EligibilityTrace(JaxComponent): ## eligibility trace
             "tau_elg": "Eligibility time constant",
             "tau_d": "Eligibility decay magnitude/constant",
             "input_scale": "Input signal scaling factor",
+            "batch_size": "Batch size dimension of this component"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

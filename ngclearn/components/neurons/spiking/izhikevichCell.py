@@ -287,6 +287,7 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
             "n_units": "Number of neuronal cells to model in this layer",
             "tau_m": "Cell membrane time constant",
             "resist_m": "Membrane resistance value",
+            "tau_w": "Recovery variable time constant",
             "v_thr": "Base voltage threshold value",
             "v_rest": "Resting membrane potential value",
             "v_reset": "Reset membrane potential value",

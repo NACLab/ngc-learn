@@ -68,12 +68,12 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
     """
 
     # Define Functions
-    def __init__(self, name, n_units, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size setup
         self.n_units = n_units
-        self.batch_size = 1
+        self.batch_size = batch_size
 
         ## Convolution shape setup
         self.width = self.height = n_units
@@ -137,7 +137,8 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},
         }
         hyperparams = {
-            "n_units": "Number of neurons to model in this layer"
+            "n_units": "Number of neurons to model in this layer",
+            "batch_size": "Batch size dimension of this component"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

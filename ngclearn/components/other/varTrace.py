@@ -64,7 +64,8 @@ class VarTrace(JaxComponent): ## low-pass filter
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp", **kwargs):
+    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp",
+                 batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Trace control coefficients
@@ -73,7 +74,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -127,6 +128,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "tau_tr": "Trace/filter time constant",
             "a_delta": "Increment to apply to trace (if not set to 0); "
                        "otherwise, traces clamp to 1 and then decay",

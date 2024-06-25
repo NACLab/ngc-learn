@@ -219,6 +219,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
             "x_shape": "Shape of any single incoming/input feature map",
+            "batch_size": "Batch size dimension of this component",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
@@ -227,7 +228,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
             "A_plus": "Strength of long-term potentiation (LTP)",
             "A_minus": "Strength of long-term depression (LTD)",
             "eta": "Global learning rate initial condition",
-            "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "pretrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
             "w_decay": "Synaptic filter decay term",
             "w_bound": "Soft synaptic bound applied to filters post-update"
         }

@@ -51,8 +51,9 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
 
     # Define Functions
     def __init__(self, name, shape, eta, lmbda=0.01, w_bound=1.,
-                 weight_init=None, resist_scale=1., p_conn=1., **kwargs):
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, **kwargs)
+                 weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs):
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
+                         batch_size=batch_size, **kwargs)
 
         ## Synaptic hyper-parameters
         self.eta = eta ## global learning rate governing plasticity
@@ -134,11 +135,13 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "lmbda": "Degree of synaptic disconnect",
             "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",
+            "w_bound ": "Maximum value/magnitude that any single synapse can take"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

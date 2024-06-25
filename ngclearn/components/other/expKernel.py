@@ -43,7 +43,7 @@ class ExpKernel(JaxComponent): ## exponential kernel
     """
 
     # Define Functions
-    def __init__(self, name, n_units, dt, tau_w=500., nu=4., **kwargs):
+    def __init__(self, name, n_units, dt, tau_w=500., nu=4., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         self.tau_w = tau_w ## kernel window time constant
@@ -51,7 +51,7 @@ class ExpKernel(JaxComponent): ## exponential kernel
         self.win_len = int(nu/dt) + 1 ## window length
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -101,6 +101,7 @@ class ExpKernel(JaxComponent): ## exponential kernel
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "dt": "Integration time constant (kernel needs knowledge of `dt`)",
             "nu": "Spike time interval for window",
             "tau_w": "Spike window time constant"

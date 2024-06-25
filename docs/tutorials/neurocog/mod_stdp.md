@@ -272,7 +272,18 @@ which should produce a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/modstdp_syn_dynamics.jpg" width="500" />
 
-and then we will plot the dynamics of important compartments the drive the operation 
+Notice, first, that the middle plot for MSTDP (the red curve in the middle plot) 
+essentially mimics the update produced by STDP for the first `100` ms and then 
+flips (becomes a mirror image) of the STDP trajectory; this is due to the fact 
+that, as you can see in the code you wrote earlier for the spike train simulation, 
+the reward signal changes sign after `100` ms and since MSTDP is effectively 
+the product of the reward and an STDP synaptic update the sign of the synaptic 
+change will flip as well. Finally, notice that the MSTDP-ET yields a 
+smoothened change in synaptic efficacy (the blue curve in the bottom plot); 
+this is due to the eligibility trace leakily integrating the STDP updates 
+over time (and ultimately multiplying the trace by the reward at time `t`).
+
+We will then plot the dynamics of important compartments the drive the operation 
 of the various STDP models with the following code block:
 
 ```python 
@@ -327,3 +338,24 @@ which should yield the following component dynamics plot:
 
 <img src="../../images/tutorials/neurocog/mod_stdp_component_dynamics.jpg" width="500" />
 
+This plot usefully breaks down the plasticity dynamics of all three STDP models 
+into the core component dynamics. The top two plots illustrate the emissions 
+of spikes over time (the pre-synaptic spike plot followed by the post-synaptic 
+spike plot) while underneath these -- the third plot -- is a visualization 
+of these spikes respective traces multiplied by their corresponding sign 
+that is used in STDP, i.e., the blue pre-synaptic curve is positive as it 
+represents synaptic potentiation over time (pre occurs before post) while the 
+orange post-synaptic curve is negative as it represents synaptic depression 
+over time (post occurs after pre). The teal curve in the fourth plot 
+illustrates what kind of updates that typical trace-based STDP would produce, 
+in the absence of a reward signal, whereas the yellow-ish/goldenrod curve 
+underneath shows the eligibilty trace that smoothens out the more pulse-like 
+adjustments that STDP yields. In the very bottom plot, we see the red piecewise 
+function that characterizes our reward signal -- for the first `100` ms it 
+is simply one whereas for the last `200` ms it is negative one. In general, 
+one will not likely have access to a clean dense reward in most control 
+problems, i.e., the reward signal is typically sparse, which will mean that 
+modulated STDP updates will only occur when the signal is non-zero; this is 
+the advantage that MSTDP-ET offers over MSTDP as the synaptic change 
+dynamics persist (yet decay) in between reward presentation times and thus 
+MSTDP-ET will be more effective in cases when the reward signal is delayed.

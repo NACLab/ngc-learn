@@ -65,8 +65,9 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
 
     # Define Functions
     def __init__(self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0.,
-                 weight_init=None, resist_scale=1., p_conn=1., **kwargs):
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, **kwargs)
+                 weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs):
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
+                         batch_size=batch_size, **kwargs)
 
         ## Synapse and BCM hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
@@ -77,7 +78,6 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.Rscale = resist_scale ## post-transformation scale factor
         self.theta0 = theta0 #-1. ## initial condition for theta/threshold variables
 
-        self.batch_size = 1
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
@@ -166,13 +166,16 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "tau_theta": "Time constant for synaptic threshold variable `theta`",
             "tau_w": "Time constant for BCM synaptic adjustment",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
-            "w_decay": "Synaptic decay term"
+            "w_decay": "Synaptic decay term",
+            "eta": "Global learning rate",
+            "theta0": "Initial condition for theta/threshold variables"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

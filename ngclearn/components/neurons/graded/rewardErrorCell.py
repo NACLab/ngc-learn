@@ -19,7 +19,7 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
 
         alpha: decay factor to apply to (exponential) moving average prediction
     """
-    def __init__(self, name, n_units, alpha, **kwargs):
+    def __init__(self, name, n_units, alpha, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## RPE meta-parameters
@@ -27,7 +27,7 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
 
         ## Layer Size Setup
         self.n_units = n_units
-        self.batch_size = 1
+        self.batch_size = batch_size
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -73,7 +73,8 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
-            "alpha": "Moving average decay factor"
+            "alpha": "Moving average decay factor",
+            "batch_size": "Batch size dimension of this component"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

@@ -247,7 +247,8 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
             "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
             "eta": "Global (fixed) learning rate",
             "w_bound": "Soft synaptic bound applied to filters post-update",
-            "w_decay": "Synaptic filter decay term"
+            "w_decay": "Synaptic filter decay term",
+            "optim_type": "Optimization scheme to used for adjusting synapses"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

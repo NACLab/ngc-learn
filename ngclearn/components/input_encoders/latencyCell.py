@@ -154,7 +154,8 @@ class LatencyCell(JaxComponent):
 
     # Define Functions
     def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
-                 linearize=False, normalize=False, num_steps=1., **kwargs):
+                 linearize=False, normalize=False, num_steps=1.,
+                 batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## latency meta-parameters
@@ -167,7 +168,7 @@ class LatencyCell(JaxComponent):
         self.num_steps = num_steps
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## Compartment setup
@@ -259,11 +260,13 @@ class LatencyCell(JaxComponent):
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component",
             "threshold": "Spike threshold (constant and shared across neurons)",
             "linearize": "Should a linear latency encoding be used?",
             "normalize": "Should the latency code(s) be normalized?",
             "num_steps": "Number of total time steps of simulation to consider ("
                          "useful for target spike time computation",
+            "first_spike_time": "Time of first allowable spike"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

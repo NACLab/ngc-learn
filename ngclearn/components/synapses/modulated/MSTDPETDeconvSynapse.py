@@ -13,7 +13,7 @@ class TraceSTDPDeconvSynapse(TraceSTDPDeconvSynapse): ## modulated trace-based d
                          eta=eta, pretrace_target=pretrace_target, filter_init=filter_init,
                          bias_init=None, stride=stride, padding=padding,
                          resist_scale=resist_scale, w_bound=w_bound, w_decay=w_decay,
-                         batch_size=batch_size,**kwargs)
+                         batch_size=batch_size, **kwargs)
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
@@ -111,6 +111,7 @@ class TraceSTDPDeconvSynapse(TraceSTDPDeconvSynapse): ## modulated trace-based d
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
             "x_shape": "Shape of any single incoming/input feature map",
+            "batch_size": "Batch size dimension of this component",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",

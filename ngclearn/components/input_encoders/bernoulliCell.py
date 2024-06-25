@@ -56,11 +56,11 @@ class BernoulliCell(JaxComponent):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         # Compartments (state of the cell, parameters, will be updated through stateless calls)
@@ -120,6 +120,7 @@ class BernoulliCell(JaxComponent):
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
+            "batch_size": "Batch size dimension of this component"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

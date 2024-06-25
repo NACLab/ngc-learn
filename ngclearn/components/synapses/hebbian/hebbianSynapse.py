@@ -140,9 +140,9 @@ class HebbianSynapse(DenseSynapse):
     def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
                  w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
-                 resist_scale=1., **kwargs):
+                 resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
-                         p_conn, **kwargs)
+                         p_conn, batch_size=batch_size, **kwargs)
 
         ## synaptic plasticity properties and characteristics
         self.shape = shape
@@ -155,7 +155,6 @@ class HebbianSynapse(DenseSynapse):
         self.is_nonnegative = is_nonnegative
         self.sign_value = sign_value
 
-        self.batch_size = 1
         ## optimization / adjustment properties (given learning dynamics above)
         self.opt = get_opt_step_fn(optim_type, eta=self.eta)
 
@@ -245,6 +244,7 @@ class HebbianSynapse(DenseSynapse):
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
@@ -255,7 +255,8 @@ class HebbianSynapse(DenseSynapse):
             "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
-            "w_decay": "Synaptic decay term"
+            "w_decay": "Synaptic decay term",
+            "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

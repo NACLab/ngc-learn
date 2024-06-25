@@ -80,9 +80,9 @@ class ExpSTDPSynapse(DenseSynapse):
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, exp_beta, eta=1.,
                  pretrace_target=0., weight_init=None, resist_scale=1.,
-                 p_conn=1., w_bound=1., **kwargs):
+                 p_conn=1., w_bound=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale,
-                         p_conn, **kwargs)
+                         p_conn, batch_size=batch_size, **kwargs)
 
         ## Exp-STDP meta-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
@@ -94,7 +94,6 @@ class ExpSTDPSynapse(DenseSynapse):
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
 
-        self.batch_size = 1
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
@@ -182,6 +181,7 @@ class ExpSTDPSynapse(DenseSynapse):
         }
         hyperparams = {
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
@@ -189,7 +189,7 @@ class ExpSTDPSynapse(DenseSynapse):
             "A_minus": "Strength of long-term depression (LTD)",
             "exp_beta": "Controls effect of exponential Hebbian shift / dependency (B)",
             "eta": "Global learning rate initial condition",
-            "preTrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "pretrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

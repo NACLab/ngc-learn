@@ -112,6 +112,7 @@ class MSTDPETConvSynapse(TraceSTDPConvSynapse): # modulated trace-based conv STD
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
             "x_shape": "Shape of any single incoming/input feature map",
+            "batch_size": "Batch size dimension of this component",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
