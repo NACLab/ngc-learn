@@ -49,9 +49,6 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         filter_init: a kernel to drive initialization of this synaptic cable's
             filter values
 
-        bias_init: kernel to drive initialization of bias/base-rate values
-            (Default: None, which turns off/disables biases)
-
         stride: length/size of stride
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
@@ -237,7 +234,6 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
                      "x `number input channels` x `number output channels`",
             "x_shape": "Shape of any single incoming/input feature map",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
-            "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
             "stride": "length / size of stride",
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",

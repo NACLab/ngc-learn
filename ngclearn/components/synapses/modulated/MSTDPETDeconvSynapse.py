@@ -176,7 +176,6 @@ class MSTDPETDeconvSynapse(TraceSTDPDeconvSynapse): ## modulated trace-based dec
             "x_shape": "Shape of any single incoming/input feature map",
             "batch_size": "Batch size dimension of this component",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
-            "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
             "stride": "length / size of stride",
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",
