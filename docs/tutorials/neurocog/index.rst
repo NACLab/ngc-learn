@@ -63,7 +63,7 @@ work towards more advanced concepts.
 
 .. toctree::
   :maxdepth: 1
-  :caption: Model Tools
+  :caption: Model and Analysis Tools
 
   plotting
   metrics
