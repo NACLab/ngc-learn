@@ -111,7 +111,7 @@ class TraceSTDPDeconvSynapse(TraceSTDPDeconvSynapse): ## modulated trace-based d
             "shape": "Shape of synaptic filter value matrix; `kernel width` x `kernel height` "
                      "x `number input channels` x `number output channels`",
             "x_shape": "Shape of any single incoming/input feature map",
-            "weight_init": "Initialization conditions for synaptic filter (K) values",
+            "filter_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level output scaling factor (R)",
             "stride": "length / size of stride",
