@@ -1,14 +1,50 @@
 # Lecture 4D: Short-Term Plasticity
 
-In this lesson, we will study how short-term plasticity (STDP) dynamics 
+In this lesson, we will study how short-term plasticity (STP) dynamics 
 using one of ngc-learn's in-built synapses, the `STPDenseSynapse`. 
 Specifically, we will study how a dynamic synapse may be constructed and 
-examine what short-term depression (STD) and short-term facilitation dominated 
-configurations of an STP synapse look like. 
+examine what short-term depression (STD) and short-term facilitation
+(STF) dominated configurations of an STP synapse look like. 
 
 ## Probing Short-Term Plasticity
 
+Go ahead and make a new folder for this study and create a Python script,
+i.e., `run_shortterm_plasticity.py`, to write your code for this part of the 
+tutorial. 
+
+We will write a 3-component dynamical system that connects a Poisson input 
+encoding cell to a leaky integrate-and-fire (LIF) cell via a single dynamic 
+synapse that evolves according to STP. We will first write our 
+simulation of this dynamic synapse from the perspective of STF-dominated 
+dynamics, plotting out the results under two different Poisson spike trains 
+with different spiking frequencies. Then, we will modify our simulation 
+to emulate dynamics from a STD-dominated perspective.
+
 ### Starting with Facilitation-Dominated Dynamics
+
+One experiment goal with using a "dynamic synapse" is often to computationally 
+model the fact that synaptic efficacy (strength/conductance magnitude) is 
+not a fixed quantity (even in cases where long-term adaptation/learning is 
+absent) and instead a time-varying property that depends on a fixed 
+quantity of biophysical resources, e.g., neurotransmitter chemicals. This 
+means, in the context of spiking cells, when a pre-synaptic neuron emits a 
+pulse, this will affect the relative magnitude of the synapse's efficacy; 
+in some cases, this will result in an increase (facilitation) and, in others, 
+this will result in a decrease (depression) that lasts over a short period 
+of time (several milliseconds in many instances). Considering the fact 
+synapses have a dynamic nature to them, both over short and long time-scales, 
+means that plasticity can be thought of as a stimulus and resource-dependent 
+quantity, reflecting an important biophysical aspect that affects how 
+neuronal systems adapt and generalize given different kinds of sensory 
+stimuli.
+
+Writing our STP dynamic synapse can be done by importing 
+[STPDenseSynapse](ngclearn.components.synapses.STPDenseSynapse)  
+from ngc-learn's in-built components and using it to wire the output 
+spike compartment of the `PoissonCell` to the input electrical current
+compartment of the `LIFCell`. This can be done as follows (using the 
+meta-parameters we provide in the code block below to ensure 
+STF-dominated dynamics):
 
 ```python 
 from jax import numpy as jnp, random, jit
@@ -62,6 +98,15 @@ with Context("Model") as model:
     def clamp(obs):
         z0.inputs.set(obs)
 ```
+
+Notice that the `STPDenseSynapse` has two important time constants to configure; 
+`tau_f` ($\tau_f$), the facilitation time constant, and `tau_d` ($\tau_d$, the 
+depression time constant. In effect, it is these two constants that you will 
+want to set to obtain different desired behavior from this in-built dynamic 
+synapse -- setting $\tau_f > \tau_d$ will result in STF-dominated behavior 
+whereas setting $\tauf < \tau_d$ will produce STD-dominated behavior. Note 
+that setting $\tau_d = 0$ will result in short-term depression being turned off 
+completely ($\tau_f 0$ disables STF).
 
 We can then write the simulated input Poisson spike train as follows:
 

@@ -140,6 +140,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
+
+        resist_scale: a scaling factor applied to incoming current `j` (default: 1)
     """
 
     # Define Functions
