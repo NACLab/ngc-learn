@@ -1,7 +1,8 @@
 # Lecture 4D: Short-Term Plasticity
 
-In this lesson, we will study how short-term plasticity (STP) dynamics 
-using one of ngc-learn's in-built synapses, the `STPDenseSynapse`. 
+In this lesson, we will study how short-term plasticity (STP) <b>[1]</b> dynamics 
+-- where synaptic efficacy is cast in terms of the history of presynaptic activity -- 
+using ngc-learn's in-built `STPDenseSynapse`. 
 Specifically, we will study how a dynamic synapse may be constructed and 
 examine what short-term depression (STD) and short-term facilitation
 (STF) dominated configurations of an STP synapse look like. 
@@ -22,21 +23,31 @@ to emulate dynamics from a STD-dominated perspective.
 
 ### Starting with Facilitation-Dominated Dynamics
 
-One experiment goal with using a "dynamic synapse" is often to computationally 
+One experiment goal with using a "dynamic synapse" <b>[1]</b> is often to computationally 
 model the fact that synaptic efficacy (strength/conductance magnitude) is 
-not a fixed quantity (even in cases where long-term adaptation/learning is 
-absent) and instead a time-varying property that depends on a fixed 
-quantity of biophysical resources, e.g., neurotransmitter chemicals. This 
-means, in the context of spiking cells, when a pre-synaptic neuron emits a 
-pulse, this will affect the relative magnitude of the synapse's efficacy; 
+not a fixed quantity -- even in cases where long-term adaptation/learning is 
+absent -- and instead a time-varying property that depends on a fixed 
+quantity of biophysical resources. Specifically, biological neuronal networks, 
+synaptic signaling (or communication of information across synaptic connection 
+pathways) consumes some quantity of neurotransmitters -- STF results from an 
+influx of calcium into an axon terminal of a pre-synaptic neuron (after 
+emission of a spike pulse) whereas STD occurs after a depletion of 
+neurotransmitters that is consumed by the act of synaptic signaling at the axon 
+terminal of a pre-synaptic neuron. Studies of cortical neuronal regions have 
+empirically found that some areas are STD-dominated, STF-dominated, or exhibit 
+some mixture of the two.
+
+Ultimately, the above means that, in the context of spiking cells, when a 
+pre-synaptic neuron emits a pulse, this act will affect the relative magnitude 
+of the synapse's efficacy; 
 in some cases, this will result in an increase (facilitation) and, in others, 
 this will result in a decrease (depression) that lasts over a short period 
-of time (several milliseconds in many instances). Considering the fact 
-synapses have a dynamic nature to them, both over short and long time-scales, 
-means that plasticity can be thought of as a stimulus and resource-dependent 
-quantity, reflecting an important biophysical aspect that affects how 
-neuronal systems adapt and generalize given different kinds of sensory 
-stimuli.
+of time (several hundreds to thousands of milliseconds in many instances). 
+As a result of considering synapses to have a dynamic nature to them, both over 
+short and long time-scales, plasticity can now be thought of as a stimulus and 
+resource-dependent quantity, reflecting an important biophysical aspect that 
+affects how neuronal systems adapt and generalize given different kinds of 
+sensory stimuli.
 
 Writing our STP dynamic synapse can be done by importing 
 [STPDenseSynapse](ngclearn.components.synapses.STPDenseSynapse)  
@@ -106,9 +117,37 @@ want to set to obtain different desired behavior from this in-built dynamic
 synapse -- setting $\tau_f > \tau_d$ will result in STF-dominated behavior 
 whereas setting $\tauf < \tau_d$ will produce STD-dominated behavior. Note 
 that setting $\tau_d = 0$ will result in short-term depression being turned off 
-completely ($\tau_f 0$ disables STF).
+completely ($\tau_f 0$ disables STF). 
 
-We can then write the simulated input Poisson spike train as follows:
+Formally, given the time constants above the dynamics of the `STPDenseSynapse` 
+operate according to the following coupled ordinary differential equations (ODEs):
+
+$$
+\tau_f \frac{\partial u_j(t)}{\partial t} &= -u_j(t) + N_R (1 - u_j(t)) s_j(t) \\
+\tau_d \frac{\partial x_j}{\partial t} &= (1 - x_j(t)) - u_j(t + \Delta t) x_j(t) s_j(t) \\
+$$
+
+and the resulting (short-term) synaptic efficacy:
+
+$$
+W^{dyn}(t + \Delta t) = \Big( W^{max}_{ij} u_j(t + \Delta t) x_j(t) s_j(t) \Big) 
++ W^{dyn}_{ij} (1 - s_j(t))
+$$
+
+where $N_R$ represents an increment produced by a pre-synaptic spike (and 
+in essence, the neurotransmitter resources available to yield facilitation), 
+$W^{max}_{ij}$ denotes the absolute synaptic efficacy (or maximum response 
+amplitude of this synapse in the case of a complete release of all 
+neurotransmitters; $x_j(t) = u_j(t) = 1$) of the connection between pre-synaptic 
+neuron $j$ and post-synaptic neuron $i$, and $W^{dyn}_{ij}(t)$ is the value 
+of the dynamic synapse's efficacy at time `t`.
+
+### Simulating and Visualizing STF
+
+Now that we understand the basics of how an ngc-learn STP works, we can next 
+try it out on a simple pre-synaptic Poisson spike train.  Writing out the 
+simulated input Poisson spike train and our STP model's processing of this 
+data can be done as follows:
 
 ```python 
 t_vals = []
@@ -142,7 +181,6 @@ u_vals = jnp.squeeze(jnp.asarray(u_vals))
 x_vals = jnp.squeeze(jnp.asarray(x_vals))
 t_vals = jnp.squeeze(jnp.asarray(t_vals))
 ```
-
 
 We may then plot out the result of the STF-dominated dynamics we 
 simulate above with the following code:
@@ -226,3 +264,14 @@ input spike train, i.e., `firing_rate_e = 20 ## Hz`, to obtain a plot similar
 to the one below: 
 
 <img src="../../images/tutorials/neurocog/20Hz_stp_std_dom.jpg" width="500" />
+
+You have now successfully simulated a dynamic synapse in ngc-learn across 
+several different Poisson input train frequencies under both STF and 
+STD-dominated regimes. In more complex biophysical models, it could prove useful 
+to consider combining STP with other forms of long-term experience-dependent 
+forms of synaptic adaptation, such as spike-timing-dependent plasticity.
+
+## References
+
+<b>[1]</b> Tsodyks, Misha, Klaus Pawelzik, and Henry Markram. "Neural networks 
+with dynamic synapses." Neural computation 10.4 (1998): 821-835.
