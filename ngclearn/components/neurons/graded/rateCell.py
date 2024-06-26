@@ -156,7 +156,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         thresholdType, thr_lmbda = threshold
         self.thresholdType = thresholdType ## type of thresholding function to use
         self.thr_lmbda = thr_lmbda ## scale to drive thresholding dynamics
-        self.Rscale = resist_scale
+        self.Rscale = resist_scale ## a "resistance" scaling factor
 
         ## integration properties
         self.integrationType = integration_type
