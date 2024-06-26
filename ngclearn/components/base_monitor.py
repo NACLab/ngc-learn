@@ -84,6 +84,7 @@ class Base_Monitor(Component):
         super().__init__(name, **kwargs)
         self.store = {}
         self.compartments = []
+        self._sources = []
         self.default_window_length = default_window_length
 
     def __lshift__(self, other):
@@ -119,9 +120,37 @@ class Base_Monitor(Component):
         setattr(self, comp_key, new_comp)
         setattr(self, store_comp_key, new_comp_store)
         self.compartments.append(new_comp.path)
-
+        self._sources.append(compartment)
         self._update_resolver()
 
+    def halt(self, compartment):
+        """
+        Stops the monitor from watching a specific compartment. It is important
+        to note that it does not stop previously compiled methods. It does not
+        remove it from the stored values, so it can still be viewed.
+        Args:
+            compartment: The compartment object to stop watching
+        """
+        if compartment not in self._sources:
+            return
+
+        comp_key = "*".join(compartment.path.split("/"))
+        store_comp_key = comp_key + "*store"
+
+        self.compartments.remove(getattr(self, comp_key).path)
+        self._sources.remove(compartment)
+
+        delattr(self, comp_key)
+        delattr(self, store_comp_key)
+        self._update_resolver()
+
+    def halt_all(self):
+        """
+        Stops the monitor from watching all compartments.
+        """
+        for compartment in self._sources:
+            self.halt(compartment)
+            
     def _update_resolver(self):
         output_compartments = []
         compartments = []
