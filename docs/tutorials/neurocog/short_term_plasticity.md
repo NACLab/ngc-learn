@@ -119,14 +119,14 @@ synapse:
 2. setting $\tau_f < \tau_d$ will produce STD-dominated behavior. 
 
 Note that setting $\tau_d = 0$ will result in short-term depression being turned off 
-completely ($\tau_f = 0$ disables STF). 
+completely (and $\tau_f = 0$ disables STF). 
 
 Formally, given the time constants above the dynamics of the `STPDenseSynapse` 
 operate according to the following coupled ordinary differential equations (ODEs):
 
 $$
 \tau_f \frac{\partial u_j(t)}{\partial t} &= -u_j(t) + N_R \big(1 - u_j(t)\big) s_j(t) \\
-\tau_d \frac{\partial x_j}{\partial t} &= (1 - x_j(t)) - u_j(t + \Delta t) x_j(t) s_j(t) \\
+\tau_d \frac{\partial x_j}{\partial t} &= \big(1 - x_j(t)\big) - u_j(t + \Delta t) x_j(t) s_j(t) \\
 $$
 
 and the resulting (short-term) synaptic efficacy:
@@ -136,13 +136,18 @@ W^{dyn}_{ij}(t + \Delta t) = \Big( W^{max}_{ij} u_j(t + \Delta t) x_j(t) s_j(t) 
 + W^{dyn}_{ij} (1 - s_j(t))
 $$
 
-where $N_R$ represents an increment produced by a pre-synaptic spike (and 
-in essence, the neurotransmitter resources available to yield facilitation), 
+where $N_R$ represents an increment produced by a pre-synaptic spike $\mathbf{s}_j(t)$ 
+(and in essence, the neurotransmitter resources available to yield facilitation), 
 $W^{max}_{ij}$ denotes the absolute synaptic efficacy (or maximum response 
 amplitude of this synapse in the case of a complete release of all 
 neurotransmitters; $x_j(t) = u_j(t) = 1$) of the connection between pre-synaptic 
 neuron $j$ and post-synaptic neuron $i$, and $W^{dyn}_{ij}(t)$ is the value 
-of the dynamic synapse's efficacy at time `t`.
+of the dynamic synapse's efficacy at time `t`. 
+$\mathbf{x}_j$ is a variable (which lies in the range of $[0,1]$) that indicates 
+the fraction of (neurotransmitter) resources available after a depletion of the 
+neurotransmitter resource pool. $\mathbf{u}_j$, on the hand, 
+represents the neurotransmitter "release probability", or the fraction of available 
+resources ready for the dynamic synapse's use.
 
 ### Simulating and Visualizing STF
 
