@@ -10,7 +10,7 @@ class Monitor(Base_Monitor):
         @staticmethod
         def _advance(**kwargs):
             return_vals = []
-            for _, comp in compartments:
+            for comp in compartments:
                 new_val = kwargs[comp]
                 current_store = kwargs[comp + "*store"]
                 current_store = current_store.at[:-1].set(current_store[1:])

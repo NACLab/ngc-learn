@@ -104,7 +104,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     | and j_td is taken to be the set of top-down pressure signals
 
     | --- Cell Input Compartments: ---
-    | j - input (takes in external signals)
+    | j - input pressure (takes in external signals)
     | j_td - input/top-down pressure input (takes in external signals)
     | --- Cell State Compartments ---
     | z - rate activity
@@ -140,12 +140,14 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
+
+        resist_scale: a scaling factor applied to incoming pressure `j` (default: 1)
     """
 
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
                  threshold=("none", 0.), integration_type="euler",
-                 batch_size=1, **kwargs):
+                 batch_size=1, resist_scale=1., **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -156,6 +158,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         thresholdType, thr_lmbda = threshold
         self.thresholdType = thresholdType ## type of thresholding function to use
         self.thr_lmbda = thr_lmbda ## scale to drive thresholding dynamics
+        self.Rscale = resist_scale ## a "resistance" scaling factor
 
         ## integration properties
         self.integrationType = integration_type
@@ -175,7 +178,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     @staticmethod
     def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
-                       thresholdType, thr_lmbda, j, j_td, z):
+                       Rscale, thresholdType, thr_lmbda, j, j_td, z):
         if tau_m > 0.:
             ### run a step of integration over neuronal dynamics
             ## Notes:
@@ -183,6 +186,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             ## self.current <-- "bottom-up" data-dependent signal
             dfx_val = dfx(z)
             j = _modulate(j, dfx_val)
+            j = j * Rscale
             tmp_z = _run_cell(dt, j, j_td, z,
                               tau_m, leak_gamma=priorLeakRate,
                               integType=intgFlag, priorType=priorType)

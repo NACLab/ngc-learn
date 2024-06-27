@@ -44,9 +44,11 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
             this to < 1 and > 0. will result in a sparser synaptic structure
             (lower values yield sparse structure)
 
-        tau_f: short-term facilitation time constant (default: 750 ms)
+        tau_f: short-term facilitation (STF) time constant (default: `750` ms); note
+            that setting this to `0` ms will disable STF
 
-        tau_d: shoft-term depression time constant (default: 50 ms)
+        tau_d: shoft-term depression time constant (default: `50` ms); note
+            that setting this to `0` ms will disable STD
 
         resources_int: initialization kernel for synaptic resources matrix
     """
@@ -80,7 +82,11 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
                        u, x, Wdyn):
         s = inputs
         ## compute short-term facilitation
-        u = u - u * (1./tau_f) + (resources * (1. - u)) * s #jnp.sum(..., axis=1, keepdims=True)
+        #u = u - u * (1./tau_f) + (resources * (1. - u)) * s
+        if tau_f > 0.: ## compute short-term facilitation
+            u = u - u * (1./tau_f) + (resources * (1. - u)) * s
+        else:
+            u = resources ## disabling STF yields fixed resource u variables
         ## compute dynamic synaptic values/conductances
         Wdyn = (weights * u * x) * s + Wdyn * (1. - s) ## OR: -W/tau_w + W * u * x
         if tau_d > 0.:
