@@ -111,26 +111,28 @@ with Context("Model") as model:
 ```
 
 Notice that the `STPDenseSynapse` has two important time constants to configure; 
-`tau_f` ($\tau_f$), the facilitation time constant, and `tau_d` ($\tau_d$, the 
+`tau_f` ($\tau_f$), the facilitation time constant, and `tau_d` ($\tau_d$), the 
 depression time constant. In effect, it is these two constants that you will 
 want to set to obtain different desired behavior from this in-built dynamic 
-synapse -- setting $\tau_f > \tau_d$ will result in STF-dominated behavior 
-whereas setting $\tauf < \tau_d$ will produce STD-dominated behavior. Note 
-that setting $\tau_d = 0$ will result in short-term depression being turned off 
-completely ($\tau_f 0$ disables STF). 
+synapse: 
+1. setting $\tau_f > \tau_d$ will result in STF-dominated behavior; whereas 
+2. setting $\tau_f < \tau_d$ will produce STD-dominated behavior. 
+
+Note that setting $\tau_d = 0$ will result in short-term depression being turned off 
+completely ($\tau_f = 0$ disables STF). 
 
 Formally, given the time constants above the dynamics of the `STPDenseSynapse` 
 operate according to the following coupled ordinary differential equations (ODEs):
 
 $$
-\tau_f \frac{\partial u_j(t)}{\partial t} &= -u_j(t) + N_R (1 - u_j(t)) s_j(t) \\
+\tau_f \frac{\partial u_j(t)}{\partial t} &= -u_j(t) + N_R \big(1 - u_j(t)\big) s_j(t) \\
 \tau_d \frac{\partial x_j}{\partial t} &= (1 - x_j(t)) - u_j(t + \Delta t) x_j(t) s_j(t) \\
 $$
 
 and the resulting (short-term) synaptic efficacy:
 
 $$
-W^{dyn}(t + \Delta t) = \Big( W^{max}_{ij} u_j(t + \Delta t) x_j(t) s_j(t) \Big) 
+W^{dyn}_{ij}(t + \Delta t) = \Big( W^{max}_{ij} u_j(t + \Delta t) x_j(t) s_j(t) \Big) 
 + W^{dyn}_{ij} (1 - s_j(t))
 $$
 
