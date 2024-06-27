@@ -104,7 +104,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     | and j_td is taken to be the set of top-down pressure signals
 
     | --- Cell Input Compartments: ---
-    | j - input (takes in external signals)
+    | j - input pressure (takes in external signals)
     | j_td - input/top-down pressure input (takes in external signals)
     | --- Cell State Compartments ---
     | z - rate activity
@@ -141,7 +141,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
 
-        resist_scale: a scaling factor applied to incoming current `j` (default: 1)
+        resist_scale: a scaling factor applied to incoming pressure `j` (default: 1)
     """
 
     # Define Functions
