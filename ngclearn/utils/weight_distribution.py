@@ -66,6 +66,17 @@ def uniform(amin=0., amax=1., **kwargs):
     dist_dict = {"dist": "uniform", "amin": amin, "amax": amax}
     return {**kwargs, **dist_dict}
 
+def fan_in_uniform(**kwargs):
+    """
+    Produce a configuration for a fan-in scaled unit uniform
+    distribution initializer.
+
+    Returns:
+        a fan-in scaled (unit) uniform distribution configuration
+    """
+    dist_dict = {"dist": "fan_in_uniform"}
+    return {**kwargs, **dist_dict}
+
 def hollow(scale, **kwargs):
     """
     Produce a configuration for a constant hollow distribution initializer.
@@ -117,6 +128,7 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
                 "uniform" (amin, amax);
                 "gaussian" (mu, sigma);
                 "fan_in_gaussian" (NO params);
+                "fan_in_uniform" (NO params);
                 "hollow" (scale);
                 "eye" (scale);
                 while currently supported post-processing keyword arguments include:
@@ -178,6 +190,13 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
             phi = jax.random.normal(dkey, shape)
         phi = phi * jnp.sqrt(1.0 / (shape[0] * 1.))
         params = phi.astype(jnp.float32)
+    elif dist_type == "fan_in_uniform": ## fan-in scaled unit uniform init
+        phi = jnp.sqrt(1.0 / (shape[0] * 1.)) # sometimes "k" in other libraries
+        if use_numpy:
+            params = np.random.uniform(low=-phi, high=phi, size=shape)
+        else:
+            params = jax.random.uniform(dkey, shape, minval=-phi, maxval=phi)
+        params = params.astype(jnp.float32)
     elif dist_type == "constant": ## constant value (everywhere) init
         scale = _init_kernel.get("value", 1.)
         if use_numpy:
