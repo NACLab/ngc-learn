@@ -263,7 +263,6 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         if one_spike: ## old code ~> if self.one_spike is False:
             key, skey = random.split(key, 2)
         ## run one integration step for neuronal dynamics
-        #j = _modify_current(j, dt, tau_m, R_m) ## re-scale current in prep for volt ODE
         j = j * R_m
         surrogate = d_spike_fx(j)
         v, s, raw_spikes, rfr = _run_cell(dt, j, v, thr, thr_theta, rfr, skey,
