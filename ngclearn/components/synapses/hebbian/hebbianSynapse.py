@@ -41,8 +41,7 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
     if w_decay > 0.:
-        dW = dW - jnp.matmul((1. - _pre).T, post) * w_decay
-        #dW = dW - W * w_decay
+        dW = dW - W * w_decay
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
