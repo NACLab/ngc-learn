@@ -52,6 +52,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     | mu - predicted value (takes in external signals)
     | target - desired/goal value (takes in external signals)
     | modulator - modulation signal (takes in optional external signals)
+    | mask - binary/gating mask to apply to error neuron calculations
     | --- Cell Output Compartments: ---
     | L - local loss function embodied by this cell
     | dmu - derivative of L w.r.t. mu
@@ -134,7 +135,8 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
             "inputs":
                 {"mu": "External input prediction value(s)",
                  "target": "External input target signal value(s)",
-                 "modulator": "External input modulatory/scaling signal(s)"},
+                 "modulator": "External input modulatory/scaling signal(s)",
+                 "mask": "External binary/gating mask to apply to signals"},
             "outputs":
                 {"L": "Local loss value computed/embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",
