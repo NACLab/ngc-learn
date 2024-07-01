@@ -237,8 +237,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        #self.spike_fx, self.d_spike_fx = arctan_estimator() #
-        self.spike_fx, self.d_spike_fx = triangular_estimator() # straight_through_estimator()
+        self.spike_fx, self.d_spike_fx = arctan_estimator() #
+        #self.spike_fx, self.d_spike_fx = triangular_estimator() # straight_through_estimator()
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
