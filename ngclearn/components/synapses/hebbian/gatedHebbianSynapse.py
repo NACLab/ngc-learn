@@ -43,11 +43,11 @@ class GatedHebbianSynapse(DenseSynapse):
         ## calculate synaptic update values
         dWeights, dBiases = GatedHebbianSynapse._compute_update(w_bound, pre, post, weights)
         weights = weights + dWeights * eta
-        if bias_init != None:
-            biases = biases + dBiases * eta
         if w_decay > 0.:
             Wdec = jnp.matmul((1. - preSpike).T, postSpike) * w_decay
             weights = weights - Wdec
+        if bias_init != None:
+            biases = biases + dBiases * eta
         weights = jnp.clip(weights, 0., w_bound)
         return weights, biases, dWeights, dBiases
 
