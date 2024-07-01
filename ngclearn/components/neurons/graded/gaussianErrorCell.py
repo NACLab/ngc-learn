@@ -62,16 +62,15 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
         n_units: number of cellular entities (neural population size)
 
-        tau_m: (Unused -- currently cell is a fixed-point model)
-
-        leakRate: (Unused -- currently cell is a fixed-point model)
+        refract_time: relative refractory period time (ms; Default: 0 ms)
     """
-    def __init__(self, name, n_units, batch_size=1, **kwargs):
+    def __init__(self, name, n_units, refract_time=0., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size Setup
         self.n_units = n_units
         self.batch_size = batch_size
+        self.refract_T = refract_time  # ms ## refractory period
 
         ## Convolution shape setup
         self.width = self.height = n_units
@@ -84,39 +83,47 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.target = Compartment(restVals) # target. input wire
         self.dtarget = Compartment(restVals) # derivative target
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
+        self.rfr = Compartment(restVals + self.refract_T) ## refractory variable(s)
 
     @staticmethod
-    def _advance_state(dt, mu, dmu, target, dtarget, modulator):
+    def _advance_state(dt, refract_T, mu, dmu, target, dtarget, modulator, rfr):
+        mask = (rfr >= refract_T) * 1.
         ## compute Gaussian error cell output
-        dmu, dtarget, L = _run_cell(dt, target, mu)
-        dmu = dmu * modulator
-        dtarget = dtarget * modulator
-        return dmu, dtarget, L
+        dmu, dtarget, L = _run_cell(dt, target * mask, mu * mask)
+        dmu = dmu * modulator * mask
+        dtarget = dtarget * modulator * mask
+        if refract_T > 0.: ## if non-zero refractory times used, then...
+            rfr = (rfr + dt) * (1. - target) + target * dt  # set refract to dt
+        return dmu, dtarget, L, rfr
 
     @resolver(_advance_state)
-    def advance_state(self, dmu, dtarget, L):
+    def advance_state(self, dmu, dtarget, L, rfr):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.L.set(L)
+        self.rfr.set(rfr)
 
     @staticmethod
-    def _reset(batch_size, n_units):
-        dmu = jnp.zeros((batch_size, n_units))
-        dtarget = jnp.zeros((batch_size, n_units))
-        target = jnp.zeros((batch_size, n_units)) #None
-        mu = jnp.zeros((batch_size, n_units)) #None
+    def _reset(refract_T, batch_size, n_units):
+        restVals = jnp.zeros((batch_size, n_units))
+        dmu = restVals
+        dtarget = restVals
+        target = restVals
+        mu = restVals
         modulator = mu + 1.
         L = 0.
-        return dmu, dtarget, target, mu, modulator, L
+        rfr = restVals + refract_T
+        return dmu, dtarget, target, mu, modulator, L, rfr
 
     @resolver(_reset)
-    def reset(self, dmu, dtarget, target, mu, modulator, L):
+    def reset(self, dmu, dtarget, target, mu, modulator, L, rfr):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.target.set(target)
         self.mu.set(mu)
         self.modulator.set(modulator)
         self.L.set(L)
+        self.rfr.set(rfr)
 
     @classmethod
     def help(cls): ## component help function
