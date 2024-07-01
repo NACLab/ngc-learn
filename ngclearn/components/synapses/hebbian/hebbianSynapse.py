@@ -220,6 +220,15 @@ class HebbianSynapse(DenseSynapse):
             jnp.zeros(shape[1]), # db
         )
 
+    @resolver(_reset)
+    def reset(self, inputs, outputs, pre, post, dWeights, dBiases):
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.pre.set(pre)
+        self.post.set(post)
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
+
     @classmethod
     def help(cls): ## component help function
         properties = {
@@ -264,15 +273,6 @@ class HebbianSynapse(DenseSynapse):
                             "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay",
                 "hyperparameters": hyperparams}
         return info
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dWeights, dBiases):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
