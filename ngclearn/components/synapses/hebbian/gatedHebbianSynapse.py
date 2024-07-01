@@ -49,7 +49,8 @@ class GatedHebbianSynapse(DenseSynapse):
             weights = weights - Wdec
         if bias_init != None:
             biases = biases + dBiases * eta
-        weights = jnp.clip(weights, 0., w_bound)
+        if w_bound > 0.:
+            weights = jnp.clip(weights, 0., w_bound)
         return weights, biases, dWeights, dBiases
 
     @resolver(_evolve)
