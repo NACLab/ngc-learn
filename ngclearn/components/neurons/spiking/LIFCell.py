@@ -5,7 +5,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-from ngclearn.utils.surrogate_fx import straight_through_estimator
+from ngclearn.utils.surrogate_fx import straight_through_estimator, triangular_estimator
 
 @jit
 def _update_times(t, s, tols):
@@ -237,7 +237,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        self.spike_fx, self.d_spike_fx = straight_through_estimator()
+        self.spike_fx, self.d_spike_fx = triangular_estimator() # straight_through_estimator()
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
