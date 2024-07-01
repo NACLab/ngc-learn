@@ -260,11 +260,11 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
                        thr, tau_theta, theta_plus, one_spike, intgFlag, d_spike_fx,
                        key, j, v, s, rfr, thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
-        if one_spike: ## old code ~> if self.one_spike is False:
+        if one_spike:
             key, skey = random.split(key, 2)
         ## run one integration step for neuronal dynamics
         j = j * R_m
-        surrogate = d_spike_fx(j)
+        surrogate = d_spike_fx(j, thr + thr_theta)
         v, s, raw_spikes, rfr = _run_cell(dt, j, v, thr, thr_theta, rfr, skey,
                                           tau_m, v_rest, v_reset, v_decay, refract_T,
                                           intgFlag)
