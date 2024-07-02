@@ -53,7 +53,6 @@ def triangular_estimator(get_surr_fx=False):
         mask = (v < thr).astype(jnp.float32)
         dfx = mask * thr - (1. - mask) * thr
         return dfx
-        return dfx
     if get_surr_fx == True:
         return spike_fx, spike_fx, d_spike_fx
     else:
