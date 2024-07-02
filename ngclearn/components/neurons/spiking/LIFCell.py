@@ -237,9 +237,9 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        self.spike_fx, self.d_spike_fx = secant_lif_estimator()
+        #self.spike_fx, self.d_spike_fx = secant_lif_estimator()
         #self.spike_fx, self.d_spike_fx = arctan_estimator() #
-        #self.spike_fx, self.d_spike_fx = triangular_estimator() # straight_through_estimator()
+        self.spike_fx, self.d_spike_fx = triangular_estimator() # straight_through_estimator()
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -270,8 +270,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         v, s, raw_spikes, rfr = _run_cell(dt, j, v, thr, thr_theta, rfr, skey,
                                           tau_m, v_rest, v_reset, v_decay, refract_T,
                                           intgFlag)
-        #surrogate = d_spike_fx(v, thr + thr_theta)
-        surrogate = d_spike_fx(j, thr + thr_theta)
+        surrogate = d_spike_fx(v, thr + thr_theta)
+        #surrogate = d_spike_fx(j, thr + thr_theta)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
             thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
