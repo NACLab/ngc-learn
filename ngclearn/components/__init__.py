@@ -24,7 +24,6 @@ from .input_encoders.latencyCell import LatencyCell
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
-from .synapses.hebbian.gatedHebbianSynapse import GatedHebbianSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse

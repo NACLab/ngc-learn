@@ -4,7 +4,6 @@ from .staticSynapse import StaticSynapse
 from .STPDenseSynapse import STPDenseSynapse
 ## dense synaptic components
 from .hebbian.hebbianSynapse import HebbianSynapse
-from .hebbian.gatedHebbianSynapse import GatedHebbianSynapse
 from .hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .hebbian.eventSTDPSynapse import EventSTDPSynapse
