@@ -52,6 +52,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
     | mu - predicted value (takes in external signals)
     | target - desired/goal value (takes in external signals)
     | modulator - modulation signal (takes in optional external signals)
+    | mask - binary/gating mask to apply to error neuron calculations
     | --- Cell Output Compartments: ---
     | L - local loss function embodied by this cell
     | dmu - derivative of L w.r.t. mu
@@ -86,39 +87,45 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.target = Compartment(restVals) # target. input wire
         self.dtarget = Compartment(restVals) # derivative target
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
+        self.mask = Compartment(restVals + 1.0)
 
     @staticmethod
-    def _advance_state(dt, mu, target, modulator):
+    def _advance_state(dt, mu, target, modulator, mask):
         ## compute Laplacian error cell output
-        dmu, dtarget, L = _run_cell(dt, target, mu)
-        dmu = dmu * modulator
-        dtarget = dtarget * modulator
-        return dmu, dtarget, L
+        dmu, dtarget, L = _run_cell(dt, target * mask, mu * mask)
+        dmu = dmu * modulator * mask
+        dtarget = dtarget * modulator * mask
+        mask = mask * 0. + 1.  ## "eat" the mask as it should only apply at time t
+        return dmu, dtarget, L, mask
 
     @resolver(_advance_state)
-    def advance_state(self, dmu, dtarget, L):
+    def advance_state(self, dmu, dtarget, L, mask):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.L.set(L)
+        self.mask.set(mask)
 
     @staticmethod
     def _reset(batch_size, n_units):
-        dmu = jnp.zeros((batch_size, n_units))
-        dtarget = jnp.zeros((batch_size, n_units))
-        target = jnp.zeros((batch_size, n_units)) #None
-        mu = jnp.zeros((batch_size, n_units)) #None
+        restVals = jnp.zeros((batch_size, n_units))
+        dmu = restVals
+        dtarget = restVals
+        target = restVals
+        mu = restVals
         modulator = mu + 1.
         L = 0.
-        return dmu, dtarget, target, mu, modulator, L
+        mask = jnp.ones((batch_size, n_units))
+        return dmu, dtarget, target, mu, modulator, L, mask
 
     @resolver(_reset)
-    def reset(self, dmu, dtarget, target, mu, modulator, L):
+    def reset(self, dmu, dtarget, target, mu, modulator, L, mask):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.target.set(target)
         self.mu.set(mu)
         self.modulator.set(modulator)
         self.L.set(L)
+        self.mask.set(mask)
 
     @classmethod
     def help(cls): ## component help function
@@ -130,7 +137,8 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
             "inputs":
                 {"mu": "External input prediction value(s)",
                  "target": "External input target signal value(s)",
-                 "modulator": "External input modulatory/scaling signal(s)"},
+                 "modulator": "External input modulatory/scaling signal(s)",
+                 "mask": "External binary/gating mask to apply to signals"},
             "outputs":
                 {"L": "Local loss value computed/embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",

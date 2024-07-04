@@ -207,6 +207,7 @@ class LatencyCell(JaxComponent):
         key, *subkeys = random.split(key, 2)
         data = inputs ## get sensory pattern data / features
         spikes, spk_mask = _extract_spike(targ_sp_times, t, mask) ## get spikes at t
+        tols = _update_times(t, spikes, tols)
         return spikes, tols, spk_mask, targ_sp_times, key
 
     @resolver(_advance_state)
@@ -237,7 +238,7 @@ class LatencyCell(JaxComponent):
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.key.set( data['key'] )
+        self.key.set(data['key'])
 
     @classmethod
     def help(cls): ## component help function
