@@ -74,7 +74,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     @staticmethod
     def _compute_update(lmbda, Aminus, Aplus, w_bound, preSpike, postSpike, weights):
         ## this implements a generalization of the rule in eqn 18 of the paper
-        pos_shift = w_bound - weights * (1. + lmbda)
+        pos_shift = w_bound - (weights * (1. + lmbda))
         pos_shift = pos_shift * Aplus
         neg_shift = -weights * (1. + lmbda)
         neg_shift = neg_shift * Aminus

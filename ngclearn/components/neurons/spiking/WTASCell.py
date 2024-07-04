@@ -118,6 +118,8 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.n_units = n_units
 
         ## base threshold setup
+        ## according to eqn 26 of the source paper, the initial condition for the
+        ## threshold should technically be between: 1/n_units < threshold0 << 0.5, e.g., 0.15
         key, subkey = random.split(self.key.value)
         self.threshold0 = thr_base + random.uniform(subkey, (1, n_units),
                                                    minval=-thr_jitter, maxval=thr_jitter,
