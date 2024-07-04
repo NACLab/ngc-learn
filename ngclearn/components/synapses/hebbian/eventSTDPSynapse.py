@@ -15,10 +15,8 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     | weights - current value matrix of synaptic efficacies
     | key - JAX PRNG key
     | --- Synaptic Plasticity Compartments: ---
-    | preSpike - pre-synaptic spike to drive 1st term of STDP update (takes in external signals)
+    | pre_tols - pre-synaptic time-of-last-spike (tols) to drive 1st term of STDP update (takes in external values)
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
-    | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
-    | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
     | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
 
     | References:
@@ -36,6 +34,13 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
 
         lmbda: controls degree of synaptic disconnect ("lambda")
 
+        A_plus: strength of long-term potentiation (LTP)
+
+        A_minus: strength of long-term depression (LTD)
+
+        presyn_win_len: pre-synaptic window time, or how far back in time to
+            look for the presence of a pre-synaptic spike, in milliseconds (default: 1 ms)
+
         w_bound: maximum value/magnitude any synaptic efficacy can be (default: 1)
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
@@ -50,14 +55,16 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     """
 
     # Define Functions
-    def __init__(self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1., w_bound=1.,
-                 weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs):
+    def __init__(self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1.,
+                 presyn_win_len=1., w_bound=1., weight_init=None, resist_scale=1.,
+                 p_conn=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
                          batch_size=batch_size, **kwargs)
 
         ## Synaptic hyper-parameters
         self.eta = eta ## global learning rate governing plasticity
         self.lmbda = lmbda ## controls scaling of STDP rule
+        self.presyn_win_len = presyn_win_len
         self.Aplus = A_plus
         self.Aminus = A_minus
         self.Rscale = resist_scale ## post-transformation scale factor
@@ -66,13 +73,19 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
-        self.preSpike = Compartment(preVals)
+        self.pre_tols = Compartment(preVals)
         self.postSpike = Compartment(postVals)
         self.dWeights = Compartment(self.weights.value * 0)
         self.eta = Compartment(jnp.ones((1, 1)) * eta)  ## global learning rate governing plasticity
 
     @staticmethod
-    def _compute_update(lmbda, Aminus, Aplus, w_bound, preSpike, postSpike, weights):
+    def _compute_update(t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols,
+                        postSpike, weights):
+        ## check if a spike occurred in window of [t - presyn_win_len, t]
+        m = (pre_tols > 0.) * 1. ## ignore default value of tols = 0 ms
+        lbound = ((t - presyn_win_len) <= pre_tols) * 1.
+        rbound = (pre_tols <= t) * 1.
+        preSpike = lbound * rbound * m
         ## this implements a generalization of the rule in eqn 18 of the paper
         pos_shift = w_bound - (weights * (1. + lmbda))
         pos_shift = pos_shift * Aplus
@@ -83,9 +96,10 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         return dW
 
     @staticmethod
-    def _evolve(lmbda, Aminus, Aplus, w_bound, preSpike, postSpike, weights, eta):
+    def _evolve(t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols,
+                postSpike, weights, eta):
         dWeights = EventSTDPSynapse._compute_update(
-            lmbda, Aminus, Aplus, w_bound, preSpike, postSpike, weights
+            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights
         )
         weights = weights + dWeights * eta  # * (1. - w) * eta
         weights = jnp.clip(weights, 0.01, w_bound)  # not in source paper
@@ -102,16 +116,16 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
         outputs = postVals
-        preSpike = preVals
+        pre_tols = preVals ## pre-synaptic time-of-last-spike record
         postSpike = postVals
         dWeights = jnp.zeros(shape)
-        return inputs, outputs, preSpike, postSpike, dWeights
+        return inputs, outputs, pre_tols, postSpike, dWeights
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, preSpike, postSpike, dWeights):
+    def reset(self, inputs, outputs, pre_tols, postSpike, dWeights):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
-        self.preSpike.set(preSpike)
+        self.pre_tols.set(pre_tols)
         self.postSpike.set(postSpike)
         self.dWeights.set(dWeights)
 
@@ -126,7 +140,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         compartment_props = {
             "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "preSpike": "Pre-synaptic spike compartment value/term for STDP (s_j)",
+                 "pre_tols": "Pre-synaptic time-of-last-spike (`tols` for s_j)",
                  "postSpike": "Post-synaptic spike compartment value/term for STDP (s_i)"},
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
