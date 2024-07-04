@@ -100,7 +100,7 @@ class BernoulliCell(JaxComponent):
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.key.set( data['key'] )
+        self.key.set(data['key'])
 
     @classmethod
     def help(cls): ## component help function

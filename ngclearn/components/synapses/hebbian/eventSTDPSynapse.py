@@ -50,7 +50,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     """
 
     # Define Functions
-    def __init__(self, name, shape, eta, lmbda=0.01, w_bound=1.,
+    def __init__(self, name, shape, eta, lmbda=0.01, w_decay=1., w_bound=1.,
                  weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
                          batch_size=batch_size, **kwargs)
@@ -58,6 +58,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         ## Synaptic hyper-parameters
         self.eta = eta ## global learning rate governing plasticity
         self.lmbda = lmbda ## controls scaling of STDP rule
+        self.w_decay = w_decay
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound ## soft weight constraint
 
@@ -70,17 +71,17 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         self.eta = Compartment(jnp.ones((1, 1)) * eta)  ## global learning rate governing plasticity
 
     @staticmethod
-    def _compute_update(lmbda, w_bound, preSpike, postSpike, weights):
+    def _compute_update(lmbda, w_decay, w_bound, preSpike, postSpike, weights):
         pos_shift = w_bound - weights * (1. + lmbda)  # this follows rule in eqn 18 of the paper
-        neg_shift = -weights * (1. + lmbda)
-        dW = jnp.where(preSpike.T, pos_shift, neg_shift)
-        dW = (dW * postSpike)
+        neg_shift = (-weights * (1. + lmbda)) * w_decay
+        dW = jnp.where(preSpike.T, pos_shift, neg_shift) # at pre-spikes => LTP, else decay
+        dW = (dW * postSpike) ## gate to make sure only post-spikes trigger updates
         return dW
 
     @staticmethod
-    def _evolve(lmbda, w_bound, preSpike, postSpike, weights, eta):
+    def _evolve(lmbda, w_decay, w_bound, preSpike, postSpike, weights, eta):
         dWeights = EventSTDPSynapse._compute_update(
-            lmbda, w_bound, preSpike, postSpike, weights
+            lmbda, w_decay, w_bound, preSpike, postSpike, weights
         )
         weights = weights + dWeights * eta  # * (1. - w) * eta
         weights = jnp.clip(weights, 0.01, w_bound)  # not in source paper
