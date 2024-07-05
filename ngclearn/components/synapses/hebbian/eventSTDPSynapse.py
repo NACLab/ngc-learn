@@ -65,6 +65,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         self.eta = eta ## global learning rate governing plasticity
         self.lmbda = lmbda ## controls scaling of STDP rule
         self.presyn_win_len = presyn_win_len
+        assert self.presyn_win_len >= 0. ## pre-synaptic window must be non-negative
         self.Aplus = A_plus
         self.Aminus = A_minus
         self.Rscale = resist_scale ## post-transformation scale factor
@@ -83,9 +84,12 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
                         postSpike, weights):
         ## check if a spike occurred in window of (t - presyn_win_len, t]
         m = (pre_tols > 0.) * 1.  ## ignore default value of tols = 0 ms
-        lbound = ((t - presyn_win_len) < pre_tols) * 1.
-        rbound = (pre_tols <= t) * 1.
-        preSpike = lbound * rbound * m
+        if presyn_win_len > 0.:
+            lbound = ((t - presyn_win_len) < pre_tols) * 1.
+            preSpike = lbound * m
+        else:
+            check_spike = (pre_tols == t) * 1.
+            preSpike = check_spike * m
         ## this implements a generalization of the rule in eqn 18 of the paper
         pos_shift = w_bound - (weights * (1. + lmbda))
         pos_shift = pos_shift * Aplus
