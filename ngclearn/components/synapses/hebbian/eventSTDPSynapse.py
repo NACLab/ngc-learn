@@ -56,7 +56,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
 
     # Define Functions
     def __init__(self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1.,
-                 presyn_win_len=1., w_bound=1., weight_init=None, resist_scale=1.,
+                 presyn_win_len=2., w_bound=1., weight_init=None, resist_scale=1.,
                  p_conn=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
                          batch_size=batch_size, **kwargs)
@@ -65,6 +65,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         self.eta = eta ## global learning rate governing plasticity
         self.lmbda = lmbda ## controls scaling of STDP rule
         self.presyn_win_len = presyn_win_len
+        assert self.presyn_win_len >= 0. ## pre-synaptic window must be non-negative
         self.Aplus = A_plus
         self.Aminus = A_minus
         self.Rscale = resist_scale ## post-transformation scale factor
@@ -82,10 +83,13 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     def _compute_update(t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols,
                         postSpike, weights):
         ## check if a spike occurred in window of (t - presyn_win_len, t]
-        m = (pre_tols > 0.) * 1. ## ignore default value of tols = 0 ms
-        lbound = ((t - presyn_win_len) < pre_tols) * 1.
-        rbound = (pre_tols <= t) * 1.
-        preSpike = lbound * rbound * m
+        m = (pre_tols > 0.) * 1.  ## ignore default value of tols = 0 ms
+        if presyn_win_len > 0.:
+            lbound = ((t - presyn_win_len) < pre_tols) * 1.
+            preSpike = lbound * m
+        else:
+            check_spike = (pre_tols == t) * 1.
+            preSpike = check_spike * m
         ## this implements a generalization of the rule in eqn 18 of the paper
         pos_shift = w_bound - (weights * (1. + lmbda))
         pos_shift = pos_shift * Aplus
