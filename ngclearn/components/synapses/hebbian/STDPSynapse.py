@@ -103,7 +103,7 @@ class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
         if Aminus > 0.:
             ## calculate pre-synaptic term
             preTerm = jnp.exp(-t_delta / tau_minus)
-            dWpre = preTerm * (preSpike.T * Aminus)
+            dWpre = -preTerm * (preSpike.T * Aminus)
         ## calc final weighted adjustment
         dW = (dWpost + dWpre)
         return dW
