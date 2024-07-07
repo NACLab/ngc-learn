@@ -3,7 +3,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-class STDPSynapse(DenseSynapse): # classical STDP
+class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
     """
     A synaptic cable that adjusts its efficacies via raw
     spike-timing-dependent plasticity (STDP).
@@ -62,7 +62,7 @@ class STDPSynapse(DenseSynapse): # classical STDP
     """
 
     # Define Functions
-    def __init__(self, name, shape, A_plus, A_minus, tau_plus=10., tau_minus=10.,
+    def __init__(self, name, shape, A_plus, A_minus, tau_plus=10., tau_minus=10., w_decay=0., 
                  eta=1., tau_w=0., weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
                  batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale,
@@ -77,6 +77,7 @@ class STDPSynapse(DenseSynapse): # classical STDP
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
         self.tau_w = tau_w ## synaptic update time constant
+        self.w_decay = w_decay
 
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
@@ -112,7 +113,7 @@ class STDPSynapse(DenseSynapse): # classical STDP
         return dW
 
     @staticmethod
-    def _evolve(dt, w_bound, tau_w, Aplus, Aminus, tau_plus, tau_minus, preSpike,
+    def _evolve(dt, w_bound, w_decay, tau_w, Aplus, Aminus, tau_plus, tau_minus, preSpike,
                 postSpike, pre_tols, post_tols, weights, eta):
         dWeights = STDPSynapse._compute_update(
             Aplus, Aminus, tau_plus, tau_minus, preSpike, postSpike, pre_tols,
@@ -122,9 +123,9 @@ class STDPSynapse(DenseSynapse): # classical STDP
         if tau_w > 0.: ## triggers Euler-style synaptic update
             weights = weights + (-weights * dt/tau_w + dWeights * eta)
         else: ## raw simple ascent-style update
-            weights = weights + dWeights * eta
+            weights = weights + dWeights * eta - weights * w_decay
         ## enforce non-negativity
-        eps = 0.01
+        eps = 0.001 # 0.01
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
         return weights, dWeights
 
