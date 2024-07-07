@@ -45,6 +45,9 @@ class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
 
         eta: global learning rate initial value/condition (default: 1)
 
+        tau_w: time constant for synaptic adjustment; setting this to zero
+            disables Euler-style synaptic adjustment (default: 0)
+
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use
@@ -60,7 +63,7 @@ class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
 
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, tau_plus=10., tau_minus=10.,
-                 eta=1., weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
+                 eta=1., tau_w=0., weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
                  batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, None, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
@@ -73,6 +76,7 @@ class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.tau_minus = tau_minus ## LTD time constant
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
+        self.tau_w = tau_w ## synaptic update time constant
 
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
