@@ -185,7 +185,8 @@ class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
             "A_minus": "Strength of long-term depression (LTD)",
             "tau_plus": "Time constant for long-term potentiation (LTP)",
             "tau_minus": "Time constant for long-term depression (LTD)",
-            "eta": "Global learning rate initial condition"
+            "eta": "Global learning rate initial condition",
+            "tau_w": "Time constant for synaptic adjustment (if Euler-style change used)"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
