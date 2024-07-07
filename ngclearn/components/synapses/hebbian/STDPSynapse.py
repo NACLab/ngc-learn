@@ -95,14 +95,14 @@ class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
         post_m = (post_tols > 0.) * 1.
         pre_m = (pre_tols > 0.) * 1.
         t_delta = ((weights * 0 + 1.) * post_tols) - pre_tols.T ## t_delta.shape = weights.shape
-        t_delta = t_delta * post_m * pre_m.T
+        t_delta = t_delta * post_m * pre_m.T ## mask out zero tols
         ## calculate post-synaptic term
-        postTerm = jnp.exp(-t_delta/tau_plus)
+        postTerm = jnp.exp(-t_delta/tau_plus) * (t_delta > 0.)
         dWpost = postTerm * (postSpike * Aplus)
         dWpre = 0.
         if Aminus > 0.:
             ## calculate pre-synaptic term
-            preTerm = jnp.exp(-t_delta / tau_minus)
+            preTerm = jnp.exp(-t_delta / tau_minus) * (t_delta < 0.)
             dWpre = -preTerm * (preSpike.T * Aminus)
         ## calc final weighted adjustment
         dW = (dWpost + dWpre)
