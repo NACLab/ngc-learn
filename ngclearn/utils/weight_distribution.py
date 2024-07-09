@@ -227,21 +227,10 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
         else:
             params = jnp.minimum(params, clip_max)
     if block_diag_mask_width is not None:
-        keep_vals = jnp.ones((block_diag_mask_width, block_diag_mask_width))
-        delete_vals = jnp.zeros((block_diag_mask_width, block_diag_mask_width))
-        n_repeat_row = int(params.shape[0]/block_diag_mask_width)
-        n_repeat_col = int(params.shape[1] / block_diag_mask_width)
-        block_mask = []
-        for i in range(n_repeat_row):
-            _block_row = []
-            for j in range(n_repeat_col):
-                if j != i:
-                    _block_row.append(delete_vals)
-                else:
-                    _block_row.append(keep_vals)
-            _block_row = jnp.concatenate(_block_row, axis=1)
-            block_mask.append(_block_row)
-        block_mask = jnp.concatenate(block_mask, axis=0)
+        k = int(params.shape[0] / block_diag_mask_width) #5
+        n = block_diag_mask_width #2
+        source = jnp.eye(k, k)
+        block_mask = jnp.repeat(jnp.repeat(source, n, axis=1), n, axis=0)
         if block_mask.shape[0] == params.shape[0] and block_mask.shape[1] == params.shape[1]:
             params = params * block_mask
         else:
