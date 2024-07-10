@@ -34,6 +34,8 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay
     Returns:
         an update/adjustment matrix, an update adjustment vector (for biases)
     """
+
+    potential =  jnp.where(0 != jnp.abs(W), 1, 0)
     _pre = pre * pre_wght
     _post = post * post_wght
     dW = jnp.matmul(_pre.T, _post)
@@ -42,7 +44,7 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay
         dW = dW * (w_bound - jnp.abs(W))
     if w_decay > 0.:
         dW = dW - W * w_decay
-    return dW * jnp.where(0 != jnp.abs(W), 1, 0) * signVal, db * signVal
+    return dW * potential * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
 def _enforce_constraints(W, w_bound, is_nonnegative=True):
