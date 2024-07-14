@@ -147,7 +147,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
                  threshold=("none", 0.), integration_type="euler",
-                 batch_size=1, resist_scale=1., **kwargs):
+                 batch_size=1, resist_scale=1., shape=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -165,12 +165,18 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.intgFlag = get_integrator_code(self.integrationType)
 
         ## Layer size setup
+        _shape = (batch_size, n_units) ## default shape is 2D/matrix
+        if shape is None:
+            shape = (n_units,) ## we set shape to be equal to n_units if nothing provided
+        else:
+            _shape = (batch_size, shape[0], shape[1], shape[2]) ## shape is 4D tensor
+        self.shape = shape
         self.n_units = n_units
         self.batch_size = batch_size
         self.fx, self.dfx = create_function(fun_name=act_fx)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
-        restVals = jnp.zeros((self.batch_size, n_units))
+        restVals = jnp.zeros(_shape)
         self.j = Compartment(restVals) # electrical current
         self.zF = Compartment(restVals) # rate-coded output - activity
         self.j_td = Compartment(restVals) # top-down electrical current - pressure
@@ -211,8 +217,12 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF.set(zF)
 
     @staticmethod
-    def _reset(batch_size, n_units):
-        return tuple([jnp.zeros((batch_size, n_units)) for _ in range(4)])
+    def _reset(batch_size, shape): #n_units
+        _shape = (batch_size, shape[0])
+        if len(shape) > 1:
+            _shape = (batch_size, shape[0], shape[1], shape[2])
+        restVals = jnp.zeros((batch_size, _shape))
+        return tuple([restVals for _ in range(4)])
 
     @resolver(_reset)
     def reset(self, j, zF, j_td, z):
