@@ -205,7 +205,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             zF = fx(z) ## post-activation function value(s)
         else:
             ## run in "stateless" mode (when no membrane time constant provided)
-            z = _run_cell_stateless(j)
+            j_total = j + j_td
+            z = _run_cell_stateless(j_total)
             zF = fx(z)
         return j, j_td, z, zF
 
