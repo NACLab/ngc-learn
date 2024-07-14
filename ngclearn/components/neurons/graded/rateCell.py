@@ -221,7 +221,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
-        restVals = jnp.zeros((batch_size, _shape))
+        restVals = jnp.zeros(_shape)
         return tuple([restVals for _ in range(4)])
 
     @resolver(_reset)

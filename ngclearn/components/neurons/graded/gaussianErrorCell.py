@@ -114,7 +114,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
-        restVals = jnp.zeros((batch_size, _shape))
+        restVals = jnp.zeros(_shape)
         dmu = restVals
         dtarget = restVals
         target = restVals
