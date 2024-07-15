@@ -1,6 +1,6 @@
 from ngclearn import Context, numpy as jnp
-from ngclearn.evironment.displayTile import DisplayTile
-from ngclearn.evironment.screen import Screen
+from ngclearn.environment.displayTile import DisplayTile
+from ngclearn.environment.screen import Screen
 from ngcsimlib.logger import warn
 
 class World(Context):
