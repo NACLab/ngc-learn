@@ -79,7 +79,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         self.elg_decay = elg_decay
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
-        self.output_mask = Compartment(jnp.ones((self.batch_size, self.weights.shape[1])))
+        self.output_mask = Compartment(jnp.ones((self.batch_size, self.weights.value.shape[1])))
         self.eligibility = Compartment(jnp.zeros(shape))
 
     @staticmethod
