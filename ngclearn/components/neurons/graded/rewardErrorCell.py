@@ -76,18 +76,21 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
 
     @staticmethod
     def _evolve(dt, use_online_predictor, ema_window_len, n_ep_steps, mu,
-                accum_reward, rpe):
+                accum_reward, reward, rpe):
+        accum_reward = accum_reward + reward
+        n_ep_steps = n_ep_steps + 1
         if use_online_predictor is False:
             ## total episodic reward signal
             r = accum_reward/n_ep_steps
             mu = (1. - 1./ema_window_len) * mu + (1./ema_window_len) * r
             rpe = r - mu
-        return mu, rpe
+        return mu, rpe, accum_reward
 
     @resolver(_evolve)
-    def evolve(self, mu, rpe):
+    def evolve(self, mu, rpe, accum_reward):
         self.mu.set(mu)
         self.rpe.set(rpe)
+        self.accum_reward.set(accum_reward)
 
     @staticmethod
     def _reset(batch_size, n_units):
