@@ -109,7 +109,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                                  dWeights * modulator,
                                  jnp.clip(dWeights, max=0.) * -modulator)
         else:
-            dWeights = eligibility * output_mask * modulator
+            dWeights = eligibility * modulator
 
         ## do a gradient ascent update/shift
         weights = weights + dWeights * eta ## modulate update
