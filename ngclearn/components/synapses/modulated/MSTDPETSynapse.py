@@ -99,7 +99,9 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         else: ## perform dynamics of M-STDP (no eligibility trace)
             eligibility = dW_dt
         ## Perform a trace/update times a modulatory signal (e.g., reward)
-        dWeights = eligibility * output_mask * modulator
+        #dWeights = eligibility * output_mask * modulator
+        dWeights = eligibility * output_mask #* modulator
+        dWeights = jnp.where(dWeights >= 0., dWeights * modulator, dWeights)
 
         ## do a gradient ascent update/shift
         weights = weights + dWeights * eta ## modulate update
