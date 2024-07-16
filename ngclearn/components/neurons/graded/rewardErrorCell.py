@@ -24,14 +24,19 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
 
         ema_window_len: exponential moving average window length -- for use only
             in `evolve` step for updating episodic reward signals; (default: 10)
+
+        use_online_predictor: use online prediction of reward signal (default: True)
+            -- if set to False, then reward prediction will only occur upon a call
+            to this cell's `evolve` function
     """
-    def __init__(self, name, n_units, alpha, ema_window_len=10, batch_size=1,
-                 **kwargs):
+    def __init__(self, name, n_units, alpha, ema_window_len=10,
+                 use_online_predictor=True, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## RPE meta-parameters
         self.alpha = alpha
         self.ema_window_len = ema_window_len
+        self.use_online_predictor = use_online_predictor
 
         ## Layer Size Setup
         self.n_units = n_units
@@ -47,15 +52,17 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         self.n_ep_steps = Compartment(jnp.zeros((self.batch_size, 1))) ## number of episode steps taken
 
     @staticmethod
-    def _advance_state(dt, alpha, mu, rpe, reward, n_ep_steps, accum_reward, Ns):
+    def _advance_state(dt, use_online_predictor, alpha, mu, rpe, reward,
+                       n_ep_steps, accum_reward, Ns):
         ## compute/update RPE and predictor values
         accum_reward = accum_reward + reward
         #m = (Ns > 0.) * 1.
         #_Ns = Ns * m + (1. - m) ## mask out Ns
         rpe = reward - mu #/_Ns #reward - mu
-        mu = mu * (1. - alpha) + reward * alpha
-        # mu = mu + reward
-        # Ns = Ns + 1.
+        if use_online_predictor:
+            mu = mu * (1. - alpha) + reward * alpha
+            # mu = mu + reward
+            # Ns = Ns + 1.
         n_ep_steps = n_ep_steps + 1
         return mu, rpe, n_ep_steps, accum_reward, Ns
 
@@ -68,13 +75,15 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         self.Ns.set(Ns)
 
     @staticmethod
-    def _evolve(dt, ema_window_len, n_ep_steps, mu, accum_reward, reward): #, rpe):
+    def _evolve(dt, use_online_predictor, ema_window_len, n_ep_steps, mu,
+                accum_reward, reward, rpe):
         accum_reward = accum_reward + reward
         n_ep_steps = n_ep_steps + 1
-        ## total episodic reward signal
-        r = accum_reward/n_ep_steps
-        mu = (1. - 1./ema_window_len) * mu + (1./ema_window_len) * r
-        rpe = r - mu
+        if use_online_predictor is False:
+            ## total episodic reward signal
+            r = accum_reward/n_ep_steps
+            mu = (1. - 1./ema_window_len) * mu + (1./ema_window_len) * r
+            rpe = r - mu
         return mu, rpe, accum_reward
 
     @resolver(_evolve)
@@ -119,7 +128,8 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
                  "accum_reward": "Current accumulated episodic reward signal (generally "
                                  "produced at the end of a control episode of `n_steps`)",
                  "n_ep_steps": "Number of episodic steps taken/tracked thus far "
-                               "(since last `reset` call)"},
+                               "(since last `reset` call)",
+                 "use_online_predictor": "Should an online reward predictor be used/maintained?"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
