@@ -108,6 +108,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             dWeights = jnp.where(modulator > 0.,
                                  dWeights * modulator,
                                  jnp.clip(dWeights, min=0.) * modulator)
+            #dWeights = dWeights * modulator
         else:
             dWeights = eligibility * modulator
 
