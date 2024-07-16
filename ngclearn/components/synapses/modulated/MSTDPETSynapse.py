@@ -79,12 +79,13 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         self.elg_decay = elg_decay
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
+        self.output_mask = Compartment(jnp.ones((self.batch_size, self.weights.shape[1])))
         self.eligibility = Compartment(jnp.zeros(shape))
 
     @staticmethod
     def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg,
                 elg_decay, preSpike, postSpike, preTrace, postTrace, weights,
-                eta, modulator, eligibility):
+                eta, modulator, eligibility, output_mask):
         ## compute local synaptic update (via STDP)
         dW_dt = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus,
@@ -98,7 +99,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         else: ## perform dynamics of M-STDP (no eligibility trace)
             eligibility = dW_dt
         ## Perform a trace/update times a modulatory signal (e.g., reward)
-        dWeights = eligibility * modulator
+        dWeights = eligibility * output_mask * modulator
 
         ## do a gradient ascent update/shift
         weights = weights + dWeights * eta ## modulate update
