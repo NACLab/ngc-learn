@@ -54,6 +54,8 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
 
         elg_decay: eligibility decay constant (default: 1)
 
+        use_eligibility_masking:
+
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use
@@ -68,8 +70,8 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
     # Define Functions
     def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
                  pretrace_target=0., tau_elg=0., elg_decay=1.,
-                 weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
-                 batch_size=1, **kwargs):
+                 use_eligibility_masking=False, weight_init=None, resist_scale=1.,
+                 p_conn=1., w_bound=1., batch_size=1, **kwargs):
         super().__init__(name, shape, A_plus, A_minus, eta=eta, mu=mu,
                          pretrace_target=pretrace_target, weight_init=weight_init,
                          resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound,
@@ -77,6 +79,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
+        self.use_eligib_mask = use_eligibility_masking
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
         self.output_mask = Compartment(jnp.ones((self.batch_size, self.weights.value.shape[1])))
@@ -84,7 +87,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
 
     @staticmethod
     def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg,
-                elg_decay, preSpike, postSpike, preTrace, postTrace, weights,
+                elg_decay, use_eligib_mask, preSpike, postSpike, preTrace, postTrace, weights,
                 eta, modulator, eligibility, output_mask):
         ## compute local synaptic update (via STDP)
         dW_dt = TraceSTDPSynapse._compute_update(
@@ -99,9 +102,14 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         else: ## perform dynamics of M-STDP (no eligibility trace)
             eligibility = dW_dt
         ## Perform a trace/update times a modulatory signal (e.g., reward)
-        #dWeights = eligibility * output_mask * modulator
-        dWeights = eligibility * output_mask #* modulator
-        dWeights = jnp.where(dWeights >= 0., dWeights * modulator, dWeights)
+        if use_eligib_mask:
+            dWeights = eligibility * output_mask ## apply output mask
+            #dWeights = jnp.where(dWeights >= 0., dWeights * modulator, dWeights)
+            dWeights = jnp.where(modulator > 0.,
+                                 dWeights * modulator,
+                                 jnp.clip(dWeights, max=0.) * -modulator)
+        else:
+            dWeights = eligibility * output_mask * modulator
 
         ## do a gradient ascent update/shift
         weights = weights + dWeights * eta ## modulate update
