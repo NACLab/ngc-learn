@@ -56,7 +56,7 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
                        n_ep_steps, accum_reward, Ns):
         ## compute/update RPE and predictor values
         accum_reward = accum_reward + reward
-        m = (Ns > 0.) * 1.
+        #m = (Ns > 0.) * 1.
         #_Ns = Ns * m + (1. - m) ## mask out Ns
         rpe = reward - mu #/_Ns #reward - mu
         if use_online_predictor:
