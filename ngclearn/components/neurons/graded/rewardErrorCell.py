@@ -80,7 +80,6 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         accum_reward = accum_reward + reward
         n_ep_steps = n_ep_steps + 1.
         if use_online_predictor is False:
-            print(ema_window_len)
             ## total episodic reward signal
             r = accum_reward/n_ep_steps
             mu = (1. - 1./ema_window_len) * mu + (1./ema_window_len) * r
