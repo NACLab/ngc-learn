@@ -48,25 +48,29 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         self.reward = Compartment(restVals) ## target reward signal(s)
         self.rpe = Compartment(restVals) ## reward prediction error(s)
         self.accum_reward = Compartment(restVals)  ## accumulated reward signal(s)
+        self.Ns = Compartment(jnp.zeros((self.batch_size, 1)))
         self.n_ep_steps = Compartment(jnp.zeros((self.batch_size, 1))) ## number of episode steps taken
 
     @staticmethod
     def _advance_state(dt, use_online_predictor, alpha, mu, rpe, reward,
-                       n_ep_steps, accum_reward):
+                       n_ep_steps, accum_reward, Ns):
         ## compute/update RPE and predictor values
         accum_reward = accum_reward + reward
-        rpe = reward - mu
+        rpe = reward - mu/Ns #reward - mu
         if use_online_predictor:
-            mu = mu * (1. - alpha) + reward * alpha
+            #mu = mu * (1. - alpha) + reward * alpha
+            mu = mu + reward
+            Ns = Ns + 1.
         n_ep_steps = n_ep_steps + 1
-        return mu, rpe, n_ep_steps, accum_reward
+        return mu, rpe, n_ep_steps, accum_reward, Ns
 
     @resolver(_advance_state)
-    def advance_state(self, mu, rpe, n_ep_steps, accum_reward):
+    def advance_state(self, mu, rpe, n_ep_steps, accum_reward, Ns):
         self.mu.set(mu)
         self.rpe.set(rpe)
         self.n_ep_steps.set(n_ep_steps)
         self.accum_reward.set(accum_reward)
+        self.Ns.set(Ns)
 
     @staticmethod
     def _evolve(dt, use_online_predictor, ema_window_len, n_ep_steps, mu,
@@ -88,14 +92,16 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         rpe = restVals
         accum_reward = restVals
         n_ep_steps = jnp.zeros((batch_size, 1))
-        return mu, rpe, accum_reward, n_ep_steps
+        Ns = jnp.zeros((batch_size, 1))
+        return mu, rpe, accum_reward, n_ep_steps, Ns
 
     @resolver(_reset)
-    def reset(self, mu, rpe, accum_reward, n_ep_steps):
+    def reset(self, mu, rpe, accum_reward, n_ep_steps, Ns):
         self.mu.set(mu)
         self.rpe.set(rpe)
         self.accum_reward.set(accum_reward)
         self.n_ep_steps.set(n_ep_steps)
+        self.Ns.set(Ns)
 
     @classmethod
     def help(cls): ## component help function
