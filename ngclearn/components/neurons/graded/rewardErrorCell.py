@@ -84,6 +84,8 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
             r = accum_reward/n_ep_steps
             mu = (1. - 1./ema_window_len) * mu + (1./ema_window_len) * r
             rpe = r - mu
+        else:
+            rpe = reward - mu
         return mu, rpe, accum_reward
 
     @resolver(_evolve)
