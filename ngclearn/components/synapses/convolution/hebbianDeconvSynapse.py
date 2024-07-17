@@ -84,7 +84,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
     # Define Functions
     def __init__(self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None,
                  stride=1, padding=None, resist_scale=1., w_bound=0., is_nonnegative=False,
-                 w_decay=0., sign_value=1., update_bound=None, optim_type="sgd",
+                 w_decay=0., sign_value=1., update_bound=0., optim_type="sgd",
                  batch_size=1, **kwargs):
         super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
                          bias_init=bias_init, resist_scale=resist_scale,
