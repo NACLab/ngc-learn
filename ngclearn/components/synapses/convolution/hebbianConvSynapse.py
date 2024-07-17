@@ -68,6 +68,9 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
             optimization is required (as Hebbian rules typically yield
             adjustments for ascent)
 
+        update_bound: if set to non-negative value, this enforces a maximum
+            magnitude value to clip updates made to synapses (default: 0)
+
         optim_type: optimization scheme to physically alter synaptic values
             once an update is computed (Default: "sgd"); supported schemes
             include "sgd" and "adam"
@@ -83,13 +86,14 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
     # Define Functions
     def __init__(self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None,
                  stride=1, padding=None, resist_scale=1., w_bound=0.,
-                 is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",
-                 batch_size=1, **kwargs):
+                 is_nonnegative=False, w_decay=0., sign_value=1.,
+                 update_bound=0., optim_type="sgd", batch_size=1, **kwargs):
         super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
                          bias_init=bias_init, resist_scale=resist_scale, stride=stride,
                          padding=padding, batch_size=batch_size, **kwargs)
 
         self.eta = eta
+        self.update_bounds = update_bound
         self.w_bounds = w_bound
         self.w_decay = w_decay  ## synaptic decay
         self.is_nonnegative = is_nonnegative
@@ -158,14 +162,18 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         return dWeights, dBiases
 
     @staticmethod
-    def _evolve(opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init,
-                stride, pad_args, delta_shape, pre, post, weights, biases,
-                opt_params):
+    def _evolve(opt, sign_value, update_bounds, w_decay, w_bounds, is_nonnegative,
+                bias_init, stride, pad_args, delta_shape, pre, post, weights,
+                biases, opt_params):
         ## calc dFilters / dBiases - update to filters and biases
         dWeights, dBiases = HebbianConvSynapse._compute_update(
             sign_value, w_decay, bias_init, stride, pad_args, delta_shape,
             pre, post, weights
         )
+        if update_bounds > 0.:
+            dWeights = jnp.clip(dWeights, -update_bounds, update_bounds)
+            if bias_init != None:
+                dBiases = jnp.clip(dBiases, -update_bounds, update_bounds)
         if bias_init != None:
             opt_params, [weights, biases] = opt(opt_params, [weights, biases],
                                                 [dWeights, dBiases])
