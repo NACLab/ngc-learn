@@ -364,7 +364,7 @@ def d_relu6(x):
     """
     # df/dx = 1 if 0<x<6 else 0
     # I_x = (z >= a_min) *@ (z <= b_max) //create an indicator function  a = 0 b = 6
-    Ix1 = (x > 0.).astype(jnp.float32) #tf.cast(tf.math.greater_equal(x, 0.0),dtype=tf.float32)
+    Ix1 = (x >= 0.).astype(jnp.float32) #tf.cast(tf.math.greater_equal(x, 0.0),dtype=tf.float32)
     Ix2 = (x <= 6.).astype(jnp.float32) #tf.cast(tf.math.less_equal(x, 6.0),dtype=tf.float32)
     Ix = Ix1 * Ix2
     return Ix
