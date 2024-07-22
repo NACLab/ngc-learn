@@ -78,7 +78,7 @@ Python 3.11.4 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'1.2b2'
+'1.2b3'
 ```
 
 <i>Note</i>: If you do not have a JSON configuration file in place (see tutorials
