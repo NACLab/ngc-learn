@@ -104,7 +104,7 @@ def _run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
     ############################################################################
     ## this is a spike post-processing step
     if skey is not None:
-        m_switch = (jnp.sum(s) > 0.).astype(jnp.float32)
+        m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: not batch-able
         rS = s * random.uniform(skey, s.shape)
         rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
                         dtype=jnp.float32)

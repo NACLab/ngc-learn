@@ -36,7 +36,7 @@ ngc-learn requires:
 1) Python (>=3.10)
 2) NumPy (>=1.26.0)
 3) SciPy (>=1.7.0)
-4) ngcsimlib (>=0.3.b2), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
+4) ngcsimlib (>=0.3.b4), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
 5) JAX (>= 0.4.18) (to enable GPU use, make sure to install one of the CUDA variants)
 <!--
 5) scikit-learn (>=1.3.1) if using `ngclearn.utils.density`

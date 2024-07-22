@@ -110,11 +110,11 @@ class BernoulliCell(JaxComponent):
                           "the dimension's magnitude/value/intensity"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values"},
             "states":
                 {"key": "JAX PRNG key"},
-            "output_compartments":
+            "outputs":
                 {"tols": "Time-of-last-spike",
                  "outputs": "Binary spike values emitted at time t"},
         }

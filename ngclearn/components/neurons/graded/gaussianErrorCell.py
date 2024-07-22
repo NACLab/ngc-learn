@@ -67,10 +67,16 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
         leakRate: (Unused -- currently cell is a fixed-point model)
     """
-    def __init__(self, name, n_units, batch_size=1, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, shape=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size Setup
+        _shape = (batch_size, n_units)  ## default shape is 2D/matrix
+        if shape is None:
+            shape = (n_units,)  ## we set shape to be equal to n_units if nothing provided
+        else:
+            _shape = (batch_size, shape[0], shape[1], shape[2])  ## shape is 4D tensor
+        self.shape = shape
         self.n_units = n_units
         self.batch_size = batch_size
 
@@ -78,7 +84,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.width = self.height = n_units
 
         ## Compartment setup
-        restVals = jnp.zeros((self.batch_size, self.n_units))
+        restVals = jnp.zeros(_shape)
         self.L = Compartment(0.) # loss compartment
         self.mu = Compartment(restVals) # mean/mean name. input wire
         self.dmu = Compartment(restVals) # derivative mean
@@ -104,15 +110,18 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.mask.set(mask)
 
     @staticmethod
-    def _reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
+    def _reset(batch_size, shape): #n_units
+        _shape = (batch_size, shape[0])
+        if len(shape) > 1:
+            _shape = (batch_size, shape[0], shape[1], shape[2])
+        restVals = jnp.zeros(_shape)
         dmu = restVals
         dtarget = restVals
         target = restVals
         mu = restVals
         modulator = mu + 1.
         L = 0.
-        mask = jnp.ones((batch_size, n_units))
+        mask = jnp.ones(_shape)
         return dmu, dtarget, target, mu, modulator, L, mask
 
     @resolver(_reset)

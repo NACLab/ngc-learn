@@ -214,6 +214,7 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
     is_eye = _init_kernel.get("eye", False)
     n_row_active = _init_kernel.get("n_row_active", None)
     n_col_active = _init_kernel.get("n_col_active", None)
+    block_diag_mask_width = _init_kernel.get("block_diag_mask_width", None)
     ## run any configured post-processing to condition the final value matrix
     if clip_min is not None: ## bound all values to be > clip_min
         if use_numpy:
@@ -225,6 +226,18 @@ def initialize_params(dkey, init_kernel, shape, use_numpy=False):
             params = np.minimum(params, clip_max)
         else:
             params = jnp.minimum(params, clip_max)
+    if block_diag_mask_width is not None:
+        k = int(params.shape[0] / block_diag_mask_width) #5
+        n = block_diag_mask_width #2
+        source = jnp.eye(k, k)
+        block_mask = jnp.repeat(jnp.repeat(source, n, axis=1), n, axis=0)
+        if block_mask.shape[0] == params.shape[0] and block_mask.shape[1] == params.shape[1]:
+            params = params * block_mask
+        else:
+            critical(
+                "Initialization block matrix w/ width (" + block_diag_mask_width +
+                ") is not recognized/supported!"
+            )
     if lower_triangle: ## extract lower triangle of params matrix
         ltri_params = jax.numpy.tril(params.shape[0])
         params = ltri_params
