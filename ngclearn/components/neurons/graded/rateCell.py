@@ -9,7 +9,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
 
 ## rewritten code
-@partial(jit, static_argnums=[3, 4, 5])
+@partial(jit, static_argnums=[5])
 def _dfz_internal(z, j, j_td, tau_m, leak_gamma, prior_type=None): ## raw dynamics
     z_leak = z # * 2 ## Default: assume Gaussian
     if prior_type != None:
