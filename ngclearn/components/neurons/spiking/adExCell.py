@@ -166,11 +166,12 @@ class AdExCell(JaxComponent):
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.j = Compartment(restVals)
-        self.v = Compartment(restVals + self.v0)
-        self.w = Compartment(restVals + self.w0)
-        self.s = Compartment(restVals)
-        self.tols = Compartment(restVals) ## time-of-last-spike
+        self.j = Compartment(restVals, display_name="Current", units="mA")
+        self.v = Compartment(restVals + self.v0, display_name="Voltage", units="mV")
+        self.w = Compartment(restVals + self.w0, display_name="Recovery")
+        self.s = Compartment(restVals, display_name="Spikes")
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
+                                units="ms") ## time-of-last-spike
 
     @staticmethod
     def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,

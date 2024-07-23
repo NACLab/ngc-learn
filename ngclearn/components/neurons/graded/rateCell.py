@@ -181,10 +181,10 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
         restVals = jnp.zeros(_shape)
-        self.j = Compartment(restVals) # electrical current
-        self.zF = Compartment(restVals) # rate-coded output - activity
-        self.j_td = Compartment(restVals) # top-down electrical current - pressure
-        self.z = Compartment(restVals) # rate activity
+        self.j = Compartment(restVals, display_name="Input Stimulus Current", units="mA") # electrical current
+        self.zF = Compartment(restVals, display_name="Transformed Rate Activity") # rate-coded output - activity
+        self.j_td = Compartment(restVals, display_name="Modulatory Stimulus Current", units="mA") # top-down electrical current - pressure
+        self.z = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
 
     @staticmethod
     def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
