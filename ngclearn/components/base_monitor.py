@@ -261,7 +261,7 @@ class Base_Monitor(Component):
         if n is None:
             n = vals.shape[2]
         if title is None:
-            title = compartment.display_name
+            title = compartment.name.split("/")[0] + " " + compartment.display_name
 
         if ylabel is None:
             _ylabel = compartment.units
@@ -283,14 +283,14 @@ class Base_Monitor(Component):
             if _ylabel:
                 _ax.ylabel(_ylabel)
             if _xlabel:
-                _ax.xlabel("")
+                _ax.xlabel(_xlabel)
         else:
             _ax = ax
             _ax.set_title(title)
             if _ylabel:
                 _ax.set_ylabel(_ylabel)
             if _xlabel:
-                _ax.set_xlabel("Time Steps")
+                _ax.set_xlabel(_xlabel)
 
         if plot_func is None:
             for k in range(n):
