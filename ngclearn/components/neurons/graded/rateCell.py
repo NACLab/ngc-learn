@@ -162,7 +162,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         thresholdType, thr_lmbda = threshold
         self.thresholdType = thresholdType ## type of thresholding function to use
         self.thr_lmbda = thr_lmbda ## scale to drive thresholding dynamics
-        self.Rscale = resist_scale ## a "resistance" scaling factor
+        self.resist_scale = resist_scale ## a "resistance" scaling factor
 
         ## integration properties
         self.integrationType = integration_type
@@ -188,7 +188,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     @staticmethod
     def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
-                       Rscale, thresholdType, thr_lmbda, is_stateful, j, j_td, z):
+                       resist_scale, thresholdType, thr_lmbda, is_stateful, j, j_td, z):
         #if tau_m > 0.:
         if is_stateful:
             ### run a step of integration over neuronal dynamics
@@ -197,7 +197,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             ## self.current <-- "bottom-up" data-dependent signal
             dfx_val = dfx(z)
             j = _modulate(j, dfx_val)
-            j = j * Rscale
+            j = j * resist_scale
             tmp_z = _run_cell(dt, j, j_td, z,
                               tau_m, leak_gamma=priorLeakRate,
                               integType=intgFlag, priorType=priorType)
@@ -236,6 +236,30 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF.set(zF) # rate-coded output - activity
         self.j_td.set(j_td) # top-down electrical current - pressure
         self.z.set(z) # rate activity
+
+    def save(self, directory, **kwargs):
+        ## do a protected save of constants, depending on whether they are floats or arrays
+        tau_m = (self.tau_m if isinstance(self.tau_m, float)
+                 else jnp.ones([[self.tau_m]]))
+        priorLeakRate = (self.priorLeakRate if isinstance(self.priorLeakRate, float)
+                         else jnp.ones([[self.priorLeakRate]]))
+        resist_scale = (self.resist_scale if isinstance(self.resist_scale, float)
+                        else jnp.ones([[self.resist_scale]]))
+
+        file_name = directory + "/" + self.name + ".npz"
+        jnp.savez(file_name,
+                  tau_m=tau_m, priorLeakRate=priorLeakRate,
+                  resist_scale=resist_scale) #, key=self.key.value)
+
+    def load(self, directory, seeded=False, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        ## constants loaded in
+        self.tau_m = data['tau_m']
+        self.priorLeakRate = data['priorLeakRate']
+        self.resist_scale = data['resist_scale']
+        #if seeded:
+        #    self.key.set(data['key'])
 
     @classmethod
     def help(cls): ## component help function
