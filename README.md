@@ -79,7 +79,7 @@ Python 3.11.4 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'1.2b2'
+'1.2b3'
 ```
 
 <i>Note:</i> For access to the previous Tensorflow-2 version of ngc-learn (of
@@ -126,7 +126,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-1.2.2-Beta <!-- -Alpha -->
+1.2.3-Beta <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>

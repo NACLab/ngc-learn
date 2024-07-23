@@ -9,7 +9,7 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
 
 ## rewritten code
-@partial(jit, static_argnums=[3, 4, 5])
+@partial(jit, static_argnums=[5])
 def _dfz_internal(z, j, j_td, tau_m, leak_gamma, prior_type=None): ## raw dynamics
     z_leak = z # * 2 ## Default: assume Gaussian
     if prior_type != None:
@@ -147,11 +147,15 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
                  threshold=("none", 0.), integration_type="euler",
-                 batch_size=1, resist_scale=1., shape=None, **kwargs):
+                 batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
+        self.is_stateful = is_stateful
+        if isinstance(tau_m, float):
+            if tau_m <= 0: ## trigger stateless mode
+                self.is_stateful = False
         priorType, leakRate = prior
         self.priorType = priorType ## type of scale-shift prior to impose over the leak
         self.priorLeakRate = leakRate ## degree to which rate neurons leak (according to prior)
@@ -184,8 +188,9 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     @staticmethod
     def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
-                       Rscale, thresholdType, thr_lmbda, j, j_td, z):
-        if tau_m > 0.:
+                       Rscale, thresholdType, thr_lmbda, is_stateful, j, j_td, z):
+        #if tau_m > 0.:
+        if is_stateful:
             ### run a step of integration over neuronal dynamics
             ## Notes:
             ## self.pressure <-- "top-down" expectation / contextual pressure
