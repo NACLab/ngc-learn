@@ -277,7 +277,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
         tols = _update_times(t, s, tols)
-        return v, s, raw_spikes, rfr, thr_theta, tols, key, surrogate
+        return jnp.maximum(v, v_rest), s, raw_spikes, rfr, thr_theta, tols, key, surrogate
 
     @resolver(_advance_state)
     def advance_state(self, v, s, s_raw, rfr, thr_theta, tols, key, surrogate):
