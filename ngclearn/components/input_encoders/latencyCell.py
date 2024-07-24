@@ -4,6 +4,7 @@ from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
 from functools import partial
+from ngcsimlib.logger import info
 
 @jit
 def _update_times(t, s, tols):
