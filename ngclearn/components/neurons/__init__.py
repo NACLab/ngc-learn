@@ -5,6 +5,7 @@ from .graded.laplacianErrorCell import LaplacianErrorCell
 from .graded.rewardErrorCell import RewardErrorCell
 ## point to standard spiking cell component types
 from .spiking.sLIFCell import SLIFCell
+from .spiking.IFCell import IFCell
 from .spiking.LIFCell import LIFCell
 from .spiking.WTASCell import WTASCell
 from .spiking.quadLIFCell import QuadLIFCell

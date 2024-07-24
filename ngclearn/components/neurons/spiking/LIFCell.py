@@ -116,12 +116,13 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         resist_m: membrane resistance value (Default: 1)
 
         thr: base value for adaptive thresholds that govern short-term
-            plasticity (in milliVolts, or mV)
+            plasticity (in milliVolts, or mV; default: -52. mV)
 
-        v_rest: membrane resting potential (in mV)
+        v_rest: membrane resting potential (in mV; default: -65 mV)
 
         v_reset: membrane reset potential (in mV) -- upon occurrence of a spike,
-            a neuronal cell's membrane potential will be set to this value
+            a neuronal cell's membrane potential will be set to this value;
+            (default: -60 mV)
 
         v_decay: decay factor applied to voltage leak (Default: 1.); setting this
             to 0 mV recovers pure integrate-and-fire (IF) dynamics
@@ -131,7 +132,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         theta_plus: physical increment to be applied to any threshold value if
             a spike was emitted
 
-        refract_time: relative refractory period time (ms; Default: 1 ms)
+        refract_time: relative refractory period time (ms; Default: 5 ms)
 
         one_spike: if True, a single-spike constraint will be enforced for
             every time step of neuronal dynamics simulated, i.e., at most, only
@@ -146,13 +147,26 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             :Note: setting the integration type to the midpoint method will
                 increase the accuray of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
+
+        surrgoate_type: type of surrogate function to use for approximating a
+            partial derivative of this cell's spikes w.r.t. its voltage/current
+            (default: "straight_through")
+
+            :Note: surrogate options available include: "straight_through"
+                (straight-through estimator), "triangular" (triangular estimator),
+                "arctan" (arc-tangent estimator), and "secant_lif" (the
+                LIF-specialized secant estimator)
+
+        lower_clamp_voltage: if True, this will ensure voltage never is below
+            the value of `v_rest` (default: True)
     """
 
     @deprecate_args(thr_jitter=None)
     def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
                  v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
                  refract_time=5., one_spike=False, integration_type="euler",
-                 surrgoate_type="straight_through", **kwargs):
+                 surrgoate_type="straight_through", lower_clamp_voltage=True,
+                 **kwargs):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -163,6 +177,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.tau_m = tau_m ## membrane time constant
         self.resist_m = resist_m ## resistance value
         self.one_spike = one_spike ## True => constrains system to simulate 1 spike per time step
+        self.lower_clamp_voltage = lower_clamp_voltage ## True ==> ensures voltage is never < v_rest
 
         self.v_rest = v_rest #-65. # mV
         self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
@@ -207,8 +222,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
     @staticmethod
     def _advance_state(t, dt, tau_m, resist_m, v_rest, v_reset, v_decay, refract_T,
-                       thr, tau_theta, theta_plus, one_spike, intgFlag, d_spike_fx,
-                       key, j, v, s, rfr, thr_theta, tols):
+                       thr, tau_theta, theta_plus, one_spike, lower_clamp_voltage,
+                       intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike:
             key, skey = random.split(key, 2)
@@ -223,7 +238,9 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
         tols = _update_times(t, s, tols)
-        return jnp.maximum(v, v_rest), s, raw_spikes, rfr, thr_theta, tols, key, surrogate
+        if lower_clamp_voltage: ## ensure voltage never < v_rest
+            v = jnp.maximum(v, v_rest)
+        return v, s, raw_spikes, rfr, thr_theta, tols, key, surrogate
 
     @resolver(_advance_state)
     def advance_state(self, v, s, s_raw, rfr, thr_theta, tols, key, surrogate):
@@ -317,6 +334,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
                 {"v": "Membrane potential/voltage at time t",
                  "rfr": "Current state of (relative) refractory variable",
                  "thr": "Current state of voltage threshold at time t",
+                 "thr_theta": "Current state of homeostatic adaptive threshold at time t",
                  "key": "JAX PRNG key"},
             "outputs":
                 {"s": "Emitted spikes/pulses at time t",
@@ -331,10 +349,17 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "v_reset": "Reset membrane potential value",
             "v_decay": "Voltage leak/decay factor",
             "tau_theta": "Threshold/homoestatic increment time constant",
-            "theta_plus": "Amount to increment threshold by upon occurrence of spike",
+            "theta_plus": "Amount to increment threshold by upon occurrence "
+                          "of spike",
             "refract_time": "Length of relative refractory period (ms)",
-            "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
-            "integration_type": "Type of numerical integration to use for the cell dynamics"
+            "one_spike": "Should only one spike be sampled/allowed to emit at "
+                         "any given time step?",
+            "integration_type": "Type of numerical integration to use for the "
+                                "cell dynamics",
+            "surrgoate_type": "Type of surrogate function to use approximate "
+                              "derivative of spike w.r.t. voltage/current",
+            "lower_bound_clamp": "Should voltage be lower bounded to be never "
+                                 "be below `v_rest`"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
