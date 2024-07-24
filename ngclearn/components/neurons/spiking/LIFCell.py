@@ -151,7 +151,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     @deprecate_args(thr_jitter=None)
     def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
                  v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
-                 refract_time=5., one_spike=False, integration_type="euler", **kwargs):
+                 refract_time=5., one_spike=False, integration_type="euler",
+                 surrgoate_type="straight_through", **kwargs):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -179,14 +180,13 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        surrgoate_type = "secant_lif"
         if surrgoate_type == "secant_lif":
             self.spike_fx, self.d_spike_fx = secant_lif_estimator()
         elif surrgoate_type == "arctan":
             self.spike_fx, self.d_spike_fx = arctan_estimator()
         elif surrgoate_type == "triangular":
             self.spike_fx, self.d_spike_fx = triangular_estimator()
-        else: ## default is the straight-through estimator (STE)
+        else: ## default: straight_through
             self.spike_fx, self.d_spike_fx = straight_through_estimator()
 
 
