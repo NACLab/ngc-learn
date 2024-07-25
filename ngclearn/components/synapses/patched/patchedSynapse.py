@@ -55,7 +55,7 @@ def create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_ini
 
 class PatchedSynapse(JaxComponent): ## base patched synaptic cable
     # Define Functions
-    def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), weight_init=None, bias_init=None,
+    def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), w_mask=None, weight_init=None, bias_init=None,
                  resist_scale=1., p_conn=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -75,6 +75,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         weights = create_multi_patch_synapses(key=subkeys, shape=shape, n_sub_models=self.n_sub_models, sub_stride=self.sub_stride,
                                               weight_init=self.weight_init)
 
+        self.w_mask = jnp.where(weights!=0, 1, 0)
         self.sub_shape = (shape[0]//n_sub_models, shape[1]//n_sub_models)
 
         self.shape = weights.shape
