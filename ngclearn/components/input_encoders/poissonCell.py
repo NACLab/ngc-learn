@@ -56,10 +56,13 @@ class PoissonCell(JaxComponent):
             random.uniform(subkey, (self.batch_size, self.n_units), minval=0.,
                            maxval=1.))
 
-    def validate(self, dt, **validation_kwargs):
-        ## check for unstable combinations of dt and target-frequency meta-params
+    def validate(self, dt=None, **validation_kwargs):
         valid = super().validate(**validation_kwargs)
-        events_per_timestep = (dt/1000.) * self.target_freq ## compute scaled probability
+        if dt is None:
+            warn(f"{self.name} requires a validation kwarg of `dt`")
+            return False
+        ## check for unstable combinations of dt and target-frequency meta-params
+        events_per_timestep = (dt / 1000.) * self.target_freq  ## compute scaled probability
         if events_per_timestep > 1.:
             valid = False
             warn(

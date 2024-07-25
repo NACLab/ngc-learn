@@ -101,9 +101,12 @@ class BernoulliCell(JaxComponent):
         self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
 
-    def validate(self, dt, **validation_kwargs):
-        ## check for unstable combinations of dt and target-frequency meta-params
+    def validate(self, dt=None, **validation_kwargs):
         valid = super().validate(**validation_kwargs)
+        if dt is None:
+            warn(f"{self.name} requires a validation kwarg of `dt`")
+            return False
+        ## check for unstable combinations of dt and target-frequency meta-params
         events_per_timestep = (dt/1000.) * self.target_freq ## compute scaled probability
         if events_per_timestep > 1.:
             valid = False
