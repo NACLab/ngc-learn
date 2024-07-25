@@ -6,6 +6,7 @@ from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
 from .neurons.graded.rewardErrorCell import RewardErrorCell
 ## point to standard spiking cell component types
 from .neurons.spiking.sLIFCell import SLIFCell
+from .neurons.spiking.IFCell import IFCell
 from .neurons.spiking.LIFCell import LIFCell
 from .neurons.spiking.WTASCell import WTASCell
 from .neurons.spiking.quadLIFCell import QuadLIFCell
