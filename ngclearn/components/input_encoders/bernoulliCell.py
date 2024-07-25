@@ -24,49 +24,10 @@ def _update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
-@jit
-def _sample_bernoulli(dkey, data):
-    """
-    Samples a Bernoulli spike train on-the-fly
-
-    Args:
-        dkey: JAX key to drive stochasticity/noise
-
-        data: sensory data (vector/matrix)
-
-    Returns:
-        binary spikes
-    """
-    s_t = random.bernoulli(dkey, p=data).astype(jnp.float32)
-    return s_t
-
-@partial(jit, static_argnums=[3])
-def _sample_constrained_bernoulli(dkey, data, dt, fmax=63.75):
-    """
-    Samples a Bernoulli spike train on-the-fly that is constrained to emit
-    at a particular rate over a time window.
-
-    Args:
-        dkey: JAX key to drive stochasticity/noise
-
-        data: sensory data (vector/matrix)
-
-        dt: integration time constant
-
-        fmax: maximum frequency (Hz)
-
-    Returns:
-        binary spikes
-    """
-    pspike = data * (dt/1000.) * fmax
-    eps = random.uniform(dkey, data.shape, minval=0., maxval=1., dtype=jnp.float32)
-    s_t = (eps < pspike).astype(jnp.float32)
-    return s_t
-
 class BernoulliCell(JaxComponent):
     """
-    A Bernoulli cell that produces variations of Bernoulli-distributed spikes
-    on-the-fly (including constrained-rate trains).
+    A Bernoulli cell that produces spikes by sampling a Bernoulli distribution
+    on-the-fly (to produce data-scaled Bernoulli spike trains).
 
     | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
@@ -80,16 +41,10 @@ class BernoulliCell(JaxComponent):
         name: the string name of this cell
 
         n_units: number of cellular entities (neural population size)
-
-        target_freq: maximum frequency (in Hertz) of this Bernoulli spike train (must be > 0.)
     """
 
-    @deprecate_args(max_freq="target_freq")
-    def __init__(self, name, n_units, target_freq=0., batch_size=1, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
-
-        ## Constrained Bernoulli meta-parameters
-        self.target_freq = target_freq  ## maximum frequency (in Hertz/Hz)
 
         ## Layer Size Setup
         self.batch_size = batch_size
@@ -101,32 +56,10 @@ class BernoulliCell(JaxComponent):
         self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
 
-    def validate(self, dt=None, **validation_kwargs):
-        valid = super().validate(**validation_kwargs)
-        if dt is None:
-            warn(f"{self.name} requires a validation kwarg of `dt`")
-            return False
-        ## check for unstable combinations of dt and target-frequency meta-params
-        events_per_timestep = (dt/1000.) * self.target_freq ## compute scaled probability
-        if events_per_timestep > 1.:
-            valid = False
-            warn(
-                f"{self.name} will be unable to make as many temporal events as "
-                f"requested! ({events_per_timestep} events/timestep) Unstable "
-                f"combination of dt = {dt} and target_freq = {self.target_freq} "
-                f"being used!"
-            )
-        return valid
-
     @staticmethod
-    def _advance_state(t, dt, target_freq, key, inputs, tols):
+    def _advance_state(t, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
-        if target_freq > 0.:
-            outputs = _sample_constrained_bernoulli( ## sample Bernoulli w/ target rate
-                subkeys[0], data=inputs, dt=dt, fmax=target_freq
-            )
-        else:
-            outputs = _sample_bernoulli(subkeys[0], data=inputs)
+        outputs = random.bernoulli(subkeys[0], p=inputs).astype(jnp.float32)
         tols = _update_times(t, outputs, tols)
         return outputs, tols, key
 

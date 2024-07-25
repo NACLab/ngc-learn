@@ -1,15 +1,33 @@
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, random, jit
 from ngclearn.utils import tensorstats
-from jax import numpy as jnp, random, jit, scipy
 from functools import partial
 from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 
+@jit
+def _update_times(t, s, tols):
+    """
+    Updates time-of-last-spike (tols) variable.
+
+    Args:
+        t: current time (a scalar/int value)
+
+        s: binary spike vector
+
+        tols: current time-of-last-spike variable
+
+    Returns:
+        updated tols variable
+    """
+    _tols = (1. - s) * tols + (s * t)
+    return _tols
+
 class PoissonCell(JaxComponent):
     """
-    A Poisson cell that produces approximately Poisson-distributed spikes
-    on-the-fly.
+    A Poisson cell that samples a homogeneous Poisson process on-the-fly to
+    produce a spike train.
 
     | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
@@ -24,37 +42,25 @@ class PoissonCell(JaxComponent):
 
         n_units: number of cellular entities (neural population size)
 
-        max_freq: maximum frequency (in Hertz) of this Poisson spike train (
-        must be > 0.)
+        target_freq: maximum frequency (in Hertz) of this Bernoulli spike train (must be > 0.)
     """
 
-    # Define Functions
     @deprecate_args(max_freq="target_freq")
-    def __init__(self, name, n_units, target_freq=63.75, batch_size=1,
-                 **kwargs):
+    def __init__(self, name, n_units, target_freq=0., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
-        ## Poisson meta-parameters
+        ## Constrained Bernoulli meta-parameters
         self.target_freq = target_freq  ## maximum frequency (in Hertz/Hz)
 
         ## Layer Size Setup
         self.batch_size = batch_size
         self.n_units = n_units
 
-        _key, subkey = random.split(self.key.value, 2)
-        self.key.set(_key)
-        ## Compartment setup
+        # Compartments (state of the cell, parameters, will be updated through stateless calls)
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.inputs = Compartment(restVals,
-                                  display_name="Input Stimulus")  # input
-        # compartment
-        self.outputs = Compartment(restVals,
-                                   display_name="Spikes")  # output compartment
-        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
-                                units="ms")  # time of last spike
-        self.targets = Compartment(
-            random.uniform(subkey, (self.batch_size, self.n_units), minval=0.,
-                           maxval=1.))
+        self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
+        self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
 
     def validate(self, dt=None, **validation_kwargs):
         valid = super().validate(**validation_kwargs)
@@ -62,7 +68,7 @@ class PoissonCell(JaxComponent):
             warn(f"{self.name} requires a validation kwarg of `dt`")
             return False
         ## check for unstable combinations of dt and target-frequency meta-params
-        events_per_timestep = (dt / 1000.) * self.target_freq  ## compute scaled probability
+        events_per_timestep = (dt/1000.) * self.target_freq ## compute scaled probability
         if events_per_timestep > 1.:
             valid = False
             warn(
@@ -74,54 +80,43 @@ class PoissonCell(JaxComponent):
         return valid
 
     @staticmethod
-    def _advance_state(t, dt, target_freq, key, inputs, targets, tols):
-        ms_per_second = 1000  # ms/s
-        events_per_ms = target_freq / ms_per_second  # e/s s/ms -> e/ms
-        ms_per_event = 1 / events_per_ms  # ms/e
-        time_step_per_event = ms_per_event / dt  # ms/e * ts/ms -> ts / e
-
-        cdf = scipy.special.gammaincc((t + dt) - tols,
-                                      time_step_per_event/inputs)
-        outputs = (targets < cdf).astype(jnp.float32)
-
-        key, subkey = random.split(key, 2)
-        targets = (targets * (1 - outputs) + random.uniform(subkey,
-                                                           targets.shape) *
-                   outputs)
-
-        tols = tols * (1. - outputs) + t * outputs
-        return outputs, tols, key, targets
+    def _advance_state(t, dt, target_freq, key, inputs, tols):
+        key, *subkeys = random.split(key, 2)
+        pspike = inputs * (dt / 1000.) * target_freq
+        eps = random.uniform(subkeys[0], inputs.shape, minval=0., maxval=1.,
+                             dtype=jnp.float32)
+        outputs = (eps < pspike).astype(jnp.float32)
+        tols = _update_times(t, outputs, tols)
+        return outputs, tols, key
 
     @resolver(_advance_state)
-    def advance_state(self, outputs, tols, key, targets):
+    def advance_state(self, outputs, tols, key):
         self.outputs.set(outputs)
         self.tols.set(tols)
         self.key.set(key)
-        self.targets.set(targets)
 
     @staticmethod
-    def _reset(batch_size, n_units, key):
+    def _reset(batch_size, n_units):
         restVals = jnp.zeros((batch_size, n_units))
-        key, subkey = random.split(key, 2)
-        targets = random.uniform(subkey, (batch_size, n_units))
-        return restVals, restVals, restVals, targets, key
+        return restVals, restVals, restVals
 
     @resolver(_reset)
-    def reset(self, inputs, outputs, tols, targets, key):
+    def reset(self, inputs, outputs, tols):
         self.inputs.set(inputs)
-        self.outputs.set(outputs)
+        self.outputs.set(outputs) #None
         self.tols.set(tols)
-        self.key.set(key)
-        self.targets.set(targets)
 
     def save(self, directory, **kwargs):
+        target_freq = (self.target_freq if isinstance(self.target_freq, float)
+                       else jnp.ones([[self.target_freq]]))
         file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
+        jnp.savez(file_name, key=self.key.value, target_freq=target_freq)
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.key.set(data['key'])
+        self.target_freq = data['target_freq']
 
     @classmethod
     def help(cls):  ## component help function
