@@ -84,7 +84,7 @@ class BernoulliCell(JaxComponent):
         target_freq: maximum frequency (in Hertz) of this Bernoulli spike train (must be > 0.)
     """
 
-    @deprecate_args(target_freq="max_freq")
+    @deprecate_args(max_freq="target_freq")
     def __init__(self, name, n_units, target_freq=63.75, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 

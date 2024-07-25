@@ -4,7 +4,7 @@ from ngclearn.utils import tensorstats
 from jax import numpy as jnp, random, jit, scipy
 from functools import partial
 from ngcsimlib.deprecators import deprecate_args
-
+from ngcsimlib.logger import info, warn
 
 class PoissonCell(JaxComponent):
     """
@@ -29,7 +29,7 @@ class PoissonCell(JaxComponent):
     """
 
     # Define Functions
-    @deprecate_args(target_freq="max_freq")
+    @deprecate_args(max_freq="target_freq")
     def __init__(self, name, n_units, target_freq=63.75, batch_size=1,
                  **kwargs):
         super().__init__(name, **kwargs)
@@ -55,6 +55,20 @@ class PoissonCell(JaxComponent):
         self.targets = Compartment(
             random.uniform(subkey, (self.batch_size, self.n_units), minval=0.,
                            maxval=1.))
+
+    def validate(self, dt, **validation_kwargs):
+        ## check for unstable combinations of dt and target-frequency meta-params
+        valid = super().validate(**validation_kwargs)
+        events_per_timestep = (dt/1000.) * self.target_freq ## compute scaled probability
+        if events_per_timestep > 1.:
+            valid = False
+            warn(
+                f"{self.name} will be unable to make as many temporal events as "
+                f"requested! ({events_per_timestep} events/timestep) Unstable "
+                f"combination of dt = {dt} and target_freq = {self.target_freq} "
+                f"being used!"
+            )
+        return valid
 
     @staticmethod
     def _advance_state(t, dt, target_freq, key, inputs, targets, tols):
