@@ -8,7 +8,9 @@ import numpy as np
 import imageio.v3 as iio
 import jax.numpy as jnp
 
-def visualize(thetas, sizes, prefix, suffix='.jpg'):
+
+
+def visualize(thetas, sizes, prefix, order=None, suffix='.jpg'):
     """
 
     Args:
@@ -20,6 +22,11 @@ def visualize(thetas, sizes, prefix, suffix='.jpg'):
 
         suffix:
     """
+
+
+    if order is None:
+        order = ['C' for _ in range(len(thetas))]
+
     Ts = [t.T for t in thetas] # [tf.transpose(t) for t in thetas]
     num_filters = [T.shape[0] for T in Ts]
     n_cols = [math.ceil(math.sqrt(nf)) for nf in num_filters]
@@ -46,13 +53,14 @@ def visualize(thetas, sizes, prefix, suffix='.jpg'):
             point = start + 1 + i + (r * extra)
             plt.subplot(n_rows_total, n_cols_total, point)
             filter = T[i, :]
-            plt.imshow(np.reshape(filter, (sizes[idx][0], sizes[idx][1])), cmap=plt.cm.bone, interpolation='nearest')
+            plt.imshow(np.reshape(filter, (sizes[idx][0], sizes[idx][1]), order=order[idx]), cmap=plt.cm.bone, interpolation='nearest')
             plt.axis("off")
 
     plt.subplots_adjust(top=0.9)
     plt.savefig(prefix+suffix, bbox_inches='tight')
     plt.clf()
     plt.close()
+
 
 def visualize_labels(thetas, sizes, prefix, space_width=None, widths=None, suffix='.jpg'):
     """
