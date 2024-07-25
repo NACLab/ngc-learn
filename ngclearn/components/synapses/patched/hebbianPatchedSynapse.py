@@ -6,8 +6,8 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import PatchedSynapse
 from ngclearn.utils import tensorstats
 
-@partial(jit, static_argnums=[3, 4, 5, 6, 7, 8])
-def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
+@partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
+def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
                  pre_wght=1., post_wght=1.):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
@@ -43,10 +43,14 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay
         dW = dW * (w_bound - jnp.abs(W))
     if w_decay > 0.:
         dW = dW - W * w_decay
-    return dW * jnp.where(0 != jnp.abs(W), 1, 0) * signVal, db * signVal
 
-@partial(jit, static_argnums=[1,2])
-def _enforce_constraints(W, w_bound, is_nonnegative=True):
+    if w_mask!=None:
+        dW = dW * w_mask
+
+    return dW * signVal, db * signVal
+
+@partial(jit, static_argnums=[1,2, 3])
+def _enforce_constraints(W, w_mask, w_bound, is_nonnegative=True):
     """
     Enforces constraints that the (synaptic) efficacies/values within matrix
     `W` must adhere to.
@@ -67,6 +71,10 @@ def _enforce_constraints(W, w_bound, is_nonnegative=True):
             _W = jnp.clip(_W, 0., w_bound)
         else:
             _W = jnp.clip(_W, -w_bound, w_bound)
+
+    if w_mask!=None:
+        _W = _W * w_mask
+
     return _W
 
 class HebbianPatchedSynapse(PatchedSynapse):
@@ -138,16 +146,16 @@ class HebbianPatchedSynapse(PatchedSynapse):
     """
 
     def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
-                 w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
+                 w_mask=None, w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
                  resist_scale=1., batch_size=1, **kwargs):
-        super().__init__(name, shape, n_sub_models, stride_shape, weight_init, bias_init, resist_scale,
+        super().__init__(name, shape, n_sub_models, stride_shape, w_mask, weight_init, bias_init, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
 
         self.n_sub_models = n_sub_models
         self.sub_stride = stride_shape
 
-        self.shape = (shape[0] + (2*stride_shape[0]),
+        self.shape = (shape[0] + (2 * stride_shape[0]),
                       shape[1] + (2 * stride_shape[1]))
         self.sub_shape = (shape[0]//n_sub_models + (2 * stride_shape[0]),
                           shape[1]//n_sub_models + (2*  stride_shape[1]))
@@ -170,6 +178,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         self.postVals = jnp.zeros((self.batch_size, self.shape[1]))
         self.pre = Compartment(self.preVals)
         self.post = Compartment(self.postVals)
+        self.w_mask = w_mask
         self.dWeights = Compartment(jnp.zeros(self.shape))
         self.dBiases = Compartment(jnp.zeros(self.shape[1]))
 
@@ -179,23 +188,23 @@ class HebbianPatchedSynapse(PatchedSynapse):
             if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _compute_update(w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _compute_update(w_mask, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
                         post_wght, pre, post, weights):
         ## calculate synaptic update values
         dW, db = _calc_update(
-            pre, post, weights, w_bound, is_nonnegative=is_nonnegative,
+            pre, post, weights, w_mask, w_bound, is_nonnegative=is_nonnegative,
             signVal=sign_value, w_decay=w_decay, pre_wght=pre_wght,
             post_wght=post_wght)
 
         return dW  * jnp.where(0 != jnp.abs(weights), 1, 0) , db
 
     @staticmethod
-    def _evolve(opt, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _evolve(w_mask, opt, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dWeights, dBiases = HebbianPatchedSynapse._compute_update(
-            w_bound, is_nonnegative, sign_value, w_decay, pre_wght, post_wght,
-            pre, post, weights
+            w_mask, w_bound, is_nonnegative, sign_value, w_decay,
+            pre_wght, post_wght, pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if bias_init != None:
@@ -204,7 +213,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
             # ignore db since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = _enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
+        weights = _enforce_constraints(weights, w_mask, w_bound, is_nonnegative=is_nonnegative)
         return opt_params, weights, biases, dWeights, dBiases
 
     @resolver(_evolve)
