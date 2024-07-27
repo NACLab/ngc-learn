@@ -307,7 +307,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     def load(self, directory, seeded=False, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
-        self.thr_theta.set(data['thr_theta'])
+        self.thr_theta.set(data['threshold_theta'])
         ## constants loaded in
         self.tau_m = data['tau_m']
         self.thr = data['thr']
