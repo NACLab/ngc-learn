@@ -79,6 +79,8 @@ def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1.):
             classes.
 
         plot_fname: /path/to/plot_fname.<suffix> for saving the plot to disk
+
+        alpha:
     """
     curr_backend = plt.rcParams["backend"]
     matplotlib.use('Agg') ## temporarily go in Agg plt backend for tsne plotting
@@ -91,7 +93,9 @@ def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1.):
         lab = np.argmax(lab, 1)
     plt.figure(figsize=(8, 6))
     plt.scatter(code_vectors[:, 0], code_vectors[:, 1], c=lab, cmap=cmap, alpha=alpha)
-    plt.colorbar()
+    colorbar = plt.colorbar()
+    colorbar.set_alpha(1)
+    #plt.draw_all()
     plt.grid()
     plt.savefig("{0}".format(plot_fname), dpi=300)
     plt.clf()
