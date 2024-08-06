@@ -21,6 +21,7 @@ from ngclearn.components.synapses.modulated.eligibilityTrace import EligibilityT
 from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
 from .input_encoders.latencyCell import LatencyCell
+from .input_encoders.phasorCell import PhasorCell
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse

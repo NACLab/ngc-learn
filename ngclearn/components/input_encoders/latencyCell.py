@@ -48,7 +48,7 @@ def _calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
         projected spike times
     """
     _tau = tau
-    if normalize == True:
+    if normalize:
         _tau = num_steps - 1. - first_spk_t ## linear normalization
     #torch.clamp_max((-tau * (data - 1)), -tau * (threshold - 1))
     stimes = -_tau * (data - 1.) ## calc raw latency code values
@@ -85,7 +85,7 @@ def _calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
     stimes = jnp.log(_data / (_data - thr)) * tau ## calc spike times
     stimes = stimes + first_spk_t
 
-    if normalize == True:
+    if normalize:
         term1 = (stimes - first_spk_t)
         term2 = (num_steps - first_spk_t - 1.)
         term3 = jnp.max(stimes - first_spk_t)
