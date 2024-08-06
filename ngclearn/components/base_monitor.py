@@ -310,4 +310,4 @@ class Base_Monitor(Component):
             for k in range(n):
                 _ax.plot(vals[:, 0, k])
         else:
-            plot_func(vals, ax=_ax)
+            plot_func(vals[:, :, 0:n], ax=_ax)

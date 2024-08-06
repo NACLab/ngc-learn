@@ -94,7 +94,7 @@ def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1.):
     plt.figure(figsize=(8, 6))
     plt.scatter(code_vectors[:, 0], code_vectors[:, 1], c=lab, cmap=cmap, alpha=alpha)
     colorbar = plt.colorbar()
-    colorbar.set_alpha(1)
+    #colorbar.set_alpha(1)
     #plt.draw_all()
     plt.grid()
     plt.savefig("{0}".format(plot_fname), dpi=300)

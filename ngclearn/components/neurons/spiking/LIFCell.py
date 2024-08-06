@@ -72,7 +72,7 @@ def _run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
     ############################################################################
     return _v, s, raw_s, _rfr
 
-@partial(jit, static_argnums=[3, 4])
+#@partial(jit, static_argnums=[3, 4])
 def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     ### Runs homeostatic threshold update dynamics one step (via Euler integration).
     #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
