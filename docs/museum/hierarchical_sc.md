@@ -73,7 +73,7 @@ to the following differential equation for each layer $ℓ$:
          \arrow[red, bend left, -stealth]{r}[black]{+\epsilon^{0}}
          & r^{0}
     \end{tikzcd}
-\end{equation*}
+\end{equation*}```
 
 
 
