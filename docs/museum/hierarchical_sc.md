@@ -16,11 +16,10 @@ After going through this demonstration, you will:
     and apply gaussian filter to natural images.
 
 <p align="justify">
-The model code for this exhibit can be found
-[here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
-Note: You will need to unzip the data arrays in `natural_image.zip` 
-to the folder `exhibits/data/` to work through this exhibit.
+The model code for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
+
+**Note**: You will need to unzip the data arrays in `natural_image.zip` to the folder `exhibits/data/` to work through this exhibit.
 
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
 </p>
