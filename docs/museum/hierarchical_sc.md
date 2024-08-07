@@ -1,63 +1,46 @@
-# Hierarchical Sparse Coding with Predictive Coding
+# Hierarchical Predictive Coding
 
 In this exhibit, we create, simulate, and visualize the
 internally acquired filters/atoms of variants of a sparse coding system based
-on the classical model proposed by (Rao and Ballard, 1999) [1].
+on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
 After going through this demonstration, you will:
 
-1.  Learn how to build a 2-layer sparse coding model of natural image patterns,
-using the original dataset used in [1].
-2.  Visualize the acquired filters of the learned dictionary models and examine
-the results of imposing a kurtotic prior as well as a thresholding function
-over latent codes.
+1.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
+    using the original dataset used in [1].
+    
+2.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
+    in a hierarchical encoding model and examine
+    the results of imposing a cauchy prior over latent codes.
+3.  Learn how to 
+4.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
+    and apply gaussian filter to natural images.
 
-The model code for this
-exhibit can be found
-[here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/olshausen_sc).
 
-Note: You will need to unzip the data arrays in `exhibits/data/natural_scenes.zip` 
+
+The model code for this exhibit can be found
+[here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
+
+Note: You will need to unzip the data arrays in `natural_2.zip` 
 to the folder `exhibits/data/` to work through this exhibit.
 
 ## On Dictionary Learning
 
-Dictionary learning poses a very interesting question for statistical learning:
-can we extract "feature detectors" from a given database (or collection of patterns)
-such that only a few of these detectors play a role in reconstructing any given,
-original pattern/data point?
-The aim of dictionary learning is to acquire or learn a matrix, also called the
-"dictionary", which is meant to contain "atoms" or basic elements inside this dictionary
-(such as simple fundamental features such as the basic strokes/curves/edges
-that compose handwritten digits or characters). Several atoms (or rows of this
-matrix) inside the dictionary can then be linearly combined to reconstruct a
-given input signal or pattern. A sparse dictionary model is able to reconstruct
-input patterns with as few of these atoms as possible. Typical sparse dictionary
-or coding models work with an over-complete spanning set, or, in other words,
-a latent dimensionality (which one could think of as the number of neurons
-in a single latent state node of an ngc-learn system) that is greater than the
-dimensionality of the input itself.
+Refer to [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
 
-From a neurobiological standpoint, sparse coding emulates a fundamental property
-of neural populations -- the activities among a neural population are sparse where,
-within a period of time, the number of total active neurons (those that are firing)
-is smaller than the total number of neurons in the population itself. When sensory
-inputs are encoded within this population, different subsets (which might overlap) of
-neurons activate to represent different inputs (one way to view this is that they
-"fight" or compete for the right to activate in response to different stimuli).
-Classically, it was shown in <b>[1]</b> that a sparse coding model trained on natural
-image patches learned within its dictionary non-orthogonal filters that resembled
-receptive fields of simple-cells (found in the visual cortex).
 
-## Constructing a Sparse Coding System
+## Constructing a Hierarchical Predictive Coding System
 
-To build a sparse coding model, we can manually craft a model using ngc-learn's 
+To build a hierarchical model, we can manually craft a model using ngc-learn's 
 nodes-and-cables system. First, we specify the underlying generative model we 
-aim to emulate. Formally, we seek to optimize a set of latent codes according 
+aim to emulate. Formally, we seek to optimize sets of latent codes according 
 to the following differential equation:
 
 $$
-\tau_m \frac{\partial \mathbf{z}_t}{\partial t} = 
-\big(\mathbf{W}^T \cdot \mathbf{e}(t) \big) + \lambda \Omega\big(\mathbf{z}(t)\big)
+\tau_m \frac{\partial \mathbf{z^l}_t}{\partial t} = 
+\big(\mathbf{W^l}^T \cdot \mathbf{e^l}(t) \big) + \lambda \Omega\big(\mathbf{z^l}(t)\big)
 $$
+
+
 
 where $\tau_m$ is the latent code time constant and the error neurons $\mathbf{e}(t)$ 
 at the sensory input layer made at time $t$ are specified as: 
