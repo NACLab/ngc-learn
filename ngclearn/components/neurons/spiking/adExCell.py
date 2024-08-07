@@ -2,6 +2,7 @@ from jax import numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
@@ -134,7 +135,7 @@ class AdExCell(JaxComponent):
                 at an increase in computational cost (and simulation time)
     """
 
-    # Define Functions
+    @deprecate_args(v_thr="thr")
     def __init__(self, name, n_units, tau_m=15., resist_m=1., tau_w=400.,
                  v_sharpness=2., intrinsic_mem_thr=-55., thr=5., v_rest=-72.,
                  v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0.,
