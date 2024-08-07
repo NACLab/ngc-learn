@@ -36,7 +36,7 @@ to the following differential equation:
 
 $$
 \tau_m \frac{\partial \mathbf{z^l}_t}{\partial t} = 
-\big(\mathbf{W^l}^T \cdot \mathbf{e^l}(t) \big) + \lambda \Omega\big(\mathbf{z^l}(t)\big)
+\big((\mathbf{W}^ℓ)^T \cdot \mathbf{e^l}(t) \big) + \lambda \Omega\big(\mathbf{z^l}(t)\big)
 $$
 
 where $\tau_m$ is the latent code time constant and the error neurons $\mathbf{e}(t)$ 
