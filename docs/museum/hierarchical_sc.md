@@ -18,7 +18,7 @@ After going through this demonstration, you will:
 The model code for this exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
-Note: You will need to unzip the data arrays in `natural_2.zip` 
+Note: You will need to unzip the data arrays in `natural_image.zip` 
 to the folder `exhibits/data/` to work through this exhibit.
 
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
@@ -35,8 +35,6 @@ $$
 \tau_m \frac{\partial \mathbf{z^l}_t}{\partial t} = 
 \big(\mathbf{W^l}^T \cdot \mathbf{e^l}(t) \big) + \lambda \Omega\big(\mathbf{z^l}(t)\big)
 $$
-
-
 
 where $\tau_m$ is the latent code time constant and the error neurons $\mathbf{e}(t)$ 
 at the sensory input layer made at time $t$ are specified as: 
