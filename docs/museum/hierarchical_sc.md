@@ -16,7 +16,7 @@ After going through this demonstration, you will:
 
 <p align="justify">
 
-The model code for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
+The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
 **Note**: You will need to unzip the data arrays in `natural_image.zip` to the folder `exhibits/data/` to work through this exhibit.
 
