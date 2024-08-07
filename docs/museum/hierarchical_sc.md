@@ -26,8 +26,9 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 </p>
 
 
-
 ## Constructing a Hierarchical Predictive Coding System
+
+![Equation](path/to/your/image/equation.png)
 
 To build a hierarchical model, we can manually craft a model using ngc-learn's 
 nodes-and-cables system. First, we specify the underlying generative model we 
@@ -35,48 +36,9 @@ aim to emulate. Formally, we seek to optimize sets of latent codes according
 to the following differential equation for each layer $ℓ$:
 
 
-
-<script type="text/javascript" async
-  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
-</script>
-
-```latex
-\begin{equation*}
-    %---------------
-    \begin{tikzcd}
-    r^L \arrow[out=120,in=240, red, loop, swap, "\hat{0}"{black}]
-    \end{tikzcd}
-        \stackrel{\stackrel{\scalebox{0.7}{$f$}}{\longdownarrow{red!40!}{\downarrow}}}{ {\color{lightgray}{(.)}} }
-        \xleftrightarrow{\hspace{1em} \textit{U}^L \hspace{1em} } 
-    %---------------
-    \begin{tikzcd}
-         \mu^{L-1}
-         \arrow[red, bend right, stealth-]{r}[black,swap]{-\epsilon^{L-1}} 
-         \arrow[red, bend left, -stealth]{r}[black]{+\epsilon^{L-1}}
-         & r^{L-1}
-    \end{tikzcd}
-       \stackrel{\stackrel{\scalebox{0.7}{$f$}}{\longdownarrow{red!40!}{\downarrow}}}{ {\color{lightgray}{(.)}} }
-        \leftrightarrow \quad ... \quad \leftrightarrow 
-    %---------------
-    \begin{tikzcd}
-         \mu^{1}
-         \arrow[red, bend right, stealth-]{r}[black,swap]{-\epsilon^{1}} 
-         \arrow[red, bend left, -stealth]{r}[black]{+\epsilon^{1}}
-         & r^{1}
-    \end{tikzcd}
-       \stackrel{\stackrel{\scalebox{0.7}{$f$}}{\longdownarrow{red!40!}{\downarrow}}}{ {\color{lightgray}{(.)}} }
-        \xleftrightarrow{\hspace{1em}  \textit{U}^{1} \hspace{1em} }
-    %---------------
-    \begin{tikzcd}
-         \mu^{0}
-         \arrow[red, bend right, stealth-]{r}[black,swap]{-\epsilon^{0}} 
-         \arrow[red, bend left, -stealth]{r}[black]{+\epsilon^{0}}
-         & r^{0}
-    \end{tikzcd}
-\end{equation*}```
-
-
-
+$$
+\frac{d\mathbf{r}}{dt} = -\frac{k_1}{2}\frac{\partial E}{\partial \mathbf{r}} = \frac{k_1}{\sigma^2} \mathbf{U}^T \frac{\partial f^T}{\partial \mathbf{x}} (\mathbf{I} - f(\mathbf{U}\mathbf{r})) + \frac{k_1}{\sigma_{td}^2}(\mathbf{r}^{td} - \mathbf{r}) - \frac{k_1}{2} g'(\mathbf{r})
+$$
 
 
 
