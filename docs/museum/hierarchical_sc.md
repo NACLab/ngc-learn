@@ -5,7 +5,8 @@ In this exhibit, we create, simulate, and visualize the
 internally acquired filters/atoms of variants of a sparse coding system based
 on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
 After going through this demonstration, you will:
-    
+</p>
+
 **1**.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
     using the original dataset used in [1].
 **2**.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
@@ -14,14 +15,19 @@ After going through this demonstration, you will:
 **3**.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
     and apply gaussian filter to natural images.
 
-
+<p align="justify">
 The model code for this exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
+</p>
 
+<p align="justify">
 Note: You will need to unzip the data arrays in `natural_image.zip` 
 to the folder `exhibits/data/` to work through this exhibit.
+</p>
 
+<p align="justify">
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
+</p>
 
 
 
@@ -241,8 +247,9 @@ a functional interpretation of some extra-classical receptive-field effects.
 Nature neuroscience, 2(1), 1999.<br>
 
 
-
 <!-- footnotes -->
+
+<p align="justify">
 [^1]: Ultimately, the sparse coding training process consists of the following 
 steps: <i>1)</i> sample a random image from the image design matrix inside of 
 the in-built ngc-learn `DataLoader`, <i>2)</i> generate a number of patches equal 
@@ -250,5 +257,4 @@ to `num_patches = 250` (which we have also hard-coded into `train_patch_sc.py`),
 and <i>3)</i> feed this mini-batch of image patches to the sparse coding model to 
 facilitate an expectation-maximization (E-M) step, where we take `T=300` E-steps 
 followed by one single M-step and a norm constraint application.
-
 </p>
