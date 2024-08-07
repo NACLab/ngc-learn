@@ -7,7 +7,7 @@ on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical p
 After going through this demonstration, you will:
 </p>
 
-1.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
+1.  Learn how to build a 3-layer hierarchical sparse coding model of natural image patterns,
     using the original dataset used in [1].
 2.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
     in a hierarchical encoding model and examine the results of imposing a cauchy prior over latent codes.
@@ -32,10 +32,11 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 To build a hierarchical model, we can manually craft a model using ngc-learn's 
 nodes-and-cables system. First, we specify the underlying generative model we 
 aim to emulate. Formally, we seek to optimize sets of latent codes according 
-to the following differential equation:
+to the following differential equation for each layer $ℓ$:
 
+<!---
 $$
-\tau_m \frac{\partial \mathbf{z^ℓ}_t}{\partial t} = 
+\tau_m \frac{\partial \mathbf{r^ℓ}_t}{\partial t} = 
 \big((\mathbf{W}^ℓ)^T \cdot \mathbf{e^ℓ}(t) \big) + \lambda \Omega\big(\mathbf{z^ℓ}(t)\big)
 $$
 
@@ -45,6 +46,7 @@ at the sensory input layer made at time $t$ are specified as:
 $$
 \mathbf{e}(t) = -\big(\mathbf{{\mu}}(t) - (\mathbf{W^ℓ} \cdot \mathbf{z}(t)) \big)
 $$
+---!>
 
 where we see that we aim to learn a two-layer generative system that specifically
 imposes a prior distribution `p(z)` over the latent feature detectors (via the 
