@@ -112,7 +112,7 @@ class AdExCell(JaxComponent):
 
         intrinsic_mem_thr: intrinsic membrane threshold (Default: -55 mV)
 
-        v_thr: voltage/membrane threshold (to obtain action potentials in terms
+        thr: voltage/membrane threshold (to obtain action potentials in terms
             of binary spikes) (Default: 5 mV)
 
         v_rest: membrane resting potential (Default: -72 mV)
@@ -136,7 +136,7 @@ class AdExCell(JaxComponent):
 
     # Define Functions
     def __init__(self, name, n_units, tau_m=15., resist_m=1., tau_w=400.,
-                 v_sharpness=2., intrinsic_mem_thr=-55., v_thr=5., v_rest=-72.,
+                 v_sharpness=2., intrinsic_mem_thr=-55., thr=5., v_rest=-72.,
                  v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0.,
                  integration_type="euler", batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
@@ -158,7 +158,7 @@ class AdExCell(JaxComponent):
 
         self.v0 = v0 ## initial membrane potential/voltage condition
         self.w0 = w0 ## initial w-parameter condition
-        self.v_thr = v_thr
+        self.thr = thr
 
         ## Layer Size Setup
         self.batch_size = batch_size
@@ -174,9 +174,9 @@ class AdExCell(JaxComponent):
                                 units="ms") ## time-of-last-spike
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, tau_w, v_thr, a, b, sharpV, vT,
+    def _advance_state(t, dt, tau_m, R_m, tau_w, thr, a, b, sharpV, vT,
                      v_rest, v_reset, intgFlag, j, v, w, tols):
-        v, w, s = _run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
+        v, w, s = _run_cell(dt, j, v, w, thr, tau_m, tau_w, a, b, sharpV, vT,
                             v_rest, v_reset, R_m, intgFlag)
         tols = _update_times(t, s, tols)
         return j, v, w, s, tols
@@ -230,7 +230,7 @@ class AdExCell(JaxComponent):
             "tau_m": "Cell membrane time constant",
             "resist_m": "Membrane resistance value",
             "tau_w": "Recovery variable time constant",
-            "v_thr": "Base voltage threshold value",
+            "thr": "Base voltage threshold value",
             "v_rest": "Resting membrane potential value",
             "v_reset": "Reset membrane potential value",
             "v_sharpness": "Slope factor/voltage sharpness constant",
