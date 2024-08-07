@@ -21,7 +21,7 @@ The model code for this exhibit can be found
 Note: You will need to unzip the data arrays in `natural_2.zip` 
 to the folder `exhibits/data/` to work through this exhibit.
 
-To undrestand the Dictionary Learning please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
+To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
 
 
 ## Constructing a Hierarchical Predictive Coding System
