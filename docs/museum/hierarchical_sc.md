@@ -34,6 +34,44 @@ nodes-and-cables system. First, we specify the underlying generative model we
 aim to emulate. Formally, we seek to optimize sets of latent codes according 
 to the following differential equation for each layer $ℓ$:
 
+
+$$
+
+\begin{equation*}
+    %---------------
+    \begin{tikzcd}
+    r^L \arrow[out=120,in=240, red, loop, swap, "\hat{0}"{black}]
+    \end{tikzcd}
+        \stackrel{\stackrel{\scalebox{0.7}{$f$}}{\longdownarrow{red!40!}{\downarrow}}}{ {\color{lightgray}{(.)}} }
+        \xleftrightarrow{\hspace{1em} \textit{U}^L \hspace{1em} } 
+    %---------------
+    \begin{tikzcd}
+         \mu^{L-1}
+         \arrow[red, bend right, stealth-]{r}[black,swap]{-\epsilon^{L-1}} 
+         \arrow[red, bend left, -stealth]{r}[black]{+\epsilon^{L-1}}
+         & r^{L-1}
+    \end{tikzcd}
+       \stackrel{\stackrel{\scalebox{0.7}{$f$}}{\longdownarrow{red!40!}{\downarrow}}}{ {\color{lightgray}{(.)}} }
+        \leftrightarrow \quad ... \quad \leftrightarrow 
+    %---------------
+    \begin{tikzcd}
+         \mu^{1}
+         \arrow[red, bend right, stealth-]{r}[black,swap]{-\epsilon^{1}} 
+         \arrow[red, bend left, -stealth]{r}[black]{+\epsilon^{1}}
+         & r^{1}
+    \end{tikzcd}
+       \stackrel{\stackrel{\scalebox{0.7}{$f$}}{\longdownarrow{red!40!}{\downarrow}}}{ {\color{lightgray}{(.)}} }
+        \xleftrightarrow{\hspace{1em}  \textit{U}^{1} \hspace{1em} }
+    %---------------
+    \begin{tikzcd}
+         \mu^{0}
+         \arrow[red, bend right, stealth-]{r}[black,swap]{-\epsilon^{0}} 
+         \arrow[red, bend left, -stealth]{r}[black]{+\epsilon^{0}}
+         & r^{0}
+    \end{tikzcd}
+\end{equation*}
+$$
+
 <!---
 $$
 \tau_m \frac{\partial \mathbf{r^ℓ}_t}{\partial t} = 
