@@ -36,15 +36,9 @@ to the following differential equation for each layer $ℓ$:
 
 
 
-
-
-
-
-
 <script type="text/javascript" async
   src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
 </script>
-
 
 ```latex
 \begin{equation*}
@@ -80,7 +74,7 @@ to the following differential equation for each layer $ℓ$:
          & r^{0}
     \end{tikzcd}
 \end{equation*}
-```
+
 
 
 
