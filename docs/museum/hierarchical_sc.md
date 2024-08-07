@@ -35,15 +35,15 @@ aim to emulate. Formally, we seek to optimize sets of latent codes according
 to the following differential equation:
 
 $$
-\tau_m \frac{\partial \mathbf{z^l}_t}{\partial t} = 
-\big((\mathbf{W}^ℓ)^T \cdot \mathbf{e^l}(t) \big) + \lambda \Omega\big(\mathbf{z^l}(t)\big)
+\tau_m \frac{\partial \mathbf{z^ℓ}_t}{\partial t} = 
+\big((\mathbf{W}^ℓ)^T \cdot \mathbf{e^ℓ}(t) \big) + \lambda \Omega\big(\mathbf{z^ℓ}(t)\big)
 $$
 
 where $\tau_m$ is the latent code time constant and the error neurons $\mathbf{e}(t)$ 
 at the sensory input layer made at time $t$ are specified as: 
 
 $$
-\mathbf{e}(t) = -\big(\mathbf{o}_t - (\mathbf{W} \cdot \mathbf{z}(t)) \big)
+\mathbf{e}(t) = -\big(\mathbf{\mu}_t - (\mathbf{W^ℓ} \cdot \mathbf{z}(t)) \big)
 $$
 
 where we see that we aim to learn a two-layer generative system that specifically
