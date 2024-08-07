@@ -7,12 +7,11 @@ on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical p
 After going through this demonstration, you will:
 </p>
 
-**1**.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
+    **1**.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
     using the original dataset used in [1].
-**2**.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
+    **2**.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
     in a hierarchical encoding model and examine the results of imposing a cauchy prior over latent codes.
-    
-**3**.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
+    **3**.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
     and apply gaussian filter to natural images.
 
 <p align="justify">
@@ -20,6 +19,8 @@ After going through this demonstration, you will:
 The model code for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
 **Note**: You will need to unzip the data arrays in `natural_image.zip` to the folder `exhibits/data/` to work through this exhibit.
+
+
 
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
 </p>
