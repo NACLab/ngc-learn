@@ -1,10 +1,10 @@
 # Hierarchical Predictive Coding
 
+<div style="text-align: right">
 In this exhibit, we create, simulate, and visualize the
 internally acquired filters/atoms of variants of a sparse coding system based
 on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
 After going through this demonstration, you will:
-
 1.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
     using the original dataset used in [1].
 2.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
@@ -12,7 +12,7 @@ After going through this demonstration, you will:
     the results of imposing a cauchy prior over latent codes.
 3.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
     and apply gaussian filter to natural images.
-
+</div>
 
 
 The model code for this exhibit can be found
