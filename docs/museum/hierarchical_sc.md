@@ -7,12 +7,10 @@ After going through this demonstration, you will:
 
 1.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
     using the original dataset used in [1].
-    
 2.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
     in a hierarchical encoding model and examine
     the results of imposing a cauchy prior over latent codes.
-3.  Learn how to 
-4.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
+3.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
     and apply gaussian filter to natural images.
 
 
