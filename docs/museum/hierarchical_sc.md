@@ -6,12 +6,12 @@ internally acquired filters/atoms of variants of a sparse coding system based
 on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
 After going through this demonstration, you will:
     
-1.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
+**1**.  Learn how to build a 2-layer hierarchical sparse coding model of natural image patterns,
     using the original dataset used in [1].
-2.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
+**2**.  Visualize the acquired filters for hidden (1st and 2nd) layers of the learned dictionary
     in a hierarchical encoding model and examine the results of imposing a cauchy prior over latent codes.
     
-3.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
+**3**.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
     and apply gaussian filter to natural images.
 
 
@@ -22,7 +22,7 @@ Note: You will need to unzip the data arrays in `natural_image.zip`
 to the folder `exhibits/data/` to work through this exhibit.
 
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
-</p>
+
 
 
 ## Constructing a Hierarchical Predictive Coding System
@@ -250,3 +250,5 @@ to `num_patches = 250` (which we have also hard-coded into `train_patch_sc.py`),
 and <i>3)</i> feed this mini-batch of image patches to the sparse coding model to 
 facilitate an expectation-maximization (E-M) step, where we take `T=300` E-steps 
 followed by one single M-step and a norm constraint application.
+
+</p>
