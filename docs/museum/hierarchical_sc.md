@@ -1,6 +1,6 @@
 # Hierarchical Predictive Coding
 
-<div style="text-align: right">
+<div style="text-align: left">
 In this exhibit, we create, simulate, and visualize the
 internally acquired filters/atoms of variants of a sparse coding system based
 on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
