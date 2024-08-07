@@ -34,8 +34,6 @@ nodes-and-cables system. First, we specify the underlying generative model we
 aim to emulate. Formally, we seek to optimize sets of latent codes according 
 to the following differential equation for each layer $ℓ$:
 
-
-$$
 \[
     \begin{tikzcd}
     r^L \arrow[out=120,in=240, red, loop, swap, "\hat{0}"{black}]
@@ -65,7 +63,6 @@ $$
          & r^{0}
     \end{tikzcd}
 \]
-$$
 
 <!---
 $$
