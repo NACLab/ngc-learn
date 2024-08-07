@@ -13,10 +13,8 @@ After going through this demonstration, you will:
     
 3.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
     and apply gaussian filter to natural images.
-</p>
 
 
-<p align="justify">
 The model code for this exhibit can be found
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
