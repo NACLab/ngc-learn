@@ -43,7 +43,7 @@ where $\tau_m$ is the latent code time constant and the error neurons $\mathbf{e
 at the sensory input layer made at time $t$ are specified as: 
 
 $$
-\mathbf{e}(t) = -\big(\mathbf{\mu}_t - (\mathbf{W^ℓ} \cdot \mathbf{z}(t)) \big)
+\mathbf{e}(t) = -\big(\mathbf{\mu}(t) - (\mathbf{W^ℓ} \cdot \mathbf{z}(t)) \big)
 $$
 
 where we see that we aim to learn a two-layer generative system that specifically
