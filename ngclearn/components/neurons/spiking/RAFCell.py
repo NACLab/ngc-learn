@@ -123,7 +123,7 @@ class RAFCell(JaxComponent):
 
         ## Cell properties
         self.tau_m = tau_m
-        self.R_m = resist_m
+        self.resist_m = resist_m
         self.tau_w = tau_w
         self.omega = omega ## angular frequency
         self.b = b ## dampening factor
@@ -150,9 +150,9 @@ class RAFCell(JaxComponent):
                                 units="ms") ## time-of-last-spike
 
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, tau_w, thr, omega, b, v_rest,
+    def _advance_state(t, dt, tau_m, resist_m, tau_w, thr, omega, b, v_rest,
                        v_reset, w_reset, intgFlag, j, v, w, tols):
-        j_ = j * R_m
+        j_ = j * resist_m
         if intgFlag == 1:  ## RK-2/midpoint
             w_params = (j_, v, tau_w, omega, b)
             _, _w = step_rk2(0., w, _dfw, dt, w_params)
