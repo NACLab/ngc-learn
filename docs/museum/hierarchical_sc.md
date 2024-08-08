@@ -40,7 +40,13 @@ $$
 \frac{d\mathbf{r}}{dt} = -\frac{k_1}{2}\frac{\partial E}{\partial \mathbf{r}} = k_1 \left( \frac{1}{\sigma^2} \mathbf{U}^T \frac{\partial f(\mathbf{U}\mathbf{r})^T}{\partial (\mathbf{U}\mathbf{r})} (\mathbf{X} - f(\mathbf{U}\mathbf{r})) + \frac{1}{\sigma_{td}^2}(\mathbf{r}^{td} - \mathbf{r}) - \frac{1}{2} g'(\mathbf{r}) \right)
 $$
 
+$$
+g(\mathbf{r}) = \alpha \sum_{i} \log(1 + r_i^2)
+$$
 
+$$
+E_1 = \frac{1}{2\sigma^2} \left( \mathbf{I} - f(\mathbf{U}\mathbf{r}) \right)^\top \left( \mathbf{I} - f(\mathbf{U}\mathbf{r}) \right) + \frac{1}{2\sigma_1^2} \left( \mathbf{r} - \mathbf{r}^1 \right)^\top \left( \mathbf{r} - \mathbf{r}^1 \right)
+$$
 
 
 <!---
