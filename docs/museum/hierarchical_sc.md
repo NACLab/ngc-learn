@@ -15,12 +15,9 @@ After going through this demonstration, you will:
     and apply gaussian filter to natural images.
 
 <p align="justify">
-
 The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
 **Note**: You will need to unzip the data arrays in `natural_image.zip` to the folder `exhibits/data/` to work through this exhibit.
-
-
 
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
 </p>
@@ -39,7 +36,7 @@ to the following differential equation for each layer $ℓ$:
 
 <p align="justify">
 where we see that we aim to learn a 2-layer generative system that specifically
-imposes a prior distribution `g(r)` over the latent feature detectors (via the 
+imposes a prior distribution $$g(r)$$ over the latent feature detectors (via the 
 constraint function $\Omega\big(\mathbf{z}(t)\big)$) that we hope
 to extract in node `z`. Note that this two-layer model (or single latent-variable layer
 model) could either be the linear generative model from <b>[1]</b> or one similar to the
