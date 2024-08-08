@@ -8,4 +8,4 @@ matplotlib>=3.8.0
 jax>=0.4.18
 jaxlib>=0.4.18
 imageio>=2.31.5
-ngcsimlib>=0.3.b1
+ngcsimlib>=0.3.b4

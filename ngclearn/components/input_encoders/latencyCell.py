@@ -173,11 +173,11 @@ class LatencyCell(JaxComponent):
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.inputs = Compartment(restVals) # input compartment
-        self.outputs = Compartment(restVals) # output compartment
-        self.mask = Compartment(restVals)  # output compartment
-        self.tols = Compartment(restVals) # time of last spike
-        self.targ_sp_times = Compartment(restVals)
+        self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
+        self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
+        self.mask = Compartment(restVals, display_name="Mask Variable")  # output compartment
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
+        self.targ_sp_times = Compartment(restVals, display_name="Target Spike Time", units="ms")
         #self.reset()
 
     @staticmethod

@@ -5,6 +5,8 @@ class Monitor(Base_Monitor):
     """
     A numpy implementation of `Base_Monitor`. Designed to be used with all lava compatible ngclearn components
     """
+    auto_resolve = False
+
 
     @staticmethod
     def build_advance(compartments):
@@ -20,3 +22,11 @@ class Monitor(Base_Monitor):
             return return_vals if len(compartments) > 1 else return_vals[0]
 
         return _advance
+
+    @staticmethod
+    def build_advance_state(component):
+        return super().build_advance_state(component)
+
+    @staticmethod
+    def build_reset(component):
+        return super().build_reset(component)
