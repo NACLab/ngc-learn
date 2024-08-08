@@ -21,12 +21,10 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 
 ## Constructing a Hierarchical Predictive Coding System
 
-<p align="justify">
 To build a hierarchical model, we can manually craft a model using ngc-learn's 
 nodes-and-cables system. First, we specify the underlying generative model we 
 aim to emulate. Formally, we seek to optimize sets of latent codes according 
 to the following differential equation for each layer $ℓ$:
-</p>
 
 <!--- ????????????? ---!>
 
