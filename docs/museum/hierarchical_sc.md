@@ -26,7 +26,6 @@ nodes-and-cables system. First, we specify the underlying generative model we
 aim to emulate. Formally, we seek to optimize sets of latent codes according 
 to the following differential equation for each layer $ℓ$:
 
-<!--- ????????????? ---!>
 
 
 where we see that we aim to learn a 2-layer generative system that specifically
