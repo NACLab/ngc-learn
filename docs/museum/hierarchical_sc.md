@@ -46,7 +46,11 @@ $$
 
 $$
 E_1 = \frac{1}{2\sigma^2} \left( \mathbf{I} - f(\mathbf{U}\mathbf{r}) \right)^\top \left( \mathbf{I} - f(\mathbf{U}\mathbf{r}) \right) + \frac{1}{2\sigma_1^2} \left( \mathbf{r} - \mathbf{r}^1 \right)^\top \left( \mathbf{r} - \mathbf{r}^1 \right)
+$$
+$$
 \mathbf{r} = \mathbf{r}^1 + \mathbf{n}^1
+$$
+$$
 \text{where} \quad \mathbf{r}^1 = f(\mathbf{U}^2 \mathbf{r}^2)
 $$
 
