@@ -37,7 +37,7 @@ to the following differential equation for each layer $ℓ$:
 
 
 $$
-\frac{d\mathbf{r}}{dt} = -\frac{k_1}{2}\frac{\partial E}{\partial \mathbf{r}} = k_1 \left( \frac{1}{\sigma^2} \mathbf{U}^T \frac{\partial f^T}{\partial \mathbf{x}} (\mathbf{I} - f(\mathbf{U}\mathbf{r})) + \frac{1}{\sigma_{td}^2}(\mathbf{r}^{td} - \mathbf{r}) - \frac{1}{2} g'(\mathbf{r}) \right)
+\frac{d\mathbf{r}}{dt} = -\frac{k_1}{2}\frac{\partial E}{\partial \mathbf{r}} = k_1 \left( \frac{1}{\sigma^2} \mathbf{U}^T \frac{\partial f(\mathbf{U}\mathbf{r})^T}{\partial (\mathbf{U}\mathbf{r})}} (\mathbf{X} - f(\mathbf{U}\mathbf{r})) + \frac{1}{\sigma_{td}^2}(\mathbf{r}^{td} - \mathbf{r}) - \frac{1}{2} g'(\mathbf{r}) \right)
 $$
 
 
