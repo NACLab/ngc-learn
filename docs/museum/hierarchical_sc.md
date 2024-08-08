@@ -1,11 +1,9 @@
 # Hierarchical Predictive Coding
 
-<p align="justify">
 In this exhibit, we create, simulate, and visualize the
 internally acquired filters/atoms of variants of a sparse coding system based
 on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
 After going through this demonstration, you will:
-</p>
 
 1.  Learn how to build a 3-layer hierarchical sparse coding model of natural image patterns,
     using the original dataset used in [1].
@@ -14,13 +12,11 @@ After going through this demonstration, you will:
 3.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
     and apply gaussian filter to natural images.
 
-<p align="justify">
 The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
 **Note**: You will need to unzip the data arrays in `natural_image.zip` to the folder `exhibits/data/` to work through this exhibit.
 
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
-</p>
 
 
 ## Constructing a Hierarchical Predictive Coding System
@@ -34,14 +30,13 @@ to the following differential equation for each layer $ℓ$:
 
 <!--- ????????????? ---!>
 
-<p align="justify">
+
 where we see that we aim to learn a 2-layer generative system that specifically
 imposes a prior distribution `g(r)` over the latent feature detectors (via the 
 constraint function $\Omega\big(\mathbf{z}(t)\big)$) that we hope
 to extract in node `z`. Note that this two-layer model (or single latent-variable layer
 model) could either be the linear generative model from <b>[1]</b> or one similar to the
 model learned through ISTA <b>[2]</b> if a (soft) thresholding function is used instead.
-</p>
 
 Constructing the above system for (Olshausen &amp; Field, 1996) is done, much 
 like we do in the `SparseCoding` agent constructor in the model museum exhibit 
