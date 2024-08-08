@@ -39,7 +39,7 @@ to the following differential equation for each layer $ℓ$:
 
 <p align="justify">
 where we see that we aim to learn a 2-layer generative system that specifically
-imposes a prior distribution `g(**r**)` over the latent feature detectors (via the 
+imposes a prior distribution **`g(r)`** over the latent feature detectors (via the 
 constraint function $\Omega\big(\mathbf{z}(t)\big)$) that we hope
 to extract in node `z`. Note that this two-layer model (or single latent-variable layer
 model) could either be the linear generative model from <b>[1]</b> or one similar to the
