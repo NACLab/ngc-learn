@@ -35,7 +35,7 @@ nodes-and-cables system. First, we specify the underlying generative model we
 aim to emulate. Formally, we seek to optimize sets of latent codes according 
 to the following differential equation for each layer $ℓ$:
 
-
+<!---
 $$
 \frac{d\mathbf{r}}{dt} = -\frac{k_1}{2}\frac{\partial E}{\partial \mathbf{r}} = k_1 \left( \frac{1}{\sigma^2} \mathbf{U}^T \frac{\partial f(\mathbf{U}\mathbf{r})^T}{\partial (\mathbf{U}\mathbf{r})} (\mathbf{X} - f(\mathbf{U}\mathbf{r})) + \frac{1}{\sigma_{td}^2}(\mathbf{r}^{td} - \mathbf{r}) - \frac{1}{2} g'(\mathbf{r}) \right)
 $$
@@ -47,15 +47,17 @@ $$
 $$
 E_1 = \frac{1}{2\sigma^2} \left( \mathbf{I} - f(\mathbf{U}\mathbf{r}) \right)^\top \left( \mathbf{I} - f(\mathbf{U}\mathbf{r}) \right) + \frac{1}{2\sigma_1^2} \left( \mathbf{r} - \mathbf{r}^1 \right)^\top \left( \mathbf{r} - \mathbf{r}^1 \right)
 $$
+
 $$
-\mathbf{r} = \mathbf{r}^1 + \mathbf{n}^1
+\mathbf{r}^0 = \mathbf{r}^1 + \mathbf{n}^1
 $$
+
 $$
-\text{where} \quad \mathbf{r}^1 = f(\mathbf{U}^2 \mathbf{r}^2)
+\mathbf{r}^1 = f(\mathbf{U}^2 \mathbf{r}^2)
 $$
 
 
-<!---
+
 $$
 \tau_m \frac{\partial \mathbf{r^ℓ}_t}{\partial t} = 
 \big((\mathbf{W}^ℓ)^T \cdot \mathbf{e^ℓ}(t) \big) + \lambda \Omega\big(\mathbf{z^ℓ}(t)\big)
@@ -69,8 +71,8 @@ $$
 $$
 ---!>
 
-where we see that we aim to learn a two-layer generative system that specifically
-imposes a prior distribution `p(z)` over the latent feature detectors (via the 
+where we see that we aim to learn a 2-layer generative system that specifically
+imposes a prior distribution `g(\mathbf{r})` over the latent feature detectors (via the 
 constraint function $\Omega\big(\mathbf{z}(t)\big)$) that we hope
 to extract in node `z`. Note that this two-layer model (or single latent-variable layer
 model) could either be the linear generative model from <b>[1]</b> or one similar to the
