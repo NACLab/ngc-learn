@@ -13,6 +13,7 @@ from .neurons.spiking.quadLIFCell import QuadLIFCell
 from .neurons.spiking.adExCell import AdExCell
 from .neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .neurons.spiking.izhikevichCell import IzhikevichCell
+from .neurons.spiking.RAFCell import RAFCell
 ## point to transformer/operater component types
 from .other.varTrace import VarTrace
 from .other.expKernel import ExpKernel

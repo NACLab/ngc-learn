@@ -7,3 +7,4 @@ from .quadLIFCell import QuadLIFCell
 from .adExCell import AdExCell
 from .fitzhughNagumoCell import FitzhughNagumoCell
 from .izhikevichCell import IzhikevichCell
+from .RAFCell import RAFCell
