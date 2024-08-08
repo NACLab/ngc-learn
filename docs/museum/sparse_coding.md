@@ -68,7 +68,7 @@ $$
 
 where we see that we aim to learn a two-layer generative system that specifically
 imposes a prior distribution `p(z)` over the latent feature detectors (via the 
-constraint function $\`\Omega\big(\mathbf{z}(t)\big)`\$) that we hope
+constraint function $\`\Omega\big(\mathbf{z}(t)\big)\`$) that we hope
 to extract in node `z`. Note that this two-layer model (or single latent-variable layer
 model) could either be the linear generative model from <b>[1]</b> or one similar to the
 model learned through ISTA <b>[2]</b> if a (soft) thresholding function is used instead.
