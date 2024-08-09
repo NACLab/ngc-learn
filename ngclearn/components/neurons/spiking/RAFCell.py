@@ -159,14 +159,16 @@ class RAFCell(JaxComponent):
         ## continue with centered dynamics
         j_ = j * resist_v
         if intgFlag == 1:  ## RK-2/midpoint
+            ## Note: we integrate ODEs in order: first w, then v
             w_params = (j_, v, tau_w, omega, b)
             _, _w = step_rk2(0., w, _dfw, dt, w_params)
-            v_params = (j_, w, tau_v, omega, b)
+            v_params = (j_, _w, tau_v, omega, b)
             _, _v = step_rk2(0., v, _dfv, dt, v_params)
         else:  # integType == 0 (default -- Euler)
+            ## Note: we integrate ODEs in order: first w, then v
             w_params = (j_, v, tau_w, omega, b)
             _, _w = step_euler(0., w, _dfw, dt, w_params)
-            v_params = (j_, w, tau_v, omega, b)
+            v_params = (j_, _w, tau_v, omega, b)
             _, _v = step_euler(0., v, _dfv, dt, v_params)
         s = _emit_spike(_v, thr)
         ## hyperpolarize/reset/snap variables
