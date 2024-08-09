@@ -97,13 +97,13 @@ class RAFCell(JaxComponent):
 
         b: oscillation dampening factor (Default: -1)
 
-        v_reset: membrane potential reset condition (Default: 1 mV)
+        v_reset: reset condition for membrane potential (Default: 1 mV)
 
         w_reset: reset condition for angular current driver (Default: 0)
 
-        v0: membrane potential initial condition (Default: 1 mV)
+        v0: initial condition for membrane potential (Default: 1 mV)
 
-        w0: angular driver initial condition (Default: 0)
+        w0: initial condition for angular current driver (Default: 0)
 
         resist_v: membrane resistance (Default: 1 mega-Ohm)
 
@@ -185,11 +185,11 @@ class RAFCell(JaxComponent):
         self.tols.set(tols)
 
     @staticmethod
-    def _reset(batch_size, n_units, v_reset, w_reset):
+    def _reset(batch_size, n_units, v0, w0):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals # None
-        v = restVals + v_reset
-        w = restVals + w_reset
+        v = restVals + v0
+        w = restVals + w0
         s = restVals #+ 0
         tols = restVals #+ 0
         return j, v, w, s, tols
