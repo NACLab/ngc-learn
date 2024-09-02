@@ -21,7 +21,7 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 
 ## Hierarchical Predictive Coding System
 
-![alt text]([http://url/to/img.png](https://github.com/NACLab/ngc-learn-faeze/docs/images/hgpc_model.png))
+![img](http://url/to/img.png](https://github.com/NACLab/ngc-learn-faeze/docs/images/hgpc_model.png)
 
 
 
