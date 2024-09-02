@@ -21,7 +21,9 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 
 ## Hierarchical Predictive Coding System
 
-![alt text](http://url/to/img.png)
+![alt text]([http://url/to/img.png](https://github.com/NACLab/ngc-learn-faeze/docs/images/hgpc_model.png))
+
+
 
 ### Single Predictive Coding Network
 ### Single Predictive Coding Network
