@@ -29,7 +29,7 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 ### Image Patching for the Input Layer
 <p align="center">
   <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/b11197849c6e8d6dd956a6d1834960e1e3553ccd/docs/images/museum/hgpc/HGPC_inputL.jpg" width="250" title="Image Patching for the Input Layer">
-  <img src="[https://github.com/Faezehabibi/ngc-learn-faeze/blob/b11197849c6e8d6dd956a6d1834960e1e3553ccd/docs/images/museum/hgpc/Input_layer.png](https://github.com/Faezehabibi/ngc-learn-faeze/blob/1683b9e7cc2f9182e3f5bbd8f47e5535ad89b6f4/docs/images/museum/hgpc/Input_layer.png)" width="250" title="Input Layer">
+  <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/319d5f1fdd754eef80d850b575d36ef689d411b0/docs/images/museum/hgpc/Input_layer.png" width="250" title="Input Layer">
             
 </p>
 
