@@ -20,10 +20,7 @@ The model **code** for this exhibit can be found [here](https://github.com/NACLa
 To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
 
 ## Hierarchical Predictive Coding System
-
-![img](https://github.com/NACLab/ngc-learn-faeze/docs/images/hgpc_model.png)
-
-![r](https://github.com/Faezehabibi/ngc-learn-faeze/blob/ca96a7bd510da2ed42ae3f5c2d10da3b5e0d9707/docs/images/hgpc_model.png)
+![Hierarchical Predictive Coding System](https://github.com/Faezehabibi/ngc-learn-faeze/blob/ca96a7bd510da2ed42ae3f5c2d10da3b5e0d9707/docs/images/hgpc_model.png)
 
 ### Single Predictive Coding Network
 ### Single Predictive Coding Network
