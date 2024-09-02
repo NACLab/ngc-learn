@@ -35,7 +35,6 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 
 
 
-# so far
 ## Constructing a Hierarchical Predictive Coding System
 
 To build a hierarchical model, we can manually craft a model using ngc-learn's 
@@ -44,8 +43,9 @@ aim to emulate. Formally, we seek to optimize sets of latent codes according
 to the following differential equation for each layer $ℓ$:
 
 
+# so far
 
-where we see that we aim to learn a 2-layer generative system that specifically
+where we see that we aim to learn a 3-layer generative system that specifically
 imposes a prior distribution `g(r)` over the latent feature detectors (via the 
 constraint function $\ \Omega\big(\mathbf{z}(t)\big)$) that we hope
 to extract in node `z`. Note that this two-layer model (or single latent-variable layer
