@@ -23,7 +23,7 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 
 ![img](https://github.com/NACLab/ngc-learn-faeze/docs/images/hgpc_model.png)
 
-
+![r](https://github.com/Faezehabibi/ngc-learn-faeze/blob/ca96a7bd510da2ed42ae3f5c2d10da3b5e0d9707/docs/images/hgpc_model.png)
 
 ### Single Predictive Coding Network
 ### Single Predictive Coding Network
