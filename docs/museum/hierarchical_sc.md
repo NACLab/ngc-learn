@@ -24,12 +24,8 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
 
 
 <p align="center">
-  <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/ca96a7bd510da2ed42ae3f5c2d10da3b5e0d9707/docs/images/hgpc_model.png" width="750" title="Title">
+  <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/ca96a7bd510da2ed42ae3f5c2d10da3b5e0d9707/docs/images/hgpc_model.png" width="550" title="Hierarchical Predictive Coding System">
 </p>
-
-
-![Hierarchical Predictive Coding System](https://github.com/Faezehabibi/ngc-learn-faeze/blob/ca96a7bd510da2ed42ae3f5c2d10da3b5e0d9707/docs/images/hgpc_model.png)
-
 
 
 
