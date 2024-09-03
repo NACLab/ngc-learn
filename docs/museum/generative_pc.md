@@ -1,4 +1,4 @@
-# Hierarchical Predictive Coding
+# Generative Predictive Coding
 
 In this exhibit, we create, simulate, and visualize the
 internally acquired filters/atoms of variants of a sparse coding system based
