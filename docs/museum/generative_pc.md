@@ -1,52 +1,28 @@
 # Generative Predictive Coding
 
-In this exhibit, we create, simulate, and visualize the
-internally acquired filters/atoms of variants of a sparse coding system based
-on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
+In this section, we teach, create, simulate, and visualize a Generative Predictive Coding model (GPC) using NGC-Learn library components.
 After going through this demonstration, you will:
 
-1.  Learn what is hierarchical generative model and how build one with an arbitrary architecure. parameters.
-2.  Learn how to build a 3-layer hierarchical sparse coding model of natural image patterns,using the original dataset used in [1].
-3.  Visualize the acquired filters for hidden layers  (1st and 2nd) of the learned dictionary in a hierarchical encoding model and examine the results of imposing a prior over latent codes and synapses.
 
 
-The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
-**Note**: You will need to unzip the data arrays in `natural_image.zip` to the folder `exhibits/data/` to work through this exhibit.
 
-To undrestand the **Dictionary Learning** concept please visit [here](https://ngc-learn.readthedocs.io/en/latest/museum/sparse_coding.html#on-dictionary-learning).
 
-## Hierarchical Predictive Coding System
+
+
+
+The model **code** for this exhibit can be found [here](https://github.com/NACLab/).
+
+
+## Predictive Coding Model Block
 
 <p align="center">
-  <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/b11197849c6e8d6dd956a6d1834960e1e3553ccd/docs/images/museum/hgpc/hgpc_model.png" width="550" title="Hierarchical Predictive Coding System">
+  <img src="" width="550" title="Hierarchical Predictive Coding System">
 </p>
 
-### How to make an arbitrary hierarchichal predictive coding model with number of layers, layers size, activation function, and input patches and theis       shapes and strides (horizontall and vertical) as hyper parameters.
-### How to make overlapping patches with arbitraty patch shape and arbitraty overlap size and apply gaussian filter to natural images.
+## Predictive Coding Model Dynamics
 
-### Image Patching for the Input Layer in an Single Predictive Coding Network
-<p align="center">
-  <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/b11197849c6e8d6dd956a6d1834960e1e3553ccd/docs/images/museum/hgpc/HGPC_inputL.jpg" width="375" title="Image Patching for the Input Layer"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/319d5f1fdd754eef80d850b575d36ef689d411b0/docs/images/museum/hgpc/Input_layer.png" width="375" title="Input Layer">
-</p>
-
-
-
-
-## Constructing a Hierarchical Predictive Coding System
-
-To build a hierarchical model, we can manually craft a model using ngc-learn's 
-nodes-and-cables system. First, we specify the underlying generative model we 
-aim to emulate. Formally, we seek to optimize sets of latent codes according 
-to the following differential equation for each layer $ℓ$:
-
-
-# Original Model
-
-where we see that we aim to learn a 3-layer generative system that specifically
-imposes a prior distribution $g(\mathbf{r})$ over the latent feature detectors and
-a prior distribution $h(\mathbf{U})$ over synapses. 
+## Constructing a Predictive Coding Model using NGC-Learn
 
 
 #____________________________________________________________
