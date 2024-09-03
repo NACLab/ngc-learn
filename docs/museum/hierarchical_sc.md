@@ -5,13 +5,10 @@ internally acquired filters/atoms of variants of a sparse coding system based
 on the classical model proposed by (Rao and Ballard, 1999) [1], a hierarchical predictive coding model for encoding natural images.
 After going through this demonstration, you will:
 
-1.  Learn how to build a 3-layer hierarchical sparse coding model of natural image patterns,
-    using the original dataset used in [1].
-2.  Visualize the acquired filters for hidden layers  (1st and 2nd) of the learned dictionary
-    in a hierarchical encoding model and examine the results of imposing a cauchy prior over latent codes.
-3.  How to make an arbitrary hierarchichal predictive coding model with number of layers, layers size, activation function, and input patches and theis       shapes and strides (horizontall and vertical) as hyper parameters.
-4.  How to make overlapping patches with arbitraty patch shape and arbitraty overlap size
-    and apply gaussian filter to natural images.
+1.  Learn what is hierarchical generative model and how build one with an arbitrary architecure. parameters.
+2.  Learn how to build a 3-layer hierarchical sparse coding model of natural image patterns,using the original dataset used in [1].
+3.  Visualize the acquired filters for hidden layers  (1st and 2nd) of the learned dictionary in a hierarchical encoding model and examine the results of imposing a prior over latent codes and synapses.
+
 
 The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/patched_gpc).
 
@@ -25,6 +22,8 @@ To undrestand the **Dictionary Learning** concept please visit [here](https://ng
   <img src="https://github.com/Faezehabibi/ngc-learn-faeze/blob/b11197849c6e8d6dd956a6d1834960e1e3553ccd/docs/images/museum/hgpc/hgpc_model.png" width="550" title="Hierarchical Predictive Coding System">
 </p>
 
+### How to make an arbitrary hierarchichal predictive coding model with number of layers, layers size, activation function, and input patches and theis       shapes and strides (horizontall and vertical) as hyper parameters.
+### How to make overlapping patches with arbitraty patch shape and arbitraty overlap size and apply gaussian filter to natural images.
 
 ### Image Patching for the Input Layer in an Single Predictive Coding Network
 <p align="center">
