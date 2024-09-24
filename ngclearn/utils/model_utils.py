@@ -280,7 +280,7 @@ def sine(x, omega_0=30):
     Returns:
         output (tensor) value
     """
-    return jax.sin(omega_0 * x)
+    return jnp.sin(omega_0 * x)
 
 @jit
 def d_sine(x, omega_0=30):
@@ -294,7 +294,7 @@ def d_sine(x, omega_0=30):
     Returns:
         output (tensor) value
     """
-    return omega_0 * jax.cos(omega_0 * x)
+    return omega_0 * jnp.cos(omega_0 * x)
     
 @jit
 def tanh(x):
