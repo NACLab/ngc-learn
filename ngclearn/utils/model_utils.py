@@ -267,6 +267,33 @@ def d_relu(x):
     return (x >= 0.).astype(jnp.float32)
 
 @jit
+def sine(x, omega_0=30):
+    """
+    f(x) = sin(x * omega_0).
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
+    return jax.sin(omega_0 * x)
+
+@jit
+def d_sine(x, omega_0=30):
+        """
+    frequency = omega_0
+    frequency * cos(x * frequency).
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
+    return omega_0 * jax.cos(omega_0 * x)
+    
+@jit
 def tanh(x):
     """
     The hyperbolic tangent function.
