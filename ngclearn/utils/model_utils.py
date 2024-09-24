@@ -86,6 +86,9 @@ def create_function(fun_name, args=None):
     elif fun_name == "sigmoid":
         fx = sigmoid
         dfx = d_sigmoid
+    elif fun_name == "sine":
+        fx = sine
+        dfx = d_sine
     elif fun_name == "relu":
         fx = relu
         dfx = d_relu
