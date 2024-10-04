@@ -22,6 +22,8 @@ of a manually constructed dictionary from the state vector by a coefficient matr
 Dictionary learning combined with LASSO (L1-norm) promotes the sparsity of the coefficient matrix
 which allows only governing terms in the dictionary stay non-zero.
 
+Learning the 
+
 
 ## SINDy with Predictive Coding 
 
