@@ -83,6 +83,10 @@ def create_function(fun_name, args=None):
     if fun_name == "tanh":
         fx = tanh
         dfx = d_tanh
+    elif fun_name == "sine":
+        fx = sine
+        dfx = d_sine
+        omega_0 = args
     elif fun_name == "sigmoid":
         fx = sigmoid
         dfx = d_sigmoid
@@ -296,6 +300,7 @@ def d_sine(x, omega_0=30):
         output (tensor) value
     """
     return omega_0 * jnp.cos(omega_0 * x)
+
     
 @jit
 def tanh(x):
