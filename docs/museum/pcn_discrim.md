@@ -120,8 +120,8 @@ model generalization ability.)
 
 In the figure below, we graphically depict what the simulated PCN and its
 corresponding conditional generative model (ancestral projection graph) look like
-(the blue dashed arrow just point outs that the layer `mu1` of the feedforward
-sweep step is used initialize the neuronal activities of `z1` in the
+(the blue dashed arrow just points outs that the layer `mu1` of the feedforward
+sweep step is used to initialize the neuronal activities of `z1` in the
 PCN model's dynamics). Note that `mu1` is $\mu^1_t$, `mu2` is $\mu^2_t$, and
 `mu3` is $\mu^3_t$ while `z^1_t` is $\mathbf{z}^1_t$, `z^2_t` is $\mathbf{z}^2_t$, and
 `z^2_t` is $\mathbf{z}^3_t$ (`z^0_t` is the input layer $\mathbf{z}^0$).
