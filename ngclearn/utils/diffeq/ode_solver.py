@@ -20,7 +20,7 @@ def _step_forward(t, x, dx_dt, dt, x_scale): ## internal step co-routine
     return _t, _x
 
 @partial(jit, static_argnums=(1, 2, 3, 4, ))
-def euler(carry, _, dfx, dt, params, x_scale=1.):
+def euler(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the Euler method, i.e., a
     first-order Runge-Kutta (RK-1) step.
@@ -52,7 +52,7 @@ def euler(carry, _, dfx, dt, params, x_scale=1.):
     return new_carry, (new_carry, carry)
 
 @partial(jit, static_argnums=(1, 2, 3, 4, ))
-def heun(carry, _, dfx, dt, params, x_scale=1.):
+def heun(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Heun's method, i.e., a
     second-order Runge-Kutta (RK-2) error-corrected step. This method utilizes
@@ -95,7 +95,7 @@ def heun(carry, _, dfx, dt, params, x_scale=1.):
     return new_carry, (new_carry, carry)
 
 @partial(jit, static_argnums=(1, 2, 3, 4, ))
-def rk2(carry, _, dfx, dt, params, x_scale=1.):
+def rk2(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
     second-order Runge-Kutta (RK-2) step.
@@ -134,8 +134,8 @@ def rk2(carry, _, dfx, dt, params, x_scale=1.):
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
 
-@partial(jit, static_argnums=(1, 2, 3, 4, 5, ))
-def rk4(carry, _, dfx, dt, params, x_scale=1.):
+@partial(jit, static_argnums=(1, 2, 3, 4, ))
+def rk4(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
     fourth-order Runge-Kutta (RK-4) step.
@@ -185,7 +185,7 @@ def rk4(carry, _, dfx, dt, params, x_scale=1.):
     return new_carry, (new_carry, carry)
 
 @partial(jit, static_argnums=(1, 2, 3, 4,))
-def ralston(carry, _, dfx, dt, params, x_scale=1.):
+def ralston(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Ralston's method, i.e., a
     second-order Runge-Kutta (RK-2) error-corrected step. This method utilizes
@@ -230,25 +230,30 @@ def ralston(carry, _, dfx, dt, params, x_scale=1.):
     return new_carry, (new_carry, carry)
 
 
-@partial(jit, static_argnums=(0, 3, 4, 5,))
-def solve_ode(method_names, t0, x0, T, dfx, dt, params=None, x_scale=1.):
+@partial(jit, static_argnums=(0, 3, 4, 5, 6, 7, 8))
+def solve_ode(method_name, t0, x0, T, dfx, dt, params=None, x_scale=1., sols_only=True):
 
-    if method_names=='euler':
+    if method_name =='euler':
         method = euler
-    elif method_names == 'heun':
+    elif method_name == 'heun':
         method = heun
-    elif method_names == 'rk2':
+    elif method_name == 'rk2':
         method = rk2
-    elif method_names=='rk4':
+    elif method_name =='rk4':
         method = rk4
-    elif method_names=='ralston':
+    elif method_name =='ralston':
         method = ralston
 
     def scanner(carry, _):
-        return method(carry, _, dfx, dt, params, x_scale)
+        return method(carry, dfx, dt, params, x_scale)
 
     x_T, (xs_next, xs_carry) = _scan(scanner, init=(t0, x0), xs=jnp.arange(T))
-    return x_T, xs_next, xs_carry
+
+    if not sols_only:
+        return x_T, xs_next, xs_carry
+
+    return xs_next
+
 
 
 ########################################################################################
@@ -264,11 +269,11 @@ if __name__ == '__main__':
     t0 = 0.
     T = 800
 
-    (t_final, x_final), (ts_sol, sol_euler), (ts_carr, xs_carr) = solve_ode('euler', t0, x0, T=T, dt=dt, dfx=dfx, params=None)
-    (_, x_final), (_, sol_heun), (_, xs_carr) = solve_ode('heun', t0, x0, T=T, dt=dt, dfx=dfx, params=None)
-    (_, x_final), (_, sol_rk2), (_, xs_carr) = solve_ode('rk2', t0, x0, T=T, dt=dt, dfx=dfx, params=None)
-    (_, x_final), (_, sol_rk4), (_, xs_carr) = solve_ode('rk4', t0, x0, T=T, dt=dt, dfx=dfx, params=None)
-    (_, x_final), (_, sol_ralston), (_, xs_carr) = solve_ode('ralston', t0, x0, T=T, dt=dt, dfx=dfx, params=None)
+    (t_final, x_final), (ts_sol, sol_euler), (ts_carr, xs_carr) = solve_ode('euler', t0, x0, T=T, dfx=dfx, dt=dt, params=None, sols_only=False)
+    (_, x_final), (_, sol_heun), (_, xs_carr) = solve_ode('heun', t0, x0, T=T, dfx=dfx, dt=dt, params=None, sols_only=False)
+    (_, x_final), (_, sol_rk2), (_, xs_carr) = solve_ode('rk2', t0, x0, T=T, dfx=dfx, dt=dt, params=None, sols_only=False)
+    (_, x_final), (_, sol_rk4), (_, xs_carr) = solve_ode('rk4', t0, x0, T=T, dfx=dfx, dt=dt, params=None, sols_only=False)
+    (_, x_final), (_, sol_ralston), (_, xs_carr) = solve_ode('ralston', t0, x0, T=T, dfx=dfx, dt=dt, params=None, sols_only=False)
 
 
     plt.plot(ts_sol, sol_euler[:, 0], label='x0-Euler')
