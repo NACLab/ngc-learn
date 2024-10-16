@@ -167,19 +167,19 @@ def rk4(carry, dfx, dt, params, x_scale=1.):
 
     t, x = carry
 
-    f_1 = dfx(t, x, params)
-    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
+    dfx_1 = dfx(t, x, params)
+    t2, x2 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
 
-    f_2 = dfx(t1, x1, params)
-    t2, x2 = _step_forward(t, x, f_2, dt * 0.5, x_scale)
+    dfx_2 = dfx(t2, x2, params)
+    t3, x3 = _step_forward(t, x, dfx_2, dt * 0.5, x_scale)
 
-    f_3 = dfx(t2, x2, params)
-    t3, x3 = _step_forward(t, x, f_3, dt, x_scale)
+    dfx_3 = dfx(t3, x3, params)
+    t4, x4 = _step_forward(t, x, dfx_3, dt, x_scale)
 
-    f_4 = dfx(t3, x3, params)
+    dfx_4 = dfx(t4, x4, params)
 
-    _dx_dt = _sum_combine(f_1, f_2, f_3, f_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
-    _t, _x = _step_forward(t, x, _dx_dt, dt / 6, x_scale)
+    _dx_dt = _sum_combine(dfx_1, dfx_2, dfx_3, dfx_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
+    _t, _x = _step_forward(t, x, _dx_dt / 6, dt, x_scale)
 
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
