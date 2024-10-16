@@ -4,10 +4,7 @@ from jax import jit
 from functools import partial
 import matplotlib.pyplot as plt
 
-'''
 
-x0 = jnp.array([3, -1.5])
-'''
 @partial(jit, static_argnums=(0,))
 def linear_2D(t, x, params):
     '''
@@ -34,3 +31,24 @@ def linear_2D(t, x, params):
     dfx_ = jnp.matmul(x, coeff)
 
     return dfx_
+
+
+
+class CreateLibrary:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def poly_2D(x, y, deg=2, include_bias=True):
+        x = jnp.array(x).reshape(-1, 1)
+        y = jnp.array(y).reshape(-1, 1)
+        lib = jnp.ones_like(x).reshape(-1, 1)
+        names = ['1']
+        for i in range(deg + 1):
+            for j in range(deg - i + 1):
+                lib = jnp.concatenate([lib, x ** i * y ** j], axis=1)
+                names.append('x^{} y^{}'.format(i, j))
+        if include_bias:
+            return lib[:, 1:], names
+        else:
+            return lib[:, 2:], names[1:]
