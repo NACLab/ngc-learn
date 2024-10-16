@@ -44,8 +44,9 @@ def get_integrator_code(integrationType):
 @jit
 def _sum_combine(*args, **kwargs): ## fast co-routine for simple addition
     sum = 0
+
     for arg, val in zip(args, kwargs.values()):
-        sum += arg * val
+        sum = sum + val * arg
     return sum
 
 @jit
@@ -54,6 +55,7 @@ def _step_forward(t, x, dx_dt, dt, x_scale): ## internal step co-routine
     _x = x * x_scale + dx_dt * dt
     return _t, _x
 
+@partial(jit, static_argnums=(2, ))
 def step_euler(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the Euler method, i.e., a
@@ -81,6 +83,7 @@ def step_euler(t, x, dfx, dt, params, x_scale=1.):
     _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
     return _t, _x
 
+@partial(jit, static_argnums=(2, ))
 def step_heun(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Heun's method, i.e., a
@@ -113,13 +116,15 @@ def step_heun(t, x, dfx, dt, params, x_scale=1.):
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
     dx_dt = dfx(t, x, params)
+
     _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
     _dx_dt = dfx(_t, _x, params)
     summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
+
     _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
     return _t, _x
 
-
+@partial(jit, static_argnums=(2, ))
 def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
@@ -150,13 +155,13 @@ def step_rk2(t, x, dfx, dt, params, x_scale=1.):
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
     f_1 = dfx(t, x, params)
-    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
 
+    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
     f_2 = dfx(t1, x1, params)
     _t, _x = _step_forward(t, x, f_2, dt, x_scale)
     return _t, _x
 
-
+@partial(jit, static_argnums=(2, ))
 def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
@@ -201,8 +206,7 @@ def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     _t, _x = _step_forward(t, x, _dx_dt, dt / 6, x_scale)
     return _t, _x
 
-
-
+@partial(jit, static_argnums=(2, ))
 def step_ralston(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Ralston's method, i.e., a

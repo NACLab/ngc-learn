@@ -177,7 +177,12 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.shape = shape
         self.n_units = n_units
         self.batch_size = batch_size
-        self.fx, self.dfx = create_function(fun_name=act_fx)
+
+        
+        omega_0 = None
+        if act_fx == "sine":
+            omega_0 = kwargs["omega_0"]
+        self.fx, self.dfx = create_function(fun_name=act_fx, args=omega_0)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
         restVals = jnp.zeros(_shape)
