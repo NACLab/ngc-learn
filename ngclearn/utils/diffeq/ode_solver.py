@@ -255,8 +255,6 @@ def solve_ode(method_name, t0, x0, T, dfx, dt, params=None, x_scale=1., sols_onl
     return xs_next
 
 
-
-########################################################################################
 ########################################################################################
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
