@@ -4,13 +4,9 @@ In this section, we teach, create, simulate, and visualize SINDy model implement
 
 
 
-
-![Alt text](../images/museum/sindy/sindy.png)
-
-
-|   |   |   |
-|---|---|---|
-| | ![](../images/museum/sindy/sindy.png)  | |
+<p align="center">
+  <img src="../images/museum/sindy/sindy.png" width="300">
+</p>
 
 
 The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/exhibits/sindy/sindy.py).
