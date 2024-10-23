@@ -5,7 +5,7 @@ In this section, we teach, create, simulate, and visualize SINDy model implement
 
 
 <p align="center">
-  <img src="../images/museum/sindy/sindy.png" width="300">
+  <img src="../images/museum/sindy/sindy.png" width="600">
 </p>
 
 
