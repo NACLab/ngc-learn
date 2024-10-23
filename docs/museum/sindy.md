@@ -5,7 +5,7 @@ In this section, we teach, create, simulate, and visualize SINDy model implement
 
 
 
-![Alt text](docs/images/museum/sindy/sindy.png)
+![Alt text](../images/museum/sindy/sindy.png)
 
 
 The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/exhibits/sindy/sindy.py).
