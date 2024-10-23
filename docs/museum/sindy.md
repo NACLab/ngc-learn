@@ -4,15 +4,17 @@ In this section, we teach, create, simulate, and visualize SINDy model implement
 
 
 
-<p align="center">
-  <img src="../images/museum/sindy/sindy.png" width="600">
-</p>
-
-
 The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/exhibits/sindy/sindy.py).
 
 ## SINDy 
 SINDy is a data-driven algorithm that discovers the differential equation governing the dynamical systems. It uses symbolic regression to identify differential equation of the system and it solves sparse regression over the pre-defined library of candidate terms. It takes time series gathered dataset of the system and it gives you its describing differential equation.
+
+
+
+
+<p align="center">
+  <img src="../images/museum/sindy/sindy.png" width="900">
+</p>
 
 
 ### Inputs
