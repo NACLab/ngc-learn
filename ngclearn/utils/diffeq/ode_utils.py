@@ -154,12 +154,16 @@ def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-    f_1 = dfx(t, x, params)
+    dfx_1 = dfx(t, x, params)
 
-    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
-    f_2 = dfx(t1, x1, params)
-    _t, _x = _step_forward(t, x, f_2, dt, x_scale)
+    t1, x1 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
+    dfx_2 = dfx(t1, x1, params)
+    _t, _x = _step_forward(t, x, dfx_2, dt, x_scale)
     return _t, _x
+
+
+
+
 
 @partial(jit, static_argnums=(2, ))
 def step_rk4(t, x, dfx, dt, params, x_scale=1.):
@@ -191,19 +195,20 @@ def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-    f_1 = dfx(t, x, params)
-    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
 
-    f_2 = dfx(t1, x1, params)
-    t2, x2 = _step_forward(t, x, f_2, dt * 0.5, x_scale)
+    dfx_1 = dfx(t, x, params)
+    t2, x2 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
 
-    f_3 = dfx(t2, x2, params)
-    t3, x3 = _step_forward(t, x, f_3, dt, x_scale)
+    dfx_2 = dfx(t2, x2, params)
+    t3, x3 = _step_forward(t, x, dfx_2, dt * 0.5, x_scale)
 
-    f_4 = dfx(t3, x3, params)
+    dfx_3 = dfx(t3, x3, params)
+    t4, x4 = _step_forward(t, x, dfx_3, dt, x_scale)
 
-    _dx_dt = _sum_combine(f_1, f_2, f_3, f_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
-    _t, _x = _step_forward(t, x, _dx_dt, dt / 6, x_scale)
+    dfx_4 = dfx(t4, x4, params)
+
+    _dx_dt = _sum_combine(dfx_1, dfx_2, dfx_3, dfx_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
+    _t, _x = _step_forward(t, x, _dx_dt / 6, dt, x_scale)
     return _t, _x
 
 @partial(jit, static_argnums=(2, ))
