@@ -1,22 +1,20 @@
-# Sparse Identification of Non-linear Dynamical Systems with Predictive Coding (PC-SINDy)
+# Sparse Identification of Non-linear Dynamical Systems (SINDy)[]
 
-In this section, we teach, create, simulate, and visualize SINDy model with Predictive Coding (PC-SINDy) using NGC-Learn library components.
-
-
+In this section, we teach, create, simulate, and visualize SINDy model implemented in NGC-Learn library. 
 
 
 
 
 
-The model **code** for this exhibit can be found [here](https://github.com/NACLab/pc_sindy.py).
 
 
-## Predictive Coding (PC)
-PC is a biological plausible learning algorithm that learns the effective representation and transformations from the data. 
+The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-learn/sindy/sindy.py).
+
+## SINDy 
+SINDy is a data-driven algorithm that discovers the differential equation governing the dynamical systems. It ...
 
 
-## Sparse Identification of Non-linear Dynamical Systems (SINDy)
-SINDy is a data-driven algorithm that finds the derivative of dynamical systems in terms of a symbolic equation of the system's state vector. 
+in terms of a symbolic equation of the system's state vector. 
 SINDy describes the derivative (linear operation acting on △t) as linear transformations
 of a manually constructed dictionary from the state vector by a coefficient matrix.
 Dictionary learning combined with LASSO (L1-norm) promotes the sparsity of the coefficient matrix
