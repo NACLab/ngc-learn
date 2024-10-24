@@ -36,14 +36,14 @@ Library of Candidate Functions: $\Theta(\mathbf{X}) = [\mathbf{1} \quad \mathbf{
 
 
 <p align="center">
-  <img src="../images/museum/sindy/lorenz.png" width="190">
-  <img src="../images/museum/sindy/oscillator.png" width="190">
+  <img src="../images/museum/sindy/lorenz.png" width="300">
+  <img src="../images/museum/sindy/oscillator.png" width="300">
 </p>
 
 <p align="center">
-  <img src="../images/museum/sindy/linear_2D.png" width="190">
-  <img src="../images/museum/sindy/cubic_2D.png" width="190">
-  <img src="../images/museum/sindy/linear_3D.png" width="190">
+  <img src="../images/museum/sindy/linear_2D.png" width="300">
+  <img src="../images/museum/sindy/cubic_2D.png" width="300">
+  <img src="../images/museum/sindy/linear_3D.png" width="300">
 </p>
 
 
