@@ -16,14 +16,6 @@ SINDy is a data-driven algorithm that discovers the differential equation govern
   <img src="../images/museum/sindy/sindy.png" width="900">
 </p>
 
-<p align="center">
-  <img src="../images/museum/sindy/linear_2D.png" width="190">
-  <img src="../images/museum/sindy/cubic_2D.png" width="190">
-  <img src="../images/museum/sindy/linear_3D.png" width="190">
-  <img src="../images/museum/sindy/lorenz.png" width="190">
-  <img src="../images/museum/sindy/oscillator.png" width="190">
-</p>
-
 
 ### Inputs
 Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct:
@@ -41,6 +33,21 @@ Derivative matrix: $\dot{\mathbf{X}}_{(m \times n)}$ (computed numerically)
 Library of Candidate Functions: $\Theta(\mathbf{X}) = [\mathbf{1} \quad \mathbf{X} \quad \mathbf{X}^2 \quad \mathbf{X}^3 \quad \sin(\mathbf{X}) \quad \cos(\mathbf{X}) \quad ...]$
 
 ------------------
+
+
+<p align="center">
+  <img src="../images/museum/sindy/lorenz.png" width="190">
+  <img src="../images/museum/sindy/oscillator.png" width="190">
+</p>
+
+<p align="center">
+  <img src="../images/museum/sindy/linear_2D.png" width="190">
+  <img src="../images/museum/sindy/cubic_2D.png" width="190">
+  <img src="../images/museum/sindy/linear_3D.png" width="190">
+</p>
+
+
+
 
 
 
