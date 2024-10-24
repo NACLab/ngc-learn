@@ -29,11 +29,13 @@ State matrix: $\mathbf{X}_{(m \times n)}$  (t measurements of n variables)
 
 
 ### Inputs
-> Time: $ts = [t_0, t_1, \dots,  T]$ 
+> Time: $ts = [t_0, t_1, \dots,  T]$
+> 
 > State matrix: $\mathbf{X}_{(m \times n)}$  (t measurements of n variables)
 
 ### Inputs
-* Time: $ts = [t_0, t_1, \dots,  T]$ 
+* Time: $ts = [t_0, t_1, \dots,  T]$
+* 
 * State matrix: $\mathbf{X}_{(m \times n)}$  (t measurements of n variables)
 
 
