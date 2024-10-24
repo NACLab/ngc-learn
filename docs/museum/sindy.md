@@ -16,6 +16,11 @@ SINDy is a data-driven algorithm that discovers the differential equation govern
   <img src="../images/museum/sindy/sindy.png" width="900">
 </p>
 
+<p align="center">
+  <img src="../images/museum/sindy/linear_2D.png" width="200">
+  <img src="../images/museum/sindy/linear_3D.png" width="200">
+</p>
+
 
 ### Inputs
 Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct:
