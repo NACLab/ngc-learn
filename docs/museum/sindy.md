@@ -25,10 +25,11 @@ SINDy is a data-driven algorithm that discovers the differential equation govern
 > State matrix: $\mathbf{X}_{(m \times n)}$  (t measurements of n variables)
 
 ### Inputs
-   Time:
+
+   **Time**
 * $ts = [t_0,~t_1, \dots,~T]$
   
-   State matrix:
+   **State matrix**
 * $\mathbf{X}(t)_{(m \times n)} = [x(t),~~y(t),~~z(t)]$
 
 
