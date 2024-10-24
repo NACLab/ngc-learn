@@ -4,10 +4,7 @@ In this section, we teach, create, simulate, and visualize SINDy model implement
 
 1.  Learn how to build a SINDy model of time-series dataset, generated using Ordinary Differential Equations (ODE) of known dynamical systems used in [1].
 2.  Learn how to build polynomial libraries of given dataset with arbitrary order.
-3.  Learn how to do sparse regression in NGC (Sequential Thresholding Least Square)
-4.  Visualize the acquired filters of the learned dictionary models and examine
-the results of imposing a kurtotic prior as well as a thresholding function
-over latent codes.
+3.  Learn how to solve the sparse regression problem by iteratively performing the least squares (LSQ) method followed by thresholding-- Sequential Thresholding Least Square (STLSQ)-- for the given model.
 
 
 
@@ -65,7 +62,7 @@ which allows only governing terms in the dictionary stay non-zero.
 
 
 
-
-
+## References
+<b>[1]</b> Brunton SL, Proctor JL, Kutz JN. Discovering governing equations from data by sparse identification of nonlinear dynamical systems. Proc Natl Acad Sci U S A. 2016 Apr 12;113(15):3932-7. doi: 10.1073/pnas.1517384113. Epub 2016 Mar 28. PMID: 27035946; PMCID: PMC4839439.
 
 
