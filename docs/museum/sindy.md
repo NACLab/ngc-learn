@@ -17,11 +17,11 @@ SINDy is a data-driven algorithm that discovers the differential equation govern
 </p>
 
 <p align="center">
-  <img src="../images/museum/sindy/linear_2D.png" width="200">
-  <img src="../images/museum/sindy/cubic_2D.png" width="200">
-  <img src="../images/museum/sindy/linear_3D.png" width="200">
-  <img src="../images/museum/sindy/lorenz.png" width="200">
-  <img src="../images/museum/sindy/oscillator.png" width="200">
+  <img src="../images/museum/sindy/linear_2D.png" width="190">
+  <img src="../images/museum/sindy/cubic_2D.png" width="190">
+  <img src="../images/museum/sindy/linear_3D.png" width="190">
+  <img src="../images/museum/sindy/lorenz.png" width="190">
+  <img src="../images/museum/sindy/oscillator.png" width="190">
 </p>
 
 
