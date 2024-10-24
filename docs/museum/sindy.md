@@ -27,7 +27,17 @@ Time: $ts = [t_0, t_1, \dots,  T]$
 State matrix: $\mathbf{X}_{(m \times n)}$  (t measurements of n variables)
 </p>
 
-<b> - </b> 
+
+### Inputs
+> Time: $ts = [t_0, t_1, \dots,  T]$ 
+> State matrix: $\mathbf{X}_{(m \times n)}$  (t measurements of n variables)
+
+### Inputs
+* Time: $ts = [t_0, t_1, \dots,  T]$ 
+* State matrix: $\mathbf{X}_{(m \times n)}$  (t measurements of n variables)
+
+
+
 
 
 Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct:
