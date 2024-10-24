@@ -19,7 +19,7 @@ SINDy is a data-driven algorithm that discovers the differential equation govern
 
 
 ### Inputs
-Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct:
+<b>   </b> Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct:
 
 Time: $ts = [t_0, t_1, \dots,  T]$  (number of measurements)
 
