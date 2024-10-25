@@ -285,7 +285,7 @@ def sine(x, omega_0=30):
 
 @jit
 def d_sine(x, omega_0=30):
-        """
+    """
     frequency = omega_0
     frequency * cos(x * frequency).
 
