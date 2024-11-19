@@ -124,9 +124,10 @@ class Base_Monitor(Component):
         """
         cs, end = self._add_path(compartment.path)
 
+        dtype = compartment.value.dtype
         shape = compartment.value.shape
-        new_comp = Compartment(np.zeros(shape))
-        new_comp_store = Compartment(np.zeros((window_length, *shape)))
+        new_comp = Compartment(np.zeros(shape, dtype=dtype))
+        new_comp_store = Compartment(np.zeros((window_length, *shape), dtype=dtype))
 
         comp_key = "*".join(compartment.path.split("/"))
         store_comp_key = comp_key + "*store"

@@ -46,7 +46,7 @@ class PoissonCell(JaxComponent):
     """
 
     @deprecate_args(max_freq="target_freq")
-    def __init__(self, name, n_units, target_freq=0., batch_size=1, **kwargs):
+    def __init__(self, name, n_units, target_freq=63.75, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Constrained Bernoulli meta-parameters

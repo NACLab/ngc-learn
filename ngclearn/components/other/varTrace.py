@@ -5,7 +5,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 
 @partial(jit, static_argnums=[4])
-def _run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
+def _run_varfilter(dt, x, x_tr, decayFactor, gamma_tr, a_delta=0.):
     """
     Run variable trace filter (low-pass filter) dynamics one step forward.
 
@@ -22,7 +22,7 @@ def _run_varfilter(dt, x, x_tr, decayFactor, a_delta=0.):
     Returns:
         updated trace/filter value/state
     """
-    _x_tr = x_tr * decayFactor
+    _x_tr = gamma_tr * x_tr * decayFactor
     #x_tr + (-x_tr) * (dt / tau_tr) = (1 - dt/tau_tr) * x_tr
     if a_delta > 0.: ## perform additive form of trace ODE
         _x_tr = _x_tr + x * a_delta
@@ -64,13 +64,14 @@ class VarTrace(JaxComponent): ## low-pass filter
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_tr, a_delta, decay_type="exp",
+    def __init__(self, name, n_units, tau_tr, a_delta, gamma_tr=1, decay_type="exp",
                  batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Trace control coefficients
         self.tau_tr = tau_tr ## trace time constant
         self.a_delta = a_delta ## trace increment (if spike occurred)
+        self.gamma_tr = gamma_tr
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
 
         ## Layer Size Setup
@@ -83,17 +84,20 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.trace = Compartment(restVals)
 
     @staticmethod
-    def _advance_state(dt, decay_type, tau_tr, a_delta, inputs, trace):
-        ## compute the decay factor
-        decayFactor = 0. ## <-- pulse filter decay (default)
+    def _advance_state(dt, decay_type, tau_tr, a_delta, gamma_tr, inputs, trace):
+        decayFactor = 0.
         if "exp" in decay_type:
             decayFactor = jnp.exp(-dt/tau_tr)
         elif "lin" in decay_type:
             decayFactor = (1. - dt/tau_tr)
-        ## else "step" == decay_type, yielding a step/pulse-like filter
-        trace = _run_varfilter(dt, inputs, trace, decayFactor, a_delta)
-        outputs = trace
-        return outputs, trace
+
+        _x_tr = gamma_tr * trace * decayFactor
+        if a_delta > 0.:
+            _x_tr = _x_tr + inputs * a_delta
+        else:
+            _x_tr = _x_tr * (1. - inputs) + inputs
+
+        return trace, trace
 
     @resolver(_advance_state)
     def advance_state(self, outputs, trace):
