@@ -170,6 +170,11 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
 
+
+
+
+
+
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
@@ -177,3 +182,10 @@ if __name__ == '__main__':
     print(Wab)
     plt.imshow(Wab.weights.value, cmap='gray')
     plt.show()
+
+
+
+
+
+
+
