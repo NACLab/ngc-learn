@@ -99,6 +99,11 @@ class HebbianPatchedSynapse(PatchedSynapse):
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
+        n_sub_models: The number of submodels in each layer
+        
+        stride_shape: Stride shape of overlapping synaptic weight value matrix
+            (Default: (0, 0))
+
         eta: global learning rate
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
