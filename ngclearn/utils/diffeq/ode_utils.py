@@ -44,8 +44,9 @@ def get_integrator_code(integrationType):
 @jit
 def _sum_combine(*args, **kwargs): ## fast co-routine for simple addition
     sum = 0
+
     for arg, val in zip(args, kwargs.values()):
-        sum += arg * val
+        sum = sum + val * arg
     return sum
 
 @jit
@@ -53,6 +54,8 @@ def _step_forward(t, x, dx_dt, dt, x_scale): ## internal step co-routine
     _t = t + dt
     _x = x * x_scale + dx_dt * dt
     return _t, _x
+
+
 
 def step_euler(t, x, dfx, dt, params, x_scale=1.):
     """
@@ -80,6 +83,7 @@ def step_euler(t, x, dfx, dt, params, x_scale=1.):
     dx_dt = dfx(t, x, params)
     _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
     return _t, _x
+
 
 def step_heun(t, x, dfx, dt, params, x_scale=1.):
     """
@@ -113,9 +117,11 @@ def step_heun(t, x, dfx, dt, params, x_scale=1.):
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
     dx_dt = dfx(t, x, params)
+
     _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
     _dx_dt = dfx(_t, _x, params)
     summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
+
     _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
     return _t, _x
 
@@ -149,12 +155,16 @@ def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-    f_1 = dfx(t, x, params)
-    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
+    dfx_1 = dfx(t, x, params)
 
-    f_2 = dfx(t1, x1, params)
-    _t, _x = _step_forward(t, x, f_2, dt, x_scale)
+    t1, x1 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
+    dfx_2 = dfx(t1, x1, params)
+    _t, _x = _step_forward(t, x, dfx_2, dt, x_scale)
     return _t, _x
+
+
+
+
 
 
 def step_rk4(t, x, dfx, dt, params, x_scale=1.):
@@ -186,21 +196,21 @@ def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-    f_1 = dfx(t, x, params)
-    t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
 
-    f_2 = dfx(t1, x1, params)
-    t2, x2 = _step_forward(t, x, f_2, dt * 0.5, x_scale)
+    dfx_1 = dfx(t, x, params)
+    t2, x2 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
 
-    f_3 = dfx(t2, x2, params)
-    t3, x3 = _step_forward(t, x, f_3, dt, x_scale)
+    dfx_2 = dfx(t2, x2, params)
+    t3, x3 = _step_forward(t, x, dfx_2, dt * 0.5, x_scale)
 
-    f_4 = dfx(t3, x3, params)
+    dfx_3 = dfx(t3, x3, params)
+    t4, x4 = _step_forward(t, x, dfx_3, dt, x_scale)
 
-    _dx_dt = _sum_combine(f_1, f_2, f_3, f_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
-    _t, _x = _step_forward(t, x, _dx_dt, dt / 6, x_scale)
+    dfx_4 = dfx(t4, x4, params)
+
+    _dx_dt = _sum_combine(dfx_1, dfx_2, dfx_3, dfx_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
+    _t, _x = _step_forward(t, x, _dx_dt / 6, dt, x_scale)
     return _t, _x
-
 
 
 def step_ralston(t, x, dfx, dt, params, x_scale=1.):

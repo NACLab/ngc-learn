@@ -65,9 +65,9 @@ class BernoulliCell(JaxComponent):
 
         # Compartments (state of the cell, parameters, will be updated through stateless calls)
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.inputs = Compartment(restVals) # input compartment
-        self.outputs = Compartment(restVals) # output compartment
-        self.tols = Compartment(restVals) # time of last spike
+        self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
+        self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
 
     @staticmethod
     def _advance_state(t, key, inputs, tols):
