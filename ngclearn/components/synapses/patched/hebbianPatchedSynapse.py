@@ -19,6 +19,8 @@ def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
 
         W: synaptic weight values (at time t)
 
+        w_mask: weight mask matrix
+
         w_bound: maximum value to enforce over newly computed efficacies
 
         signVal: multiplicative factor to modulate final update by (good for
@@ -55,6 +57,8 @@ def _enforce_constraints(W, w_mask, w_bound, is_nonnegative=True):
 
     Args:
         W: synaptic weight values (at time t)
+
+         w_mask: weight mask matrix
 
         w_bound: maximum value to enforce over newly computed efficacies
 
@@ -112,6 +116,8 @@ class HebbianPatchedSynapse(PatchedSynapse):
 
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
+
+        w_mask: weight mask matrix
 
         w_bound: maximum weight to softly bound this cable's value matrix to; if
             set to 0, then no synaptic value bounding will be applied
@@ -277,6 +283,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
             "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
+            "w_mask": "weight mask matrix"
             "w_decay": "Synaptic decay term",
             "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
