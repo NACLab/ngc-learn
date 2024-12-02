@@ -41,6 +41,55 @@ def create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_ini
 
 
 class PatchedSynapse(JaxComponent): ## base patched synaptic cable
+    """
+    A patched dense synaptic cables that creates multiple small dense synaptic cables; no form of synaptic evolution/adaptation
+    is in-built to this component.
+
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output signals (transformation induced by synapses)
+    | weights - current value matrix of synaptic efficacies
+    | biases - current value vector of synaptic bias values
+    | key - JAX PRNG key
+    | --- Synaptic Plasticity Compartments: ---
+    | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
+    | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
+    | dWweights - current delta matrix containing changes to be applied to synaptic efficacies
+    | dBiases - current delta vector containing changes to be applied to bias values
+    | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
+
+    Args:
+        name: the string name of this cell
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
+
+        n_sub_models: The number of submodels in each layer
+        
+        stride_shape: Stride shape of overlapping synaptic weight value matrix
+            (Default: (0, 0))
+
+        eta: global learning rate
+
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use
+
+        bias_init: a kernel to drive initialization of biases for this synaptic cable
+            (Default: None, which turns off/disables biases)
+
+        w_mask: weight mask matrix
+
+        pre_wght: pre-synaptic weighting factor (Default: 1.)
+
+        post_wght: post-synaptic weighting factor (Default: 1.)
+
+        resist_scale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+
+        p_conn: probability of a connection existing (default: 1.); setting
+            this to < 1. will result in a sparser synaptic structure
+    """
 
     def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), w_mask=None, weight_init=None, bias_init=None,
                  resist_scale=1., p_conn=1., batch_size=1, **kwargs):
@@ -142,7 +191,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         }
         hyperparams = {
             "shape": "Overall shape of synaptic weight value matrix; number inputs x number outputs",
-            "n_sub_models": "The number of submodels in each layer",
+            "n_sub_models": "The number of submodels (dense synaptic cables) in each layer",
             "stride_shape": "Stride shape of overlapping synaptic weight value matrix",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
