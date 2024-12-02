@@ -297,7 +297,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
             "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
-            "w_mask": "weight mask matrix"
+            "w_mask": "weight mask matrix",
             "w_decay": "Synaptic decay term",
             "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
