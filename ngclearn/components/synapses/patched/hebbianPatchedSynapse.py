@@ -21,8 +21,6 @@ def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
 
         w_bound: maximum value to enforce over newly computed efficacies
 
-        is_nonnegative: (Unused)
-
         signVal: multiplicative factor to modulate final update by (good for
             flipping the signs of a computed synaptic change matrix)
 
