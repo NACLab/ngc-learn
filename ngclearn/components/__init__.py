@@ -61,5 +61,10 @@ from .monitor import Monitor
 ## point to patched component types 
 from .synapses.patched.patchedSynapse import PatchedSynapse
 from .synapses.patched.staticPatchedSynapse import StaticPatchedSynapse
-from .synapses.patched.hebbianPatc
+from .synapses.patched.hebbianPatchedSynapse import HebbianPatchedSynapse
+
+
+
+
+
 
