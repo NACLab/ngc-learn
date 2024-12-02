@@ -148,6 +148,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (Rscale); applied to output of transformation",
+            "w_mask": "weight mask matrix",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)"
         }
         info = {cls.__name__: properties,
