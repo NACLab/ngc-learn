@@ -250,7 +250,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
 
 
 
-      @resolver(_reset)
+    @resolver(_reset)
     def reset(self, inputs, outputs, pre, post, dWeights, dBiases):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
