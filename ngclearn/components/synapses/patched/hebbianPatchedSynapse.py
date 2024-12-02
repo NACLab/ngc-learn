@@ -152,6 +152,8 @@ class HebbianPatchedSynapse(PatchedSynapse):
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
+
+        batch_size: the size of each mini batch
     """
 
     def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
