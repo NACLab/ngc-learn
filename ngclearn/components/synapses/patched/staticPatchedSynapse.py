@@ -3,7 +3,7 @@ from .patchedSynapse import PatchedSynapse
 
 
 class StaticPatchedSynapse(PatchedSynapse):
-       """
+    """
         A static dense synaptic cable; no form of synaptic evolution/adaptation
         is in-built to this component.
 
@@ -40,13 +40,8 @@ class StaticPatchedSynapse(PatchedSynapse):
             p_conn: probability of a connection existing (default: 1.); setting
                 this to < 1 and > 0. will result in a sparser synaptic structure
                 (lower values yield sparse structure)
-        """
+    """
     pass
-
-
-
-
-
 
 
 
