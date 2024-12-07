@@ -303,8 +303,12 @@ if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
-                             sign_value=-1.0, bias_init=("constant", 0., 0.))
+                             sign_value=-1.0, l1_decay=0.001)
     print(Wab)
+
+
+
+
 
 
 
