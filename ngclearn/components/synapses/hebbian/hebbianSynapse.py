@@ -5,8 +5,8 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-@partial(jit, static_argnums=[3, 4, 5, 6, 7, 8])
-def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
+@partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
+def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay=0., l1_decay=0.,
                  pre_wght=1., post_wght=1.):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
@@ -27,6 +27,8 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay
 
         w_decay: synaptic decay factor to apply to this update
 
+        l1_decay: synaptic sparsity factor to apply to this update
+
         pre_wght: pre-synaptic weighting term (Default: 1.)
 
         post_wght: post-synaptic weighting term (Default: 1.)
@@ -38,10 +40,13 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., w_decay
     _post = post * post_wght
     dW = jnp.matmul(_pre.T, _post)
     db = jnp.sum(_post, axis=0, keepdims=True)
+
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
     if w_decay > 0.:
         dW = dW - W * w_decay
+    if l1_decay > 0.:
+        dW = dW - jnp.sign(W) * l1_decay
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
@@ -111,6 +116,10 @@ class HebbianSynapse(DenseSynapse):
             computed Hebbian adjustment (Default: 0); note that decay is not
             applied to any configured biases
 
+        l1_decay: degree to which (L1) synaptic sparsity is applied to the
+            computed Hebbian adjustment (Default: 0); note that sparsity is not
+            applied to any configured biases
+
         sign_value: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
             optimization is required (as Hebbian rules typically yield
@@ -138,7 +147,7 @@ class HebbianSynapse(DenseSynapse):
 
     # Define Functions
     def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
-                 w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
+                 w_bound=1., is_nonnegative=False, w_decay=0., l1_decay=0., sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
                  resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
@@ -149,6 +158,7 @@ class HebbianSynapse(DenseSynapse):
         self.Rscale = resist_scale
         self.w_bound = w_bound
         self.w_decay = w_decay ## synaptic decay
+        self.l1_decay = l1_decay ## synaptic l1 decay
         self.pre_wght = pre_wght
         self.post_wght = post_wght
         self.eta = eta
@@ -172,21 +182,21 @@ class HebbianSynapse(DenseSynapse):
             if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _compute_update(w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _compute_update(w_bound, is_nonnegative, sign_value, w_decay, l1_decay, pre_wght,
                         post_wght, pre, post, weights):
         ## calculate synaptic update values
         dW, db = _calc_update(
             pre, post, weights, w_bound, is_nonnegative=is_nonnegative,
-            signVal=sign_value, w_decay=w_decay, pre_wght=pre_wght,
+            signVal=sign_value, w_decay=w_decay, l1_decay=l1_decay, pre_wght=pre_wght,
             post_wght=post_wght)
         return dW, db
 
     @staticmethod
-    def _evolve(opt, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _evolve(opt, w_bound, is_nonnegative, sign_value, w_decay, l1_decay, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dWeights, dBiases = HebbianSynapse._compute_update(
-            w_bound, is_nonnegative, sign_value, w_decay, pre_wght, post_wght,
+            w_bound, is_nonnegative, sign_value, w_decay, l1_decay, pre_wght, post_wght,
             pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
@@ -265,12 +275,13 @@ class HebbianSynapse(DenseSynapse):
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
             "w_decay": "Synaptic decay term",
+            "l1_decay": "Synaptic sparsity term (lasso regularization)",
             "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] + b ;"
-                            "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay",
+                            "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay (or sign(W_{ij}) * l1_decay)",
                 "hyperparameters": hyperparams}
         return info
 
@@ -294,3 +305,9 @@ if __name__ == '__main__':
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
                              sign_value=-1.0, bias_init=("constant", 0., 0.))
     print(Wab)
+
+
+
+
+
+
