@@ -15,9 +15,10 @@ In this section, we teach, create, simulate, and visualize the Sparse Identifica
 
 1.  Learn how to discover the differential equation of a dynamical system using SINDy algorithm only by the system's stapshots.
 2.  Learn how to build polynomial libraries with arbitrary order out of the dataset.
-3.  Learn how to solve the sparse regression problem in 2 ways
-  - Iteratively finding the coefficient matrix by gradient descent.
-  - Iteratively performing the least squares (LSQ) method followed by thresholding-- Sequential Thresholding Least Square (STLSQ) for the given model.
+3.  Learn how to solve the sparse regression problem in various ways given SINDy's components.
+  - Sequential Thresholding Least Square (STLSQ) -- least squares (LSQ) method followed by thresholding iteratively.
+  - Iterative lasso regression.
+
    
    
 The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/exhibits/sindy/sindy.py).
@@ -107,8 +108,7 @@ This phase involves gathering the raw data points representing the system's stat
 
 ### 2.A: Making Library  → $\mathbf{\Theta}_{(m \times p)}$
 In this step, using the dataset collected in step 1, given the pre-defined function terms, we construct the dictionary of candidate predictors for system's differential equations. These functions form the columns of our library matrix $\mathbf{\Theta}(\mathbf{X})$ and $p$ is the number of candidate predictors. To identify the dynamical structure of the system this library of candidate functions appear in the regression problem to propose the model's structure that later the coefficient matrix will give weight to them according to the problem setup. Assuming sparse models for the system, by sparsification (LASSO or thresholding weigths) decide which structure best describe the system's behavior using predictors. 
-Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct:
-Library of Candidate Functions: $\Theta(\mathbf{X}) = [\mathbf{1} \quad \mathbf{X} \quad \mathbf{X}^2 \quad \mathbf{X}^3 \quad \sin(\mathbf{X}) \quad \cos(\mathbf{X}) \quad ...]$
+Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct a library of candidate functions. For example: $\Theta(\mathbf{X}) = [\mathbf{1} \quad \mathbf{X} \quad \mathbf{X}^2 \quad \mathbf{X}^3 \quad ...]$
    </td>
    <td> 
    <p align="center">
