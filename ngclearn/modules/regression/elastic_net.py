@@ -16,6 +16,14 @@ class Iterative_ElasticNet():
 
         The circuit implements sparse regression through Hebbian synapses with Elastic Net regularization.
 
+        The specific differential equation that characterizes this model is dW_reg (for adjusting W, given
+        dW (the gradient of loss/energy function), it adds lmbda * dW_reg to the dW)
+        
+        | dW_reg = (jnp.sign(W) * l1_ratio) + (W * (1-l1_ratio)/2)
+        | dW/dt = dW + lmbda * dW_reg
+
+
+
         | --- Circuit Components: ---
         | W - HebbianSynapse for learning regularized dictionary weights
         | err - GaussianErrorCell for computing prediction errors
