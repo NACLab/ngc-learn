@@ -15,15 +15,16 @@ from ngclearn.components import (RateCell,
 from ngclearn.utils.model_utils import scanner
 
 
-# batch = entire dataset --> time series?
-# poly dict -> Dict(x) --> Dict(x-hat)
-
 class Iterative_Lasso():
     """
         A neural circuit implementation of the iterative Lasso (L1) algorithm
         using Hebbian learning update rule.
 
         The circuit implements sparse coding through Hebbian synapses with L1 regularization.
+
+        The specific differential equation that characterizes this model is adding lmbda * sign(W)
+        to the dW (the gradient of loss/energy function):
+        | dW/dt = dW + lmbda * sign(W)
 
         | --- Circuit Components: ---
         | W - HebbianSynapse for learning sparse dictionary weights
