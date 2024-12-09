@@ -46,12 +46,14 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1., regType
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
 
-    if regType == "l2":
-        dW_reg = W
-    if regType == "l1":
-        dW_reg = jnp.sign(W)
-
-    dW = dW + regLambda * dW_reg
+    if regType == "l2" or regType == "ridge":
+        dW_reg = W * regLambda
+    if regType == "l1" or regType == "lasso":
+        dW_reg = jnp.sign(W) * regLambda
+    if regType == "l1l2" or regType == "elastic_net":
+        dW_reg = regLambda[0] * jnp.sign(W) + regLambda[0] * W
+    print()
+    dW = dW + dW_reg
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
@@ -121,7 +123,13 @@ class HebbianSynapse(DenseSynapse):
             typically a tuple with 1st element as a string calling the name of
             regularization to use and 2nd element as a floating point number
             calling the regularization parameter lambda (Default: (None, 0.))
-            currently it supports "l1" or "lasso" and "l2" or ridge
+            currently it supports "l1" or "lasso" or "l2" or "ridge" or "l1l2" or "elastic_net".
+            usage guide:
+            regularization = ('l1', 0.01) or regularization = ('lasso', 0.01)
+            regularization = ('l2', 0.01) or regularization = ('ridge', 0.01)
+            regularization = ('l1l2', (0.01, 0.01)) or regularization = ('elastic_net', (0.01, 0.01))
+
+
 
         sign_value: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
@@ -159,8 +167,9 @@ class HebbianSynapse(DenseSynapse):
         if w_decay is not None:
             warnings.warn(
                 "The 'w_decay' parameter is deprecated and will be removed in a future version. "
-                "Use regularization=(name, value) instead. name can take 'l1' or 'lasso' or 'l2' "
-                "or 'ridge' and value is a float",
+                "Use regularization=(name, value) instead. name can take 'l1' or 'lasso' and value is a float"
+                "OR 'l2' or 'ridge' and value is a float"
+                "OR 'l1l2' or 'elastic_net' and value is a tuple of 2 floats",
                 DeprecationWarning,
                 stacklevel=2
             )
@@ -295,7 +304,7 @@ class HebbianSynapse(DenseSynapse):
             "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
-            "regularization": "Initialization conditions for synaptic regularization values",
+            "regularization": "regularization name and value for synaptic updating regularization",
             "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
         info = {cls.__name__: properties,
@@ -323,5 +332,5 @@ if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
-                             sign_value=-1.0, regularization=("l2", 0.001))
+                             sign_value=-1.0, regularization=("elastic_net", (0.001, 0.002)))
     print(Wab)
