@@ -161,7 +161,7 @@ class HebbianSynapse(DenseSynapse):
     """
 
     # Define Functions
-    @deprecate_args(_rebind=False, w_decay='prior', _keep_as="('l2', w_decay)")
+    @deprecate_args(_rebind=False, w_decay='prior')
     def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
                  w_bound=1., is_nonnegative=False, prior=(None, 0.), w_decay=0., sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
