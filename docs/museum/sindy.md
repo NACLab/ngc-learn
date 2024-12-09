@@ -15,9 +15,8 @@ In this section, we teach, create, simulate, and visualize the Sparse Identifica
 
 1.  Learn how to discover the differential equation of a dynamical system using SINDy algorithm only by the system's stapshots.
 2.  Learn how to build polynomial libraries with arbitrary order out of the dataset.
-3.  Learn how to solve the sparse regression problem in various ways given SINDy's components.
-  - Sequential Thresholding Least Square (STLSQ) -- least squares (LSQ) method followed by thresholding iteratively.
-  - Iterative lasso regression.
+3.  Learn how to solve the sparse regression problem using the Sequential Thresholding Least Square (STLSQ) algorithm.
+
 
    
    
@@ -256,6 +255,9 @@ Solving LSQ with the sparse matrix $\mathbf{\Theta_s}$ and $\mathbf{W_s}$ and fi
 </table>
 
 
+
+<!-- --------------------------------------------------------------------------------------------- -->
+
 <!--
    <p align="center">
    <img src="../images/museum/sindy/dx.png" width="300">
@@ -345,6 +347,8 @@ for dim in range(dX.shape[1]):
 
 ```
 
+
+<!-- --------------------------------------------------------------------------------------------- -->
 
 <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
 <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
