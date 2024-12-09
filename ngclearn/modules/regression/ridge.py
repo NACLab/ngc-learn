@@ -17,6 +17,12 @@ class Iterative_Ridge():
 
         The circuit implements sparse regression through Hebbian synapses with L2 regularization.
 
+        The specific differential equation that characterizes this model is adding lmbda * W
+        to the dW (the gradient of loss/energy function):
+        | dW/dt = dW + lmbda * W
+
+        
+
         | --- Circuit Components: ---
         | W - HebbianSynapse for learning regularized dictionary weights
         | err - GaussianErrorCell for computing prediction errors
