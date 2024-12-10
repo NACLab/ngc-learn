@@ -71,10 +71,11 @@ class Iterative_Ridge():
         self.weight_fill = weight_fill
         self.threshold = threshold
         self.name = name
+        self.lr = lr
         feature_dim = dict_dim
 
         with Context(self.name) as self.circuit:
-            self.W = HebbianSynapse("W", shape=(feature_dim, sys_dim), eta=lr,
+            self.W = HebbianSynapse("W", shape=(feature_dim, sys_dim), eta=self.lr,
                                    sign_value=-1, weight_init=dist.constant(weight_fill),
                                    prior=('ridge', ridge_lmbda), optim_type=optim_type, key=subkeys[0])
             self.err = GaussianErrorCell("err", n_units=sys_dim)
