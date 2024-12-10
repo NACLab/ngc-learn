@@ -77,7 +77,8 @@ class Iterative_Ridge():
         with Context(self.name) as self.circuit:
             self.W = HebbianSynapse("W", shape=(feature_dim, sys_dim), eta=self.lr,
                                    sign_value=-1, weight_init=dist.constant(weight_fill),
-                                   prior=('ridge', ridge_lmbda), optim_type=optim_type, key=subkeys[0])
+                                   prior=('ridge', ridge_lmbda), w_bound=0.,
+                                   optim_type=optim_type, key=subkeys[0])
             self.err = GaussianErrorCell("err", n_units=sys_dim)
 
             # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
