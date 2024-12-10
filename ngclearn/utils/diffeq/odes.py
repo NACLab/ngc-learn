@@ -3,7 +3,7 @@ from jax import jit
 from functools import partial
 
 
-@partial(jit, static_argnums=(0,))
+
 def linear_2D(t, x, params):
     '''
     :param x: 2D vector
@@ -32,7 +32,7 @@ def linear_2D(t, x, params):
     return dfx_
 
 
-@partial(jit, static_argnums=(0,))
+
 def cubic_2D(t, x, params):
     '''
     :param x: 2D vector
@@ -60,7 +60,7 @@ def cubic_2D(t, x, params):
     return dfx_
 
 
-@partial(jit, static_argnums=(0,))
+
 def lorenz(t, x, params):
     '''
     :param x: 3D vector
@@ -94,7 +94,7 @@ def lorenz(t, x, params):
     return jnp.stack([dx, dy, dz], axis=-1)
 
 
-@partial(jit, static_argnums=(0,))
+
 def linear_3D(t, x, params):
     '''
     :param x: 3D vector
@@ -127,7 +127,8 @@ def linear_3D(t, x, params):
     return jnp.stack([dx, dy, dz], axis=-1)
 
 
-@partial(jit, static_argnums=(0,))
+
+
 def oscillator(t, x, params, mu1=0.05, mu2=-0.01, omega=3.0, alpha=-2.0, beta=-5.0, sigma=1.1):
     '''
     :param x: 3D vector
@@ -237,3 +238,10 @@ if __name__ == "__main__":
     ax.set_zlabel('z', fontsize=20)
     plt.grid(True)
     plt.show()
+
+
+
+
+
+
+
