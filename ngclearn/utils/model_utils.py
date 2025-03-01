@@ -548,7 +548,7 @@ def layer_normalize(x, shift=0., scale=1.):
         layer-normalized data samples `x`
     """
     xmu = jnp.mean(x, axis=1, keepdims=True)
-    xsigma = jnp.sqrt(jnp.mean(jnp.square(x - xmu)))
+    xsigma = jnp.sqrt(jnp.mean(jnp.square(x - xmu)).clip(min=1e-6))
     _x = (x - xmu)/(xsigma + 1e-6)
     return _x * scale + shift
 
