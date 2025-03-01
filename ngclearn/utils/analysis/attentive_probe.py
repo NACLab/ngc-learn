@@ -78,7 +78,7 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
     """
     Runs full nonlinear attentive probe on input encodings (typically embedding vectors produced by some other model). 
 
-    Args: 
+    Args:
         params: parameters tuple/list of probe
 
         encodings: input encoding vectors/data
@@ -98,18 +98,35 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
     """
     # encoded_image_feature: (B, hw, dim)
     #learnable_query, *_params) = params
-    learnable_query, Wq, bq, Wk, bk, Wv, bv, Wout, bout, Whid, bhid, Wln_mu, Wln_scale, Wy, by = params
-    attn_params = (Wq, bq, Wk, bk, Wv, bv, Wout, bout)
-    features = cross_attention(attn_params, learnable_query, encodings, mask, n_heads, dropout)
+    learnable_query, Wq, bq, Wk, bk, Wv, bv, Wout, bout,\
+        Wqs, bqs, Wks, bks, Wvs, bvs, Wouts, bouts, Wlnattn_mu,\
+        Wlnattn_scale, Whid1, bhid1, Wln_mu1, Wln_scale1, Whid2,\
+        bhid2, Wln_mu2, Wln_scale2, Whid3, bhid3, Wln_mu3, Wln_scale3, Wy, by = params
+    cross_attn_params = (Wq, bq, Wk, bk, Wv, bv, Wout, bout)
+    features = cross_attention(cross_attn_params, learnable_query, encodings, mask, n_heads, dropout)
+    # Perform a single self-attention block here
+    # Self-Attention
+    self_attn_params = (Wqs, bqs, Wks, bks, Wvs, bvs, Wouts, bouts)
+    skip = features
+    if use_LN:
+        features = layer_normalize(features, Wlnattn_mu, Wlnattn_scale)
+    features = cross_attention(self_attn_params, features, features, None, n_heads, dropout)
+    features = features + skip
     features = features[:, 0]  # (B, 1, dim) => (B, dim)
     # MLP
-    residual = features
+    skip = features
     if use_LN: ## normalize hidden layer output of probe predictor
-        features = layer_normalize(features, Wln_mu, Wln_scale)
-    features = jnp.matmul((features), Whid) + bhid
+        features = layer_normalize(features, Wln_mu1, Wln_scale1)
+    features = jnp.matmul((features), Whid1) + bhid1
     features = gelu(features)
-    features = residual + features
-
+    if use_LN: ## normalize hidden layer output of probe predictor
+        features = layer_normalize(features, Wln_mu2, Wln_scale2)
+    features = jnp.matmul((features), Whid2) + bhid2
+    features = gelu(features)
+    if use_LN: ## normalize hidden layer output of probe predictor
+        features = layer_normalize(features, Wln_mu3, Wln_scale3)
+    features = jnp.matmul((features), Whid3) + bhid3
+    features = features + skip
     outs = jnp.matmul(features, Wy) + by
     if use_softmax: ## apply softmax output nonlinearity
         outs = softmax(outs)
@@ -183,11 +200,12 @@ class AttentiveProbe(Probe):
     """
     def __init__(
             self, dkey, source_seq_length, input_dim, out_dim, num_heads=8, attn_dim=64,
-            target_seq_length=1, learnable_query_dim=31, batch_size=1, hid_dim=32, use_LN=True, use_softmax=True, **kwargs
+            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32, use_LN=True, use_softmax=True, **kwargs
     ):
         super().__init__(dkey, batch_size, **kwargs)
         assert attn_dim % num_heads == 0, f"`attn_dim` must be divisible by `num_heads`. Got {attn_dim} and {num_heads}."
-        self.dkey, *subkeys = random.split(self.dkey, 12)
+        assert learnable_query_dim % num_heads == 0, f"`learnable_query_dim` must be divisible by `num_heads`. Got {learnable_query_dim} and {num_heads}."
+        self.dkey, *subkeys = random.split(self.dkey, 25)
         self.num_heads = num_heads
         self.source_seq_length = source_seq_length
         self.input_dim = input_dim
@@ -205,19 +223,37 @@ class AttentiveProbe(Probe):
         bv = random.normal(subkeys[5], (1, attn_dim)) * sigma
         Wout = random.normal(subkeys[6], (attn_dim, learnable_query_dim)) * sigma
         bout = random.normal(subkeys[7], (1, learnable_query_dim)) * sigma
-        #params = (Wq, bq, Wk, bk, Wv, bv, Wout, bout)
+        cross_attn_params = (Wq, bq, Wk, bk, Wv, bv, Wout, bout)
+        Wqs = random.normal(subkeys[8], (learnable_query_dim, learnable_query_dim)) * sigma
+        bqs = random.normal(subkeys[9], (1, learnable_query_dim)) * sigma
+        Wks = random.normal(subkeys[10], (learnable_query_dim, learnable_query_dim)) * sigma
+        bks = random.normal(subkeys[11], (1, learnable_query_dim)) * sigma
+        Wvs = random.normal(subkeys[12], (learnable_query_dim, learnable_query_dim)) * sigma
+        bvs = random.normal(subkeys[13], (1, learnable_query_dim)) * sigma
+        Wouts = random.normal(subkeys[14], (learnable_query_dim, learnable_query_dim)) * sigma
+        bouts = random.normal(subkeys[15], (1, learnable_query_dim)) * sigma
+        Wlnattn_mu = jnp.zeros((1, learnable_query_dim))
+        Wlnattn_scale = jnp.ones((1, learnable_query_dim))
+        self_attn_params = (Wqs, bqs, Wks, bks, Wvs, bvs, Wouts, bouts, Wlnattn_mu, Wlnattn_scale)
         learnable_query = jnp.zeros((batch_size, 1, learnable_query_dim))  # (B, T, D)
-        #self.all_params = (learnable_query, *params)
         self.mask = np.zeros((batch_size, target_seq_length, source_seq_length)).astype(bool) ## mask tensor
         ## MLP parameters
-        Whid = random.normal(subkeys[8], (learnable_query_dim, learnable_query_dim)) * sigma
-        bhid = random.normal(subkeys[9], (1, learnable_query_dim)) * sigma
-        Wln_mu = jnp.zeros((1, learnable_query_dim))
-        Wln_scale = jnp.ones((1, learnable_query_dim))
-        Wy = random.normal(subkeys[8], (learnable_query_dim, out_dim)) * sigma
-        by = random.normal(subkeys[9], (1, out_dim)) * sigma
-        #mlp_params = (Whid, bhid, Wln_mu, Wln_scale, Wy, by)
-        self.probe_params = (learnable_query, Wq, bq, Wk, bk, Wv, bv, Wout, bout, Whid, bhid, Wln_mu, Wln_scale, Wy, by)
+        Whid1 = random.normal(subkeys[16], (learnable_query_dim, learnable_query_dim)) * sigma
+        bhid1 = random.normal(subkeys[17], (1, learnable_query_dim)) * sigma
+        Wln_mu1 = jnp.zeros((1, learnable_query_dim))
+        Wln_scale1 = jnp.ones((1, learnable_query_dim))
+        Whid2 = random.normal(subkeys[18], (learnable_query_dim, learnable_query_dim * 4)) * sigma
+        bhid2 = random.normal(subkeys[19], (1, learnable_query_dim * 4)) * sigma
+        Wln_mu2 = jnp.zeros((1, learnable_query_dim))
+        Wln_scale2 = jnp.ones((1, learnable_query_dim))
+        Whid3 = random.normal(subkeys[20], (learnable_query_dim * 4, learnable_query_dim)) * sigma
+        bhid3 = random.normal(subkeys[21], (1, learnable_query_dim)) * sigma
+        Wln_mu3 = jnp.zeros((1, learnable_query_dim * 4))
+        Wln_scale3 = jnp.ones((1, learnable_query_dim * 4))
+        Wy = random.normal(subkeys[22], (learnable_query_dim, out_dim)) * sigma
+        by = random.normal(subkeys[23], (1, out_dim)) * sigma
+        mlp_params = (Whid1, bhid1, Wln_mu1, Wln_scale1, Whid2, bhid2, Wln_mu2, Wln_scale2, Whid3, bhid3, Wln_mu3, Wln_scale3, Wy, by)
+        self.probe_params = (learnable_query, *cross_attn_params, *self_attn_params, *mlp_params)
 
         ## set up gradient calculator
         self.grad_fx = jax.value_and_grad(eval_attention_probe, argnums=0, has_aux=True)
