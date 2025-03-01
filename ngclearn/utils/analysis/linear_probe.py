@@ -51,6 +51,11 @@ def eval_linear_probe(params, x, y, use_softmax=True, use_LN=False):
 
 class LinearProbe(Probe):
     """
+    This implements a regularized linear probe, which is useful for evaluating the quality of 
+    encodings/embeddings in light of some superivsory downstream data (e.g., label one-hot 
+    encodings or real-valued vector regression targets). 
+    Note that this probe allows for configurable Elastic-net (L1+L2) regularization.
+
     Args:
         dkey: init seed key
 
@@ -79,7 +84,6 @@ class LinearProbe(Probe):
         self.use_LN = use_LN
         self.l2_decay = 0.0001
         self.l1_decay = 0.000025
-        ## TODO: add in pre-built layer norm of inputs?
 
         ## set up classifier
         flat_input_dim = input_dim * source_seq_length
@@ -97,14 +101,35 @@ class LinearProbe(Probe):
         self.eta = 0.001
 
     def process(self, embeddings):
+        """
+        Runs the probe's inference scheme given an input batch of sequences of encodings/embeddings.
+
+        Args:
+            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
+
+        Returns:
+            probe output scores/probability values
+        """
         _embeddings = embeddings
-        if len(_embeddings.shape) > 2:
+        if len(_embeddings.shape) > 2: ## we flatten a sequence batch to 2D for a linear probe
             flat_dim = embeddings.shape[1] * embeddings.shape[2]
             _embeddings = jnp.reshape(_embeddings, (embeddings.shape[0], flat_dim))
         outs = run_linear_probe(self.probe_params, _embeddings, use_softmax=self.use_softmax, use_LN=self.use_LN)
         return outs
 
     def update(self, embeddings, labels):
+        """
+        Runs and updates this probe given an input batch of sequences of encodings/embeddings and their externally
+        assigned labels/target vector values.
+
+        Args:
+            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
+
+            labels: target values that map to embedding sequence; shape (B, target_value_dim)
+
+        Returns:
+            probe output scores/probability values
+        """
         _embeddings = embeddings
         if len(_embeddings.shape) > 2:
             flat_dim = embeddings.shape[1] * embeddings.shape[2]
@@ -123,3 +148,4 @@ class LinearProbe(Probe):
             self.optim_params, self.probe_params, grads, eta=self.eta
         )
         return loss, predictions
+

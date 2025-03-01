@@ -26,6 +26,15 @@ class Probe():
         return L, predictions
 
     def predict(self, data):
+        """
+        Runs this probe's inference scheme over a pool of data.
+
+        Args:
+            data: a dataset or design tensor/matrix containing encoding vector sequences; shape (N, T, embed_dim) or (N, embed_dim)
+
+        Returns: 
+            the output scores/predictions made by this probe
+        """
         _data = data
         if len(_data.shape) < 3:
             _data = jnp.expand_dims(_data, axis=1)
@@ -45,13 +54,31 @@ class Probe():
         return Y_mu
 
     def fit(self, data, labels, n_iter=50):
+        """
+        Fits this probe to a pool of data.
+
+        Args:
+            data: a dataset or design tensor/matrix containing encoding vector sequences; shape (N, T, embed_dim) or (N, embed_dim)
+
+            labels: a design matrix containing corresponding labels/targets for the embedding data; shape (N, target_dim)
+            
+        Returns:
+            the output scores/predictions made by this probe
+        """
         _data = data
         if len(_data.shape) < 3:
             _data = jnp.expand_dims(_data, axis=1)
 
         n_samples, seq_len, dim = _data.shape
+        size_modulo = n_samples % self.batch_size
+        if size_modulo > 0: 
+            ## we append some dup data for dataset design tensors that do not divide by batch size evenly
+            _chunk = _data[0:size_modulo, :, :]
+            _data = jnp.concatenate((_data, _chunk), axis=0)
+            n_samples, seq_len, dim = _data.shape
         n_batches = int(n_samples / self.batch_size)
 
+        ## run main probe fitting loop
         Y_mu = []
         _Y = None
         for iter in range(n_iter):
@@ -81,4 +108,5 @@ class Probe():
             print()
             if iter == n_iter - 1:
                 Y_mu = jnp.concatenate(Y_mu, axis=0)
-        return Y_mu, _Y
+        return Y_mu, _Y ## return predictions mapped to current shuffling of labels
+

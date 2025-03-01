@@ -32,10 +32,15 @@ def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array
 
     Args:
         params (tuple): tuple of parameters
+
         x1 (jax.Array): query sequence. Shape: (B, T, Dq)
+
         x2 (jax.Array): key-value sequence. Shape: (B, S, Dkv)
+
         mask (jax.Array): mask tensor. Shape: (B, T, S)
+
         n_heads (int, optional): number of attention heads. Defaults to 8.
+
         dropout_rate (float, optional): dropout rate. Defaults to 0.0.
 
     Returns:
@@ -70,6 +75,27 @@ def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array
 
 @bind(jax.jit, static_argnums=[3, 4, 5, 6])
 def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_softmax=True):
+    """
+    Runs full nonlinear attentive probe on input encodings (typically embedding vectors produced by some other model). 
+
+    Args: 
+        params: parameters tuple/list of probe
+
+        encodings: input encoding vectors/data
+
+        mask: optional mask to be applied to internal cross-attention
+
+        n_heads: number of attention heads
+
+        dropout: if >0, triggers drop-out applied internally to cross-attention
+
+        use_LN: use layer normalization?
+
+        use_softmax: should softmax be applied to output of attention probe? (useful for classification) 
+
+    Returns:
+        output scores/probabilities, cross-attention (hidden) features
+    """
     # encoded_image_feature: (B, hw, dim)
     #learnable_query, *_params) = params
     learnable_query, Wq, bq, Wk, bk, Wv, bv, Wout, bout, Whid, bhid, Wln_mu, Wln_scale, Wy, by = params
@@ -87,6 +113,30 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
 
 @bind(jax.jit, static_argnums=[4, 5, 6, 7])
 def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_softmax=True):
+    """
+    Runs and evaluates the nonlinear attentive probe given a paired set of encoding vectors and externally assigned 
+    labels/regression targets.
+
+    Args:
+        params: parameters tuple/list of probe
+
+        encodings: input encoding vectors/data
+
+        labels: output target values (e.g., labels, regression target vectors)
+
+        mask: optional mask to be applied to internal cross-attention
+
+        n_heads: number of attention heads
+
+        dropout: if >0, triggers drop-out applied internally to cross-attention
+
+        use_LN: use layer normalization?
+
+        use_softmax: should softmax be applied to output of attention probe? (useful for classification) 
+
+    Returns:
+        current loss value, output scores/probabilities
+    """
     # encodings: (B, hw, dim)
     outs, _ = run_attention_probe(params, encodings, mask, n_heads, dropout, use_LN, use_softmax)
     if use_softmax: ## Multinoulli log likelihood for 1-of-K predictions
@@ -97,6 +147,10 @@ def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout:
 
 class AttentiveProbe(Probe):
     """
+    This implements a nonlinear attentive probe, which is useful for evaluating the quality of 
+    encodings/embeddings in light of some superivsory downstream data (e.g., label one-hot 
+    encodings or real-valued vector regression targets).
+
     Args:
         dkey: init seed key
 
@@ -167,6 +221,15 @@ class AttentiveProbe(Probe):
         self.eta = 0.001
 
     def process(self, embedding_sequence):
+        """
+        Runs the probe's inference scheme given an input batch of sequences of encodings/embeddings.
+
+        Args:
+            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
+
+        Returns: 
+            probe output scores/probability values
+        """
         outs, feats = run_attention_probe(
             self.probe_params, embedding_sequence, self.mask, self.num_heads, 0.0, use_LN=self.use_LN,
             use_softmax=self.use_softmax
@@ -174,6 +237,18 @@ class AttentiveProbe(Probe):
         return outs
 
     def update(self, embedding_sequence, labels):
+        """
+        Runs and updates this probe given an input batch of sequences of encodings/embeddings and their externally 
+        assigned labels/target vector values.
+
+        Args:
+            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
+
+            labels: target values that map to embedding sequence; shape (B, target_value_dim)
+
+        Returns:
+            probe output scores/probability values
+        """
         ## compute partial derivatives / adjustments to probe parameters
         outputs, grads = self.grad_fx(
             self.probe_params, embedding_sequence, labels, self.mask, self.num_heads, dropout=0., use_LN=self.use_LN,
