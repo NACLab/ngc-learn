@@ -83,6 +83,9 @@ def create_function(fun_name, args=None):
     if fun_name == "tanh":
         fx = tanh
         dfx = d_tanh
+    elif "kwta" in fun_name:
+        fx = bkwta
+        dfx = bkwta #d_identity
     elif fun_name == "sigmoid":
         fx = sigmoid
         dfx = d_sigmoid
@@ -98,6 +101,9 @@ def create_function(fun_name, args=None):
     elif fun_name == "softplus":
         fx = softplus
         dfx = d_softplus
+    elif fun_name == "softmax":
+        fx = softmax
+        dfx = d_identity ## TODO: currently Jacobian of softmax not supported!
     elif fun_name == "unit_threshold":
         fx = threshold ## default threshold is 1 (thus unit)
         dfx = d_threshold ## STE approximation
@@ -109,9 +115,16 @@ def create_function(fun_name, args=None):
         dfx = d_identity
     else:
         raise RuntimeError(
-            "Activition function (" + fun_name + ") is not recognized/supported!"
+            "Activation function (" + fun_name + ") is not recognized/supported!"
             )
     return fx, dfx
+
+@partial(jit, static_argnums=[1])
+def bkwta(x, nWTA=5): #5 10 15 #K=50):
+    values, indices = lax.top_k(x, nWTA) # Note: we do not care to sort the indices
+    kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
+    topK = jnp.greater_equal(x, kth).astype(jnp.float32) # cast booleans to floats
+    return topK
 
 @partial(jit, static_argnums=[2, 3, 4])
 def normalize_matrix(M, wnorm, order=1, axis=0, scale=1.):
@@ -441,6 +454,26 @@ def inverse_logistic(x, clip_bound=0.03): # 0.03
     return jnp.log( x_/((1.0 - x_) + 1e-6) )
 
 @jit
+def gelu(x):
+    """
+    Applies the Gaussian Error Linear Unit (GeLU) activation (specifically, a fast approximation is used).
+
+    Args:
+        x: data to transform via inverse logistic function
+
+    Returns:
+        output of the GeLU activation
+    """
+    return x * sigmoid(x * 1.702) ## approximate GeLU
+
+@jit
+def d_gelu(x):
+    # df/dx = 1.702 * [ 1/(exp(-x) + 1) + (exp(-x) * x) / (exp(-x) + 1)^2]
+    exp_neg_x = jnp.exp(-x)
+    _x = (1./(exp_neg_x + 1.)) + (exp_neg_x * x)/jnp.square(exp_neg_x+1)
+    return _x * 1.702
+
+@jit
 def softmax(x, tau=0.0):
     """
     Softmax function with overflow control built in directly. Contains optional
@@ -498,6 +531,13 @@ def threshold_cauchy(x, lmbda):
     term1 = f * (x >= lmbda).astype(jnp.float32) ## f * (x >= lmda)
     term2 = g * (x <= -lmbda).astype(jnp.float32) ## g * (x <= -lmda)
     return term1 + term2
+
+@jit
+def layer_normalize(x, shift=0., scale=1.):
+    xmu = jnp.mean(x, axis=1, keepdims=True)
+    xsigma = jnp.sqrt(jnp.mean(jnp.square(x - xmu)))
+    _x = (x - xmu)/(xsigma + 1e-6)
+    return _x * scale + shift
 
 @jit
 def drop_out(dkey, input, rate=0.0):
