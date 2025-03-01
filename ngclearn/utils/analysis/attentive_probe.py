@@ -22,7 +22,25 @@ def masked_fill(x: jax.Array, mask: jax.Array, value=0) -> jax.Array:
     return jnp.where(mask, jnp.broadcast_to(value, x.shape), x)
 
 @bind(jax.jit, static_argnums=[4, 5])
-def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array, n_heads: int=8, dropout_rate: float=0.0):
+def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array, n_heads: int=8, dropout_rate: float=0.0) -> jax.Array:
+    """
+    Run cross-attention function given a list of parameters and two sequences (x1 and x2).
+    The function takes in a query sequence x1 and a key-value sequence x2, and returns an output of the same shape as x1.
+    T is the length of the query sequence, and S is the length of the key-value sequence.
+    Dq is the dimension of the query sequence, and Dkv is the dimension of the key-value sequence.
+    H is the number of attention heads.
+
+    Args:
+        params (tuple): tuple of parameters
+        x1 (jax.Array): query sequence. Shape: (B, T, Dq)
+        x2 (jax.Array): key-value sequence. Shape: (B, S, Dkv)
+        mask (jax.Array): mask tensor. Shape: (B, T, S)
+        n_heads (int, optional): number of attention heads. Defaults to 8.
+        dropout_rate (float, optional): dropout rate. Defaults to 0.0.
+
+    Returns:
+        jax.Array: output of cross-attention
+    """
     B, T, Dq = x1.shape # The original shape
     _, S, Dkv = x2.shape
     # in here we attend x2 to x1
