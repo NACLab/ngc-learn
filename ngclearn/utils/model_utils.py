@@ -534,6 +534,19 @@ def threshold_cauchy(x, lmbda):
 
 @jit
 def layer_normalize(x, shift=0., scale=1.):
+    """
+    Applies layer normalization to input data `x`
+
+    Args:
+        x: data to apply threshold function over
+
+        shift: the compensating mean/shift factor/parameters (to undo mean subtraction)
+
+        scale: the compensating re-scaling factor/parameters (to undo standard deviation division)
+
+    Returns:
+        layer-normalized data samples `x`
+    """
     xmu = jnp.mean(x, axis=1, keepdims=True)
     xsigma = jnp.sqrt(jnp.mean(jnp.square(x - xmu)))
     _x = (x - xmu)/(xsigma + 1e-6)
