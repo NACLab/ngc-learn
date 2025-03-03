@@ -84,6 +84,7 @@ class LinearProbe(Probe):
         self.use_LN = use_LN
         self.l2_decay = 0.0001
         self.l1_decay = 0.000025
+        # eta = 0.05 for SGD, batch_size=2000
 
         ## set up classifier
         flat_input_dim = input_dim * source_seq_length

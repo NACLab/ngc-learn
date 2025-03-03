@@ -11,11 +11,12 @@ class Probe():
 
     """
     def __init__(
-            self, dkey, batch_size=4, **kwargs
+            self, dkey, batch_size=1, dev_batch_size=1, **kwargs
     ):
         #dkey, *subkeys = random.split(dkey, 3)
         self.dkey = dkey
         self.batch_size = batch_size
+        self.dev_batch_size = dev_batch_size
 
     def process(self, embeddings):
         predictions = None
@@ -25,24 +26,29 @@ class Probe():
         L = predictions = None
         return L, predictions
 
-    def predict(self, data):
+    def predict(self, data, batch_size=None):
         """
         Runs this probe's inference scheme over a pool of data.
 
         Args:
             data: a dataset or design tensor/matrix containing encoding vector sequences; shape (N, T, embed_dim) or (N, embed_dim)
 
+            batch_size: optional batch-size argument (Default: None, will use training batch size)
+
         Returns: 
             the output scores/predictions made by this probe
         """
+        _batch_size = batch_size
+        if _batch_size is None:
+            _batch_size = self.batch_size
         _data = data
         if len(_data.shape) < 3:
             _data = jnp.expand_dims(_data, axis=1)
 
         n_samples, seq_len, dim = _data.shape
-        n_batches = int(n_samples / self.batch_size)
+        n_batches = int(n_samples / _batch_size)
         s_ptr = 0
-        e_ptr = self.batch_size
+        e_ptr = _batch_size
         Y_mu = []
         for b in range(n_batches):
             x_mb = _data[s_ptr:e_ptr, :, :]  ## slice out 3D batch tensor
@@ -132,7 +138,7 @@ class Probe():
 
             impatience += 1
             if dev_data is not None:
-                Ymu = self.predict(dev_data)
+                Ymu = self.predict(dev_data, batch_size=self.dev_batch_size)
                 acc = jnp.sum(jnp.equal(jnp.argmax(Ymu, axis=1), jnp.argmax(dev_labels, axis=1))) / (dev_labels.shape[0] * 1.)
                 if acc > best_acc:
                     best_acc = acc
