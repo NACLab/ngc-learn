@@ -122,11 +122,12 @@ class Probe():
                 _L, py = self.update(x_mb, y_mb)
                 acc = jnp.sum(jnp.equal(jnp.argmax(py, axis=1), jnp.argmax(y_mb, axis=1))) + acc
                 L = (_L * x_mb.shape[0]) + L ## we remove the batch division from loss w.r.t. x_mb/y_mb
-                if dev_data is not None:
-                    print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}  Dev.Acc = {best_acc:.2f}", end="")
-                else:
-                    print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}", end="")
-            print()
+
+            if dev_data is not None:
+                print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}  Dev.Acc = {best_acc:.2f}", end="")
+            else:
+                print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}", end="")
+
             acc = acc / Ns
             L = L / Ns ## compute current loss over (train) dataset
 
@@ -144,5 +145,6 @@ class Probe():
 
             if impatience > patience:
                 break  ## execute early stopping
+        print()
         return best_acc
 
