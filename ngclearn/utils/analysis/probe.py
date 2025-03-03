@@ -75,7 +75,7 @@ class Probe():
             patience: number of iterations of improvement (decrease) in loss before early-stopping enacted
             
         Returns:
-            the output scores/predictions made by this probe
+            best accuracy found over fitting run
         """
         data, labels = dataset
         dev_data = dev_labels = None
@@ -97,9 +97,7 @@ class Probe():
 
         ## run main probe fitting loop
         impatience = 0
-        final_L = 10000.
         best_acc = 0.
-        #Y_mu = []
         _Y = None
         for ii in range(n_iter):
             ## shuffle data (to ensure i.i.d. across sequences)
@@ -128,13 +126,9 @@ class Probe():
                     print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}  Dev.Acc = {best_acc:.2f}", end="")
                 else:
                     print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}", end="")
-                # if ii == ii-1:
-                #     Y_mu.append(py)
             print()
             acc = acc / Ns
-            final_L = L / Ns ## compute current loss over (train) dataset
-            # if ii == ii - 1:
-            #     Y_mu = jnp.concatenate(Y_mu, axis=0)
+            L = L / Ns ## compute current loss over (train) dataset
 
             impatience += 1
             if dev_data is not None:
@@ -150,5 +144,5 @@ class Probe():
 
             if impatience > patience:
                 break  ## execute early stopping
-        return final_L
+        return best_acc
 
