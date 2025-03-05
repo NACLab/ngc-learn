@@ -236,7 +236,8 @@ class AttentiveProbe(Probe):
         Wlnattn_scale = jnp.ones((1, learnable_query_dim)) ## LN parameter (applied to output of attention)
         self_attn_params = (Wqs, bqs, Wks, bks, Wvs, bvs, Wouts, bouts, Wlnattn_mu, Wlnattn_scale)
         learnable_query = jnp.zeros((batch_size, 1, learnable_query_dim))  # (B, T, D)
-        self.mask = np.zeros((batch_size, target_seq_length, source_seq_length)).astype(bool) ## mask tensor
+        self.mask = np.zeros((self.batch_size, target_seq_length, source_seq_length)).astype(bool) ## mask tensor
+        self.dev_mask = np.zeros((self.dev_batch_size, target_seq_length, source_seq_length)).astype(bool)
         ## MLP parameters
         Whid1 = random.normal(subkeys[16], (learnable_query_dim, learnable_query_dim)) * sigma
         bhid1 = random.normal(subkeys[17], (1, learnable_query_dim)) * sigma
@@ -259,7 +260,7 @@ class AttentiveProbe(Probe):
         self.grad_fx = jax.value_and_grad(eval_attention_probe, argnums=0, has_aux=True)
         ## set up update rule/optimizer
         self.optim_params = adam.adam_init(self.probe_params)
-        self.eta = 0.001
+        self.eta = 0.0002 #0.001
 
     def process(self, embedding_sequence):
         """
@@ -271,13 +272,14 @@ class AttentiveProbe(Probe):
         Returns: 
             probe output scores/probability values
         """
+        #print(embedding_sequence.shape)
         outs, feats = run_attention_probe(
-            self.probe_params, embedding_sequence, self.mask, self.num_heads, 0.0, use_LN=self.use_LN,
+            self.probe_params, embedding_sequence, self.dev_mask, self.num_heads, 0.0, use_LN=self.use_LN,
             use_softmax=self.use_softmax
         )
         return outs
 
-    def update(self, embedding_sequence, labels):
+    def update(self, embedding_sequence, labels, dkey=None):
         """
         Runs and updates this probe given an input batch of sequences of encodings/embeddings and their externally 
         assigned labels/target vector values.
@@ -290,9 +292,10 @@ class AttentiveProbe(Probe):
         Returns:
             probe output scores/probability values
         """
+        # TODO: put in dkey to facilitate dropout
         ## compute partial derivatives / adjustments to probe parameters
         outputs, grads = self.grad_fx(
-            self.probe_params, embedding_sequence, labels, self.mask, self.num_heads, dropout=0., use_LN=self.use_LN,
+            self.probe_params, embedding_sequence, labels, self.mask, self.num_heads, dropout=0.5, use_LN=self.use_LN,
             use_softmax=self.use_softmax
         )
         loss, predictions = outputs
