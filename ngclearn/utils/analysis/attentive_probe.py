@@ -73,8 +73,8 @@ def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array
     attention = attention.transpose([0, 2, 1, 3]).reshape((B, T, -1)) # (B, T, H, E) => (B, T, D)
     return attention @ Wout + bout # (B, T, Dq)
 
-@bind(jax.jit, static_argnums=[3, 4, 5, 6])
-def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_softmax=True):
+@bind(jax.jit, static_argnums=[3, 4, 5, 6, 7])
+def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=True, use_softmax=True):
     """
     Runs full nonlinear attentive probe on input encodings (typically embedding vectors produced by some other model). 
 
@@ -101,8 +101,11 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
     learnable_query, Wq, bq, Wk, bk, Wv, bv, Wout, bout,\
         Wqs, bqs, Wks, bks, Wvs, bvs, Wouts, bouts, Wlnattn_mu,\
         Wlnattn_scale, Whid1, bhid1, Wln_mu1, Wln_scale1, Whid2,\
-        bhid2, Wln_mu2, Wln_scale2, Whid3, bhid3, Wln_mu3, Wln_scale3, Wy, by = params
+        bhid2, Wln_mu2, Wln_scale2, Whid3, bhid3, Wln_mu3, Wln_scale3,\
+        Wy, by, ln_in_mu, ln_in_scale = params
     cross_attn_params = (Wq, bq, Wk, bk, Wv, bv, Wout, bout)
+    if use_LN_input:
+        learnable_query = layer_normalize(learnable_query, ln_in_mu, ln_in_scale)
     features = cross_attention(cross_attn_params, learnable_query, encodings, mask, n_heads, dropout)
     # Perform a single self-attention block here
     # Self-Attention
@@ -200,7 +203,7 @@ class AttentiveProbe(Probe):
     """
     def __init__(
             self, dkey, source_seq_length, input_dim, out_dim, num_heads=8, attn_dim=64,
-            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32, use_LN=True, use_softmax=True, **kwargs
+            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32, use_LN=True, use_LN_input=True, use_softmax=True, **kwargs
     ):
         super().__init__(dkey, batch_size, **kwargs)
         assert attn_dim % num_heads == 0, f"`attn_dim` must be divisible by `num_heads`. Got {attn_dim} and {num_heads}."
@@ -212,6 +215,7 @@ class AttentiveProbe(Probe):
         self.out_dim = out_dim
         self.use_softmax = use_softmax
         self.use_LN = use_LN
+        self.use_LN_input = use_LN_input
 
         sigma = 0.05
         ## cross-attention parameters
@@ -254,7 +258,11 @@ class AttentiveProbe(Probe):
         Wy = random.normal(subkeys[22], (learnable_query_dim, out_dim)) * sigma
         by = random.normal(subkeys[23], (1, out_dim)) * sigma
         mlp_params = (Whid1, bhid1, Wln_mu1, Wln_scale1, Whid2, bhid2, Wln_mu2, Wln_scale2, Whid3, bhid3, Wln_mu3, Wln_scale3, Wy, by)
-        self.probe_params = (learnable_query, *cross_attn_params, *self_attn_params, *mlp_params)
+        # Finally, define ln for the input to the attention
+        ln_in_mu = jnp.zeros((1, learnable_query_dim)) ## LN parameter
+        ln_in_scale = jnp.ones((1, learnable_query_dim)) ## LN parameter
+        ln_in_params = (ln_in_mu, ln_in_scale)
+        self.probe_params = (learnable_query, *cross_attn_params, *self_attn_params, *mlp_params, *ln_in_params)
 
         ## set up gradient calculator
         self.grad_fx = jax.value_and_grad(eval_attention_probe, argnums=0, has_aux=True)
@@ -294,8 +302,9 @@ class AttentiveProbe(Probe):
         """
         # TODO: put in dkey to facilitate dropout
         ## compute partial derivatives / adjustments to probe parameters
+        # NOTE: Viet: Change back to 0.0 for now for the code to run
         outputs, grads = self.grad_fx(
-            self.probe_params, embedding_sequence, labels, self.mask, self.num_heads, dropout=0.5, use_LN=self.use_LN,
+            self.probe_params, embedding_sequence, labels, self.mask, self.num_heads, dropout=0.0, use_LN=self.use_LN,
             use_softmax=self.use_softmax
         )
         loss, predictions = outputs
