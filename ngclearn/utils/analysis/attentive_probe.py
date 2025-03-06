@@ -282,7 +282,7 @@ class AttentiveProbe(Probe):
         self.probe_params = (learnable_query, *cross_attn_params, *self_attn_params, *mlp_params, *ln_in_params)
 
         ## set up gradient calculator
-        self.grad_fx = jax.value_and_grad(eval_attention_probe, argnums=0, has_aux=True)
+        self.grad_fx = jax.value_and_grad(eval_attention_probe, argnums=0, has_aux=True, allow_int=True)
         ## set up update rule/optimizer
         self.optim_params = adam.adam_init(self.probe_params)
         self.eta = 0.0002 #0.001
