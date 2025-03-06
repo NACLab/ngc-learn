@@ -79,7 +79,7 @@ class Probe():
             x_mb = _data[s_ptr:e_ptr, :, :]  ## slice out 3D batch tensor
             s_ptr = e_ptr
             e_ptr += x_mb.shape[0]
-            y_mu = self.process(x_mb)
+            y_mu = self.process(x_mb, dkey=None)
             Y_mu.append(y_mu)
         Y_mu = jnp.concatenate(Y_mu, axis=0)
         return Y_mu
@@ -143,8 +143,9 @@ class Probe():
                 s_ptr = e_ptr
                 e_ptr += x_mb.shape[0]
                 Ns += x_mb.shape[0]
+                self.dkey, *subkeys = random.split(self.dkey, 2)
 
-                _L, py = self.update(x_mb, y_mb)
+                _L, py = self.update(x_mb, y_mb, dkey=subkeys[0])
                 acc = jnp.sum(jnp.equal(jnp.argmax(py, axis=1), jnp.argmax(y_mb, axis=1))) + acc
                 L = (_L * x_mb.shape[0]) + L ## we remove the batch division from loss w.r.t. x_mb/y_mb
 
