@@ -70,7 +70,7 @@ def cross_attention(dkey, params: tuple, x1: jax.Array, x2: jax.Array, mask: jax
     score = jax.nn.softmax(score, axis=-1) # (B, H, T, S)
     score = score.astype(q.dtype) # (B, H, T, S)
     if dropout_rate > 0.:
-        score = drop_out(dkey, input=score, rate=dropout_rate) ## NOTE: normally you apply dropout here
+        score, _ = drop_out(dkey, input=score, rate=dropout_rate) ## NOTE: normally you apply dropout here
     attention = jnp.einsum("BHTS,BHSE->BHTE", score, v) # (B, T, H, E)
     attention = attention.transpose([0, 2, 1, 3]).reshape((B, T, -1)) # (B, T, H, E) => (B, T, D)
     return attention @ Wout + bout # (B, T, Dq)
