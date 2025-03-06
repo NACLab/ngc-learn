@@ -567,8 +567,7 @@ def drop_out(dkey, input, rate=0.0):
     Returns:
         output as well as binary mask
     """
-    eps = random.uniform(dkey, (input.shape[0],input.shape[1]),
-                         minval=0.0, maxval=1.0)
+    eps = random.uniform(dkey, shape=input.shape, minval=0.0, maxval=1.0)
     mask = (eps <= (1.0 - rate)).astype(jnp.float32)
     mask = mask * (1.0 / (1.0 - rate)) ## apply inverted dropout scheme
     output = input * mask
