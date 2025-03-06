@@ -74,7 +74,7 @@ def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array
     return attention @ Wout + bout # (B, T, Dq)
 
 @bind(jax.jit, static_argnums=[3, 4, 5, 6, 7])
-def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=True, use_softmax=True):
+def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=False, use_softmax=True):
     """
     Runs full nonlinear attentive probe on input encodings (typically embedding vectors produced by some other model). 
 
@@ -138,8 +138,8 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
         outs = jax.nn.softmax(outs)
     return outs, features
 
-@bind(jax.jit, static_argnums=[4, 5, 6, 7])
-def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_softmax=True):
+@bind(jax.jit, static_argnums=[4, 5, 6, 7, 8])
+def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=False, use_softmax=True):
     """
     Runs and evaluates the nonlinear attentive probe given a paired set of encoding vectors and externally assigned 
     labels/regression targets.
@@ -165,7 +165,7 @@ def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout:
         current loss value, output scores/probabilities
     """
     # encodings: (B, hw, dim)
-    outs, _ = run_attention_probe(params, encodings, mask, n_heads, dropout, use_LN, use_softmax)
+    outs, _ = run_attention_probe(params, encodings, mask, n_heads, dropout, use_LN, use_LN_input, use_softmax)
     if use_softmax: ## Multinoulli log likelihood for 1-of-K predictions
         L = -jnp.mean(jnp.sum(jnp.log(outs.clip(min=1e-5)) * labels, axis=1, keepdims=True))
     else: ## MSE for real-valued outputs
@@ -206,7 +206,7 @@ class AttentiveProbe(Probe):
     """
     def __init__(
             self, dkey, source_seq_length, input_dim, out_dim, num_heads=8, attn_dim=64,
-            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32, use_LN=True, use_LN_input=True, use_softmax=True, **kwargs
+            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32, use_LN=True, use_LN_input=False, use_softmax=True, **kwargs
     ):
         super().__init__(dkey, batch_size, **kwargs)
         assert attn_dim % num_heads == 0, f"`attn_dim` must be divisible by `num_heads`. Got {attn_dim} and {num_heads}."
@@ -288,7 +288,7 @@ class AttentiveProbe(Probe):
         #print(embedding_sequence.shape)
         outs, feats = run_attention_probe(
             self.probe_params, embedding_sequence, self.dev_mask, self.num_heads, 0.0, use_LN=self.use_LN,
-            use_softmax=self.use_softmax
+            use_LN_input=self.use_LN_input, use_softmax=self.use_softmax
         )
         return outs
 
@@ -310,7 +310,7 @@ class AttentiveProbe(Probe):
         # NOTE: Viet: Change back to 0.0 for now for the code to run
         outputs, grads = self.grad_fx(
             self.probe_params, embedding_sequence, labels, self.mask, self.num_heads, dropout=0.0, use_LN=self.use_LN,
-            use_softmax=self.use_softmax
+            use_LN_input=self.use_LN_input, use_softmax=self.use_softmax
         )
         loss, predictions = outputs
         ## adjust parameters of probe
