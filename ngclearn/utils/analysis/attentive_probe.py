@@ -133,7 +133,9 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
     features = features + skip
     outs = jnp.matmul(features, Wy) + by
     if use_softmax: ## apply softmax output nonlinearity
-        outs = softmax(outs)
+        # NOTE: Viet: please check the softmax function, it might potentially
+        # cause the gradient to be nan since there is a potential division by zero
+        outs = jax.nn.softmax(outs)
     return outs, features
 
 @bind(jax.jit, static_argnums=[4, 5, 6, 7])
@@ -165,7 +167,7 @@ def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout:
     # encodings: (B, hw, dim)
     outs, _ = run_attention_probe(params, encodings, mask, n_heads, dropout, use_LN, use_softmax)
     if use_softmax: ## Multinoulli log likelihood for 1-of-K predictions
-        L = -jnp.mean(jnp.sum(jnp.log(outs) * labels, axis=1, keepdims=True))
+        L = -jnp.mean(jnp.sum(jnp.log(outs.clip(min=1e-5)) * labels, axis=1, keepdims=True))
     else: ## MSE for real-valued outputs
         L = jnp.mean(jnp.sum(jnp.square(outs - labels), axis=1, keepdims=True))
     return L, outs #, features
