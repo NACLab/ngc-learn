@@ -454,6 +454,47 @@ def inverse_logistic(x, clip_bound=0.03): # 0.03
     return jnp.log( x_/((1.0 - x_) + 1e-6) )
 
 @jit
+def swish(x, beta):
+    """
+    Applies the Swish parameterized activation, proposed in Ramachandran et al., 2017
+    ("Searching for Activation Functions").
+
+    Args:
+        x: data to transform via inverse logistic function
+
+        beta: coefficient/parameters to weight input x by
+
+    Returns:
+        output of the Swish activation
+    """
+    return x * sigmoid(x * beta)
+
+@jit
+def d_swish(x, beta):
+    # df/dx = beta * [ 1/(exp(-x) + 1) + (exp(-x) * x) / (exp(-x) + 1)^2]
+    # df/dx = beta * sigmoid(x * beta) * (1 - sigmoid(x) * beta)
+    exp_neg_x = jnp.exp(-x)
+    _x = (1./(exp_neg_x + 1.)) + (exp_neg_x * x)/jnp.square(exp_neg_x+1)
+    return _x * beta
+
+@jit
+def silu(x):
+    """
+    Applies the sigmoid-weighted linear unit (SiLU or SiL) activation.
+
+    Args:
+        x: data to transform via inverse logistic function
+
+    Returns:
+        output of the Swish activation
+    """
+    return swish(x, beta=1.)
+
+@jit
+def d_silu(x):
+    return d_swish(x, beta=1.)
+
+@jit
 def gelu(x):
     """
     Applies the Gaussian Error Linear Unit (GeLU) activation (specifically, a fast approximation is used).
@@ -464,14 +505,33 @@ def gelu(x):
     Returns:
         output of the GeLU activation
     """
-    return x * sigmoid(x * 1.702) ## approximate GeLU
+    return swish(x, beta=1.702) ## approximate GeLU # beta=1.4
 
 @jit
 def d_gelu(x):
     # df/dx = 1.702 * [ 1/(exp(-x) + 1) + (exp(-x) * x) / (exp(-x) + 1)^2]
-    exp_neg_x = jnp.exp(-x)
-    _x = (1./(exp_neg_x + 1.)) + (exp_neg_x * x)/jnp.square(exp_neg_x+1)
-    return _x * 1.702
+    return d_swish(x, beta=1.702) # beta=1.4
+
+@jit
+def elu(x, alpha=1.):
+    """
+    Applies the exponential linear unit (ELU) activation.
+
+    Args:
+        x: data to transform via inverse logistic function
+
+        alpha: coefficient/parameters to weight input x by
+
+    Returns:
+        output of the GeLU activation
+        """
+    mask = x >= 0.
+    return x * mask + ((jnp.exp(x) - 1) * alpha) * (1. - mask)
+
+@jit
+def elu(x, alpha=1.):
+    mask = (x >= 0.)
+    return mask + (1. - mask) * (jnp.exp(x) * alpha)
 
 @jit
 def softmax(x, tau=0.0):
@@ -553,24 +613,24 @@ def layer_normalize(x, shift=0., scale=1.):
     return _x * scale + shift
 
 @jit
-def drop_out(dkey, input, rate=0.0):
+def drop_out(dkey, data, rate=0.0):
     """
     Applies a drop-out transform to an input matrix.
 
     Args:
         dkey: Jax randomness key for this operator
 
-        input: data to apply random/drop-out mask to
+        data: input data to apply random/drop-out mask to
 
         rate: probability of a dimension being dropped
 
     Returns:
         output as well as binary mask
     """
-    eps = random.uniform(dkey, shape=input.shape, minval=0.0, maxval=1.0)
+    eps = random.uniform(dkey, shape=data.shape, minval=0.0, maxval=1.0)
     mask = (eps <= (1.0 - rate)).astype(jnp.float32)
     mask = mask * (1.0 / (1.0 - rate)) ## apply inverted dropout scheme
-    output = input * mask
+    output = data * mask
     return output, mask
 
 
