@@ -72,18 +72,20 @@ def create_function(fun_name, args=None):
     Activation function creation routine.
 
     Args:
-        fun_name: string name of activation function to produce
-            (Currently supports: "tanh", "relu", "lrelu", "identity")
+        fun_name: string name of activation function to produce;
+            Currently supports: "tanh", "bkwta" (binary K-winners-take-all), "sigmoid", "relu", "lrelu", "relu6",
+            "elu", "silu", "gelu",  "softplus", "softmax" (derivative not supported), "unit_threshold", "heaviside",
+            "identity"
 
     Returns:
         function fx, first derivative of function (w.r.t. input) dfx
     """
-    fx = None
-    dfx = None
+    fx = None ## the function
+    dfx = None ## the first derivative of function w.r.t. its input
     if fun_name == "tanh":
         fx = tanh
         dfx = d_tanh
-    elif "kwta" in fun_name:
+    elif "bkwta" in fun_name:
         fx = bkwta
         dfx = bkwta #d_identity
     elif fun_name == "sigmoid":
@@ -98,6 +100,15 @@ def create_function(fun_name, args=None):
     elif fun_name == "relu6":
         fx = relu6
         dfx = d_relu6
+    elif fun_name == "elu":
+        fx = elu
+        dfx = d_elu
+    elif fun_name == "silu":
+        fx = silu
+        dfx = d_silu
+    elif fun_name == "gelu":
+        fx = gelu
+        dfx = d_gelu
     elif fun_name == "softplus":
         fx = softplus
         dfx = d_softplus
@@ -127,35 +138,35 @@ def bkwta(x, nWTA=5): #5 10 15 #K=50):
     return topK
 
 @partial(jit, static_argnums=[2, 3, 4])
-def normalize_matrix(M, wnorm, order=1, axis=0, scale=1.):
+def normalize_matrix(data, wnorm, order=1, axis=0, scale=1.):
     """
     Normalizes the values in matrix to have a particular norm across each vector span.
 
     Args:
-        M: (2D) matrix to normalize
+        data: (2D) data matrix to normalize
 
-        wnorm: target norm for each
+        wnorm: target norm for each row/column of data matrix
 
         order: order of norm to use in normalization (Default: 1);
             note that `ord=1` results in the L1-norm, `ord=2` results in the L2-norm
 
         axis: 0 (apply to column vectors), 1 (apply to row vectors)
 
-        scale: step modifier to produce the projected matrix
+        scale: step modifier to produce the projected matrix (Unused)
 
     Returns:
         a normalized value matrix
     """
     if order == 2: ## denominator is L2 norm
-        wOrdSum = jnp.maximum(jnp.sqrt(jnp.sum(jnp.square(M), axis=axis, keepdims=True)), 1e-8)
+        wOrdSum = jnp.maximum(jnp.sqrt(jnp.sum(jnp.square(data), axis=axis, keepdims=True)), 1e-8)
     else: ## denominator is L1 norm
-        wOrdSum = jnp.maximum(jnp.sum(jnp.abs(M), axis=axis, keepdims=True), 1e-8)
+        wOrdSum = jnp.maximum(jnp.sum(jnp.abs(data), axis=axis, keepdims=True), 1e-8)
     m = (wOrdSum == 0.).astype(dtype=jnp.float32)
     wOrdSum = wOrdSum * (1. - m) + m #wAbsSum[wAbsSum == 0.] = 1.
-    _M = M * (wnorm/wOrdSum)
-    #dM = ((wnorm/wOrdSum) - 1.) * M
-    #_M = M + dM * scale
-    return _M
+    _data = data * (wnorm/wOrdSum)
+    #d_data = ((wnorm/wOrdSum) - 1.) * data
+    #_data = data + d_data * scale
+    return _data
 
 @jit
 def clamp_min(x, min_val):
@@ -529,7 +540,7 @@ def elu(x, alpha=1.):
     return x * mask + ((jnp.exp(x) - 1) * alpha) * (1. - mask)
 
 @jit
-def elu(x, alpha=1.):
+def d_elu(x, alpha=1.):
     mask = (x >= 0.)
     return mask + (1. - mask) * (jnp.exp(x) * alpha)
 
