@@ -123,7 +123,7 @@ def run_attention_probe(
     skip = features
     if use_LN:
         features = layer_normalize(features, Wlnattn_mu, Wlnattn_scale)
-    features = cross_attention(self_attn_params, features, features, None, n_heads, dropout)
+    features = cross_attention(dkey, self_attn_params, features, features, None, n_heads, dropout)
     features = features + skip
     features = features[:, 0]  # (B, 1, dim) => (B, dim)
     # MLP
