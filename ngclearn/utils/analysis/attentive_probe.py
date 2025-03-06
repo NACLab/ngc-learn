@@ -102,10 +102,11 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
         Wqs, bqs, Wks, bks, Wvs, bvs, Wouts, bouts, Wlnattn_mu,\
         Wlnattn_scale, Whid1, bhid1, Wln_mu1, Wln_scale1, Whid2,\
         bhid2, Wln_mu2, Wln_scale2, Whid3, bhid3, Wln_mu3, Wln_scale3,\
-        Wy, by, ln_in_mu, ln_in_scale = params
+        Wy, by, ln_in_mu, ln_in_scale, ln_in_mu2, ln_in_scale2 = params
     cross_attn_params = (Wq, bq, Wk, bk, Wv, bv, Wout, bout)
     if use_LN_input:
         learnable_query = layer_normalize(learnable_query, ln_in_mu, ln_in_scale)
+        encodings = layer_normalize(encodings, ln_in_mu2, ln_in_scale2)
     features = cross_attention(cross_attn_params, learnable_query, encodings, mask, n_heads, dropout)
     # Perform a single self-attention block here
     # Self-Attention
@@ -261,7 +262,9 @@ class AttentiveProbe(Probe):
         # Finally, define ln for the input to the attention
         ln_in_mu = jnp.zeros((1, learnable_query_dim)) ## LN parameter
         ln_in_scale = jnp.ones((1, learnable_query_dim)) ## LN parameter
-        ln_in_params = (ln_in_mu, ln_in_scale)
+        ln_in_mu2 = jnp.zeros((1, input_dim)) ## LN parameter
+        ln_in_scale2 = jnp.ones((1, input_dim)) ## LN parameter
+        ln_in_params = (ln_in_mu, ln_in_scale, ln_in_mu2, ln_in_scale2)
         self.probe_params = (learnable_query, *cross_attn_params, *self_attn_params, *mlp_params, *ln_in_params)
 
         ## set up gradient calculator
