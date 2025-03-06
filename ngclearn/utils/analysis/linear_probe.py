@@ -101,16 +101,7 @@ class LinearProbe(Probe):
         self.optim_params = adam.adam_init(self.probe_params)
         self.eta = 0.001
 
-    def process(self, embeddings):
-        """
-        Runs the probe's inference scheme given an input batch of sequences of encodings/embeddings.
-
-        Args:
-            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
-
-        Returns:
-            probe output scores/probability values
-        """
+    def process(self, embeddings, dkey=None):
         _embeddings = embeddings
         if len(_embeddings.shape) > 2: ## we flatten a sequence batch to 2D for a linear probe
             flat_dim = embeddings.shape[1] * embeddings.shape[2]
@@ -118,19 +109,7 @@ class LinearProbe(Probe):
         outs = run_linear_probe(self.probe_params, _embeddings, use_softmax=self.use_softmax, use_LN=self.use_LN)
         return outs
 
-    def update(self, embeddings, labels):
-        """
-        Runs and updates this probe given an input batch of sequences of encodings/embeddings and their externally
-        assigned labels/target vector values.
-
-        Args:
-            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
-
-            labels: target values that map to embedding sequence; shape (B, target_value_dim)
-
-        Returns:
-            probe output scores/probability values
-        """
+    def update(self, embeddings, labels, dkey=None):
         _embeddings = embeddings
         if len(_embeddings.shape) > 2:
             flat_dim = embeddings.shape[1] * embeddings.shape[2]

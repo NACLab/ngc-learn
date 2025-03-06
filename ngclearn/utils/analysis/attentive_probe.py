@@ -21,8 +21,8 @@ def masked_fill(x: jax.Array, mask: jax.Array, value=0) -> jax.Array:
     """
     return jnp.where(mask, jnp.broadcast_to(value, x.shape), x)
 
-@bind(jax.jit, static_argnums=[4, 5])
-def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array, n_heads: int=8, dropout_rate: float=0.0) -> jax.Array:
+@bind(jax.jit, static_argnums=[5, 6])
+def cross_attention(dkey, params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array, n_heads: int=8, dropout_rate: float=0.0) -> jax.Array:
     """
     Run cross-attention function given a list of parameters and two sequences (x1 and x2).
     The function takes in a query sequence x1 and a key-value sequence x2, and returns an output of the same shape as x1.
@@ -31,6 +31,8 @@ def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array
     H is the number of attention heads.
 
     Args:
+        dkey: JAX key to trigger any internal noise (drop-out)
+
         params (tuple): tuple of parameters
 
         x1 (jax.Array): query sequence. Shape: (B, T, Dq)
@@ -68,17 +70,22 @@ def cross_attention(params: tuple, x1: jax.Array, x2: jax.Array, mask: jax.Array
     score = jax.nn.softmax(score, axis=-1) # (B, H, T, S)
     score = score.astype(q.dtype) # (B, H, T, S)
     if dropout_rate > 0.:
-        score = drop_out(input=score, rate=dropout_rate) ## NOTE: normally you apply dropout here
+        score = drop_out(dkey, input=score, rate=dropout_rate) ## NOTE: normally you apply dropout here
     attention = jnp.einsum("BHTS,BHSE->BHTE", score, v) # (B, T, H, E)
     attention = attention.transpose([0, 2, 1, 3]).reshape((B, T, -1)) # (B, T, H, E) => (B, T, D)
     return attention @ Wout + bout # (B, T, Dq)
 
-@bind(jax.jit, static_argnums=[3, 4, 5, 6, 7])
-def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=False, use_softmax=True):
+@bind(jax.jit, static_argnums=[4, 5, 6, 7, 8])
+def run_attention_probe(
+        dkey, params, encodings, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=False,
+        use_softmax=True
+):
     """
     Runs full nonlinear attentive probe on input encodings (typically embedding vectors produced by some other model). 
 
     Args:
+        dkey: JAX key for any internal noise to be applied
+
         params: parameters tuple/list of probe
 
         encodings: input encoding vectors/data
@@ -90,6 +97,8 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
         dropout: if >0, triggers drop-out applied internally to cross-attention
 
         use_LN: use layer normalization?
+
+        use_LN_input: use layer normalization on input encodings?
 
         use_softmax: should softmax be applied to output of attention probe? (useful for classification) 
 
@@ -107,7 +116,7 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
     if use_LN_input:
         learnable_query = layer_normalize(learnable_query, ln_in_mu, ln_in_scale)
         encodings = layer_normalize(encodings, ln_in_mu2, ln_in_scale2)
-    features = cross_attention(cross_attn_params, learnable_query, encodings, mask, n_heads, dropout)
+    features = cross_attention(dkey, cross_attn_params, learnable_query, encodings, mask, n_heads, dropout)
     # Perform a single self-attention block here
     # Self-Attention
     self_attn_params = (Wqs, bqs, Wks, bks, Wvs, bvs, Wouts, bouts)
@@ -138,13 +147,15 @@ def run_attention_probe(params, encodings, mask, n_heads: int, dropout: float = 
         outs = jax.nn.softmax(outs)
     return outs, features
 
-@bind(jax.jit, static_argnums=[4, 5, 6, 7, 8])
-def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=False, use_softmax=True):
+@bind(jax.jit, static_argnums=[5, 6, 7, 8, 9])
+def eval_attention_probe(dkey, params, encodings, labels, mask, n_heads: int, dropout: float = 0.0, use_LN=False, use_LN_input=False, use_softmax=True):
     """
     Runs and evaluates the nonlinear attentive probe given a paired set of encoding vectors and externally assigned 
     labels/regression targets.
 
     Args:
+        dkey: JAX key to trigger any internal noise (as in drop-out)
+
         params: parameters tuple/list of probe
 
         encodings: input encoding vectors/data
@@ -165,7 +176,7 @@ def eval_attention_probe(params, encodings, labels, mask, n_heads: int, dropout:
         current loss value, output scores/probabilities
     """
     # encodings: (B, hw, dim)
-    outs, _ = run_attention_probe(params, encodings, mask, n_heads, dropout, use_LN, use_LN_input, use_softmax)
+    outs, _ = run_attention_probe(dkey, params, encodings, mask, n_heads, dropout, use_LN, use_LN_input, use_softmax)
     if use_softmax: ## Multinoulli log likelihood for 1-of-K predictions
         L = -jnp.mean(jnp.sum(jnp.log(outs.clip(min=1e-5)) * labels, axis=1, keepdims=True))
     else: ## MSE for real-valued outputs
@@ -219,6 +230,7 @@ class AttentiveProbe(Probe):
         self.use_softmax = use_softmax
         self.use_LN = use_LN
         self.use_LN_input = use_LN_input
+        self.dropout = 0.5
 
         sigma = 0.05
         ## cross-attention parameters
@@ -275,42 +287,25 @@ class AttentiveProbe(Probe):
         self.optim_params = adam.adam_init(self.probe_params)
         self.eta = 0.0002 #0.001
 
-    def process(self, embedding_sequence):
-        """
-        Runs the probe's inference scheme given an input batch of sequences of encodings/embeddings.
-
-        Args:
-            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
-
-        Returns: 
-            probe output scores/probability values
-        """
-        #print(embedding_sequence.shape)
+    def process(self, embeddings, dkey=None):
+        noise_key = None
+        if dkey is not None:
+            dkey, *subkeys = random.split(dkey, 2)
+            noise_key = subkeys[0]
         outs, feats = run_attention_probe(
-            self.probe_params, embedding_sequence, self.dev_mask, self.num_heads, 0.0, use_LN=self.use_LN,
-            use_LN_input=self.use_LN_input, use_softmax=self.use_softmax
+            noise_key, self.probe_params, embeddings, self.dev_mask, self.num_heads, 0.0,
+            use_LN=self.use_LN, use_LN_input=self.use_LN_input, use_softmax=self.use_softmax
         )
         return outs
 
-    def update(self, embedding_sequence, labels, dkey=None):
-        """
-        Runs and updates this probe given an input batch of sequences of encodings/embeddings and their externally 
-        assigned labels/target vector values.
-
-        Args:
-            embedding_sequence: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
-
-            labels: target values that map to embedding sequence; shape (B, target_value_dim)
-
-        Returns:
-            probe output scores/probability values
-        """
-        # TODO: put in dkey to facilitate dropout
-        ## compute partial derivatives / adjustments to probe parameters
-        # NOTE: Viet: Change back to 0.0 for now for the code to run
+    def update(self, embeddings, labels, dkey=None):
+        noise_key = None
+        if dkey is not None:
+            dkey, *subkeys = random.split(dkey, 2)
+            noise_key = subkeys[0]
         outputs, grads = self.grad_fx(
-            self.probe_params, embedding_sequence, labels, self.mask, self.num_heads, dropout=0.0, use_LN=self.use_LN,
-            use_LN_input=self.use_LN_input, use_softmax=self.use_softmax
+            noise_key, self.probe_params, embeddings, labels, self.mask, self.num_heads, dropout=self.dropout,
+            use_LN=self.use_LN, use_LN_input=self.use_LN_input, use_softmax=self.use_softmax
         )
         loss, predictions = outputs
         ## adjust parameters of probe

@@ -18,11 +18,36 @@ class Probe():
         self.batch_size = batch_size
         self.dev_batch_size = dev_batch_size
 
-    def process(self, embeddings):
+    def process(self, embeddings, dkey=None):
+        """
+        Runs the probe's inference scheme given an input batch of sequences of encodings/embeddings.
+
+        Args:
+            embeddings: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
+
+            dkey: Optional JAX noise key
+
+        Returns:
+            probe output scores/probability values
+        """
         predictions = None
         return predictions
 
-    def update(self, embeddings, labels):
+    def update(self, embeddings, labels, dkey=None):
+        """
+        Runs and updates this probe given an input batch of sequences of encodings/embeddings and their externally
+        assigned labels/target vector values.
+
+        Args:
+            embeddings: a 3D tensor containing a batch of encoding sequences; shape (B, T, embed_dim)
+
+            labels: target values that map to embedding sequence; shape (B, target_value_dim)
+
+            dkey: Optional JAX noise key
+
+        Returns:
+            probe output scores/probability values
+        """
         L = predictions = None
         return L, predictions
 
