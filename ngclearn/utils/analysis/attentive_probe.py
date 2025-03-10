@@ -219,7 +219,9 @@ class AttentiveProbe(Probe):
     """
     def __init__(
             self, dkey, source_seq_length, input_dim, out_dim, num_heads=8, attn_dim=64,
-            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32, use_LN=True, use_LN_input=False, use_softmax=True, **kwargs
+            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32,
+            use_LN=True, use_LN_input=False, use_softmax=True, dropout=0.5, eta=0.0002,
+            eta_decay=0.0, min_eta=1e-5, **kwargs
     ):
         super().__init__(dkey, batch_size, **kwargs)
         assert attn_dim % num_heads == 0, f"`attn_dim` must be divisible by `num_heads`. Got {attn_dim} and {num_heads}."
@@ -232,9 +234,9 @@ class AttentiveProbe(Probe):
         self.use_softmax = use_softmax
         self.use_LN = use_LN
         self.use_LN_input = use_LN_input
-        self.dropout = 0.5
+        self.dropout = dropout
 
-        sigma = 0.05
+        sigma = 0.02
         ## cross-attention parameters
         Wq = random.normal(subkeys[0], (learnable_query_dim, attn_dim)) * sigma
         bq = random.normal(subkeys[1], (1, attn_dim)) * sigma
@@ -287,7 +289,10 @@ class AttentiveProbe(Probe):
         self.grad_fx = jax.value_and_grad(eval_attention_probe, argnums=1, has_aux=True) #, allow_int=True)
         ## set up update rule/optimizer
         self.optim_params = adam.adam_init(self.probe_params)
-        self.eta = 0.0002 #0.001
+        # Learning rate scheduling
+        self.eta = eta #0.001
+        self.eta_decay = eta_decay
+        self.min_eta = min_eta
 
         # Finally, the dkey for the noise_key
         self.noise_key = subkeys[24]
@@ -319,5 +324,7 @@ class AttentiveProbe(Probe):
         self.optim_params, self.probe_params = adam.adam_step(
             self.optim_params, self.probe_params, grads, eta=self.eta
         )
+
+        self.eta = max(self.min_eta, self.eta - self.eta_decay * self.eta)
         return loss, predictions
 

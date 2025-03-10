@@ -150,9 +150,14 @@ class Probe():
                 L = (_L * x_mb.shape[0]) + L ## we remove the batch division from loss w.r.t. x_mb/y_mb
 
             if dev_data is not None:
-                print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}  Dev.Acc = {best_acc:.2f}", end="")
+                print_string = f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}  Dev.Acc = {best_acc:.2f}"
             else:
-                print(f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}", end="")
+                print_string = f"\r{ii} L = {L / Ns:.3f} Acc = {acc / Ns:.2f}"
+
+            if hasattr(self, "eta"):
+                print_string += f"  LR = {getattr(self, 'eta'):.6f}"
+            
+            print(print_string, end = "")
 
             acc = acc / Ns
             L = L / Ns ## compute current loss over (train) dataset
