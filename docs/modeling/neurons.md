@@ -191,6 +191,23 @@ cell supports either Euler or midpoint method / RK-2 integration.)
     :noindex:
 ```
 
+### The Resonate-and-Fire (RAF) Cell
+
+This cell models dynamics over voltage `v` and a angular driver state/variable `w`; these 
+two variables result in a dampened oscillatory spiking neuronal cell). In effect, the 
+resonatoe-and-fire (RAF) model (or "resonator") evolves as a result of two coupled 
+differential equations. (Note that this cell supports either Euler or RK-2 integration.)
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.RAFCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### The Izhikevich Cell
 
 This cell models dynamics over voltage `v` and a recover variable `w` (where `w`

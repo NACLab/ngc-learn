@@ -19,7 +19,6 @@ from .neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .neurons.spiking.izhikevichCell import IzhikevichCell
 from .neurons.spiking.RAFCell import RAFCell
 
-
 ## point to transformer/operater component types
 from .other.varTrace import VarTrace
 from .other.expKernel import ExpKernel
@@ -31,7 +30,6 @@ from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
 from .input_encoders.latencyCell import LatencyCell
 from .input_encoders.phasorCell import PhasorCell
-
 
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse
