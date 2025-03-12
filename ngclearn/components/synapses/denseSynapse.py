@@ -47,8 +47,8 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.bias_init = bias_init
 
         ## Synapse meta-parameters
-        self.shape = shape ## shape of synaptic efficacy matrix
-        self.Rscale = resist_scale ## post-transformation scale factor
+        self.shape = shape
+        self.Rscale = resist_scale
 
         ## Set up synaptic weight values
         tmp_key, *subkeys = random.split(self.key.value, 4)

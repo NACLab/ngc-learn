@@ -10,14 +10,14 @@ from .neurons.graded.rewardErrorCell import RewardErrorCell
 
 ## point to standard spiking cell component types
 from .neurons.spiking.sLIFCell import SLIFCell
+from .neurons.spiking.IFCell import IFCell
 from .neurons.spiking.LIFCell import LIFCell
 from .neurons.spiking.WTASCell import WTASCell
 from .neurons.spiking.quadLIFCell import QuadLIFCell
 from .neurons.spiking.adExCell import AdExCell
 from .neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .neurons.spiking.izhikevichCell import IzhikevichCell
-
-
+from .neurons.spiking.RAFCell import RAFCell
 ## point to transformer/operater component types
 from .other.varTrace import VarTrace
 from .other.expKernel import ExpKernel
@@ -28,7 +28,7 @@ from ngclearn.components.synapses.modulated.eligibilityTrace import EligibilityT
 from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
 from .input_encoders.latencyCell import LatencyCell
-
+from .input_encoders.phasorCell import PhasorCell
 
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse
