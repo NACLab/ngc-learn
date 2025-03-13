@@ -171,7 +171,7 @@ def oscillator(t, x, params, mu1=0.05, mu2=-0.01, omega=3.0, alpha=-2.0, beta=-5
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from ngclearn.utils.diffeq.ode_solver import solve_ode
+    from ngclearn.utils.diffeq.ode_utils import solve_ode
 
 
     t0 = 0.

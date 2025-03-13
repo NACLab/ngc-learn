@@ -280,7 +280,7 @@ Solving LSQ with the sparse matrix $\mathbf{\Theta_s}$ and $\mathbf{W_s}$ and fi
 import numpy as np
 import jax.numpy as jnp
 from ngclearn.utils.feature_dictionaries.polynomialLibrary import PolynomialLibrary
-from ngclearn.utils.diffeq.ode_solver import solve_ode
+from ngclearn.utils.diffeq.ode_utils import solve_ode
 from ngclearn.utils.diffeq.odes import lorenz, linear_2D
 
 jnp.set_printoptions(suppress=True, precision=5)
