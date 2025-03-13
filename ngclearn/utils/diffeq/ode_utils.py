@@ -95,9 +95,7 @@ def _euler(carry, dfx, dt, params, x_scale=1.):
     first-order Runge-Kutta (RK-1) step.
 
     Args:
-        t: current time variable to advance by dt
-
-        x: current variable values to advance/iteratively integrate (at time `t`)
+        carry: a tuple containing current time and data, i.e., (t, x)
 
         dfx: (ordinary) differential equation co-routine (as implemented in an
             ngc-learn component)
@@ -157,7 +155,17 @@ def step_heun(t, x, dfx, dt, params, x_scale=1.):
     """
 
     carry = (t, x)
+
     next_state, *_ = _heun(carry, dfx, dt, params, x_scale=x_scale)
+
+    #
+    # dx_dt = dfx(t, x, params)
+    #
+    # _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
+    # _dx_dt = dfx(_t, _x, params)
+    # summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
+
+    # _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
     _t, _x = next_state
 
     return _t, _x
@@ -178,9 +186,7 @@ def _heun(carry, dfx, dt, params, x_scale=1.):
     | Industrial and Applied Mathematics, 1998.
 
     Args:
-        t: current time variable to advance by dt
-
-        x: current variable values to advance/iteratively integrate (at time `t`)
+        carry: a tuple containing current time and data, i.e., (t, x)
 
         dfx: (ordinary) differential equation co-routine (as implemented in an
             ngc-learn component)
@@ -243,6 +249,21 @@ def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     next_state, *_ = _rk2(carry, dfx, dt, params, x_scale=x_scale)
     _t, _x = next_state
 
+    #
+    # dx_dt = dfx(t, x, params)
+    #
+    # _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
+    # _dx_dt = dfx(_t, _x, params)
+    # summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
+
+    # _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
+
+
+    # dfx_1 = dfx(t, x, params)
+    #
+    # t1, x1 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
+    # dfx_2 = dfx(t1, x1, params)
+    # _t, _x = _step_forward(t, x, dfx_2, dt, x_scale)
     return _t, _x
 
 
@@ -259,9 +280,7 @@ def _rk2(carry, dfx, dt, params, x_scale=1.):
     | Industrial and Applied Mathematics, 1998.
 
     Args:
-        t: current time variable to advance by dt
-
-        x: current variable values to advance/iteratively integrate (at time `t`)
+        carry: a tuple containing current time and data, i.e., (t, x)
 
         dfx: (ordinary) differential equation co-routine (as implemented in an
             ngc-learn component)
@@ -317,11 +336,23 @@ def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-    
     carry = (t, x)
     next_state, *_ = _rk4(carry, dfx, dt, params, x_scale=x_scale)
-    
     _t, _x = next_state
+
+    # dfx_1 = dfx(t, x, params)
+    # t2, x2 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
+    #
+    # dfx_2 = dfx(t2, x2, params)
+    # t3, x3 = _step_forward(t, x, dfx_2, dt * 0.5, x_scale)
+    #
+    # dfx_3 = dfx(t3, x3, params)
+    # t4, x4 = _step_forward(t, x, dfx_3, dt, x_scale)
+    #
+    # dfx_4 = dfx(t4, x4, params)
+    #
+    # _dx_dt = _sum_combine(dfx_1, dfx_2, dfx_3, dfx_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
+    # _t, _x = _step_forward(t, x, _dx_dt / 6, dt, x_scale)
     return _t, _x
 
 
@@ -339,9 +370,7 @@ def _rk4(carry, dfx, dt, params, x_scale=1.):
     | Industrial and Applied Mathematics, 1998.
 
     Args:
-        t: current time variable to advance by dt
-
-        x: current variable values to advance/iteratively integrate (at time `t`)
+        carry: a tuple containing current time and data, i.e., (t, x)
 
         dfx: (ordinary) differential equation co-routine (as implemented in an
             ngc-learn component)
@@ -412,8 +441,14 @@ def step_ralston(t, x, dfx, dt, params, x_scale=1.):
 
     carry = (t, x)
     next_state, *_ = _rk4(carry, dfx, dt, params, x_scale=x_scale)
-    
     _t, _x = next_state
+
+    # dx_dt = dfx(t, x, params) ## k1
+    # tm, xm = _step_forward(t, x, dx_dt, dt * 0.75, x_scale)
+    # _dx_dt = dfx(tm, xm, params)  ## k2
+    # ## Note: new step is a weighted combination of k1 and k2
+    # summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=(1./3.), weight2=(2./3.))
+    # _t, _x = _step_forward(t, x, summed_dx_dt, dt, x_scale)
     return _t, _x
 
 
@@ -433,9 +468,7 @@ def _ralston(carry, dfx, dt, params, x_scale=1.):
     | Mathematics of computation 16.80 (1962): 431-437.
 
     Args:
-        t: current time variable to advance by dt
-
-        x: current variable values to advance/iteratively integrate (at time `t`)
+        carry: a tuple containing current time and data, i.e., (t, x)
 
         dfx: (ordinary) differential equation co-routine (as implemented in an
             ngc-learn component)
@@ -493,6 +526,7 @@ def solve_ode(method_name, t0, x0, T, dfx, dt, params=None, x_scale=1., sols_onl
 ########################################################################################
 ########################################################################################
 if __name__ == '__main__':
+    
     import matplotlib.pyplot as plt
     from odes import linear_2D
 
