@@ -72,21 +72,25 @@ def create_function(fun_name, args=None):
     Activation function creation routine.
 
     Args:
-        fun_name: string name of activation function to produce
-            (Currently supports: "tanh", "relu", "lrelu", "identity")
+        fun_name: string name of activation function to produce;
+            Currently supports: "tanh", "bkwta" (binary K-winners-take-all), "sigmoid", "relu", "lrelu", "relu6",
+            "elu", "silu", "gelu",  "softplus", "softmax" (derivative not supported), "unit_threshold", "heaviside",
+            "identity"
 
     Returns:
         function fx, first derivative of function (w.r.t. input) dfx
     """
-    fx = None
-    dfx = None
+    fx = None ## the function
+    dfx = None ## the first derivative of function w.r.t. its input
     if fun_name == "tanh":
         fx = tanh
         dfx = d_tanh
+    elif fun_name == "bkwta":
+        fx = bkwta
+        dfx = bkwta #d_identity
     elif fun_name == "sine":
         fx = sine
         dfx = d_sine
-        omega_0 = args
     elif fun_name == "sigmoid":
         fx = sigmoid
         dfx = d_sigmoid
@@ -99,9 +103,21 @@ def create_function(fun_name, args=None):
     elif fun_name == "relu6":
         fx = relu6
         dfx = d_relu6
+    elif fun_name == "elu":
+        fx = elu
+        dfx = d_elu
+    elif fun_name == "silu":
+        fx = silu
+        dfx = d_silu
+    elif fun_name == "gelu":
+        fx = gelu
+        dfx = d_gelu
     elif fun_name == "softplus":
         fx = softplus
         dfx = d_softplus
+    elif fun_name == "softmax":
+        fx = softmax
+        dfx = d_identity ## TODO: currently Jacobian of softmax not supported!
     elif fun_name == "unit_threshold":
         fx = threshold ## default threshold is 1 (thus unit)
         dfx = d_threshold ## STE approximation
@@ -113,40 +129,47 @@ def create_function(fun_name, args=None):
         dfx = d_identity
     else:
         raise RuntimeError(
-            "Activition function (" + fun_name + ") is not recognized/supported!"
+            "Activation function (" + fun_name + ") is not recognized/supported!"
             )
     return fx, dfx
 
+@partial(jit, static_argnums=[1])
+def bkwta(x, nWTA=5): #5 10 15 #K=50):
+    values, indices = lax.top_k(x, nWTA) # Note: we do not care to sort the indices
+    kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
+    topK = jnp.greater_equal(x, kth).astype(jnp.float32) # cast booleans to floats
+    return topK
+
 @partial(jit, static_argnums=[2, 3, 4])
-def normalize_matrix(M, wnorm, order=1, axis=0, scale=1.):
+def normalize_matrix(data, wnorm, order=1, axis=0, scale=1.):
     """
     Normalizes the values in matrix to have a particular norm across each vector span.
 
     Args:
-        M: (2D) matrix to normalize
+        data: (2D) data matrix to normalize
 
-        wnorm: target norm for each
+        wnorm: target norm for each row/column of data matrix
 
         order: order of norm to use in normalization (Default: 1);
             note that `ord=1` results in the L1-norm, `ord=2` results in the L2-norm
 
         axis: 0 (apply to column vectors), 1 (apply to row vectors)
 
-        scale: step modifier to produce the projected matrix
+        scale: step modifier to produce the projected matrix (Unused)
 
     Returns:
         a normalized value matrix
     """
     if order == 2: ## denominator is L2 norm
-        wOrdSum = jnp.maximum(jnp.sqrt(jnp.sum(jnp.square(M), axis=axis, keepdims=True)), 1e-8)
+        wOrdSum = jnp.maximum(jnp.sqrt(jnp.sum(jnp.square(data), axis=axis, keepdims=True)), 1e-8)
     else: ## denominator is L1 norm
-        wOrdSum = jnp.maximum(jnp.sum(jnp.abs(M), axis=axis, keepdims=True), 1e-8)
+        wOrdSum = jnp.maximum(jnp.sum(jnp.abs(data), axis=axis, keepdims=True), 1e-8)
     m = (wOrdSum == 0.).astype(dtype=jnp.float32)
     wOrdSum = wOrdSum * (1. - m) + m #wAbsSum[wAbsSum == 0.] = 1.
-    _M = M * (wnorm/wOrdSum)
-    #dM = ((wnorm/wOrdSum) - 1.) * M
-    #_M = M + dM * scale
-    return _M
+    _data = data * (wnorm/wOrdSum)
+    #d_data = ((wnorm/wOrdSum) - 1.) * data
+    #_data = data + d_data * scale
+    return _data
 
 @jit
 def clamp_min(x, min_val):
@@ -473,6 +496,86 @@ def inverse_logistic(x, clip_bound=0.03): # 0.03
     return jnp.log( x_/((1.0 - x_) + 1e-6) )
 
 @jit
+def swish(x, beta):
+    """
+    Applies the Swish parameterized activation, proposed in Ramachandran et al., 2017
+    ("Searching for Activation Functions").
+
+    Args:
+        x: data to transform via inverse logistic function
+
+        beta: coefficient/parameters to weight input x by
+
+    Returns:
+        output of the Swish activation
+    """
+    return x * sigmoid(x * beta)
+
+@jit
+def d_swish(x, beta):
+    # df/dx = beta * [ 1/(exp(-x) + 1) + (exp(-x) * x) / (exp(-x) + 1)^2]
+    # df/dx = beta * sigmoid(x * beta) * (1 - sigmoid(x) * beta)
+    exp_neg_x = jnp.exp(-x)
+    _x = (1./(exp_neg_x + 1.)) + (exp_neg_x * x)/jnp.square(exp_neg_x+1)
+    return _x * beta
+
+@jit
+def silu(x):
+    """
+    Applies the sigmoid-weighted linear unit (SiLU or SiL) activation.
+
+    Args:
+        x: data to transform via inverse logistic function
+
+    Returns:
+        output of the Swish activation
+    """
+    return swish(x, beta=1.)
+
+@jit
+def d_silu(x):
+    return d_swish(x, beta=1.)
+
+@jit
+def gelu(x):
+    """
+    Applies the Gaussian Error Linear Unit (GeLU) activation (specifically, a fast approximation is used).
+
+    Args:
+        x: data to transform via inverse logistic function
+
+    Returns:
+        output of the GeLU activation
+    """
+    return swish(x, beta=1.702) ## approximate GeLU # beta=1.4
+
+@jit
+def d_gelu(x):
+    # df/dx = 1.702 * [ 1/(exp(-x) + 1) + (exp(-x) * x) / (exp(-x) + 1)^2]
+    return d_swish(x, beta=1.702) # beta=1.4
+
+@jit
+def elu(x, alpha=1.):
+    """
+    Applies the exponential linear unit (ELU) activation.
+
+    Args:
+        x: data to transform via inverse logistic function
+
+        alpha: coefficient/parameters to weight input x by
+
+    Returns:
+        output of the GeLU activation
+        """
+    mask = x >= 0.
+    return x * mask + ((jnp.exp(x) - 1) * alpha) * (1. - mask)
+
+@jit
+def d_elu(x, alpha=1.):
+    mask = (x >= 0.)
+    return mask + (1. - mask) * (jnp.exp(x) * alpha)
+
+@jit
 def softmax(x, tau=0.0):
     """
     Softmax function with overflow control built in directly. Contains optional
@@ -532,25 +635,44 @@ def threshold_cauchy(x, lmbda):
     return term1 + term2
 
 @jit
-def drop_out(dkey, input, rate=0.0):
+def layer_normalize(x, shift=0., scale=1.):
+    """
+    Applies layer normalization to input data `x`
+
+    Args:
+        x: data to apply threshold function over
+
+        shift: the compensating mean/shift factor/parameters (to undo mean subtraction)
+
+        scale: the compensating re-scaling factor/parameters (to undo standard deviation division)
+
+    Returns:
+        layer-normalized data samples `x`
+    """
+    xmu = jnp.mean(x, axis=1, keepdims=True)
+    xsigma = jnp.sqrt(jnp.mean(jnp.square(x - xmu)).clip(min=1e-6)).clip(min=1e-6)
+    _x = (x - xmu) / xsigma
+    return _x * scale + shift
+
+@jit
+def drop_out(dkey, data, rate=0.0):
     """
     Applies a drop-out transform to an input matrix.
 
     Args:
         dkey: Jax randomness key for this operator
 
-        input: data to apply random/drop-out mask to
+        data: input data to apply random/drop-out mask to
 
         rate: probability of a dimension being dropped
 
     Returns:
         output as well as binary mask
     """
-    eps = random.uniform(dkey, (input.shape[0],input.shape[1]),
-                         minval=0.0, maxval=1.0)
+    eps = random.uniform(dkey, shape=data.shape, minval=0.0, maxval=1.0)
     mask = (eps <= (1.0 - rate)).astype(jnp.float32)
     mask = mask * (1.0 / (1.0 - rate)) ## apply inverted dropout scheme
-    output = input * mask
+    output = data * mask
     return output, mask
 
 
