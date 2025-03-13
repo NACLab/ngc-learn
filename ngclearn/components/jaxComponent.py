@@ -21,4 +21,3 @@ class JaxComponent(Component):
         self.directory = directory
         self.key = Compartment(
             random.PRNGKey(time.time_ns()) if key is None else key)
-

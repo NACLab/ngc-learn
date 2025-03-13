@@ -146,13 +146,13 @@ def visualize_gif(frames, path='.', name='tmp', suffix='.jpg', **kwargs):
     _frames = [f.astype(jnp.uint8) for f in frames]
     iio.imwrite(path + '/' + name + '.gif', _frames, **kwargs)
 
-def make_video(f_start, f_end, path, prefix, suffix='.jpg', skip=1):
+def make_video(f_start, f_end, path, prefix, suffix='.jpg', skip=1, **kwargs):
     images = []
     for i in range(f_start, f_end+1, skip):
         print("Reading frame " + str(i))
         images.append(iio.imread(path + "/" + prefix + str(i) + suffix))
     print("writing gif")
-    iio.imwrite(path + '/training.gif', images, loop=0, duration=200)
+    iio.imwrite(path + '/training.gif', images, **kwargs)
 
 
 # def visualize_norm(thetas, sizes, prefix, suffix='.jpg'):

@@ -124,9 +124,10 @@ class Base_Monitor(Component):
         """
         cs, end = self._add_path(compartment.path)
 
+        dtype = compartment.value.dtype
         shape = compartment.value.shape
-        new_comp = Compartment(np.zeros(shape))
-        new_comp_store = Compartment(np.zeros((window_length, *shape)))
+        new_comp = Compartment(np.zeros(shape, dtype=dtype))
+        new_comp_store = Compartment(np.zeros((window_length, *shape), dtype=dtype))
 
         comp_key = "*".join(compartment.path.split("/"))
         store_comp_key = comp_key + "*store"
@@ -310,4 +311,4 @@ class Base_Monitor(Component):
             for k in range(n):
                 _ax.plot(vals[:, 0, k])
         else:
-            plot_func(vals, ax=_ax)
+            plot_func(vals[:, :, 0:n], ax=_ax)

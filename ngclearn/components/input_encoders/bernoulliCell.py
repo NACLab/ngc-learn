@@ -2,6 +2,9 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from ngclearn.utils import tensorstats
+from functools import partial
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
 
 @jit
 def _update_times(t, s, tols):
@@ -21,25 +24,10 @@ def _update_times(t, s, tols):
     _tols = (1. - s) * tols + (s * t)
     return _tols
 
-@jit
-def _sample_bernoulli(dkey, data):
-    """
-    Samples a Bernoulli spike train on-the-fly
-
-    Args:
-        dkey: JAX key to drive stochasticity/noise
-
-        data: sensory data (vector/matrix)
-
-    Returns:
-        binary spikes
-    """
-    s_t = random.bernoulli(dkey, p=data).astype(jnp.float32)
-    return s_t
-
 class BernoulliCell(JaxComponent):
     """
-    A Bernoulli cell that produces Bernoulli-distributed spikes on-the-fly.
+    A Bernoulli cell that produces spikes by sampling a Bernoulli distribution
+    on-the-fly (to produce data-scaled Bernoulli spike trains).
 
     | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
@@ -55,7 +43,6 @@ class BernoulliCell(JaxComponent):
         n_units: number of cellular entities (neural population size)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -72,9 +59,9 @@ class BernoulliCell(JaxComponent):
     @staticmethod
     def _advance_state(t, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
-        outputs = _sample_bernoulli(subkeys[0], data=inputs)
-        timeOfLastSpike = _update_times(t, outputs, tols)
-        return outputs, timeOfLastSpike, key
+        outputs = random.bernoulli(subkeys[0], p=inputs).astype(jnp.float32)
+        tols = _update_times(t, outputs, tols)
+        return outputs, tols, key
 
     @resolver(_advance_state)
     def advance_state(self, outputs, tols, key):
