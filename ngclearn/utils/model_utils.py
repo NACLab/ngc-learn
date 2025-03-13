@@ -590,12 +590,11 @@ def softmax(x, tau=0.0):
     Returns:
         a (N x D) probability distribution output block
     """
-    # TODO: Do we need to also consider for edge case the division of tau by 0 is invalid?
     if tau > 0.0:
         x = x / tau
     max_x = jnp.max(x, axis=1, keepdims=True)
     exp_x = jnp.exp(x - max_x)
-    return exp_x / jnp.sum(exp_x, axis=1, keepdims=True) # TODO: We also have to take care of the case where the sum is 0
+    return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
 
 @jit
 def threshold_soft(x, lmbda):
