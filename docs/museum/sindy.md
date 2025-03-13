@@ -11,54 +11,48 @@ Inconsistent color schemes across visualizations
 
 # Sparse Identification of Non-linear Dynamical Systems (SINDy)[1]
 
-In this section, we teach, create, simulate, and visualize the Sparse Identification of Non-linear Dynamical Systems (SINDy) [1] model implemention in NGC-Learn library (JAX). After going through this demonstration, you will:
+In this section, we will study, create, simulate, and visualize a model known as the sparse identification of non-linear dynamical systems (SINDy) [1], implementing it in NGC-Learn and JAX. After going through this demonstration, you will:
 
-1.  Learn how to discover the differential equation of a dynamical system using SINDy algorithm only by the system's stapshots.
-2.  Learn how to build polynomial libraries with arbitrary order out of the dataset.
-3.  Learn how to solve the sparse regression problem in 2 ways
+1.  Learn how to uncover the differential equations of a dynamical system using the SINDy algorithm, using only snapshots of the system of interest.
+2.  Learn how to build polynomial libraries of an arbitrary order from a dataset.
+3.  Learn how to solve the sparse regression problem in two ways: 
   - Iteratively finding the coefficient matrix by gradient descent.
-  - Iteratively performing the least squares (LSQ) method followed by thresholding-- Sequential Thresholding Least Square (STLSQ) for the given model.
+  - Iteratively performing the least squares (LSQ) method followed by thresholding, i.e., carrying out sequential thresholding least squares (STLSQ) for the given model.
    
    
-The model **code** for this exhibit can be found [here](https://github.com/NACLab/ngc-museum/exhibits/sindy/sindy.py).
+The model **code** for this exhibit (in NGC-Museum) can be found [here](https://github.com/NACLab/ngc-museum/exhibits/sindy/sindy.py).
 
+## The SINDy Process Model 
 
-## SINDy 
-
-SINDy is a data-driven algorithm that discovers the governing behavior of a dynamical system in terms of symbolic differential equation. It solves the sparse regression problem over the coefficients of pre-defined library that includes $p$ candidate predictors. It tries to find sparse model that only uses $s$ predictors out of $p$ where $s<p$ that best describes the dynamics (time-derivatives) of the system only from the dataset collected over time. SINDy assumes systems follow parsimonious theorem where the balace between the complexity and accuracy results generalization.
-
-
+SINDy is a data-driven algorithm that discovers the governing behavior of a dynamical system in terms of symbolic differential equations. It solves the sparse regression problem over the coefficients of a pre-defined library that includes $p$ candidate predictors. It ultimately tries to find sparse model that only uses $s$ predictors out of $p$ where $s<p$ that best describes the dynamics (time-derivatives) of the system only from a dataset collected over time. SINDy assumes that the systems it is to identify follow the parsimonious theorem (Occam's Razor) where the balance between the complexity and accuracy results in effective generalization.
 
 ### SINDy Dynamics
 
-If $\mathbf{X}$ is a system that only depends on variable $t$, a very small change in the independant variable ($dt$) can cause changing the system by $dX$ amount. 
-```math
+If $\mathbf{X}$ is a system that only depends on variable $t$, a very small change in the independent variable ($dt$) can cause a change in the system by $dX$ amount. 
+$$$
 d\mathbf{X} = \mathbf{Ẋ}(t)~dt
-```
-SINDy models the derivative[^1] (a linear operation) as a linear transformations with:
-[^1]: Derivative is a linear operation that acts on dt and gives the differential that is the linearization approximation of the taylor series of the function.
-```math
+$$$
+SINDy models the derivative[^1] (a linear operation) as linear transformations with:
+[^1]: The derivative is a linear operation that acts on $dt$ and gives a differential that is the linearized approximation of the taylor series of the function.
+$$$
 \frac{d\mathbf{X}(t)}{dt} = \mathbf{Ẋ}(t) = \mathbf{f}(\mathbf{X}(t))
-```
-SINDy assumes thatt this linear operation, $\mathbf{f}(\mathbf{X}(t))$ is a matrix multiplication that linearly combines the relevant predictors to describe the system's equation.
-```math
+$$$
+SINDy assumes that this linear operation, i.e., $\mathbf{f}(\mathbf{X}(t))$, is a matrix multiplication that linearly combines the relevant predictors in order to describe the system's equation.
+$$$
 \mathbf{f}(\mathbf{X}(t)) = \mathbf{\Theta}(\mathbf{X})~\mathbf{W}
-```
+$$$
 
+Given a group of candidate functions within the library $\mathbf{\Theta}(\mathbf{X})$, the coefficients in $\mathbf{W}$ that choose the library terms are to be **sparse**. In other words, there are only a few functions that exist in the system's differential equation. Given these assumptions, SINDy solves a sparse regression problem in order to find the $\mathbf{W}$ that maps the library of selected terms to each feature of the system being identified. SINDy imposes parsimony constraints over the resulting symbolic regression (i.e., genetic programming) to describe a dynamical system's behavior with as few terms as possible. In order to select a sparse set of the given features, the model adds the LASSO regularizarion penalty (i.e., an L1 norm constraint) to the regression problem and solves the sparse regression or solves the regression problem via STLSQ. We will describe STLSQ in third step of the SINDy dynamics/process.
 
-Given a group of candidate functions in the library $\mathbf{\Theta}(\mathbf{X})$, the coefficient $\mathbf{W}$ of choose the library terms is **sparse**. In other words, there are only a few functions that exist in the system's differential equation. Given these assumptions, SINDy solves the sparse regression problem to find the $\mathbf{W}$ that maps the library selected terms to each feature of the system. SINDy imposes parsimony constraints over symbolic regression (i.e., genetic programming) to describe a dynamical system's behavior by as few terms as possible. In order to select a sparse set of the given features, it adds the LASSO regularizarion (i.e., L1 norm) to the regression problem and solves the sparse regression or solves the regression problem by STLSQ. Here we desceibe STLSQ in third step of the SINDy dynamics.
-
-
-
-SINDy's dynamics can be presented in 3 main phases according to the figure 1. 
+In essence, SINDy's dynamics can be presented in three main phases, visualized in Figure 1 below. 
 
 ------------------------------------------------------------------------------------------
 
 <p align="center">
-  <img src="../images/museum/sindy/flow_SR.png" width="700">
+  <img src="../images/museum/sindy/flow_SR.png" width="500">
 
 
-**Figure 1:** **Flow of three phases in SINDy.** **Phase-1)** Data collection: capturing system's states that are changing in time and making the state vector. **Phase-2A)** Library formation: manually creating the library of candidate predictors that could appear in the model. **Phase-2B)** Derivative computation: using the data collected in phase 1 and compute its derivative with respect to time. **Phase-3)**  Solving the sparse regression problem.
+**Figure 1:** **The flow of the three phases in SINDy.** **Phase-1)** Data collection: capturing system states that are changing in time and creating the state vector. **Phase-2A)** Library formation: manually creating the library of candidate predictors that could appear in the model. **Phase-2B)** Derivative computation: using the data collected in phase 1 to compute its derivative with respect to time. **Phase-3)**  Solving the sparse regression problem.
 </p>
 
 ------------------------------------------------------------------------------------------
@@ -71,7 +65,7 @@ SINDy's dynamics can be presented in 3 main phases according to the figure 1.
 <td width="70%" valign="top">
    
 ## Phase 1: Collecting Dataset → $\mathbf{X}_{(m \times n)}$
-This phase involves gathering the raw data points representing the system's states across time; In this example, capturing the x, y, and z coordinates of the system's states in this. Here, $m$ represents the number of data points (number of the spanshots/time length) and $n$ is the system's dimensions.
+This phase involves gathering the raw data points representing the system's states across time. In this example, this means capturing the $x$, $y$, and $z$ coordinates of the system's states. Here, $m$ represents the number of data points (number of the snapshots/length of time) and $n$ is the system's dimensionality.
 </td>
 <td width="30%" align="top">
    <p align="center">
@@ -105,9 +99,9 @@ This phase involves gathering the raw data points representing the system's stat
 <tr>
    <td> 
 
-### 2.A: Making Library  → $\mathbf{\Theta}_{(m \times p)}$
-In this step, using the dataset collected in step 1, given the pre-defined function terms, we construct the dictionary of candidate predictors for system's differential equations. These functions form the columns of our library matrix $\mathbf{\Theta}(\mathbf{X})$ and $p$ is the number of candidate predictors. To identify the dynamical structure of the system this library of candidate functions appear in the regression problem to propose the model's structure that later the coefficient matrix will give weight to them according to the problem setup. Assuming sparse models for the system, by sparsification (LASSO or thresholding weigths) decide which structure best describe the system's behavior using predictors. 
-Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct:
+### 2.A: Making the Library  → $\mathbf{\Theta}_{(m \times p)}$
+In this step, using the dataset collected in phase 1, given pre-defined function terms, we construct a dictionary of candidate predictors for identifying the target system's differential equations. These functions form the columns of our library matrix $\mathbf{\Theta}(\mathbf{X})$ and $p$ is the number of candidate predictors. To identify the dynamical structure of the system, this library of candidate functions appears in the regression problem to propose the model's structure that will later serve as the coefficient matrix for weighting the functions according to the problem setup. We assume sparse models will be sufficient to identify the system and do this through sparsification (LASSO or thresholding weights) in order decide which structure best describes the system's behavior using predictors. 
+Given a set of time-series measurements of a dynamical system state variables ($\mathbf{X}_{(m \times n)}$) we construct the following:
 Library of Candidate Functions: $\Theta(\mathbf{X}) = [\mathbf{1} \quad \mathbf{X} \quad \mathbf{X}^2 \quad \mathbf{X}^3 \quad \sin(\mathbf{X}) \quad \cos(\mathbf{X}) \quad ...]$
    </td>
    <td> 
@@ -122,8 +116,7 @@ Library of Candidate Functions: $\Theta(\mathbf{X}) = [\mathbf{1} \quad \mathbf{
    <td> 
    
 ### 2.B: Compute State Derivatives → $\mathbf{Ẋ}_{(m \times n)}$
-Given a set of time-series measurements of a dynamical system state variables $\mathbf{X}_{(m \times n)}$ we construct the derivative matrix: $\mathbf{Ẋ}_{(m \times n)}$ (computed numerically)
-In this step, using the dataset collected in step 1, we calculating the time derivatives of each state variable with respect to time. In this example, we compute ẋ, ẏ, and ż to capture how the system evolves over time.
+Given a set of time-series measurements of a dynamical system's state variables $\mathbf{X}_{(m \times n)}$, we next construct the derivative matrix: $\mathbf{Ẋ}_{(m \times n)}$ (computed numerically). In this step, using the dataset collected in phase 1, we compute the derivatives of each state variable with respect to time. In this example, we compute $ẋ$, $ẏ$, and $ż$ in order to capture how the system evolves over time.
    </td>
    <td> 
    <p align="center">
@@ -147,7 +140,7 @@ In this step, using the dataset collected in step 1, we calculating the time der
 <td width="70%" valign="top">
    
 ## Phase 3: Solving Sparse Regression Problem → $\mathbf{W_s}_{(p \times n)}$
-Solving the Sparse Regression problem (SR) can be done with various method such as Lasso, STLSQ, Elastic Net, and many others. Here we describe STLSQ to solve the SR problem according to the SINDy method.
+Solving the resulting sparse regression (SR) problem that results from the phases/steps above can be done using various method such as Lasso, STLSQ, Elastic Net, as well as many other schemes. Here, we describe the STLSQ approach to solve the SR problem according to the SINDy process.
 </td>
 
 <td width="30%" align="top">
@@ -166,12 +159,12 @@ Solving the Sparse Regression problem (SR) can be done with various method such 
 
 
 
-### Solving Sparse Regression by Sequential Thresholding Least Square (STLSQ)
+### Solving Sparse Regression by Sequential Thresholding Least Squares (STLSQ)
 <!-- --------------------------------------------------------------------------------------------- -->
 <p align="center">
   <img src="../images/museum/sindy/flow.png" width="800">
 
-**Figure 1:** **Flow of three phases in SINDy.** **Phase-1)** Data collection: capturing system's states that are changing in time and making the state vector. **Phase-2A)** Library formation: manually creating the library of candidate predictors that could appear in the model. **Phase-2B)** Derivative computation: using the data collected in phase 1 and compute its derivative with respect to time. **Phase-3)**  Solving the sparse regression problem with STLSQ.
+**Figure 1:** **The flow of three phases in SINDy.** **Phase-1)** Data collection: capturing system's states that are changing in time and making the state vector. **Phase-2A)** Library formation: manually creating the library of candidate predictors that could appear in the model. **Phase-2B)** Derivative computation: using the data collected in phase 1 and computing its derivative with respect to time. **Phase-3)**  Solving the sparse regression problem via STLSQ.
 </p>
 
 ------------------------------------------------------------------------------------------
@@ -200,7 +193,7 @@ Solving the Sparse Regression problem (SR) can be done with various method such 
    <td> 
 
 #### 3.A: Least Square method (LSQ) → $\mathbf{W}$ 
-Finds library coefficients by solving the following regression problem $\mathbf{Ẋ} = \mathbf{\Theta}\mathbf{W}$ analytically $\mathbf{W}  = (\mathbf{\Theta}^T \mathbf{\Theta})^{-1} \mathbf{\Theta}^T \mathbf{Ẋ}$ 
+This step entails finding library coefficients by solving the following regression problem $\mathbf{Ẋ} = \mathbf{\Theta}\mathbf{W}$ analytically $\mathbf{W}  = (\mathbf{\Theta}^T \mathbf{\Theta})^{-1} \mathbf{\Theta}^T \mathbf{Ẋ}$ 
    </td>
    <td> 
    <p align="center">
@@ -213,7 +206,7 @@ Finds library coefficients by solving the following regression problem $\mathbf{
    <td> 
    
 #### 3.B: Thresholding → $\mathbf{W_s}$
-Sparsifies $\mathbf{W}$ by keeping only some terms in $\mathbf{W}$ that corresponds to the effective terms in the library.
+This step entails sparsifying $\mathbf{W}$ by keeping only some of the terms within $\mathbf{W}$, particularly those that correspond to the effective terms in the library.
    </td>
    <td> 
    <p align="center">
@@ -225,7 +218,7 @@ Sparsifies $\mathbf{W}$ by keeping only some terms in $\mathbf{W}$ that correspo
    <td> 
    
 #### 3.C: Masking → $\mathbf{\Theta_s}$
-Sparsifies $\mathbf{\Theta}$ by keeping only the corresponding terms in $\mathbf{W}$ that are kept.
+This step sparsifies $\mathbf{\Theta}$ by keeping only the corresponding terms in $\mathbf{W}$ that remain (from the prior step).
    </td>
    <td> 
    <p align="center">
@@ -239,7 +232,7 @@ Sparsifies $\mathbf{\Theta}$ by keeping only the corresponding terms in $\mathbf
    <td> 
    
 #### 3.D: Repeat A → B → C until convergence
-Solving LSQ with the sparse matrix $\mathbf{\Theta_s}$ and $\mathbf{W_s}$ and find the new $\mathbf{W}$ and repreat steps B and C everytime.
+We continue to solve LSQ with the sparse matrix $\mathbf{\Theta_s}$ and $\mathbf{W_s}$ and find a new $\mathbf{W}$, repeating steps B and C until convergence.
    </td>
    <td> 
    <p align="center">
@@ -268,7 +261,9 @@ Solving LSQ with the sparse matrix $\mathbf{\Theta_s}$ and $\mathbf{W_s}$ and fi
 
 <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
 <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
-## Code
+## Code: Simulating SINDy
+
+We finally present ngc-learn code below for using and simulating the SINDy process to identify several dynamical systems.
 
 <!--
 -->
@@ -349,7 +344,9 @@ for dim in range(dX.shape[1]):
 <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
 <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
 
-## Results
+## Results: System Identification
+
+Running the above code should produce results similar to the findings we present next.
 
 <table>
 <th>
@@ -517,28 +514,6 @@ $\mathbf{ẏ} = -2.0\mathbf{x}^3 - 0.1\mathbf{y}^3$
 </tr>
    
 </table>
-
-
-
-
-
-
-
-<!--
------------------------------------------------------------------------------
-Dictionary learning combined with LASSO (L1-norm) promotes the sparsity of the coefficient matrix which allows only governing terms in the dictionary stay non-zero.
-
-The solve linear regression by lasso that is the L1-norm regularized least squares to penalize L1-norm of weights (coefficients).
-lasso solution is the sparse model with coefficients corresponding to the relevant features in the library that predicts the motion of the system.
-
-of a manually constructed dictionary from the state vector by a coefficient matrix.
-
------------------------------------------------------------------------------o
-
--->
-
-
-
 
 
 ## References
