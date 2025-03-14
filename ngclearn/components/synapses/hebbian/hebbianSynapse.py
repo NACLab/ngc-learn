@@ -98,7 +98,7 @@ class HebbianSynapse(DenseSynapse):
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
     | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
-    | dWweights - current delta matrix containing changes to be applied to synaptic efficacies
+    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
     | dBiases - current delta vector containing changes to be applied to bias values
     | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
 
