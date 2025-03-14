@@ -7,7 +7,8 @@ from ngclearn.components.synapses.patched import PatchedSynapse
 from ngclearn.utils import tensorstats
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
-def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1., w_decay=0.,
+def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
+                 prior_type=None, prior_lmbda=0.,
                  pre_wght=1., post_wght=1.):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
@@ -19,14 +20,18 @@ def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
 
         W: synaptic weight values (at time t)
 
-        w_mask: weight mask matrix
+        w_mask: synaptic weight masking matrix (same shape as W)
 
         w_bound: maximum value to enforce over newly computed efficacies
+
+        is_nonnegative: (Unused)
 
         signVal: multiplicative factor to modulate final update by (good for
             flipping the signs of a computed synaptic change matrix)
 
-        w_decay: synaptic decay factor to apply to this update
+        prior_type: prior type or name (Default: None)
+
+        prior_lmbda: prior parameter (Default: 0.0)
 
         pre_wght: pre-synaptic weighting term (Default: 1.)
 
@@ -35,14 +40,28 @@ def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
     Returns:
         an update/adjustment matrix, an update adjustment vector (for biases)
     """
+
     _pre = pre * pre_wght
     _post = post * post_wght
     dW = jnp.matmul(_pre.T, _post)
     db = jnp.sum(_post, axis=0, keepdims=True)
+    dW_reg = 0.
+
     if w_bound > 0.:
         dW = dW * (w_bound - jnp.abs(W))
-    if w_decay > 0.:
-        dW = dW - W * w_decay
+
+    if prior_type == "l2" or prior_type == "ridge":
+        dW_reg = W
+
+    if prior_type == "l1" or prior_type == "lasso":
+        dW_reg = jnp.sign(W)
+
+    if prior_type == "l1l2" or prior_type == "elastic_net":
+        l1_ratio = prior_lmbda[1]
+        prior_lmbda = prior_lmbda[0]
+        dW_reg = jnp.sign(W) * l1_ratio + W * (1-l1_ratio)/2
+
+    dW = dW + prior_lmbda * dW_reg
 
     if w_mask!=None:
         dW = dW * w_mask
@@ -79,6 +98,7 @@ def _enforce_constraints(W, w_mask, w_bound, is_nonnegative=True):
 
     return _W
 
+
 class HebbianPatchedSynapse(PatchedSynapse):
     """
     A synaptic cable that adjusts its efficacies via a two-factor Hebbian
@@ -93,7 +113,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
     | --- Synaptic Plasticity Compartments: ---
     | pre - pre-synaptic signal to drive first term of Hebbian update (takes in external signals)
     | post - post-synaptic signal to drive 2nd term of Hebbian update (takes in external signals)
-    | dWweights - current delta matrix containing changes to be applied to synaptic efficacies
+    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
     | dBiases - current delta vector containing changes to be applied to bias values
     | opt_params - locally-embedded optimizer statisticis (e.g., Adam 1st/2nd moments if adam is used)
 
@@ -104,7 +124,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
             with number of inputs by number of outputs)
 
         n_sub_models: The number of submodels in each layer
-        
+
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
 
@@ -125,9 +145,17 @@ class HebbianPatchedSynapse(PatchedSynapse):
         is_nonnegative: enforce that synaptic efficacies are always non-negative
             after each synaptic update (if False, no constraint will be applied)
 
-        w_decay: degree to which (L2) synaptic weight decay is applied to the
-            computed Hebbian adjustment (Default: 0); note that decay is not
-            applied to any configured biases
+
+        prior: a kernel to drive prior of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            prior to use and 2nd element as a floating point number
+            calling the prior parameter lambda (Default: (None, 0.))
+            currently it supports "l1" or "lasso" or "l2" or "ridge" or "l1l2" or "elastic_net".
+            usage guide:
+            prior = ('l1', 0.01) or prior = ('lasso', lmbda)
+            prior = ('l2', 0.01) or prior = ('ridge', lmbda)
+            prior = ('l1l2', (0.01, 0.01)) or prior = ('elastic_net', (lmbda, l1_ratio))
+
 
         sign_value: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
@@ -157,11 +185,15 @@ class HebbianPatchedSynapse(PatchedSynapse):
     """
 
     def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
-                 w_mask=None, w_bound=1., is_nonnegative=False, w_decay=0., sign_value=1.,
+                 w_mask=None, w_bound=1., is_nonnegative=False, prior=(None, 0.), sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
                  resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, shape, n_sub_models, stride_shape, w_mask, weight_init, bias_init, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
+
+        prior_type, prior_lmbda = prior
+        self.prior_type = prior_type
+        self.prior_lmbda = prior_lmbda
 
         self.n_sub_models = n_sub_models
         self.sub_stride = stride_shape
@@ -174,7 +206,6 @@ class HebbianPatchedSynapse(PatchedSynapse):
         ## synaptic plasticity properties and characteristics
         self.Rscale = resist_scale
         self.w_bound = w_bound
-        self.w_decay = w_decay ## synaptic decay
         self.pre_wght = pre_wght
         self.post_wght = post_wght
         self.eta = eta
@@ -199,22 +230,22 @@ class HebbianPatchedSynapse(PatchedSynapse):
             if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _compute_update(w_mask, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _compute_update(w_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
                         post_wght, pre, post, weights):
         ## calculate synaptic update values
         dW, db = _calc_update(
             pre, post, weights, w_mask, w_bound, is_nonnegative=is_nonnegative,
-            signVal=sign_value, w_decay=w_decay, pre_wght=pre_wght,
+            signVal=sign_value, prior_type=prior_type, prior_lmbda=prior_lmbda, pre_wght=pre_wght,
             post_wght=post_wght)
 
         return dW  * jnp.where(0 != jnp.abs(weights), 1, 0) , db
 
     @staticmethod
-    def _evolve(w_mask, opt, w_bound, is_nonnegative, sign_value, w_decay, pre_wght,
+    def _evolve(w_mask, opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dWeights, dBiases = HebbianPatchedSynapse._compute_update(
-            w_mask, w_bound, is_nonnegative, sign_value, w_decay,
+            w_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda,
             pre_wght, post_wght, pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
@@ -299,14 +330,14 @@ class HebbianPatchedSynapse(PatchedSynapse):
             "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
+            "prior": "prior name and value for synaptic updating prior",
             "w_mask": "weight mask matrix",
-            "w_decay": "Synaptic decay term",
             "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = [(W * Rscale) * inputs] + b ;"
-                            "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - W_{ij} * w_decay",
+                            "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - g(W_{ij}) * prior_lmbda",
                 "hyperparameters": hyperparams}
         return info
 
@@ -336,12 +367,9 @@ class HebbianPatchedSynapse(PatchedSynapse):
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        Wab = HebbianPatchedSynapse("Wab", (9, 30), 3)
+        Wab = HebbianPatchedSynapse("Wab", (9, 30), 3, (0, 0), optim_type='adam',
+                             sign_value=-1.0, prior=("l1l2", 0.001))
     print(Wab)
     plt.imshow(Wab.weights.value, cmap='gray')
     plt.show()
-
-
-
-
 
