@@ -1,88 +1,80 @@
 import jax.numpy as jnp
-from jax import jit
-from functools import partial
-
-
 
 def linear_2D(t, x, params):
-    '''
-    :param x: 2D vector
-            type: jax array
-            shape:(2,)
+    """
+    * suggested init value - x0 = jnp.array([3, -1.5])
 
-    :param t: Unused
+    Args:
+        param x: 2D vector
+               type: jax array
+               shape:(2,)
 
-    :param params: Unused
+        param t: Unused
 
-    :return: 2D vector: [
-                         -0.1 * x[0] + 2.0 * x[1],
-                         -2.0 * x[0] - 0.1 * x[1]
-                         ]
-            type: jax array
-            shape:(2,)
+        param params: Unused
 
-    ------------------------------------------
-        * suggested init value-
-                x0 = jnp.array([3, -1.5])
-    '''
+    Returns:
+        2D vector: [
+                     -0.1 * x[0] + 2.0 * x[1],
+                     -2.0 * x[0] - 0.1 * x[1]
+                     ]
+        type: jax array
+        shape:(2,)
+    """
     coeff = jnp.array([[-0.1, 2],
                        [-2, -0.1]]).T
     dfx_ = jnp.matmul(x, coeff)
 
     return dfx_
 
-
-
 def cubic_2D(t, x, params):
-    '''
-    :param x: 2D vector
-            type: jax array
-            shape:(2,)
+    """
+    suggested init value - x0 = jnp.array([2., 0.])
 
-    :param t: Unused
+    Args:
+        param x: 2D vector
+                  type: jax array
+                  shape: (2,)
 
-    :param params: Unused
+        param t: Unused
 
-    :return: 2D vector: [
-                        -0.1 * x[0] ** 3 + 2.0 * x[1] ** 3,
-                        -2.0 * x[0] ** 3 - 0.1 * x[1] ** 3,
-                        ]
-            type: jax array
-            shape:(2,)
+        param params: Unused
 
-    ------------------------------------------
-        * suggested init value-
-                x0 = jnp.array([2., 0.])
-    '''
+    Returns:
+        2D vector: [
+                    -0.1 * x[0] ** 3 + 2.0 * x[1] ** 3,
+                    -2.0 * x[0] ** 3 - 0.1 * x[1] ** 3,
+                    ]
+        type: jax array
+        shape:(2,)
+    """
     coeff = jnp.array([[-0.1, 2],
                        [-2, -0.1]]).T
     dfx_ = jnp.matmul(x**3, coeff)
     return dfx_
 
-
-
 def lorenz(t, x, params):
-    '''
-    :param x: 3D vector
-            type: jax array
-            shape:(3,)
+    """
+    suggested init value - x0 = jnp.array([-8, 7, 27])
 
-    :param t: Unused
+    Args:
+        param x: 3D vector
+                  type: jax array
+                  shape: (3,)
 
-    :param params: Unused
+        param t: Unused
 
-    :return: 3D vector: [
-                        10 * (x[1] - x[0]),
-                        x[0] * (28 - x[2]) - x[1],
-                        x[0] * x[1] - 8 / 3 * x[2],
-                        ]
-            type: jax array
-            shape:(3,)
+        param params: Unused
 
-    ------------------------------------------
-        * suggested init value-
-                x0 = jnp.array([-8, 7, 27])
-    '''
+    Returns:
+        3D vector: [
+                    10 * (x[1] - x[0]),
+                    x[0] * (28 - x[2]) - x[1],
+                    x[0] * x[1] - 8 / 3 * x[2],
+                    ]
+        type: jax array
+        shape:(3,)
+    """
     x_ = x[..., 0]
     y_ = x[..., 1]
     z_ = x[..., 2]
@@ -90,32 +82,31 @@ def lorenz(t, x, params):
     dx = 10 * y_ - 10 * x_
     dy = 28 * x_ - x_ * z_ - y_
     dz = x_ * y_ - 8 / 3 * z_
-
     return jnp.stack([dx, dy, dz], axis=-1)
 
 
-
 def linear_3D(t, x, params):
-    '''
-    :param x: 3D vector
-            type: jax array
-            shape:(3,)
+    """
+    suggested init value - x0 = jnp.array([1, 1., -1])
 
-    :param t: Unused
+    Args:
+        param x: 3D vector
+                  type: jax array
+                  shape: (3,)
 
-    :param params: Unused
+        param t: Unused
 
-    :return: 3D vector: [
-                         -0.1 * x[0] + 2 * x[1],
-                         -2 * x[0] - 0.1 * x[1],
-                         -0.3 * x[2]
-                        ]
-            type: jax array
-            shape:(3,)
-    ------------------------------------------
-        * suggested init value-
-                x0 = jnp.array([1, 1., -1])
-    '''
+        param params: Unused
+
+    Returns:
+        3D vector: [
+                     -0.1 * x[0] + 2 * x[1],
+                     -2 * x[0] - 0.1 * x[1],
+                     -0.3 * x[2]
+                    ]
+        type: jax array
+        shape:(3,)
+    """
     x_ = x[..., 0]
     y_ = x[..., 1]
     z_ = x[..., 2]
@@ -130,27 +121,28 @@ def linear_3D(t, x, params):
 
 
 def oscillator(t, x, params, mu1=0.05, mu2=-0.01, omega=3.0, alpha=-2.0, beta=-5.0, sigma=1.1):
-    '''
-    :param x: 3D vector
-            type: jax array
-            shape:(3,)
+    """
+    suggested init value - x0 = jnp.array([0.5, 0.05, 0.1])
 
-    :param t: Unused
+    Args:
+        param x: 3D vector
+                  type: jax array
+                  shape: (3,)
 
-    :param params: Unused
+        param t: Unused
 
-    :return: 3D vector: [
-                         mu1 * x[0] + sigma * x[0] * x[1],
-                         mu2 * x[1] + (omega + alpha * x[1] + beta * x[2]) * x[2] - sigma * x[0] ** 2,
-                         mu2 * x[2] - (omega + alpha * x[1] + beta * x[2]) * x[1],
-                        ]
+        param params: Unused
 
-            type: jax array
-            shape:(3,)
-    ------------------------------------------
-        * suggested init value-
-                x0 = jnp.array([0.5, 0.05, 0.1])
-    '''
+    Returns:
+        3D vector: [
+                     mu1 * x[0] + sigma * x[0] * x[1],
+                     mu2 * x[1] + (omega + alpha * x[1] + beta * x[2]) * x[2] - sigma * x[0] ** 2,
+                     mu2 * x[2] - (omega + alpha * x[1] + beta * x[2]) * x[1],
+                    ]
+
+        type: jax array
+        shape:(3,)
+    """
     x_ = x[..., 0]
     y_ = x[..., 1]
     z_ = x[..., 2]
@@ -162,13 +154,7 @@ def oscillator(t, x, params, mu1=0.05, mu2=-0.01, omega=3.0, alpha=-2.0, beta=-5
     return jnp.stack([dx, dy, dz], axis=-1)
 
 
-
-
-
-
-
-
-
+## some testing/driver code to check the ODEs themselves
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from ngclearn.utils.diffeq.ode_utils import solve_ode
