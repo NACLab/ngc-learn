@@ -557,4 +557,5 @@ if __name__ == '__main__':
     plt.plot(ts_sol, sol_ralston[:, 1], label='x1-Ralston')
     plt.legend(loc='best')
     plt.grid()
-    plt.show()
+    #plt.show()
+    plt.savefig("integrator_plot.jpg")

@@ -3,51 +3,6 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
 
-def _run_cell(dt, targ, mu, sigma):
-    """
-    Moves cell dynamics one step forward.
-
-    Args:
-        dt: integration time constant
-
-        targ: target pattern value
-
-        mu: prediction value
-
-        sigma: prediction variance
-
-    Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, local loss
-    """
-    return _run_gaussian_cell(dt, targ, mu, sigma)
-
-@jit
-def _run_gaussian_cell(dt, targ, mu, sigma):
-    """
-    Moves Gaussian cell dynamics one step forward. Specifically, this
-    routine emulates the error unit behavior of the local cost functional:
-
-    | L(targ, mu) = -(1/2) * ||targ - mu||^2_2
-    | or log likelihood of the multivariate Gaussian with identity covariance
-
-    Args:
-        dt: integration time constant
-
-        targ: target pattern value
-
-        mu: prediction value
-
-        sigma: prediction variance
-
-    Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, loss
-    """
-    dmu = (targ - mu)/sigma # e (error unit)
-    dtarg = -dmu # reverse of e
-    dsigma = 1.  # no derivative is calculated at this time for sigma
-    L = -jnp.sum(jnp.square(dmu)) * 0.5 / sigma
-    return dmu, dtarg, dsigma, L
-
 class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
     A simple (non-spiking) Gaussian error cell - this is a fixed-point solution
@@ -55,12 +10,14 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
     | --- Cell Input Compartments: ---
     | mu - predicted value (takes in external signals)
+    | Sigma - predicted covariance (takes in external signals)
     | target - desired/goal value (takes in external signals)
     | modulator - modulation signal (takes in optional external signals)
     | mask - binary/gating mask to apply to error neuron calculations
     | --- Cell Output Compartments: ---
     | L - local loss function embodied by this cell
     | dmu - derivative of L w.r.t. mu
+    | dSigma - derivative of L w.r.t. Sigma
     | dtarget - derivative of L w.r.t. target
 
     Args:
@@ -68,13 +25,13 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
         n_units: number of cellular entities (neural population size)
 
-        tau_m: (Unused -- currently cell is a fixed-point model)
+        batch_size: batch size dimension of this cell (Default: 1)
 
-        leakRate: (Unused -- currently cell is a fixed-point model)
-
-        sigma: prediction covariance matrix (𝚺) in multivariate gaussian distribution
+        sigma: initial/fixed value for prediction covariance matrix (𝚺) in multivariate gaussian distribution;
+            Note that if the compartment `Sigma` is never used, then this cell assumes that the covariance collapses
+            to a constant/fixed `sigma`
     """
-    def __init__(self, name, n_units, batch_size=1, sigma=1, shape=None, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, sigma=1., shape=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size Setup
@@ -83,60 +40,78 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
             shape = (n_units,)  ## we set shape to be equal to n_units if nothing provided
         else:
             _shape = (batch_size, shape[0], shape[1], shape[2])  ## shape is 4D tensor
+        sigma_shape = (1,1)
+        if not isinstance(sigma, float):
+            sigma_shape = jnp.array(sigma).shape
+        self.sigma_shape = sigma_shape
         self.shape = shape
         self.n_units = n_units
         self.batch_size = batch_size
-        self.sigma = sigma
 
         ## Convolution shape setup
         self.width = self.height = n_units
 
         ## Compartment setup
         restVals = jnp.zeros(_shape)
-        self.L = Compartment(0.) # loss compartment
-        self.mu = Compartment(restVals) # mean/mean name. input wire
+        self.L = Compartment(0., display_name="Gaussian Log likelihood", units="nats") # loss compartment
+        self.mu = Compartment(restVals, display_name="Gaussian mean") # mean/mean name. input wire
         self.dmu = Compartment(restVals) # derivative mean
-        self.target = Compartment(restVals) # target. input wire
+        _Sigma = jnp.zeros(sigma_shape)
+        self.Sigma = Compartment(_Sigma + sigma, display_name="Gaussian variance/covariance")
+        self.dSigma = Compartment(_Sigma)
+        self.target = Compartment(restVals, display_name="Gaussian data/target variable") # target. input wire
         self.dtarget = Compartment(restVals) # derivative target
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
     @staticmethod
-    def _advance_state(dt, mu, dmu, target, dtarget, sigma, modulator, mask):
-        ## compute Gaussian error cell output
-        dmu, dtarget, dsigma, L = _run_cell(dt, target * mask, mu * mask, sigma)
-        dmu = dmu * modulator * mask
+    def _advance_state(dt, mu, target, Sigma, modulator, mask): ## compute Gaussian error cell output
+        # Moves Gaussian cell dynamics one step forward. Specifically, this routine emulates the error unit
+        # behavior of the local cost functional:
+        # FIXME: Currently, below does: L(targ, mu) = -(1/(2*sigma)) * ||targ - mu||^2_2
+        #        but should support full log likelihood of the multivariate Gaussian with covariance of different types
+        # TODO: could introduce a variant of GaussianErrorCell that moves according to an ODE
+        #       (using integration time constant dt)
+        _dmu = (target - mu)  # e (error unit)
+        dmu = _dmu / Sigma
+        dtarget = -dmu  # reverse of e
+        dSigma = Sigma * 0 + 1. # no derivative is calculated at this time for sigma
+        L = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
+
+        dmu = dmu * modulator * mask ## not sure how mask will apply to a full covariance...
         dtarget = dtarget * modulator * mask
-        dsigma = dsigma * 0 + 1. # no derivative is calculated at this time for sigma
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
-        return dmu, dtarget, L, mask
+        return dmu, dtarget, dSigma, L[0, 0], mask
 
     @resolver(_advance_state)
-    def advance_state(self, dmu, dtarget, L, mask):
+    def advance_state(self, dmu, dtarget, dSigma, L, mask):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
+        self.dSigma.set(dSigma)
         self.L.set(L)
         self.mask.set(mask)
 
     @staticmethod
-    def _reset(batch_size, shape): #n_units
+    def _reset(batch_size, shape, sigma_shape): ## reset core components/statistics
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
         restVals = jnp.zeros(_shape)
         dmu = restVals
         dtarget = restVals
+        dSigma = jnp.zeros(sigma_shape)
         target = restVals
         mu = restVals
         modulator = mu + 1.
-        L = 0.
+        L = 0. #jnp.zeros((1, 1))
         mask = jnp.ones(_shape)
-        return dmu, dtarget, target, mu, modulator, L, mask
+        return dmu, dtarget, dSigma, target, mu, modulator, L, mask
 
     @resolver(_reset)
-    def reset(self, dmu, dtarget, target, mu, modulator, L, mask):
+    def reset(self, dmu, dtarget, dSigma, target, mu, modulator, L, mask):
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
+        self.dSigma.set(dSigma)
         self.target.set(target)
         self.mu.set(mu)
         self.modulator.set(modulator)
@@ -152,12 +127,14 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         compartment_props = {
             "inputs":
                 {"mu": "External input prediction value(s)",
+                 "Sigma": "External variance/covariance prediction value(s)",
                  "target": "External input target signal value(s)",
                  "modulator": "External input modulatory/scaling signal(s)",
                  "mask": "External binary/gating mask to apply to signals"},
             "outputs":
                 {"L": "Local loss value computed/embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",
+                 "dSigma": "first derivative of loss w.r.t. variance/covariance value(s)",
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},
         }
         hyperparams = {
