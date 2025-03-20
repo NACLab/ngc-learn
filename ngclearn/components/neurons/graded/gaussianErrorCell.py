@@ -73,10 +73,6 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         leakRate: (Unused -- currently cell is a fixed-point model)
 
         sigma: prediction covariance matrix (𝚺) in multivariate gaussian distribution
-                | if unit variance ⇒ sigma == 1 * I
-                | if shared scalar variance ⇒ sigma == gamma * I     (gamma > 0)
-                | if sigma is a diagonal covariance ⇒ sigma == diag(sigma_vec)   (sigma_vec[i] > 0 for all i)
-                | if sigma is a fill covariance matrix ⇒ sigma (PSD: positive semi-definite matrix)
     """
     def __init__(self, name, n_units, batch_size=1, sigma=1, shape=None, **kwargs):
         super().__init__(name, **kwargs)
