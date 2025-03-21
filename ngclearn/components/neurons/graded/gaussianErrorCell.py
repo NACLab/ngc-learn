@@ -81,7 +81,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         dmu = dmu * modulator * mask ## not sure how mask will apply to a full covariance...
         dtarget = dtarget * modulator * mask
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
-        return dmu, dtarget, dSigma, L[0, 0], mask
+        return dmu, dtarget, dSigma, jnp.squeeze(L), mask
 
     @resolver(_advance_state)
     def advance_state(self, dmu, dtarget, dSigma, L, mask):

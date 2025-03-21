@@ -43,7 +43,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         else:
             _shape = (batch_size, shape[0], shape[1], shape[2])  ## shape is 4D tensor
         scale_shape = (1, 1)
-        if not isinstance(scale, float):
+        if not isinstance(scale, float) and not isinstance(sigma, int):
             scale_shape = jnp.array(scale).shape
         self.scale_shape = scale_shape
         ## Layer Size setup
@@ -83,7 +83,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         dshift = dshift * modulator * mask
         dtarget = dtarget * modulator * mask
         mask = mask * 0. + 1.  ## "eat" the mask as it should only apply at time t
-        return dshift, dtarget, dScale, L[0, 0], mask
+        return dshift, dtarget, dScale, jnp.squeeze(L), mask
 
     @resolver(_advance_state)
     def advance_state(self, dshift, dtarget, dScale, L, mask):
