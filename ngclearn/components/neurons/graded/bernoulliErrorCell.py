@@ -150,5 +150,5 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        X = GaussianErrorCell("X", 9)
+        X = BernoulliErrorCell("X", 9)
     print(X)
