@@ -5,6 +5,7 @@ from .jaxComponent import JaxComponent
 from .neurons.graded.rateCell import RateCell
 from .neurons.graded.gaussianErrorCell import GaussianErrorCell
 from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
+from .neurons.graded.bernoulliErrorCell import BernoulliErrorCell
 from .neurons.graded.rewardErrorCell import RewardErrorCell
 
 

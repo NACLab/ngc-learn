@@ -2,6 +2,7 @@
 from .graded.rateCell import RateCell
 from .graded.gaussianErrorCell import GaussianErrorCell
 from .graded.laplacianErrorCell import LaplacianErrorCell
+from .graded.bernoulliErrorCell import BernoulliErrorCell
 from .graded.rewardErrorCell import RewardErrorCell
 ## point to standard spiking cell component types
 from .spiking.sLIFCell import SLIFCell
