@@ -41,7 +41,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         else:
             _shape = (batch_size, shape[0], shape[1], shape[2])  ## shape is 4D tensor
         sigma_shape = (1,1)
-        if not isinstance(sigma, float):
+        if not isinstance(sigma, float) and not isinstance(sigma, int):
             sigma_shape = jnp.array(sigma).shape
         self.sigma_shape = sigma_shape
         self.shape = shape
