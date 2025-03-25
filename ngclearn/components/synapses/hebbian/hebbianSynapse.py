@@ -40,23 +40,24 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.,
     """
     _pre = pre * pre_wght
     _post = post * post_wght
-    dW = jnp.matmul(_pre.T, _post)
-    db = jnp.sum(_post, axis=0, keepdims=True)
-    dW_reg = 0.
+    dW = jnp.matmul(_pre.T, _post) ## calc Hebbian adjustment
+    db = jnp.sum(_post, axis=0, keepdims=True) ## calc Hebbian adjustment to bias/base-rates
+    dW_reg = 0. ## synaptic decay term
 
-    if w_bound > 0.:
+    if w_bound > 0.: ## induce any synaptic value bounding
         dW = dW * (w_bound - jnp.abs(W))
-
+    ## apply synaptic priors
     if prior_type == "l2" or prior_type == "ridge":
-        dW_reg = -W
+        dW_reg = -W * prior_lmbda
     if prior_type == "l1" or prior_type == "lasso":
-        dW_reg = -jnp.sign(W)
+        dW_reg = -jnp.sign(W) * prior_lmbda
     if prior_type == "l1l2" or prior_type == "elastic_net":
         l1_ratio = prior_lmbda[1]
-        prior_lmbda = prior_lmbda[0]
+        prior_scale = prior_lmbda[0]
         dW_reg = -jnp.sign(W) * l1_ratio - W * (1-l1_ratio)/2
-
-    dW = dW + prior_lmbda * dW_reg
+        dW_reg = dW_reg * prior_scale
+    ## produce final update/adjustment
+    dW = dW + dW_reg
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
