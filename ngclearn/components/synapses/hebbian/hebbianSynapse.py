@@ -48,13 +48,13 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.,
         dW = dW * (w_bound - jnp.abs(W))
 
     if prior_type == "l2" or prior_type == "ridge":
-        dW_reg = W
+        dW_reg = -W
     if prior_type == "l1" or prior_type == "lasso":
-        dW_reg = jnp.sign(W)
+        dW_reg = -jnp.sign(W)
     if prior_type == "l1l2" or prior_type == "elastic_net":
         l1_ratio = prior_lmbda[1]
         prior_lmbda = prior_lmbda[0]
-        dW_reg = jnp.sign(W) * l1_ratio + W * (1-l1_ratio)/2
+        dW_reg = -jnp.sign(W) * l1_ratio - W * (1-l1_ratio)/2
 
     dW = dW + prior_lmbda * dW_reg
     return dW * signVal, db * signVal

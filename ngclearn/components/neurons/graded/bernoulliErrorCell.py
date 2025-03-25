@@ -102,14 +102,14 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
-        restVals = jnp.zeros(_shape)
+        restVals = jnp.zeros(_shape) ## "rest"/reset values
         dp = restVals
         dtarget = restVals
         target = restVals
         p = restVals
-        modulator = mu + 1.
-        L = 0. #jnp.zeros((1, 1))
-        mask = jnp.ones(_shape)
+        modulator = restVals + 1. ## reset modulator signal
+        L = 0. #jnp.zeros((1, 1)) ## rest loss
+        mask = jnp.ones(_shape) ## reset mask
         return dp, dtarget, target, p, modulator, L, mask
 
     @resolver(_reset)
