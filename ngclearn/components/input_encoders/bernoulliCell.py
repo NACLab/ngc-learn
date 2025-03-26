@@ -6,8 +6,8 @@ from functools import partial
 from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 
 class BernoulliCell(JaxComponent):
@@ -49,7 +49,7 @@ class BernoulliCell(JaxComponent):
     @staticmethod
     def advance_state(t, key, inputs, tols):
         ## NOTE: should `inputs` be checked if bounded to [0,1]?
-        key, *subkeys = random.split(key, 2)
+        key, *subkeys = random.split(key, 3)
         outputs = random.bernoulli(subkeys[0], p=inputs).astype(jnp.float32)
         # Updates time-of-last-spike (tols) variable:
         # output = s = binary spike vector

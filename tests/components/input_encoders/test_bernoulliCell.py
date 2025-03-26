@@ -25,20 +25,23 @@ def test_bernoulliCell1():
     with Context("Circuit") as ctx:
         a = BernoulliCell(name="a", n_units=1, key=subkeys[0])
 
-        myProcess = (Process()
-                     >> a.advance_state)
+        advance_process = (Process()
+                           >> a.advance_state)
+        ctx.wrap_and_add_command(advance_process.pure, name="run")
 
-        ctx.wrap_and_add_command(myProcess.pure, name="run")
+        reset_process = (Process()
+                         >> a.reset)
+        ctx.wrap_and_add_command(reset_process.pure, name="reset")
 
-        ## create and compile core simulation commands
-        reset_cmd, reset_args = ctx.compile_by_key(
-            a, compile_key="reset"
-        )
-        ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
-        advance_cmd, advance_args = ctx.compile_by_key(
-            a,compile_key="advance_state"
-        )
-        ctx.add_command(wrap_command(jit(ctx.advance_state)), name="advance")
+        # ## create and compile core simulation commands
+        # reset_cmd, reset_args = ctx.compile_by_key(
+        #     a, compile_key="reset"
+        # )
+        # ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
+        # advance_cmd, advance_args = ctx.compile_by_key(
+        #     a,compile_key="advance_state"
+        # )
+        # ctx.add_command(wrap_command(jit(ctx.advance_state)), name="advance")
 
 
         ## set up non-compiled utility commands
@@ -50,11 +53,11 @@ def test_bernoulliCell1():
     x_seq = jnp.asarray([[1., 1., 0., 0., 1.]], dtype=jnp.float32)
 
     outs = []
-    ctx.reset()
+    #ctx.reset()
     for ts in range(x_seq.shape[1]):
         x_t = jnp.array([[x_seq[0,ts]]]) ## get data at time t
         ctx.clamp(x_t)
-        ctx.advance(t=ts*1., dt=1.)
+        ctx.run(t=ts*1.)#, dt=1.)
         outs.append(a.outputs.value)
     outs = jnp.concatenate(outs, axis=1)
 
