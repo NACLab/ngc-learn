@@ -1,28 +1,12 @@
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit
+from jax import numpy as jnp, random
 from ngclearn.utils import tensorstats
-from functools import partial
 from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 class PoissonCell(JaxComponent):
     """
@@ -79,32 +63,26 @@ class PoissonCell(JaxComponent):
             )
         return valid
 
+    @transition(output_compartments=["outputs", "tols", "key"])
     @staticmethod
-    def _advance_state(t, dt, target_freq, key, inputs, tols):
+    def advance_state(t, dt, target_freq, key, inputs, tols):
         key, *subkeys = random.split(key, 2)
         pspike = inputs * (dt / 1000.) * target_freq
         eps = random.uniform(subkeys[0], inputs.shape, minval=0., maxval=1.,
                              dtype=jnp.float32)
         outputs = (eps < pspike).astype(jnp.float32)
-        tols = _update_times(t, outputs, tols)
+
+        # Updates time-of-last-spike (tols) variable:
+        # output = s = binary spike vector
+        # tols = current time-of-last-spike variable
+        tols = (1. - outputs) * tols + (outputs * t)
         return outputs, tols, key
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs, tols, key):
-        self.outputs.set(outputs)
-        self.tols.set(tols)
-        self.key.set(key)
-
+    @transition(output_compartments=["inputs", "outputs", "tols"])
     @staticmethod
-    def _reset(batch_size, n_units):
+    def reset(batch_size, n_units):
         restVals = jnp.zeros((batch_size, n_units))
         return restVals, restVals, restVals
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, tols):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs) #None
-        self.tols.set(tols)
 
     def save(self, directory, **kwargs):
         target_freq = (self.target_freq if isinstance(self.target_freq, float)
@@ -121,12 +99,9 @@ class PoissonCell(JaxComponent):
     @classmethod
     def help(cls):  ## component help function
         properties = {
-            "cell_type": "PoissonCell - samples input to produce spikes, "
-                         "where dimension is a probability proportional to "
-                         "the dimension's magnitude/value/intensity and "
-                         "constrained by a maximum spike frequency (spikes "
-                         "follow "
-                         "a Poisson distribution)"
+            "cell_type": "PoissonCell - samples input to produce spikes, where dimension is a probability proportional "
+                         "to the dimension's magnitude/value/intensity and constrained by a maximum spike frequency "
+                         "(spikes follow a Poisson distribution)"
         }
         compartment_props = {
             "inputs":

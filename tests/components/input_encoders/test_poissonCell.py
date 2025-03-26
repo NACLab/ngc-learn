@@ -2,7 +2,7 @@ from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import BernoulliCell
+from ngclearn.components import PoissonCell
 from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
@@ -13,15 +13,15 @@ from ngcsimlib.context import Context
 from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 
-def test_bernoulliCell1():
+def test_poissonCell():
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
-    #T = 300  # ms
-    # ---- build a simple Bernoulli cell system ----
+    # T = 300  # ms
+    # ---- build a simple Poisson cell system ----
     with Context("Circuit") as ctx:
-        a = BernoulliCell(name="a", n_units=1, key=subkeys[0])
+        a = PoissonCell(name="a", n_units=1, target_freq=1000., key=subkeys[0])
 
         advance_process = (Process()
                            >> a.advance_state)
@@ -42,14 +42,13 @@ def test_bernoulliCell1():
     outs = []
     ctx.reset()
     for ts in range(x_seq.shape[1]):
-        x_t = jnp.array([[x_seq[0,ts]]]) ## get data at time t
+        x_t = jnp.array([[x_seq[0, ts]]])  ## get data at time t
         ctx.clamp(x_t)
-        ctx.run(t=ts*1., dt=dt)
+        ctx.run(t=ts * 1., dt=dt)
         outs.append(a.outputs.value)
     outs = jnp.concatenate(outs, axis=1)
 
     ## output should equal input
     assert_array_equal(outs, x_seq)
-    print(outs)
 
-test_bernoulliCell1()
+test_poissonCell()

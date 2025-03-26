@@ -1,8 +1,6 @@
-#from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit
+from jax import numpy as jnp, random
 from ngclearn.utils import tensorstats
-from functools import partial
 from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 
@@ -49,6 +47,11 @@ class BernoulliCell(JaxComponent):
     @staticmethod
     def advance_state(t, key, inputs, tols):
         ## NOTE: should `inputs` be checked if bounded to [0,1]?
+        # print(key)
+        # print(t)
+        # print(inputs.shape)
+        # print(tols.shape)
+        # print("-----")
         key, *subkeys = random.split(key, 3)
         outputs = random.bernoulli(subkeys[0], p=inputs).astype(jnp.float32)
         # Updates time-of-last-spike (tols) variable:
