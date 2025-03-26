@@ -32,8 +32,8 @@ class BernoulliCell(JaxComponent):
     """
 
     def __init__(self, name, n_units, batch_size=1, **kwargs):
-        #super().__init__(name, **kwargs)
-        super(JaxComponent, self).__init__(name, **kwargs)
+        super().__init__(name, **kwargs)
+        #super(BernoulliCell, self).__init__(name, **kwargs)
 
         ## Layer Size Setup
         self.batch_size = batch_size
