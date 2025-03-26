@@ -178,6 +178,10 @@ class HebbianSynapse(DenseSynapse):
         self.shape = shape
         self.Rscale = resist_scale
         self.prior_type = prior_type
+        if self.prior_type.lower() == "gaussian":
+            self.prior_type = "ridge"
+        elif self.prior_type.lower() == "laplacian":
+            self.prior_type = "lasso"
         self.prior_lmbda = prior_lmbda
         self.w_bound = w_bound
         self.pre_wght = pre_wght

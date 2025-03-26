@@ -80,12 +80,11 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
             dL_dp = x - _p ## d(Bern LL)/dp where _p = sigmoid(p)
         else:
             dL_dp = x/(_p) - one_min_x/one_min_p  ## d(Bern LL)/dp
-        dL_dx = log_p - log_one_min_p  ## d(Bern LL)/dx
-        dp = dL_dp #* d_sigmoid(p)
-        if input_logits:
-            dp = dp * d_sigmoid(p)
+            dL_dp = dL_dp  * d_sigmoid(p)
+        dL_dx = (log_p - log_one_min_p)  ## d(Bern LL)/dx
+        dp = dL_dp
 
-        dp = dL_dp * modulator * mask ## NOTE: how does mask apply to a multivariate Bernoulli?
+        dp = dp * modulator * mask ## NOTE: how does mask apply to a multivariate Bernoulli?
         dtarget = dL_dx * modulator * mask
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
         return dp, dtarget, jnp.squeeze(L), mask
