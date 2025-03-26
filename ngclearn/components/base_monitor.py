@@ -2,8 +2,8 @@ import json
 
 from ngclearn import Component, Compartment
 from ngclearn import numpy as np
-from ngcsimlib.utils import add_component_resolver, add_resolver_meta, \
-    get_current_path
+#from ngcsimlib.utils import add_component_resolver, add_resolver_meta, \
+from ngcsimlib.utils import get_current_path
 from ngcsimlib.logger import warn, critical
 import matplotlib.pyplot as plt
 

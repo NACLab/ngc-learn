@@ -1,6 +1,8 @@
 import time
 from jax import random
-from ngclearn import resolver, Component, Compartment
+#from ngclearn import resolver, Component, Compartment
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 class JaxComponent(Component):
     """
