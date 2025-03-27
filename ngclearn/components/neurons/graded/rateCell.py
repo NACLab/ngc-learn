@@ -1,7 +1,11 @@
+# %%
+
 from jax import numpy as jnp, random, jit
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngclearn import resolver, Component, Compartment
+# from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.compilers.process import transition
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy
@@ -191,8 +195,9 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.j_td = Compartment(restVals, display_name="Modulatory Stimulus Current", units="mA") # top-down electrical current - pressure
         self.z = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
 
+    @transition(output_compartments=["j", "j_td", "z", "zF"])
     @staticmethod
-    def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
+    def advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
                        resist_scale, thresholdType, thr_lmbda, is_stateful, j, j_td, z):
         #if tau_m > 0.:
         if is_stateful:
@@ -220,27 +225,15 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             zF = fx(z)
         return j, j_td, z, zF
 
-    @resolver(_advance_state)
-    def advance_state(self, j, j_td, z, zF):
-        self.j.set(j)
-        self.j_td.set(j_td)
-        self.z.set(z)
-        self.zF.set(zF)
-
+    @transition(output_compartments=["j", "j_td", "z", "zF"])
     @staticmethod
-    def _reset(batch_size, shape): #n_units
+    def reset(batch_size, shape): #n_units
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
         restVals = jnp.zeros(_shape)
         return tuple([restVals for _ in range(4)])
 
-    @resolver(_reset)
-    def reset(self, j, zF, j_td, z):
-        self.j.set(j) # electrical current
-        self.zF.set(zF) # rate-coded output - activity
-        self.j_td.set(j_td) # top-down electrical current - pressure
-        self.z.set(z) # rate activity
 
     def save(self, directory, **kwargs):
         ## do a protected save of constants, depending on whether they are floats or arrays
