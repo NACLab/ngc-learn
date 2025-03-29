@@ -27,6 +27,8 @@ class PoissonCell(JaxComponent):
         n_units: number of cellular entities (neural population size)
 
         target_freq: maximum frequency (in Hertz) of this Bernoulli spike train (must be > 0.)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     @deprecate_args(max_freq="target_freq")

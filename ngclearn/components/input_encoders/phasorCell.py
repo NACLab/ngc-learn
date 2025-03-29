@@ -1,8 +1,13 @@
-from ngclearn import resolver, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
 from jax import numpy as jnp, random
-from ngcsimlib.logger import warn
+from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
+
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
 
 class PhasorCell(JaxComponent):
     """
@@ -12,8 +17,9 @@ class PhasorCell(JaxComponent):
     | inputs - input (takes in external signals)
     | --- Cell State Compartments: ---
     | key - JAX PRNG key
+    | angles - current angle of phasor 
     | --- Cell Output Compartments: ---
-    | outputs - output
+    | outputs - output of phasor cell
     | tols - time-of-last-spike
 
     Args:
@@ -23,6 +29,8 @@ class PhasorCell(JaxComponent):
 
         target_freq: maximum frequency (in Hertz) of this spike train
             (must be > 0.)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     # Define Functions
@@ -63,8 +71,7 @@ class PhasorCell(JaxComponent):
             return False
         ## check for unstable combinations of dt and target-frequency
         # meta-params
-        events_per_timestep = (
-                                  dt / 1000.) * self.target_freq  ##
+        events_per_timestep = (dt / 1000.) * self.target_freq  ##
         # compute scaled probability
         if events_per_timestep > 1.:
             valid = False
@@ -78,9 +85,9 @@ class PhasorCell(JaxComponent):
             )
         return valid
 
+    @transition(output_compartments=["outputs", "tols", "key", "angles"])
     @staticmethod
-    def _advance_state(t, dt, target_freq, key,
-                       inputs, angles, tols, base_scale):
+    def advance_state(t, dt, target_freq, key, inputs, angles, tols, base_scale):
         ms_per_second = 1000  # ms/s
         events_per_ms = target_freq / ms_per_second  # e/s s/ms -> e/ms
         ms_per_event = 1 / events_per_ms  # ms/e
@@ -105,26 +112,12 @@ class PhasorCell(JaxComponent):
 
         return outputs, tols, key, updated_angles
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs, tols, key, angles):
-        self.outputs.set(outputs)
-        self.tols.set(tols)
-        self.key.set(key)
-        self.angles.set(angles)
-
+    @transition(output_compartments=["inputs", "outputs", "tols", "angles", "key"])
     @staticmethod
-    def _reset(batch_size, n_units, key, target_freq):
+    def reset(batch_size, n_units, key, target_freq):
         restVals = jnp.zeros((batch_size, n_units))
         key, subkey = random.split(key, 2)
         return restVals, restVals, restVals, restVals, key
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, tols, angles, key):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.tols.set(tols)
-        self.key.set(key)
-        self.angles.set(angles)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -154,7 +147,7 @@ class PhasorCell(JaxComponent):
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
             "batch_size": "Batch size dimension of this component",
-            "target_freq": "Maximum spike frequency of the train produced",
+            "target_freq": "Maximum spike frequency of the (spike) train produced",
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

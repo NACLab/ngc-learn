@@ -13,7 +13,7 @@ from ngcsimlib.context import Context
 from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 
-def test_latencyCell():
+def test_latencyCell1():
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
@@ -69,4 +69,4 @@ def test_latencyCell():
     ## output should equal input
     assert_array_equal(outs, targets)
 
-test_latencyCell()
+#test_latencyCell1()

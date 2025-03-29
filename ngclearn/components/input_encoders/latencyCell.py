@@ -142,6 +142,8 @@ class LatencyCell(JaxComponent):
 
         num_steps: number of discrete time steps to consider for normalized latency
             code (only useful if "normalize" is set to True) (Default: 1)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     # Define Functions
