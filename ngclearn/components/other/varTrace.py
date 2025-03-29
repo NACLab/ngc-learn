@@ -1,8 +1,13 @@
+from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
-from ngclearn import resolver, Component, Compartment
-from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
+
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[4])
 def _run_varfilter(dt, x, x_tr, decayFactor, gamma_tr, a_delta=0.):
@@ -54,6 +59,8 @@ class VarTrace(JaxComponent): ## low-pass filter
         a_delta: value to increment a trace by in presence of a spike; note if set
             to a value <= 0, then a piecewise gated trace will be used instead
 
+        gamma_tr: an extra multiplier in front of the leak of the trace (Default: 1)
+
         decay_type: string indicating the decay type to be applied to ODE
             integration; low-pass filter configuration
 
@@ -61,6 +68,8 @@ class VarTrace(JaxComponent): ## low-pass filter
                 1) `'lin'` = linear trace filter, i.e., decay = x_tr + (-x_tr) * (dt/tau_tr);
                 2) `'exp'` = exponential trace filter, i.e., decay = exp(-dt/tau_tr) * x_tr;
                 3) `'step'` = step trace, i.e., decay = 0 (a pulse applied upon input value)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     # Define Functions
@@ -83,37 +92,27 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.outputs = Compartment(restVals) # output compartment
         self.trace = Compartment(restVals)
 
+    @transition(output_compartments=["outputs", "trace"])
     @staticmethod
-    def _advance_state(dt, decay_type, tau_tr, a_delta, gamma_tr, inputs, trace):
+    def advance_state(dt, decay_type, tau_tr, a_delta, gamma_tr, inputs, trace):
         decayFactor = 0.
         if "exp" in decay_type:
             decayFactor = jnp.exp(-dt/tau_tr)
         elif "lin" in decay_type:
             decayFactor = (1. - dt/tau_tr)
-
         _x_tr = gamma_tr * trace * decayFactor
         if a_delta > 0.:
             _x_tr = _x_tr + inputs * a_delta
         else:
             _x_tr = _x_tr * (1. - inputs) + inputs
-
+        trace = _x_tr
         return trace, trace
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs, trace):
-        self.outputs.set(outputs)
-        self.trace.set(trace)
-
+    @transition(output_compartments=["inputs", "outputs", "trace"])
     @staticmethod
-    def _reset(batch_size, n_units):
+    def reset(batch_size, n_units):
         restVals = jnp.zeros((batch_size, n_units))
         return restVals, restVals, restVals
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, trace):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.trace.set(trace)
 
     @classmethod
     def help(cls): ## component help function
