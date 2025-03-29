@@ -19,15 +19,11 @@ def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
     dv_dt = dv_dt * (1./tau_m) * mask
     return dv_dt
 
+#@partial(jit, static_argnums=[2])
 def _dfv(t, v, params): ## voltage dynamics wrapper
     j, rfr, tau_m, refract_T = params
     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T)
     return dv_dt
-
-@jit
-def _hyperpolarize(v, s):
-    _v = (1. - s) * v ## hyper-polarize cells
-    return _v
 
 @partial(jit, static_argnums=[3,4,5])
 def _update_threshold(dt, v_thr, spikes, thrGain=0.002, thrLeak=0.0005, rho_b = 0.):
@@ -50,55 +46,6 @@ def _update_refract_and_spikes(dt, rfr, s, refract_T, sticky_spikes=False):
     if sticky_spikes == True: ## pin refractory spikes if configured
         _s = s * mask + (1. - mask)
     return _rfr, _s
-
-@partial(jit, static_argnums=[6, 7, 8, 9, 10, 11])
-def _run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
-              thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
-    """
-    Runs leaky integrator neuronal dynamics
-
-    Args:
-        dt: integration time constant (milliseconds, or ms)
-
-        j: electrical current value
-
-        v: membrane potential (voltage) value (at t)
-
-        v_thr: voltage threshold value (at t)
-
-        tau_m: cell membrane time constant
-
-        rfr: refractory variable vector (one per neuronal cell)
-
-        spike_fx: spike emission function of form `spike_fx(v, v_thr)`
-
-        refract_T: (relative) refractory time period (in ms; Default
-            value is 1 ms)
-
-        thrGain: the amount of threshold incremented per time step (if spike present)
-
-        thrLeak: the amount of threshold value leaked per time step
-
-        rho_b: sparsity factor; if > 0, will force adaptive threshold to operate
-            with sparsity across a layer enforced
-
-        sticky_spikes: if True, then spikes are pinned at value of action potential
-            (i.e., 1) for as long as the relative refractory occurs (this recovers
-            the source paper's core spiking process)
-
-    Returns:
-        voltage(t+dt), spikes, threshold(t+dt), updated refactory variables
-    """
-    #new_voltage, mask = _update_voltage(dt, j, v, rfr, tau_m, refract_T, v_min)
-    v_params = (j, rfr, tau_m, refract_T)
-    _, _v = step_euler(0., v, _dfv, dt, v_params) #_v = step_euler(v, v_params, _dfv, dt)
-    # if v_min is not None:
-    #     _v = jnp.maximum(v_min, _v)
-    spikes = spike_fx(_v, v_thr)
-    _v = _hyperpolarize(_v, spikes)
-    new_thr = _update_threshold(dt, v_thr, spikes, thrGain, thrLeak, rho_b)
-    _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, refract_T, sticky_spikes)
-    return _v, spikes, new_thr, _rfr
 
 class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
     """
@@ -237,14 +184,20 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         if inh_R > 0.: ## if inh_R > 0, then lateral inhibition is applied
             j = j - (jnp.matmul(spikes, inh_weights) * inh_R)
         #####################################################################################
+        surrogate = d_spike_fx(j, c1=0.82, c2=0.08) ## calc surrogate deriv of spikes
 
-        surrogate = d_spike_fx(j, c1=0.82, c2=0.08)
-        #surrogate = d_spike_fx(j_curr, c1=0.82, c2=0.08)
-    
-        v, s, thr, rfr = \
-            _run_cell(dt, j, v, thr, tau_m, 
-                      rfr, spike_fx, refract_T, thrGain, thrLeak,
-                      rho_b, sticky_spikes=sticky_spikes, v_min=v_min)
+        ## transition to:  voltage(t+dt), spikes, threshold(t+dt), refractory_variables(t+dt)
+        v_params = (j, rfr, tau_m, refract_T)
+        _, _v = step_euler(0., v, _dfv, dt, v_params)
+        spikes = spike_fx(_v, thr)
+        #_v = _hyperpolarize(_v, spikes)
+        _v = (1. - spikes) * _v ## hyper-polarize cells
+        new_thr = _update_threshold(dt, thr, spikes, thrGain, thrLeak, rho_b)
+        _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, refract_T, sticky_spikes)
+        v = _v
+        s = spikes
+        thr = new_thr
+        rfr = _rfr
 
         ## update tols
         tols = (1. - s) * tols + (s * t)

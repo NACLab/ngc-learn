@@ -27,6 +27,7 @@ def test_sLIFCell1():
         #"""
         advance_process = (Process()
                            >> a.advance_state)
+        #ctx.wrap_and_add_command(advance_process.pure, name="run")
         ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
         reset_process = (Process()
@@ -58,11 +59,9 @@ def test_sLIFCell1():
         ctx.clamp(x_t)
         ctx.run(t=ts * 1., dt=dt)
         outs.append(a.s.value)
-
     outs = jnp.concatenate(outs, axis=1)
-    #print(outs)
 
     ## output should equal input
     assert_array_equal(outs, y_seq)
 
-test_sLIFCell1()
+#test_sLIFCell1()
