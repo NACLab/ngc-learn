@@ -57,7 +57,7 @@ def _step_forward(t, x, dx_dt, dt, x_scale): ## internal step co-routine
     _x = x * x_scale + dx_dt * dt
     return _t, _x
 
-
+@partial(jit, static_argnums=(2, 3, 4, 5, ))
 def step_euler(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the Euler method, i.e., a

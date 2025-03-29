@@ -1,61 +1,15 @@
+from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
-from ngclearn import resolver, Component, Compartment
-from ngclearn.components.jaxComponent import JaxComponent
+from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import step_euler
 from ngclearn.utils.surrogate_fx import secant_lif_estimator
-from ngclearn.utils import tensorstats
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
-
-@partial(jit, static_argnums=[3,4])
-def _modify_current(j, spikes, inh_weights, R_m, inh_R):
-    """
-    A simple function that modifies electrical current j via application of a
-    scalar membrane resistance value and an approximate form of lateral inhibition.
-    Note that if no inhibitory resistance is set (i.e., inh_R = 0), then no
-    lateral inhibition is applied. Functionally, this routine carries out the
-    following piecewise equation:
-
-    | j * R_m - [Wi * s(t-dt)] * inh_R, if inh_R > 0
-    | j * R_m, otherwise
-
-    Args:
-        j: electrical current value
-
-        spikes: previous binary spike vector (for t-dt)
-
-        inh_weights: lateral recurrent inhibitory synapses (typically should be
-            chosen to be a scaled hollow matrix)
-
-        R_m: membrane resistance (to multiply/scale j by)
-
-        inh_R: inhibitory resistance to scale lateral inhibitory current by; if
-            inh_R = 0, NO lateral inhibitory pressure will be applied
-
-    Returns:
-        modified electrical current value
-    """
-    _j = j * R_m
-    if inh_R > 0.:
-        _j = _j - (jnp.matmul(spikes, inh_weights) * inh_R)
-    return _j
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
@@ -97,6 +51,7 @@ def _update_refract_and_spikes(dt, rfr, s, refract_T, sticky_spikes=False):
         _s = s * mask + (1. - mask)
     return _rfr, _s
 
+@partial(jit, static_argnums=[6, 7, 8, 9, 10, 11])
 def _run_cell(dt, j, v, v_thr, tau_m, rfr, spike_fx, refract_T=1., thrGain=0.002,
               thrLeak=0.0005, rho_b = 0., sticky_spikes=False, v_min=None):
     """
@@ -206,6 +161,8 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
             a key setting used by Samadi et al., 2017
 
         thr_jitter: scale of uniform jitter to add to initialization of thresholds
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     # Define Functions
@@ -258,36 +215,44 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.rfr = Compartment(restVals + self.refract_T) ## refractory variable(s)
         self.surrogate = Compartment(restVals + 1.) ## surrogate signal
 
+    @transition(output_compartments=["j", "s", "tols", "v", "thr", "rfr", "surrogate"])
     @staticmethod
-    def _advance_state(t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m,
-                       spike_fx, refract_T, thrGain, thrLeak, rho_b,
-                       sticky_spikes, v_min, j, s, v, thr, rfr, tols):
-        ## run one step of Euler integration over neuronal dynamics
-        j_curr = j
-        ## apply simplified inhibitory pressure
-        j_curr = _modify_current(j_curr, s, inh_weights, R_m, inh_R)
-        j = j_curr # None ## store electrical current
-        surrogate = d_spike_fx(j_curr, c1=0.82, c2=0.08)
+    def advance_state(
+            t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx, refract_T, thrGain, 
+            thrLeak, rho_b, sticky_spikes, v_min, j, s, v, thr, rfr, tols
+    ):
+        #####################################################################################
+        #The following 3 lines of code modify electrical current j via application of a
+        #scalar membrane resistance value and an approximate form of lateral inhibition.
+        #Functionally, this routine carries out the following piecewise equation:
+        #| j * R_m - [Wi * s(t-dt)] * inh_R, if inh_R > 0
+        #| j * R_m, otherwise
+        #| where j: electrical current value, spikes: previous binary spike vector (for t-dt), 
+        #    inh_weights: lateral recurrent inhibitory synapses (typically should be chosen 
+        #    to be a scaled hollow matrix), 
+        #| R_m: membrane resistance (to multiply/scale j by), 
+        #| inh_R: inhibitory resistance to scale lateral inhibitory current by; if inh_R = 0, 
+        #    NO lateral inhibitory pressure will be applied
+        j = j * R_m
+        if inh_R > 0.: ## if inh_R > 0, then lateral inhibition is applied
+            j = j - (jnp.matmul(spikes, inh_weights) * inh_R)
+        #####################################################################################
+
+        surrogate = d_spike_fx(j, c1=0.82, c2=0.08)
+        #surrogate = d_spike_fx(j_curr, c1=0.82, c2=0.08)
+    
         v, s, thr, rfr = \
-            _run_cell(dt, j_curr, v, thr, tau_m,
+            _run_cell(dt, j, v, thr, tau_m, 
                       rfr, spike_fx, refract_T, thrGain, thrLeak,
                       rho_b, sticky_spikes=sticky_spikes, v_min=v_min)
+
         ## update tols
-        tols = _update_times(t, s, tols)
+        tols = (1. - s) * tols + (s * t)
         return j, s, tols, v, thr, rfr, surrogate
 
-    @resolver(_advance_state)
-    def advance_state(self, j, s, tols, v, thr, rfr, surrogate):
-        self.j.set(j)
-        self.s.set(s)
-        self.tols.set(tols)
-        self.thr.set(thr)
-        self.rfr.set(rfr)
-        self.surrogate.set(surrogate)
-        self.v.set(v)
-
+    @transition(output_compartments=["j", "s", "tols", "v", "thr", "rfr", "surrogate"])
     @staticmethod
-    def _reset(refract_T, thr_persist, threshold0, batch_size, n_units, thr):
+    def reset(refract_T, thr_persist, threshold0, batch_size, n_units, thr):
         restVals = jnp.zeros((batch_size, n_units))
         voltage = restVals
         refract = restVals + refract_T
@@ -298,16 +263,6 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         if not thr_persist: ## if thresh non-persistent, reset to base value
             thr = threshold0 + 0
         return current, spikes, timeOfLastSpike, voltage, thr, refract, surrogate
-
-    @resolver(_reset)
-    def reset(self, j, s, tols, v, thr, rfr, surrogate):
-        self.j.set(j)
-        self.s.set(s)
-        self.tols.set(tols)
-        self.thr.set(thr)
-        self.rfr.set(rfr)
-        self.surrogate.set(surrogate)
-        self.v.set(v)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
