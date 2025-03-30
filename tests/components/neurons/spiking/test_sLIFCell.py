@@ -13,13 +13,14 @@ from ngcsimlib.context import Context
 from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 def test_sLIFCell1():
+    name = "slif_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
     trace_increment = 0.1
     # ---- build a simple Poisson cell system ----
-    with Context("Circuit") as ctx:
+    with Context(name) as ctx:
         a = SLIFCell(
             name="a", n_units=1, tau_m=50., resist_m=10., thr=0.3, key=subkeys[0]
         )

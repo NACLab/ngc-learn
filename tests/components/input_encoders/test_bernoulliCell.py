@@ -3,33 +3,34 @@ from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import BernoulliCell
-from ngcsimlib.compilers import compile_command, wrap_command
+#from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
 from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+#from ngcsimlib.component import Component
+#from ngcsimlib.compartment import Compartment
 from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
+#from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 
 def test_bernoulliCell1():
+    name = "bernoulli_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
     #T = 300  # ms
     # ---- build a simple Bernoulli cell system ----
-    with Context("Circuit") as ctx:
+    with Context(name) as ctx:
         a = BernoulliCell(name="a", n_units=1, key=subkeys[0])
 
         advance_process = (Process()
                            >> a.advance_state)
-        ctx.wrap_and_add_command(advance_process.pure, name="run")
+        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
         reset_process = (Process()
                          >> a.reset)
-        ctx.wrap_and_add_command(reset_process.pure, name="reset")
+        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
         ## set up non-compiled utility commands
         @Context.dynamicCommand

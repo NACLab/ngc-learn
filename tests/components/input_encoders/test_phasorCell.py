@@ -3,24 +3,25 @@ from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import PhasorCell
-from ngcsimlib.compilers import compile_command, wrap_command
+#from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
 from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
+#from ngcsimlib.component import Component
+#from ngcsimlib.compartment import Compartment
+#from ngcsimlib.context import Context
+#from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 
 def test_phasorCell1():
+    name = "phasor_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
     # T = 300  # ms
     # ---- build a simple Poisson cell system ----
-    with Context("Circuit") as ctx:
+    with Context(name) as ctx:
         a = PhasorCell(name="a", n_units=1, target_freq=1000., key=subkeys[0])
 
         advance_process = (Process()
@@ -52,4 +53,4 @@ def test_phasorCell1():
     ## output should equal input
     assert_array_equal(outs, x_seq)
 
-test_phasorCell1()
+#test_phasorCell1()

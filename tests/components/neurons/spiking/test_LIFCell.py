@@ -13,13 +13,14 @@ from ngcsimlib.context import Context
 from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 def test_LIFCell1():
+    name = "lif_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
     trace_increment = 0.1
     # ---- build a simple Poisson cell system ----
-    with Context("Circuit") as ctx:
+    with Context(name) as ctx:
         a = LIFCell(
             name="a", n_units=1, tau_m=5., resist_m=30., key=subkeys[0]
         )
@@ -65,4 +66,4 @@ def test_LIFCell1():
     ## output should equal input
     assert_array_equal(outs, y_seq)
 
-test_LIFCell1()
+#test_LIFCell1()

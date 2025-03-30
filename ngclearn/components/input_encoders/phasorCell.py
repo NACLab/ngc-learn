@@ -44,7 +44,7 @@ class PhasorCell(JaxComponent):
         ## Layer Size Setup
         self.batch_size = batch_size
         self.n_units = n_units
-        _key, subkey = random.split(self.key.value, 2)
+        _key, *subkey = random.split(self.key.value, 3)
         self.key.set(_key)
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -62,7 +62,7 @@ class PhasorCell(JaxComponent):
         # alpha = ((random.normal(subkey, self.angles.value.shape) * (jnp.sqrt(target_freq) / target_freq)) + 1)
         # beta = random.poisson(subkey, lam=target_freq, shape=self.angles.value.shape) / target_freq
 
-        self.base_scale = random.poisson(subkey, lam=target_freq, shape=self.angles.value.shape) / target_freq
+        self.base_scale = random.poisson(subkey[0], lam=target_freq, shape=self.angles.value.shape) / target_freq
 
     def validate(self, dt=None, **validation_kwargs):
         valid = super().validate(**validation_kwargs)
@@ -95,11 +95,11 @@ class PhasorCell(JaxComponent):
         angle_per_event = 2 * jnp.pi  # rad / e
         angle_per_timestep = angle_per_event / time_step_per_event  # rad / e
         # * e/ts -> rad / ts
-        key, subkey = random.split(key, 2)
+        key, *subkey = random.split(key, 3)
         # scatter = random.uniform(subkey, angles.shape, minval=0.5,
         #                          maxval=1.5) * base_scale
 
-        scatter = ((random.normal(subkey, angles.shape) * 0.2) + 1) * base_scale
+        scatter = ((random.normal(subkey[0], angles.shape) * 0.2) + 1) * base_scale
         scattered_update = angle_per_timestep * scatter
         scaled_scattered_update = scattered_update * inputs
 
@@ -116,7 +116,7 @@ class PhasorCell(JaxComponent):
     @staticmethod
     def reset(batch_size, n_units, key, target_freq):
         restVals = jnp.zeros((batch_size, n_units))
-        key, subkey = random.split(key, 2)
+        key, *subkey = random.split(key, 3)
         return restVals, restVals, restVals, restVals, key
 
     def save(self, directory, **kwargs):

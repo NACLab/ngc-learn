@@ -14,6 +14,7 @@ from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 
 def test_latencyCell1():
+    name = "latency_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
@@ -21,7 +22,7 @@ def test_latencyCell1():
     dt = 1.  # 0.1  # ms ## compute integration time constant
     tau = 1.
     # ---- build a simple Poisson cell system ----
-    with Context("Circuit") as ctx:
+    with Context(name) as ctx:
         a = LatencyCell(
             "a", n_units=4, tau=tau, threshold=0.01, linearize=True,
             normalize=True, num_steps=T, clip_spikes=False
@@ -30,13 +31,13 @@ def test_latencyCell1():
         ## create and compile core simulation commands
         advance_process = (Process()
                            >> a.advance_state)
-        ctx.wrap_and_add_command(advance_process.pure, name="advance")
+        ctx.wrap_and_add_command(jit(advance_process.pure), name="advance")
         calc_spike_times_process = (Process()
                                     >> a.calc_spike_times)
-        ctx.wrap_and_add_command(calc_spike_times_process.pure, name="calc_spike_times")
+        ctx.wrap_and_add_command(jit(calc_spike_times_process.pure), name="calc_spike_times")
         reset_process = (Process()
                          >> a.reset)
-        ctx.wrap_and_add_command(reset_process.pure, name="reset")
+        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
         ## set up non-compiled utility commands
         @Context.dynamicCommand

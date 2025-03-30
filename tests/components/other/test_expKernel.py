@@ -13,24 +13,25 @@ from ngcsimlib.context import Context
 from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 def test_expKernel1():
+    name = "expKernel_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
     trace_increment = 0.1
     # ---- build a simple Poisson cell system ----
-    with Context("Circuit") as ctx:
+    with Context(name) as ctx:
         a = ExpKernel(
             name="a", n_units=1, dt=1., tau_w=500., nu=4., key=subkeys[0]
         )
 
         advance_process = (Process()
                            >> a.advance_state)
-        ctx.wrap_and_add_command(advance_process.pure, name="run")
+        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
         reset_process = (Process()
                          >> a.reset)
-        ctx.wrap_and_add_command(reset_process.pure, name="reset")
+        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
         ## set up non-compiled utility commands
         @Context.dynamicCommand

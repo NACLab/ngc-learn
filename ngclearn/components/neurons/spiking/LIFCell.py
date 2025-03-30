@@ -1,16 +1,3 @@
-"""
-from jax import numpy as jnp, random, jit, nn
-from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
-from ngclearn import resolver, Component, Compartment
-from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
-from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
-                                         triangular_estimator,
-                                         straight_through_estimator)
-"""
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
