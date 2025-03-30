@@ -26,11 +26,11 @@ def test_phasorCell1():
 
         advance_process = (Process()
                            >> a.advance_state)
-        ctx.wrap_and_add_command(advance_process.pure, name="run")
+        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
         reset_process = (Process()
                          >> a.reset)
-        ctx.wrap_and_add_command(reset_process.pure, name="reset")
+        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
         ## set up non-compiled utility commands
         @Context.dynamicCommand
