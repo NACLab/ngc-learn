@@ -34,8 +34,8 @@ class PhasorCell(JaxComponent):
     """
 
     # Define Functions
-    def __init__(self, name, n_units, target_freq=63.75, batch_size=1,
-                 **kwargs):
+    def __init__(
+            self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Phasor meta-parameters
@@ -63,6 +63,7 @@ class PhasorCell(JaxComponent):
         # beta = random.poisson(subkey, lam=target_freq, shape=self.angles.value.shape) / target_freq
 
         self.base_scale = random.poisson(subkey[0], lam=target_freq, shape=self.angles.value.shape) / target_freq
+        self.disable_phasor = disable_phasor
 
     def validate(self, dt=None, **validation_kwargs):
         valid = super().validate(**validation_kwargs)
@@ -87,7 +88,7 @@ class PhasorCell(JaxComponent):
 
     @transition(output_compartments=["outputs", "tols", "key", "angles"])
     @staticmethod
-    def advance_state(t, dt, target_freq, key, inputs, angles, tols, base_scale):
+    def advance_state(t, dt, target_freq, key, inputs, angles, tols, base_scale, disable_phasor):
         ms_per_second = 1000  # ms/s
         events_per_ms = target_freq / ms_per_second  # e/s s/ms -> e/ms
         ms_per_event = 1 / events_per_ms  # ms/e
@@ -108,6 +109,8 @@ class PhasorCell(JaxComponent):
         updated_angles = jnp.where(updated_angles > angle_per_event,
                                    updated_angles - angle_per_event,
                                    updated_angles)
+        if disable_phasor:
+            outputs = inputs + 0
         tols = tols * (1. - outputs) + t * outputs
 
         return outputs, tols, key, updated_angles

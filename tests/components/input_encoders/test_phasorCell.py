@@ -22,7 +22,7 @@ def test_phasorCell1():
     # T = 300  # ms
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
-        a = PhasorCell(name="a", n_units=1, target_freq=1000., key=subkeys[0])
+        a = PhasorCell(name="a", n_units=1, target_freq=1000., disable_phasor=True, key=subkeys[0])
 
         advance_process = (Process()
                            >> a.advance_state)
@@ -49,6 +49,7 @@ def test_phasorCell1():
         outs.append(a.outputs.value)
         #print(a.outputs.value)
     outs = jnp.concatenate(outs, axis=1)
+    #print(outs)
 
     ## output should equal input
     assert_array_equal(outs, x_seq)

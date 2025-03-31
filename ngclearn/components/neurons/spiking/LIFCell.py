@@ -14,7 +14,7 @@ from ngcsimlib.compilers.process import transition
 #from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 
-@jit
+#@jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
     mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
     ## update voltage / membrane potential
@@ -188,16 +188,16 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         j = j * resist_m
         ############################################################################
         ### Runs leaky integrator (leaky integrate-and-fire; LIF) neuronal dynamics.
-        _v_thr = thr_theta + thr #v_theta + v_thr ## calc present voltage threshold
+        _v_thr = thr_theta + thr ## calc present voltage threshold
         #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
         ## update voltage / membrane potential
         v_params = (j, rfr, tau_m, refract_T, v_rest, v_decay)
         if intgFlag == 1:
             _, _v = step_rk2(0., v, _dfv, dt, v_params)
-        else: #_v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
+        else:
             _, _v = step_euler(0., v, _dfv, dt, v_params)
-        ## obtain action potentials/spikes
-        s = (_v > _v_thr).astype(jnp.float32)
+        ## obtain action potentials/spikes/pulses
+        s = (_v > _v_thr) * 1.
         ## update refractory variables
         _rfr = (rfr + dt) * (1. - s)
         ## perform hyper-polarization of neuronal cells
