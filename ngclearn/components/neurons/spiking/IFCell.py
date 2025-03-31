@@ -1,31 +1,19 @@
+from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
+from functools import partial
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
-from ngclearn import resolver, Component, Compartment
-from ngclearn.components.jaxComponent import JaxComponent
+from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-from ngclearn.utils.surrogate_fx import (arctan_estimator,
+from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
@@ -166,32 +154,26 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
                                 units="ms") ## time-of-last-spike
         self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
+    @transition(output_compartments=["v", "s", "rfr", "tols", "key", "surrogate"])
     @staticmethod
-    def _advance_state(t, dt, tau_m, resist_m, v_rest, v_reset, refract_T,
-                       thr, lower_clamp_voltage, intgFlag, d_spike_fx, key,
-                       j, v, rfr, tols):
+    def advance_state(
+            t, dt, tau_m, resist_m, v_rest, v_reset, refract_T, thr, lower_clamp_voltage, intgFlag, d_spike_fx, key,
+            j, v, rfr, tols
+    ):
         ## run one integration step for neuronal dynamics
         j = j * resist_m
         v, s, rfr = _run_cell(dt, j, v, thr, rfr, tau_m, v_rest, v_reset,
                               refract_T, intgFlag)
         surrogate = d_spike_fx(v, thr)
         ## update tols
-        tols = _update_times(t, s, tols)
+        tols = (1. - s) * tols + (s * t)
         if lower_clamp_voltage: ## ensure voltage never < v_rest
             v = jnp.maximum(v, v_rest)
         return v, s, rfr, tols, key, surrogate
 
-    @resolver(_advance_state)
-    def advance_state(self, v, s, rfr, tols, key, surrogate):
-        self.v.set(v)
-        self.s.set(s)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
-        self.key.set(key)
-        self.surrogate.set(surrogate)
-
+    @transition(output_compartments=["j", "v", "s", "rfr", "tols", "surrogate"])
     @staticmethod
-    def _reset(batch_size, n_units, v_rest, refract_T):
+    def reset(batch_size, n_units, v_rest, refract_T):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals #+ 0
         v = restVals + v_rest
@@ -200,15 +182,6 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
         tols = restVals #+ 0
         surrogate = restVals + 1.
         return j, v, s, rfr, tols, surrogate
-
-    @resolver(_reset)
-    def reset(self, j, v, s, rfr, tols, surrogate):
-        self.j.set(j)
-        self.v.set(v)
-        self.s.set(s)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
-        self.surrogate.set(surrogate)
 
     def save(self, directory, **kwargs):
         ## do a protected save of constants, depending on whether they are floats or arrays
