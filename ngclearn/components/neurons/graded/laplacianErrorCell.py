@@ -2,6 +2,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
+from ngcsimlib.compilers.process import transition
 
 class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -66,8 +67,9 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator = Compartment(restVals + 1.0) ## to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
+    @transition(output_compartments=["dshift", "dtarget", "dScale", "L", "mask"])
     @staticmethod
-    def _advance_state(dt, shift, target, Scale, modulator, mask): ## compute Laplacian error cell output
+    def advance_state(dt, shift, target, Scale, modulator, mask): ## compute Laplacian error cell output
         # Moves Laplacian cell dynamics one step forward. Specifically, this routine emulates the error unit
         # behavior of the local cost functional:
         # FIXME: Currently, below does: L(targ, shift) = -||targ - shift||_1/scale
@@ -85,16 +87,9 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         mask = mask * 0. + 1.  ## "eat" the mask as it should only apply at time t
         return dshift, dtarget, dScale, jnp.squeeze(L), mask
 
-    @resolver(_advance_state)
-    def advance_state(self, dshift, dtarget, dScale, L, mask):
-        self.dshift.set(dshift)
-        self.dtarget.set(dtarget)
-        self.dScale.set(dScale)
-        self.L.set(L)
-        self.mask.set(mask)
-
+    @transition(output_compartments=["dshift", "dtarget", "dScale", "target", "shift", "modulator", "L", "mask"])
     @staticmethod
-    def _reset(batch_size, n_units, scale_shape):
+    def reset(batch_size, n_units, scale_shape):
         restVals = jnp.zeros((batch_size, n_units))
         dshift = restVals
         dtarget = restVals
@@ -105,17 +100,6 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         L = 0.
         mask = jnp.ones((batch_size, n_units))
         return dshift, dtarget, dScale, target, shift, modulator, L, mask
-
-    @resolver(_reset)
-    def reset(self, dshift, dtarget, dScale, target, shift, modulator, L, mask):
-        self.dshift.set(dshift)
-        self.dtarget.set(dtarget)
-        self.dScale.set(dScale)
-        self.target.set(target)
-        self.shift.set(shift)
-        self.modulator.set(modulator)
-        self.L.set(L)
-        self.mask.set(mask)
 
     @classmethod
     def help(cls): ## component help function

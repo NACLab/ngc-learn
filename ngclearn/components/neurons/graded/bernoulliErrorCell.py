@@ -3,6 +3,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import sigmoid, d_sigmoid
+from ngcsimlib.compilers.process import transition
 
 class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -58,8 +59,9 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
+    @transition(output_compartments=["dp", "dtarget", "L", "mask"])
     @staticmethod
-    def _advance_state(dt, p, target, modulator, mask, input_logits): ## compute Bernoulli error cell output
+    def advance_state(dt, p, target, modulator, mask, input_logits): ## compute Bernoulli error cell output
         # Moves Bernoulli error cell dynamics one step forward. Specifically, this routine emulates the error unit
         # behavior of the local cost functional
         eps = 0.0001
@@ -89,15 +91,9 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
         return dp, dtarget, jnp.squeeze(L), mask
 
-    @resolver(_advance_state)
-    def advance_state(self, dp, dtarget, L, mask):
-        self.dp.set(dp)
-        self.dtarget.set(dtarget)
-        self.L.set(L)
-        self.mask.set(mask)
-
+    @transition(output_compartments=["dp", "dtarget", "target", "p", "modulator", "L", "mask"])
     @staticmethod
-    def _reset(batch_size, shape): ## reset core components/statistics
+    def reset(batch_size, shape): ## reset core components/statistics
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
@@ -110,16 +106,6 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         L = 0. #jnp.zeros((1, 1)) ## rest loss
         mask = jnp.ones(_shape) ## reset mask
         return dp, dtarget, target, p, modulator, L, mask
-
-    @resolver(_reset)
-    def reset(self, dp, dtarget, target, p, modulator, L, mask):
-        self.dp.set(dp)
-        self.dtarget.set(dtarget)
-        self.target.set(target)
-        self.p.set(p)
-        self.modulator.set(modulator)
-        self.L.set(L)
-        self.mask.set(mask)
 
     @classmethod
     def help(cls): ## component help function
