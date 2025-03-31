@@ -28,22 +28,6 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T)
     return dv_dt
 
-def _run_cell(dt, j, v, v_thr, rfr, tau_m, v_rest, v_reset, refract_T, integType=0):
-    ### Runs integrator (or integrate-and-fire; IF) neuronal dynamics
-    ## update voltage / membrane potential
-    v_params = (j, rfr, tau_m, refract_T)
-    if integType == 1:
-        _, _v = step_rk2(0., v, _dfv, dt, v_params)
-    else:
-        _, _v = step_euler(0., v, _dfv, dt, v_params)
-    ## obtain action potentials/spikes
-    s = (_v > v_thr).astype(jnp.float32)
-    ## update refractory variables
-    _rfr = (rfr + dt) * (1. - s)
-    ## perform hyper-polarization of neuronal cells
-    _v = _v * (1. - s) + s * v_reset
-    return _v, s, _rfr
-
 class IFCell(JaxComponent): ## integrate-and-fire cell
     """
     A spiking cell based on integrate-and-fire (IF) neuronal dynamics.
@@ -162,8 +146,21 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
     ):
         ## run one integration step for neuronal dynamics
         j = j * resist_m
-        v, s, rfr = _run_cell(dt, j, v, thr, rfr, tau_m, v_rest, v_reset,
-                              refract_T, intgFlag)
+
+        ### Runs integrator (or integrate-and-fire; IF) neuronal dynamics
+        ## update voltage / membrane potential
+        v_params = (j, rfr, tau_m, refract_T)
+        if intgFlag == 1:
+            _, _v = step_rk2(0., v, _dfv, dt, v_params)
+        else:
+            _, _v = step_euler(0., v, _dfv, dt, v_params)
+        ## obtain action potentials/spikes
+        s = (_v > thr).astype(jnp.float32)
+        ## update refractory variables
+        rfr = (rfr + dt) * (1. - s)
+        ## perform hyper-polarization of neuronal cells
+        v = _v * (1. - s) + s * v_reset
+
         surrogate = d_spike_fx(v, thr)
         ## update tols
         tols = (1. - s) * tols + (s * t)
