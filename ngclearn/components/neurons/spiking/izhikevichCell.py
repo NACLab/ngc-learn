@@ -159,7 +159,7 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
-                increase the accuray of the estimate of the cell's evolution
+                increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
     """
 

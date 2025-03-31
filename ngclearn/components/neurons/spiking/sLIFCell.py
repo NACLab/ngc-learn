@@ -113,10 +113,10 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, resist_m, thr, resist_inh=0.,
-                 thr_persist=False, thr_gain=0.0, thr_leak=0.0, rho_b=0.,
-                 refract_time=0., sticky_spikes=False, thr_jitter=0.05,
-                 batch_size=1, **kwargs):
+    def __init__(
+            self, name, n_units, tau_m, resist_m, thr, resist_inh=0., thr_persist=False, thr_gain=0.0, thr_leak=0.0,
+            rho_b=0., refract_time=0., sticky_spikes=False, thr_jitter=0.05, batch_size=1, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)

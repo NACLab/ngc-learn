@@ -100,17 +100,34 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
             a single spike will be permitted to emit per step -- this means that
             if > 1 spikes emitted, a single action potential will be randomly
             sampled from the non-zero spikes detected
+            
+        integration_type: type of integration to use for this cell's dynamics;
+            current supported forms include "euler" (Euler/RK-1 integration)
+            and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
+
+            :Note: setting the integration type to the midpoint method will
+                increase the accuracy of the estimate of the cell's evolution
+                at an increase in computational cost (and simulation time)
+
+        surrogate_type: type of surrogate function to use for approximating a
+            partial derivative of this cell's spikes w.r.t. its voltage/current
+            (default: "straight_through")
+
+            :Note: surrogate options available include: "straight_through"
+                (straight-through estimator), "triangular" (triangular estimator),
+                "arctan" (arc-tangent estimator), and "secant_lif" (the
+                LIF-specialized secant estimator)
     """ ## batch_size arg?
 
     @deprecate_args(thr_jitter=None, critical_v="critical_V")
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., v_scale=-41.6, critical_v=1.,
             tau_theta=1e7, theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler",
-            surrgoate_type="straight_through", lower_clamp_voltage=True, **kwargs
+            surrogate_type="straight_through", lower_clamp_voltage=True, **kwargs
     ):
         super().__init__(
             name, n_units, tau_m, resist_m, thr, v_rest, v_reset, 1., tau_theta, theta_plus, refract_time,
-            one_spike, integration_type, surrgoate_type, lower_clamp_voltage, **kwargs
+            one_spike, integration_type, surrogate_type, lower_clamp_voltage, **kwargs
         )
         ## only two distinct additional constants distinguish the Quad-LIF cell
         self.v_c = v_scale

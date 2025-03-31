@@ -100,10 +100,10 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
-                increase the accuray of the estimate of the cell's evolution
+                increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
 
-        surrgoate_type: type of surrogate function to use for approximating a
+        surrogate_type: type of surrogate function to use for approximating a
             partial derivative of this cell's spikes w.r.t. its voltage/current
             (default: "straight_through")
 
@@ -120,7 +120,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
                  v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
                  refract_time=5., one_spike=False, integration_type="euler",
-                 surrgoate_type="straight_through", lower_clamp_voltage=True,
+                 surrogate_type="straight_through", lower_clamp_voltage=True,
                  **kwargs):
         super().__init__(name, **kwargs)
 
@@ -150,11 +150,11 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        if surrgoate_type == "secant_lif":
+        if surrogate_type == "secant_lif":
             self.spike_fx, self.d_spike_fx = secant_lif_estimator()
-        elif surrgoate_type == "arctan":
+        elif surrogate_type == "arctan":
             self.spike_fx, self.d_spike_fx = arctan_estimator()
-        elif surrgoate_type == "triangular":
+        elif surrogate_type == "triangular":
             self.spike_fx, self.d_spike_fx = triangular_estimator()
         else: ## default: straight_through
             self.spike_fx, self.d_spike_fx = straight_through_estimator()

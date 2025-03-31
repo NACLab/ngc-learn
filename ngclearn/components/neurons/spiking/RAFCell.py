@@ -1,28 +1,15 @@
-from jax import numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, random, jit, nn
+from functools import partial
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 @jit
 def _dfv_internal(j, v, w, tau_m, omega, b): ## "voltage" dynamics
@@ -47,11 +34,6 @@ def _dfw(t, w, params): ## angular driver dynamics wrapper
     j, v, tau_w, omega, b = params
     dv_dt = _dfw_internal(j, v, w, tau_w, omega, b)
     return dv_dt
-
-@jit
-def _emit_spike(v, v_thr):
-    s = (v > v_thr).astype(jnp.float32)
-    return s
 
 class RAFCell(JaxComponent):
     """
@@ -112,14 +94,15 @@ class RAFCell(JaxComponent):
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
-                increase the accuray of the estimate of the cell's evolution
+                increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
     """
 
     @deprecate_args(resist_m="resist_v", tau_m="tau_v")
-    def __init__(self, name, n_units, tau_v=1., tau_w=1., thr=1., omega=10.,
-                 b=-1., v_reset=1., w_reset=0., v0=0., w0=0., resist_v=1.,
-                 integration_type="euler", batch_size=1, **kwargs):
+    def __init__(
+            self, name, n_units, tau_v=1., tau_w=1., thr=1., omega=10., b=-1., v_reset=0., w_reset=0., v0=0., w0=0.,
+            resist_v=1., integration_type="euler", batch_size=1, **kwargs
+    ):
         #v_rest=-72., v_reset=-75., w_reset=0., thr=5., v0=-70., w0=0., tau_w=400., thr=5., omega=10., b=-1.
         super().__init__(name, **kwargs)
 
@@ -150,11 +133,13 @@ class RAFCell(JaxComponent):
         self.v = Compartment(restVals + self.v0, display_name="Voltage", units="mV")
         self.w = Compartment(restVals + self.w0, display_name="Angular-Driver")
         self.s = Compartment(restVals, display_name="Spikes")
-        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
-                                units="ms") ## time-of-last-spike
+        self.tols = Compartment(
+            restVals, display_name="Time-of-Last-Spike", units="ms"
+        ) ## time-of-last-spike
 
+    @transition(output_compartments=["j", "v", "w", "s", "tols"])
     @staticmethod
-    def _advance_state(t, dt, tau_v, resist_v, tau_w, thr, omega, b,
+    def advance_state(t, dt, tau_v, resist_v, tau_w, thr, omega, b,
                        v_reset, w_reset, intgFlag, j, v, w, tols):
         ## continue with centered dynamics
         j_ = j * resist_v
@@ -170,24 +155,17 @@ class RAFCell(JaxComponent):
             _, _w = step_euler(0., w, _dfw, dt, w_params)
             v_params = (j_, _w, tau_v, omega, b)
             _, _v = step_euler(0., v, _dfv, dt, v_params)
-        s = _emit_spike(_v, thr)
+        s = (_v > thr) * 1. ## emit spikes/pulses
         ## hyperpolarize/reset/snap variables
         w = _w * (1. - s) + s * w_reset
         v = _v * (1. - s) + s * v_reset
 
-        tols = _update_times(t, s, tols)
+        tols = (1. - s) * tols + (s * t) ## update times-of-last-spike(s)
         return j, v, w, s, tols
 
-    @resolver(_advance_state)
-    def advance_state(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.w.set(w)
-        self.v.set(v)
-        self.s.set(s)
-        self.tols.set(tols)
-
+    @transition(output_compartments=["j", "v", "w", "s", "tols"])
     @staticmethod
-    def _reset(batch_size, n_units, v0, w0):
+    def reset(batch_size, n_units, v0, w0):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals # None
         v = restVals + v0
@@ -195,14 +173,6 @@ class RAFCell(JaxComponent):
         s = restVals #+ 0
         tols = restVals #+ 0
         return j, v, w, s, tols
-
-    @resolver(_reset)
-    def reset(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.v.set(v)
-        self.w.set(w)
-        self.s.set(s)
-        self.tols.set(tols)
 
     @classmethod
     def help(cls): ## component help function
