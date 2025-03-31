@@ -102,7 +102,7 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
             sampled from the non-zero spikes detected
     """ ## batch_size arg?
 
-    @deprecate_args(thr_jitter=None)
+    @deprecate_args(thr_jitter=None, critical_v="critical_V")
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., v_scale=-41.6, critical_v=1.,
             tau_theta=1e7, theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler",
