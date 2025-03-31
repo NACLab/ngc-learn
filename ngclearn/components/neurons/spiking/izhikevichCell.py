@@ -1,27 +1,16 @@
-from jax import numpy as jnp, jit
-from ngclearn.utils import tensorstats
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, random, jit, nn
+from functools import partial
+from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
 
 @jit
 def _dfv_internal(j, v, w, b, tau_m): ## raw voltage dynamics
@@ -54,39 +43,6 @@ def _post_process(s, _v, _w, v, w, c, d): ## internal post-processing routine
     v_next = _v * (1. - s) + s * c
     w_next = _w * (1. - s) + s * (w + d)
     return v_next, w_next
-
-@jit
-def _emit_spike(v, v_thr):
-    s = (v > v_thr).astype(jnp.float32)
-    return s
-
-@jit
-def _modify_current(j, R_m):
-    _j = j * R_m
-    return _j
-
-def _run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
-              R_m=1., integType=0):
-    ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
-    a = 1./tau_w ## we map time constant to variable "a" (a = 1/tau_w)
-    _j = _modify_current(j, R_m)
-    #_j = jnp.maximum(-30.0, _j) ## lower-bound/clip input current
-    ## check for spikes
-    s = _emit_spike(v, v_thr)
-    ## for non-spikes, evolve according to dynamics
-    if integType == 1:
-        v_params = (_j, w, b, tau_m)
-        _, _v = step_rk2(0., v, _dfv, dt, v_params) #_v = step_rk2(v, v_params, _dfv, dt)
-        w_params = (_j, v, b, tau_w)
-        _, _w = step_rk2(0., w, _dfw, dt, w_params) #_w = step_rk2(w, w_params, _dfw, dt)
-    else: # integType == 0 (default -- Euler)
-        v_params = (_j, w, b, tau_m)
-        _, _v = step_euler(0., v, _dfv, dt, v_params) #_v = step_euler(v, v_params, _dfv, dt)
-        w_params = (_j, v, b, tau_w)
-        _, _w = step_euler(0., w, _dfw, dt, w_params) #_w = step_euler(w, w_params, _dfw, dt)
-    ## for spikes, snap to particular states
-    _v, _w = _post_process(s, _v, _w, v, w, c, d)
-    return _v, _w, s
 
 class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
     """
@@ -197,24 +153,38 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
+    @transition(output_compartments=["j", "v", "w", "s", "tols"])
     @staticmethod
-    def _advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
+    def advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
                        intgFlag, j, v, w, s, tols):
-        v, w, s = _run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
-                            b=coupling, c=v_reset, d=w_reset, R_m=R_m, integType=intgFlag)
-        tols = _update_times(t, s, tols)
+        ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
+        a = 1. / tau_w  ## we map time constant to variable "a" (a = 1/tau_w)
+        _j = j * R_m
+        # _j = jnp.maximum(-30.0, _j) ## lower-bound/clip input current
+        ## check for spikes
+        s = (v > v_thr) * 1.
+        ## for non-spikes, evolve according to dynamics
+        if intgFlag == 1:
+            v_params = (_j, w, coupling, tau_m)
+            _, _v = step_rk2(0., v, _dfv, dt, v_params)  # _v = step_rk2(v, v_params, _dfv, dt)
+            w_params = (_j, v, coupling, tau_w)
+            _, _w = step_rk2(0., w, _dfw, dt, w_params)  # _w = step_rk2(w, w_params, _dfw, dt)
+        else:  # integType == 0 (default -- Euler)
+            v_params = (_j, w, coupling, tau_m)
+            _, _v = step_euler(0., v, _dfv, dt, v_params)  # _v = step_euler(v, v_params, _dfv, dt)
+            w_params = (_j, v, coupling, tau_w)
+            _, _w = step_euler(0., w, _dfw, dt, w_params)  # _w = step_euler(w, w_params, _dfw, dt)
+        ## for spikes, snap to particular states
+        _v, _w = _post_process(s, _v, _w, v, w, v_reset, w_reset)
+        v = _v
+        w = _w
+
+        tols = (1. - s) * tols + (s * t) ## update tols
         return j, v, w, s, tols
 
-    @resolver(_advance_state)
-    def advance_state(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.w.set(w)
-        self.v.set(v)
-        self.s.set(s)
-        self.tols.set(tols)
-
+    @transition(output_compartments=["j", "v", "w", "s", "tols"])
     @staticmethod
-    def _reset(batch_size, n_units, v0, w0):
+    def reset(batch_size, n_units, v0, w0):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals # None
         v = restVals + v0
@@ -222,14 +192,6 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         s = restVals #+ 0
         tols = restVals #+ 0
         return j, v, w, s, tols
-
-    @resolver(_reset)
-    def reset(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.v.set(v)
-        self.w.set(w)
-        self.s.set(s)
-        self.tols.set(tols)
 
     @classmethod
     def help(cls): ## component help function

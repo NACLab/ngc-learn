@@ -3,7 +3,7 @@ from ngcsimlib.context import Context
 import numpy as np
 
 np.random.seed(42)
-from ngclearn.components import FitzhughNagumoCell
+from ngclearn.components import IzhikevichCell
 from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
@@ -14,16 +14,16 @@ from ngcsimlib.context import Context
 from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 
-def test_fitzhughNagumoCell1():
-    name = "fh_ctx"
+def test_izhikevichCell1():
+    name = "izh_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
-    dt = 0.1 #1.  # ms
+    dt = 1.  # ms
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
-        a = FitzhughNagumoCell(
-            name="a", n_units=1, tau_m=1., resist_m=5., v_thr=2.1, key=subkeys[0]
+        a = IzhikevichCell(
+            name="a", n_units=1, tau_m=1., resist_m=4., v_thr=30., key=subkeys[0]
         )
 
         #"""
@@ -50,9 +50,9 @@ def test_fitzhughNagumoCell1():
             a.j.set(x)
 
     ## input spike train
-    x_seq = jnp.asarray([[0., 0., 1., 1., 1., 1., 0., 0., 0., 0.]], dtype=jnp.float32)
+    x_seq = jnp.asarray([[0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 0., 0., 0., 0., 0.]], dtype=jnp.float32)
     ## desired output/epsp pulses
-    y_seq = jnp.asarray([[0., 0., 0., 0., 0., 1., 0., 0., 0., 0.]], dtype=jnp.float32)
+    y_seq = jnp.asarray([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.]], dtype=jnp.float32)
 
     outs = []
     ctx.reset()
@@ -61,10 +61,11 @@ def test_fitzhughNagumoCell1():
         ctx.clamp(x_t)
         ctx.run(t=ts * 1., dt=dt)
         outs.append(a.s.value)
+        print(a.v.value)
     outs = jnp.concatenate(outs, axis=1)
-    #print(outs)
-
+    print(outs)
+    #exit()
     ## output should equal input
     assert_array_equal(outs, y_seq)
 
-#test_fitzhughNagumoCell1()
+#test_izhikevichCell1()
