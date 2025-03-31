@@ -3,7 +3,7 @@ from ngcsimlib.context import Context
 import numpy as np
 
 np.random.seed(42)
-from ngclearn.components import WTASCell
+from ngclearn.components import FitzhughNagumoCell
 from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
@@ -14,16 +14,16 @@ from ngcsimlib.context import Context
 from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
 
-def test_WTASCell1():
-    name = "wtas_ctx"
+def test_fitzhughNagumoCellCell1():
+    name = "fh_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
-    dt = 1.  # ms
+    dt = 0.1 #1.  # ms
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
-        a = WTASCell(
-            name="a", n_units=2, tau_m=25., resist_m=1., key=subkeys[0]
+        a = FitzhughNagumoCell(
+            name="a", n_units=1, tau_m=1., resist_m=5., v_thr=2.1, key=subkeys[0]
         )
 
         #"""
@@ -50,21 +50,25 @@ def test_WTASCell1():
             a.j.set(x)
 
     ## input spike train
-    x_seq = jnp.asarray([[0., 1.], [0., 1.], [1., 0.], [1., 0.]], dtype=jnp.float32)
+    x_seq = jnp.asarray([[0., 0., 1., 1., 1., 1., 0., 0., 0., 0.]], dtype=jnp.float32)
     ## desired output/epsp pulses
-    y_seq = x_seq
+    y_seq = jnp.asarray([[0., 0., 0., 0., 0., 1., 0., 0., 0., 0.]], dtype=jnp.float32)
 
     outs = []
+    volts = []
+    recovs = []
     ctx.reset()
-    for ts in range(x_seq.shape[0]):
-        x_t = x_seq[ts:ts+1, :]  ## get data at time t
+    for ts in range(x_seq.shape[1]):
+        x_t = x_seq[:, ts:ts+1]  ## get data at time t
         ctx.clamp(x_t)
         ctx.run(t=ts * 1., dt=dt)
         outs.append(a.s.value)
-    outs = jnp.concatenate(outs, axis=0)
+        volts.append(a.v.value)
+        recovs.append(a.w.value)
+    outs = jnp.concatenate(outs, axis=1)
     #print(outs)
-    #exit()
+
     ## output should equal input
     assert_array_equal(outs, y_seq)
 
-#test_WTASCell1()
+test_fitzhughNagumoCellCell1()
