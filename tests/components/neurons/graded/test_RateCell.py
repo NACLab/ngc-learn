@@ -53,7 +53,7 @@ def test_RateCell1():
       ctx.run(t=ts * 1., dt=dt)
       outs.append(a.z.value)
   outs = jnp.concatenate(outs, axis=1)
-  print(outs)
+  # print(outs)
   ## output should equal input
   # assert_array_equal(outs, y_seq, tol=1e-3)
   np.testing.assert_allclose(outs, y_seq, atol=1e-3)
