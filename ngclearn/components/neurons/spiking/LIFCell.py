@@ -16,7 +16,7 @@ from ngcsimlib.compartment import Compartment
 
 #@jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
-    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+    mask = (rfr >= refract_T) * 1. # get refractory mask
     ## update voltage / membrane potential
     dv_dt = (v_rest - v) * v_decay + (j * mask)
     dv_dt = dv_dt * (1./tau_m)
