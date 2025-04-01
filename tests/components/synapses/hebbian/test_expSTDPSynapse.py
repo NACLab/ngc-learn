@@ -2,7 +2,7 @@ from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import TraceSTDPSynapse
+from ngclearn.components import ExpSTDPSynapse
 from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
@@ -11,16 +11,16 @@ from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.context import Context
 
-def test_traceSTDPSynapse1():
-    name = "trace_stdp_ctx"
+def test_expSTDPSynapse1():
+    name = "exp_stdp_ctx"
     ## create seeding keys
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
-        a = TraceSTDPSynapse(
-            name="a", shape=(1,1), A_plus=1., A_minus=1., key=subkeys[0]
+        a = ExpSTDPSynapse(
+            name="a", shape=(1,1), A_plus=1., A_minus=1., exp_beta=1.25, key=subkeys[0]
         )
 
         #"""
@@ -54,7 +54,7 @@ def test_traceSTDPSynapse1():
     out_trace = jnp.ones((1, 1,)) * 0.65
 
     ## check pre-synaptic STDP only
-    truth = jnp.array([[1.25]])
+    truth = jnp.array([[0.57342285]])
     ctx.reset()
     a.preSpike.set(in_spike * 0)
     a.preTrace.set(in_trace)
@@ -65,7 +65,7 @@ def test_traceSTDPSynapse1():
     #print(a.dWeights.value)
     assert_array_equal(a.dWeights.value, truth)
 
-    truth = jnp.array([[-0.65]])
+    truth = jnp.array([[-0.29817986]])
     ctx.reset()
     a.preSpike.set(in_spike)
     a.preTrace.set(in_trace)
@@ -76,4 +76,4 @@ def test_traceSTDPSynapse1():
     #print(a.dWeights.value)
     assert_array_equal(a.dWeights.value, truth)
 
-#test_traceSTDPSynapse1()
+#test_expSTDPSynapse1()
