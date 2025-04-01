@@ -63,6 +63,23 @@ used for fixed value deconvolution/transposed convolution synaptic filters.
     :noindex:
 ```
 
+## Dynamic Synapse Types
+
+### Short-Term Plasticity(Dense) Synapse
+
+This synapse performs a linear transform of its input signals. Note that this 
+synapse is "dynamic" in the sense that it engages in short-term plasticity (STP), meaning that its efficacy values change as a function of its inputs (and simulated consumed resources), but it does not provide any long-term form of plasticity/adjustment.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.STPDenseSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ## Multi-Factor Learning Synapse Types
 
 Hebbian rules operate in a local manner -- they generally use information more
