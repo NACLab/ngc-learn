@@ -102,16 +102,28 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
 
         v_reset: voltage value to reset to after a spike (in mV)
             (Default: 0 mV)
+
+        integration_type: type of integration to use for this cell's dynamics;
+            current supported forms include "euler" (Euler/RK-1 integration)
+            and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
+
+            :Note: setting the integration type to the midpoint method will
+                increase the accuracy of the estimate of the cell's evolution
+                at an increase in computational cost (and simulation time)
     """
 
     # Define Functions
     def __init__(
             self, name, n_units, tau_v, resist_m=1., v_Na=115., v_K=-35., v_L=10.6, g_Na=100., g_K=5., g_L=0.3, thr=4.,
-            spike_reset=False, v_reset=0., **kwargs
+            spike_reset=False, v_reset=0., integration_type="euler", **kwargs
     ):
         super().__init__(name, **kwargs)
 
-        ## membrane parameter setup (affects ODE integration)
+        ## Integration properties
+        self.integrationType = integration_type
+        self.intgFlag = get_integrator_code(self.integrationType)
+
+        ## cell properties / biophysical parameter setup (affects ODE integration)
         self.tau_v = tau_v ## membrane time constant
         self.R_m = resist_m ## resistance value
         self.spike_reset = spike_reset
@@ -140,15 +152,24 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
 
     @transition(output_compartments=["v", "m", "n", "h", "s", "tols"])
     @staticmethod
-    def advance_state(t, dt, spike_reset, v_reset, thr, tau_v, R_m, g_Na, g_K, g_L, v_Na, v_K, v_L, j, v, m, n, h, tols):
+    def advance_state(
+            t, dt, spike_reset, v_reset, thr, tau_v, R_m, g_Na, g_K, g_L, v_Na, v_K, v_L, j, v, m, n, h, tols, intgFlag
+    ):
         _j = j * R_m
         alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = _calc_biophysical_constants(v)
         ## integrate voltage / membrane potential
-        _, _v = step_euler(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
-        ## next, integrate different channels
-        _, _n = step_euler(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
-        _, _m = step_euler(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
-        _, _h = step_euler(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
+        if intgFlag == 1:
+            _, _v = step_rk2(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
+            ## next, integrate different channels
+            _, _n = step_rk2(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
+            _, _m = step_rk2(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
+            _, _h = step_rk2(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
+        else:  # integType == 0 (default -- Euler)
+            _, _v = step_euler(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
+            ## next, integrate different channels
+            _, _n = step_euler(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
+            _, _m = step_euler(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
+            _, _h = step_euler(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
         ## obtain action potentials/spikes/pulses
         s = (_v > thr) * 1.
         if spike_reset:  ## if spike-reset used, variables snapped back to initial conditions
