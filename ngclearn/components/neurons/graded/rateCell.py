@@ -13,9 +13,15 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
 
 ## rewritten code
-@partial(jit, static_argnums=[5])
+# @partial(jit, static_argnums=[5])
 def _dfz_internal(z, j, j_td, tau_m, leak_gamma, prior_type=None): ## raw dynamics
     z_leak = z # * 2 ## Default: assume Gaussian
+    prior_type_dict = {
+        0: "laplacian",
+        1: "cauchy",
+        2: "exp"
+    }
+    prior_type = prior_type_dict.get(prior_type, None)
     if prior_type != None:
         if prior_type == "laplacian": ## Laplace dist
             z_leak = jnp.sign(z) ## d/dx of Laplace is signum
@@ -31,7 +37,7 @@ def _dfz(t, z, params): ## diff-eq dynamics wrapper
     dz_dt = _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType)
     return dz_dt
 
-@jit
+# @jit
 def _modulate(j, dfx_val):
     """
     Apply a signal modulator to j (typically of the form of a derivative/dampening function)
@@ -46,6 +52,7 @@ def _modulate(j, dfx_val):
     """
     return j * dfx_val
 
+@partial(jit, static_argnames=["integType", "priorType"])
 def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
     """
     Runs leaky rate-coded state dynamics one step in time.
@@ -81,7 +88,7 @@ def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None)
         _, _z = step_euler(0., z, _dfz, dt, params)
     return _z
 
-@jit
+# @jit
 def _run_cell_stateless(j):
     """
     A simplification of running a stateless set of dynamics over j (an identity
@@ -161,7 +168,12 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             if tau_m <= 0: ## trigger stateless mode
                 self.is_stateful = False
         priorType, leakRate = prior
-        self.priorType = priorType ## type of scale-shift prior to impose over the leak
+        priorTypeDict = {
+            "laplacian": 0,
+            "cauchy": 1,
+            "exp": 2
+        }
+        self.priorType = priorTypeDict.get(priorType, -1)
         self.priorLeakRate = leakRate ## degree to which rate neurons leak (according to prior)
         thresholdType, thr_lmbda = threshold
         self.thresholdType = thresholdType ## type of thresholding function to use
