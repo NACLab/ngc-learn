@@ -37,7 +37,6 @@ from .input_encoders.phasorCell import PhasorCell
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
-from .synapses.hebbian.STDPSynapse import STDPSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
