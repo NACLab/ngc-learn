@@ -133,8 +133,7 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
             [self.weights.value, self.biases.value]
             if bias_init else [self.weights.value]))
 
-    def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
-              weights):
+    def _init(self, batch_size, x_size, shape, stride, padding, pad_args, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
         _d = conv2d(_x, weights.value, stride_size=stride, padding=padding) * 0
@@ -155,8 +154,7 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
             sign_value, w_decay, bias_init, stride, pad_args, delta_shape, pre, post, weights
     ): ## synaptic kernel adjustment calculation co-routine
         ## compute adjustment to filters
-        dWeights = calc_dK_conv(pre, post, delta_shape=delta_shape,
-                                stride_size=stride, padding=pad_args)
+        dWeights = calc_dK_conv(pre, post, delta_shape=delta_shape, stride_size=stride, padding=pad_args)
         dWeights = dWeights * sign_value
         if w_decay > 0.:  ## apply synaptic decay
             dWeights = dWeights - weights * w_decay
@@ -174,12 +172,10 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
     ):
         ## calc dFilters / dBiases - update to filters and biases
         dWeights, dBiases = HebbianConvSynapse._compute_update(
-            sign_value, w_decay, bias_init, stride, pad_args, delta_shape,
-            pre, post, weights
+            sign_value, w_decay, bias_init, stride, pad_args, delta_shape, pre, post, weights
         )
         if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases],
-                                                [dWeights, dBiases])
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
         else: ## ignore dBiases since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
 
@@ -205,8 +201,7 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         # elif padding == "VALID":
         #     antiPad = _conv_valid_transpose_padding(post.shape[1], x_size,
         #                                             k_size, stride)
-        dInputs = calc_dX_conv(weights, post, delta_shape=x_delta_shape,
-                               stride_size=stride, anti_padding=antiPad)
+        dInputs = calc_dX_conv(weights, post, delta_shape=x_delta_shape, stride_size=stride, anti_padding=antiPad)
         ## flip sign of back-transmitted signal (if applicable)
         dInputs = dInputs * sign_value
         return dInputs

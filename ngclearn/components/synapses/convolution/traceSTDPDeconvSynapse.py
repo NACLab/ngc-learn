@@ -1,9 +1,17 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
 from .deconvSynapse import DeconvSynapse
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
+from ngclearn.utils import tensorstats
+import ngclearn.utils.weight_distribution as dist
 from ngclearn.components.synapses.convolution.ngcconv import (deconv2d, _calc_dX_deconv,
                                                               _calc_dK_deconv, calc_dX_deconv,
                                                               calc_dK_deconv)
+from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 
 class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional cable
     """
@@ -65,13 +73,14 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
     """
 
     # Define Functions
-    def __init__(self, name, shape, x_shape, A_plus, A_minus, eta=0.,
-                 pretrace_target=0., filter_init=None, stride=1, padding=None,
-                 resist_scale=1., w_bound=0., w_decay=0., batch_size=1,
-                 **kwargs):
-        super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
-                         bias_init=None, resist_scale=resist_scale, stride=stride,
-                         padding=padding, batch_size=batch_size, **kwargs)
+    def __init__(
+            self, name, shape, x_shape, A_plus, A_minus, eta=0., pretrace_target=0., filter_init=None, stride=1,
+            padding=None, resist_scale=1., w_bound=0., w_decay=0., batch_size=1, **kwargs
+    ):
+        super().__init__(
+            name, shape, x_shape=x_shape, filter_init=filter_init, bias_init=None, resist_scale=resist_scale,
+            stride=stride, padding=padding, batch_size=batch_size, **kwargs
+        )
 
         self.eta = eta
         self.w_bound = w_bound  ## soft weight constraint
@@ -93,12 +102,10 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
 
         ########################################################################
         ## Shape error correction -- do shape correction inference (for local updates)
-        self._init(self.batch_size, self.x_size, self.shape, self.stride,
-                   self.padding, self.pad_args, self.weights)
+        self._init(self.batch_size, self.x_size, self.shape, self.stride, self.padding, self.pad_args, self.weights)
         ########################################################################
 
-    def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
-              weights):
+    def _init(self, batch_size, x_size, shape, stride, padding, pad_args, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
         _d = deconv2d(_x, self.weights.value, stride_size=self.stride,
@@ -117,8 +124,9 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         self.x_delta_shape = (dx, dy)
 
     @staticmethod
-    def _compute_update(pretrace_target, Aplus, Aminus, shape, stride, padding,
-                        delta_shape, preSpike, preTrace, postSpike, postTrace):
+    def _compute_update(
+            pretrace_target, Aplus, Aminus, shape, stride, padding, delta_shape, preSpike, preTrace, postSpike, postTrace
+    ):
         k_size, k_size, n_in_chan, n_out_chan = shape
         ## calc dFilters
         dW_ltp = calc_dK_deconv(preTrace - pretrace_target, postSpike * Aplus,
@@ -130,10 +138,12 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         dWeights = (dW_ltp + dW_ltd)
         return dWeights
 
+    @transition(output_compartments=["weights", "dWeights"])
     @staticmethod
-    def _evolve(pretrace_target, Aplus, Aminus, w_decay, w_bound,
-                shape, stride, padding, delta_shape, preSpike, preTrace, postSpike,
-                postTrace, weights, eta):
+    def evolve(
+            pretrace_target, Aplus, Aminus, w_decay, w_bound, shape, stride, padding, delta_shape, preSpike, preTrace,
+            postSpike, postTrace, weights, eta
+    ):
         dWeights = TraceSTDPDeconvSynapse._compute_update(
             pretrace_target, Aplus, Aminus, shape, stride, padding, delta_shape,
             preSpike, preTrace, postSpike, postTrace
@@ -148,25 +158,17 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
             weights = jnp.clip(weights, eps, w_bound - eps)
         return weights, dWeights
 
-    @resolver(_evolve)
-    def evolve(self, weights, dWeights):
-        self.weights.set(weights)
-        self.dWeights.set(dWeights)
-
+    @transition(output_compartments=["dInputs"])
     @staticmethod
-    def _backtransmit(stride, padding, x_delta_shape, preSpike, postSpike,
-                      weights):  ## action-backpropagating routine
+    def backtransmit(stride, padding, x_delta_shape, preSpike, postSpike, weights):  ## action-backpropagating routine
         ## calc dInputs
         dInputs = calc_dX_deconv(weights, postSpike, delta_shape=x_delta_shape,
                                  stride_size=stride, padding=padding)
         return dInputs
 
-    @resolver(_backtransmit)
-    def backtransmit(self, dInputs):
-        self.dInputs.set(dInputs)
-
+    @transition(output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace"])
     @staticmethod
-    def _reset(in_shape, out_shape):
+    def reset(in_shape, out_shape):
         preVals = jnp.zeros(in_shape)
         postVals = jnp.zeros(out_shape)
         inputs = preVals
@@ -176,15 +178,6 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         preTrace = preVals
         postTrace = postVals
         return inputs, outputs, preSpike, postSpike, preTrace, postTrace
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.preSpike.set(preSpike)
-        self.postSpike.set(postSpike)
-        self.preTrace.set(preTrace)
-        self.postTrace.set(postTrace)
 
     @classmethod
     def help(cls): ## component help function

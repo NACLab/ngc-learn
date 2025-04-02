@@ -97,9 +97,9 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
         if self.bias_init is None:
             info(self.name, "is using default bias value of zero (no bias "
                             "kernel provided)!")
-        self.biases = Compartment(dist.initialize_params(subkeys[2], bias_init,
-                                                         (1, shape[1]))
-                                  if bias_init else 0.0)
+        self.biases = Compartment(
+            dist.initialize_params(subkeys[2], bias_init, (1, shape[1])) if bias_init else 0.0
+        )
 
     @transition(output_compartments=["outputs"])
     @staticmethod

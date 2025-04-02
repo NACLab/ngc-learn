@@ -143,9 +143,9 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
     def _compute_update(sign_value, w_decay, bias_init, shape, stride, padding, delta_shape, pre, post, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         ## compute adjustment to filters
-        dWeights = calc_dK_deconv(pre, post, delta_shape=delta_shape,
-                                  stride_size=stride, out_size=k_size,
-                                  padding=padding)
+        dWeights = calc_dK_deconv(
+            pre, post, delta_shape=delta_shape, stride_size=stride, out_size=k_size, padding=padding
+        )
         dWeights = dWeights * sign_value
         if w_decay > 0.:  ## apply synaptic decay
             dWeights = dWeights - weights * w_decay
@@ -162,12 +162,10 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
             pre, post, weights, biases, opt_params
     ):
         dWeights, dBiases = HebbianDeconvSynapse._compute_update(
-            sign_value, w_decay, bias_init, shape, stride, padding, delta_shape,
-            pre, post, weights
+            sign_value, w_decay, bias_init, shape, stride, padding, delta_shape, pre, post, weights
         )
         if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases],
-                                                [dWeights, dBiases])
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
         else: ## ignore dBiases since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## apply any enforced filter constraints
@@ -182,8 +180,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
     @staticmethod
     def backtransmit(sign_value, stride, padding, x_delta_shape, pre, post, weights):  ## action-backpropagating routine
         ## calc dInputs
-        dInputs = calc_dX_deconv(weights, post, delta_shape=x_delta_shape,
-                                 stride_size=stride, padding=padding)
+        dInputs = calc_dX_deconv(weights, post, delta_shape=x_delta_shape, stride_size=stride, padding=padding)
         ## flip sign of back-transmitted signal (if applicable)
         dInputs = dInputs * sign_value
         return dInputs
