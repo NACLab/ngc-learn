@@ -1,13 +1,11 @@
 from .jaxComponent import JaxComponent
 
-
 ## point to rate-coded cell component types
 from .neurons.graded.rateCell import RateCell
 from .neurons.graded.gaussianErrorCell import GaussianErrorCell
 from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
 from .neurons.graded.bernoulliErrorCell import BernoulliErrorCell
 from .neurons.graded.rewardErrorCell import RewardErrorCell
-
 
 ## point to standard spiking cell component types
 from .neurons.spiking.sLIFCell import SLIFCell
@@ -21,11 +19,9 @@ from .neurons.spiking.izhikevichCell import IzhikevichCell
 from .neurons.spiking.hodgkinHuxleyCell import HodgkinHuxleyCell
 from .neurons.spiking.RAFCell import RAFCell
 
-## point to transformer/operater component types
+## point to transformer/operator component types
 from .other.varTrace import VarTrace
 from .other.expKernel import ExpKernel
-from ngclearn.components.synapses.modulated.eligibilityTrace import EligibilityTrace
-
 
 ## point to input encoder component types
 from .input_encoders.bernoulliCell import BernoulliCell
@@ -43,7 +39,6 @@ from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .synapses.hebbian.BCMSynapse import BCMSynapse
 from .synapses.STPDenseSynapse import STPDenseSynapse
 
-
 ## point to convolutional component types
 from .synapses.convolution.convSynapse import ConvSynapse
 from .synapses.convolution.staticConvSynapse import StaticConvSynapse
@@ -56,7 +51,6 @@ from .synapses.convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 ## point to modulated component types
 from .synapses.modulated.MSTDPETSynapse import MSTDPETSynapse
 
-
 ## point to monitors
 from .monitor import Monitor
 
@@ -64,9 +58,4 @@ from .monitor import Monitor
 from .synapses.patched.patchedSynapse import PatchedSynapse
 from .synapses.patched.staticPatchedSynapse import StaticPatchedSynapse
 from .synapses.patched.hebbianPatchedSynapse import HebbianPatchedSynapse
-
-
-
-
-
 

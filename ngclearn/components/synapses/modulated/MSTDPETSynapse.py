@@ -1,13 +1,17 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
 from ngclearn.components.synapses.hebbian import TraceSTDPSynapse
 from ngclearn.utils import tensorstats
 
 class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligility traces
     """
-    A synaptic cable that adjusts its efficacies via trace-based form of
-    three-factor learning, i.e., modulated spike-timing-dependent plasticity
-    (M-STDP) or modulated STDP with eligibility traces (M-STDP-ET).
+    A synaptic cable that adjusts its efficacies via trace-based form of three-factor learning, i.e., modulated
+    spike-timing-dependent plasticity (M-STDP) or modulated STDP with eligibility traces (M-STDP-ET).
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
@@ -20,11 +24,14 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
     | postSpike - post-synaptic spike to drive 2nd term of STDP update (takes in external signals)
     | preTrace - pre-synaptic trace value to drive 1st term of STDP update (takes in external signals)
     | postTrace - post-synaptic trace value to drive 2nd term of STDP update (takes in external signals)
-    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+    | dWeights - current delta matrix containing (MS-STDP/MS-STDP-ET) changes to be applied to synaptic efficacies
     | eligibility - current state of eligibility trace
-    | eta - global learning rate (multiplier beyond A_plus and A_minus)
+    | eta - global learning rate (applied to change in weights for final MS-STDP/MS-STDP-ET adjustment)
 
     | References:
+    | Florian, Răzvan V. "Reinforcement learning through modulation of spike-timing-dependent synaptic plasticity."
+    | Neural computation 19.6 (2007): 1468-1502.
+    |
     | Morrison, Abigail, Ad Aertsen, and Markus Diesmann. "Spike-timing-dependent
     | plasticity in balanced random networks." Neural computation 19.6 (2007): 1437-1467.
     |
@@ -66,14 +73,14 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
     """
 
     # Define Functions
-    def __init__(self, name, shape, A_plus, A_minus, eta=1., mu=0.,
-                 pretrace_target=0., tau_elg=0., elg_decay=1.,
-                 weight_init=None, resist_scale=1., p_conn=1., w_bound=1.,
-                 batch_size=1, **kwargs):
-        super().__init__(name, shape, A_plus, A_minus, eta=eta, mu=mu,
-                         pretrace_target=pretrace_target, weight_init=weight_init,
-                         resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound,
-                         batch_size=batch_size, **kwargs)
+    def __init__(
+            self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., tau_elg=0., elg_decay=1.,
+            weight_init=None, resist_scale=1., p_conn=1., w_bound=1., batch_size=1, **kwargs
+    ):
+        super().__init__(
+            name, shape, A_plus, A_minus, eta=eta, mu=mu, pretrace_target=pretrace_target, weight_init=weight_init,
+            resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound, batch_size=batch_size, **kwargs
+        )
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
@@ -81,14 +88,15 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
         self.eligibility = Compartment(jnp.zeros(shape))
 
+    @transition(output_compartments=["weights", "dWeights", "eligibility"])
     @staticmethod
-    def _evolve(dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg,
-                elg_decay, preSpike, postSpike, preTrace, postTrace, weights,
-                eta, modulator, eligibility):
+    def evolve(
+            dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg, elg_decay, preSpike, postSpike, preTrace,
+            postTrace, weights, eta, modulator, eligibility
+    ):
         ## compute local synaptic update (via STDP)
         dW_dt = TraceSTDPSynapse._compute_update(
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus,
-            preSpike, postSpike, preTrace, postTrace, weights
+            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
         ) ## produce dW/dt (ODE for synaptic change dynamics)
         if tau_elg > 0.: ## perform dynamics of M-STDP-ET
             ## update eligibility trace given current local update
@@ -107,14 +115,11 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
         return weights, dWeights, eligibility
 
-    @resolver(_evolve)
-    def evolve(self, weights, dWeights, eligibility):
-        self.weights.set(weights)
-        self.dWeights.set(dWeights)
-        self.eligibility.set(eligibility)
-
+    @transition(
+        output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights", "eligibility"]
+    )
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         synVals = jnp.zeros(shape)
@@ -126,20 +131,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         postTrace = postVals
         dWeights = synVals
         eligibility = synVals
-        return (inputs, outputs, preSpike, postSpike, preTrace, postTrace,
-                dWeights, eligibility)
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, preSpike, postSpike, preTrace, postTrace,
-              dWeights, eligibility):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.preSpike.set(preSpike)
-        self.postSpike.set(postSpike)
-        self.preTrace.set(preTrace)
-        self.postTrace.set(postTrace)
-        self.dWeights.set(dWeights)
-        self.eligibility.set(eligibility)
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights, eligibility
 
     @classmethod
     def help(cls): ## component help function
