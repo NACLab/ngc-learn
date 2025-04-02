@@ -10,6 +10,7 @@ Subpackages
    ngclearn.components.synapses.convolution
    ngclearn.components.synapses.hebbian
    ngclearn.components.synapses.modulated
+   ngclearn.components.synapses.patched
 
 Submodules
 ----------

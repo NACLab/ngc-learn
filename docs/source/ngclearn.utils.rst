@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   ngclearn.utils.analysis
    ngclearn.utils.density
    ngclearn.utils.diffeq
    ngclearn.utils.optim

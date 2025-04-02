@@ -4,6 +4,14 @@ ngclearn.components.neurons.graded package
 Submodules
 ----------
 
+ngclearn.components.neurons.graded.bernoulliErrorCell module
+------------------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.graded.bernoulliErrorCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.neurons.graded.gaussianErrorCell module
 -----------------------------------------------------------
 

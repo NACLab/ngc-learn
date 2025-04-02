@@ -12,6 +12,14 @@ ngclearn.utils.diffeq.ode\_utils module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.diffeq.odes module
+---------------------------------
+
+.. automodule:: ngclearn.utils.diffeq.odes
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

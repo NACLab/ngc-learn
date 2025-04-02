@@ -20,6 +20,14 @@ ngclearn.components.input\_encoders.latencyCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.input\_encoders.phasorCell module
+-----------------------------------------------------
+
+.. automodule:: ngclearn.components.input_encoders.phasorCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.input\_encoders.poissonCell module
 ------------------------------------------------------
 
