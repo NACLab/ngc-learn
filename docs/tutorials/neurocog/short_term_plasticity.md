@@ -23,7 +23,7 @@ to emulate dynamics from a STD-dominated perspective.
 
 ### Starting with Facilitation-Dominated Dynamics
 
-One experiment goal with using a "dynamic synapse" <b>[1]</b> is often to computationally 
+One experimental goal with using a "dynamic synapse" <b>[1]</b> is often to computationally 
 model the fact that synaptic efficacy (strength/conductance magnitude) is 
 not a fixed quantity -- even in cases where long-term adaptation/learning is 
 absent -- and instead a time-varying property that depends on a fixed 
