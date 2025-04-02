@@ -71,3 +71,18 @@ whereas lower intensity values yield later firing times.
   .. automethod:: reset
     :noindex:
 ```
+
+### Phasor Cell
+
+This cell takes a real-valued pattern(s) and transforms it on-the-fly to
+a spike train composed of pulses emitted a regular interval. 
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.PhasorCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```

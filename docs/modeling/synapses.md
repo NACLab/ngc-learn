@@ -34,8 +34,7 @@ used for fixed value (dense) synaptic connections.
 ### Static Convolutional Synapse
 
 This synapse performs a convolutional transform of its input signals.
-Note that this synaptic cable does not evolve and is meant to be 
-used for fixed value convolution synaptic filters.
+Note that this synaptic cable does not evolve and is meant to be used for fixed value convolution synaptic filters.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.ConvSynapse
@@ -49,9 +48,8 @@ used for fixed value convolution synaptic filters.
 
 ### Static Deconvolutional Synapse
 
-This synapse performs a deconvolutional transform of its input signals.
-Note that this synaptic cable does not evolve and is meant to be 
-used for fixed value deconvolution/transposed convolution synaptic filters.
+This synapse performs a deconvolutional transform of its input signals. 
+Note that this synaptic cable does not evolve and is meant to be used for fixed value deconvolution/transposed convolution synaptic filters.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.DeconvSynapse
@@ -281,6 +279,37 @@ and a post-synaptic trace are utilized.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.TraceSTDPDeconvSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: evolve
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+## Modulated Forms of Plasticity
+
+This family of synapses implemented within ngc-learn support modulated, often 
+at least three-factor, forms of synaptic adjustment. Modulators could include 
+reward/dopamine values or scalar error signals, and are generally assumed to be 
+administered to the synapse(s) externally (i.e., it is treated as another 
+input provided by some other entity, e.g., another neural circuit).
+
+### Reward-Modulated Trace-based STDP (MSTDP-ET)
+
+This is a modulated STDP (MSTDP) rule that adjusts the underlying synaptic strength
+matrix via a weighted combination of long-term depression (LTD) and long-term
+potentiation (LTP), scaled by an external signal such as a reward/dopamine value. 
+The STDP element of this form of plasticity inherits from trace-based STDP
+(i.e. `TraceSTDPSynapse`). This synapse component further supports a configuration 
+for MSTDP-ET, MSTPD with eligibility traces; this means the synapse will treat its 
+synapses as two elements -- a synaptic efficacy and a coupled synaptic trace that 
+maintains the dynamics of STDP updates encountered over time.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.MSTDPETSynapse
   :noindex:
 
   .. automethod:: advance_state
