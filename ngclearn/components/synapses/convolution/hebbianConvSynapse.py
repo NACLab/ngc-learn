@@ -1,6 +1,13 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
 from .convSynapse import ConvSynapse
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
+from ngclearn.utils import tensorstats
+import ngclearn.utils.weight_distribution as dist
 from ngclearn.components.synapses.convolution.ngcconv import (_conv_same_transpose_padding,
                                                               _conv_valid_transpose_padding)
 from ngclearn.components.synapses.convolution.ngcconv import (conv2d, _calc_dX_conv,
@@ -143,8 +150,9 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         self.x_delta_shape = (dx, dy)
 
     @staticmethod
-    def _compute_update(sign_value, w_decay, bias_init, stride, pad_args,
-                        delta_shape, pre, post, weights):
+    def _compute_update(
+            sign_value, w_decay, bias_init, stride, pad_args, delta_shape, pre, post, weights
+    ): ## synaptic kernel adjustment calculation co-routine
         ## compute adjustment to filters
         dWeights = calc_dK_conv(pre, post, delta_shape=delta_shape,
                                 stride_size=stride, padding=pad_args)
@@ -157,10 +165,12 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
             dBiases = jnp.sum(post, axis=0, keepdims=True) * sign_value
         return dWeights, dBiases
 
+    @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
     @staticmethod
-    def _evolve(opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init,
-                stride, pad_args, delta_shape, pre, post, weights, biases,
-                opt_params):
+    def evolve(
+            opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init, stride, pad_args, delta_shape, pre, post,
+            weights, biases, opt_params
+    ):
         ## calc dFilters / dBiases - update to filters and biases
         dWeights, dBiases = HebbianConvSynapse._compute_update(
             sign_value, w_decay, bias_init, stride, pad_args, delta_shape,
@@ -180,17 +190,11 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
                 weights = jnp.clip(weights, -w_bounds, w_bounds)
         return opt_params, weights, biases, dWeights, dBiases
 
-    @resolver(_evolve)
-    def evolve(self, opt_params, weights, biases, dWeights, dBiases):
-        self.opt_params.set(opt_params)
-        self.weights.set(weights)
-        self.biases.set(biases)
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
-
+    @transition(output_compartments=["dInputs"])
     @staticmethod
-    def _backtransmit(sign_value, x_size, shape, stride, padding, x_delta_shape,
-                      antiPad, post, weights): ## action-backpropagating routine
+    def backtransmit(
+            sign_value, x_size, shape, stride, padding, x_delta_shape, antiPad, post, weights
+    ): ## action-backpropagating routine
         ## calc dInputs - adjustment w.r.t. input signal
         k_size, k_size, n_in_chan, n_out_chan = shape
         # antiPad = None
@@ -206,12 +210,9 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         dInputs = dInputs * sign_value
         return dInputs
 
-    @resolver(_backtransmit)
-    def backtransmit(self, dInputs):
-        self.dInputs.set(dInputs)
-
+    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dInputs"])
     @staticmethod
-    def _reset(in_shape, out_shape):
+    def reset(in_shape, out_shape):
         preVals = jnp.zeros(in_shape)
         postVals = jnp.zeros(out_shape)
         inputs = preVals
@@ -220,14 +221,6 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         post = postVals
         dInputs = preVals
         return inputs, outputs, pre, post, dInputs
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dInputs):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.dInputs.set(dInputs)
 
     @classmethod
     def help(cls): ## component help function
