@@ -189,7 +189,7 @@ disk, like the ones below:
    +------------------------------------------------------------+------------------------------------------------------------+
 ```
 
-A useful note is that the `F-N` above used Euler integration to step through its
+A useful note is that the AdEx cell above used Euler integration to step through its
 dynamics (this is the default/base routine for all cell components in ngc-learn);
 however, one could configure it to use the midpoint method for integration
 by setting its argument `integration_type = rk2` in cases where more
