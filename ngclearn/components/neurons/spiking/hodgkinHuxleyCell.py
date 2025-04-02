@@ -46,7 +46,7 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
     the initiation and propagation of action potentials within a (giant) squid axon.
 
     The four differential equations for adjusting this specific cell
-    (for adjusting v, given current j, over time) is:
+    (for adjusting v, given current j, over time) are:
 
     | tau_v dv/dt = j - g_Na * m^3 * h * (v - v_Na) - g_K * n^4 * (v - v_K) - g_L * (v - v_L)
     | dn/dt = alpha_n(v) * (1 - n) - beta_n(v) * n
