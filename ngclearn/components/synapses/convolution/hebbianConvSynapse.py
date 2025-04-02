@@ -92,9 +92,10 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
                  stride=1, padding=None, resist_scale=1., w_bound=0.,
                  is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",
                  batch_size=1, **kwargs):
-        super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
-                         bias_init=bias_init, resist_scale=resist_scale, stride=stride,
-                         padding=padding, batch_size=batch_size, **kwargs)
+        super().__init__(
+            name, shape, x_shape=x_shape, filter_init=filter_init, bias_init=bias_init, resist_scale=resist_scale,
+            stride=stride, padding=padding, batch_size=batch_size, **kwargs
+        )
 
         self.eta = eta
         self.w_bounds = w_bound

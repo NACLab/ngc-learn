@@ -50,7 +50,8 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
     # Define Functions
     def __init__(
             self, name, shape, x_shape, filter_init=None, bias_init=None, stride=1, padding=None, resist_scale=1.,
-            batch_size=1, **kwargs):
+            batch_size=1, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         self.filter_init = filter_init
