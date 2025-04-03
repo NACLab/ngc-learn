@@ -47,6 +47,7 @@ def test_expSTDPSynapse1():
         evolve_cmd, evolve_args = ctx.compile_by_key(a, compile_key="evolve")
         ctx.add_command(wrap_command(jit(ctx.evolve)), name="adapt")
         """
+    a.weights.set(jnp.ones((1, 1)) * 0.1)
 
     in_spike = jnp.ones((1, 1))
     in_trace = jnp.ones((1, 1,)) * 1.25
@@ -54,7 +55,7 @@ def test_expSTDPSynapse1():
     out_trace = jnp.ones((1, 1,)) * 0.65
 
     ## check pre-synaptic STDP only
-    truth = jnp.array([[0.57342285]])
+    truth = jnp.array([[1.1031212]])
     ctx.reset()
     a.preSpike.set(in_spike * 0)
     a.preTrace.set(in_trace)
@@ -65,7 +66,7 @@ def test_expSTDPSynapse1():
     #print(a.dWeights.value)
     assert_array_equal(a.dWeights.value, truth)
 
-    truth = jnp.array([[-0.29817986]])
+    truth = jnp.array([[-0.57362294]])
     ctx.reset()
     a.preSpike.set(in_spike)
     a.preTrace.set(in_trace)
@@ -77,3 +78,4 @@ def test_expSTDPSynapse1():
     assert_array_equal(a.dWeights.value, truth)
 
 #test_expSTDPSynapse1()
+

@@ -48,6 +48,7 @@ def test_eventSTDPSynapse1():
         evolve_cmd, evolve_args = ctx.compile_by_key(a, compile_key="evolve")
         ctx.add_command(wrap_command(jit(ctx.evolve)), name="adapt")
         """
+    a.weights.set(jnp.ones((1, 1)) * 0.1)
 
     t = 12. ## fake out current time
     ## Case 1: outside of pre-syn time window
@@ -55,7 +56,7 @@ def test_eventSTDPSynapse1():
     out_spike = jnp.ones((1, 1))
 
     ## check pre-synaptic STDP only
-    truth = jnp.array([[-0.6296545]])
+    truth = jnp.array([[-0.101]])
     ctx.reset()
     a.pre_tols.set(input_tols)
     a.postSpike.set(out_spike)
@@ -69,7 +70,7 @@ def test_eventSTDPSynapse1():
     out_spike = jnp.ones((1, 1))
 
     ## check pre-synaptic STDP only
-    truth = jnp.array([[0.37034547]])
+    truth = jnp.array([[0.899]])
     ctx.reset()
     a.pre_tols.set(input_tols)
     a.postSpike.set(out_spike)
@@ -79,3 +80,4 @@ def test_eventSTDPSynapse1():
     assert_array_equal(a.dWeights.value, truth)
 
 #test_eventSTDPSynapse1()
+

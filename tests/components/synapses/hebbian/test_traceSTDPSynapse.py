@@ -47,6 +47,7 @@ def test_traceSTDPSynapse1():
         evolve_cmd, evolve_args = ctx.compile_by_key(a, compile_key="evolve")
         ctx.add_command(wrap_command(jit(ctx.evolve)), name="adapt")
         """
+    a.weights.set(jnp.ones((1, 1)) * 0.1)
 
     in_spike = jnp.ones((1, 1))
     in_trace = jnp.ones((1, 1,)) * 1.25
