@@ -37,7 +37,7 @@ ngc-learn requires:
 2) NumPy (>=1.26.0)
 3) SciPy (>=1.7.0)
 4) ngcsimlib (>=0.3.b4), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
-5) JAX (>= 0.4.18) (to enable GPU use, make sure to install one of the CUDA variants)
+5) JAX (>= 0.4.28) (to enable GPU use, make sure to install one of the CUDA variants)
 <!--
 5) scikit-learn (>=1.3.1) if using `ngclearn.utils.density`
 6) matplotlib (>=3.4.3) if using `ngclearn.utils.viz`
@@ -79,7 +79,7 @@ Python 3.11.4 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'1.2b3'
+'2.0.0'
 ```
 
 <i>Note:</i> For access to the previous Tensorflow-2 version of ngc-learn (of
@@ -126,7 +126,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-1.2.3-Beta <!-- -Alpha -->
+2.0.0 <!--1.2.3-Beta--> <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>
