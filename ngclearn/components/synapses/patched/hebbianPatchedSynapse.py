@@ -5,6 +5,7 @@ from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.synapses.patched import PatchedSynapse
 from ngclearn.utils import tensorstats
+from ngcsimlib.compilers.process import transition
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
 def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
@@ -240,8 +241,9 @@ class HebbianPatchedSynapse(PatchedSynapse):
 
         return dW  * jnp.where(0 != jnp.abs(weights), 1, 0) , db
 
+    @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
     @staticmethod
-    def _evolve(w_mask, opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
+    def evolve(w_mask, opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dWeights, dBiases = HebbianPatchedSynapse._compute_update(
@@ -258,16 +260,9 @@ class HebbianPatchedSynapse(PatchedSynapse):
         weights = _enforce_constraints(weights, w_mask, w_bound, is_nonnegative=is_nonnegative)
         return opt_params, weights, biases, dWeights, dBiases
 
-    @resolver(_evolve)
-    def evolve(self, opt_params, weights, biases, dWeights, dBiases):
-        self.opt_params.set(opt_params)
-        self.weights.set(weights)
-        self.biases.set(biases)
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
-
+    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dWeights", "dBiases"])
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         return (
@@ -278,19 +273,6 @@ class HebbianPatchedSynapse(PatchedSynapse):
             jnp.zeros(shape), # dW
             jnp.zeros(shape[1]), # db
         )
-
-
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dWeights, dBiases):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
-
-
 
 
     @classmethod
