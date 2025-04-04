@@ -50,6 +50,7 @@ from .synapses.convolution.hebbianDeconvSynapse import HebbianDeconvSynapse
 from .synapses.convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 ## point to modulated component types
 from .synapses.modulated.MSTDPETSynapse import MSTDPETSynapse
+from .synapses.modulated.REINFORCESynapse import REINFORCESynapse
 
 ## point to monitors
 from .monitor import Monitor

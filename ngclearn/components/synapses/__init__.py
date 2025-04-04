@@ -27,6 +27,7 @@ from .convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 
 ## modulated synaptic components
 from .modulated.MSTDPETSynapse import MSTDPETSynapse
+from .modulated.REINFORCESynapse import REINFORCESynapse
 
 ## patched synaptic components
 from .patched.patchedSynapse import PatchedSynapse

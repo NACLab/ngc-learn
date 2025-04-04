@@ -4,7 +4,7 @@ from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components.synapses.hebbian.REINFORCESynapse import REINFORCESynapse
+from ngclearn.components.synapses.modulated.REINFORCESynapse import REINFORCESynapse
 from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
@@ -51,5 +51,5 @@ def test_REINFORCESynapse1():
     # assert_array_equal(a.dWeights.value, truth)
     print(a.dWeights.value)
 
-# test_REINFORCESynapse1()
+#test_REINFORCESynapse1()
 
