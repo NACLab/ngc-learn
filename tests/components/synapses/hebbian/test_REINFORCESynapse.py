@@ -16,6 +16,7 @@ from ngcsimlib.context import Context
 def test_REINFORCESynapse1():
     name = "reinforce_ctx"
     ## create seeding keys
+    np.random.seed(42)
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
