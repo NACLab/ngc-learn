@@ -128,14 +128,12 @@ class HebbianSynapse(DenseSynapse):
         prior: a kernel to drive prior of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             prior to use and 2nd element as a floating point number
-            calling the prior parameter lambda (Default: (None, 0.))
-            currently it supports "l1" or "lasso" or "l2" or "ridge" or "l1l2" or "elastic_net".
+            calling the prior parameter lambda (Default: ('constant', 0.))
+            currently it supports "l1"/"lasso"/"laplacian" or "l2"/"ridge"/"gaussian" or "l1l2"/"elastic_net".
             usage guide:
             prior = ('l1', 0.01) or prior = ('lasso', lmbda)
             prior = ('l2', 0.01) or prior = ('ridge', lmbda)
             prior = ('l1l2', (0.01, 0.01)) or prior = ('elastic_net', (lmbda, l1_ratio))
-
-
 
         sign_value: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
@@ -165,7 +163,7 @@ class HebbianSynapse(DenseSynapse):
     # Define Functions
     @deprecate_args(_rebind=False, w_decay='prior')
     def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
-                 w_bound=1., is_nonnegative=False, prior=(None, 0.), w_decay=0., sign_value=1.,
+                 w_bound=1., is_nonnegative=False, prior=("constant", 0.), w_decay=0., sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
                  resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
@@ -175,6 +173,8 @@ class HebbianSynapse(DenseSynapse):
             prior = ('l2', w_decay)
 
         prior_type, prior_lmbda = prior
+        if prior_type is None:
+            prior_type = "constant"
         ## synaptic plasticity properties and characteristics
         self.shape = shape
         self.Rscale = resist_scale
