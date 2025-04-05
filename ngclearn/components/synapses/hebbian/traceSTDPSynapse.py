@@ -81,6 +81,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.Aminus = A_minus ## LTD strength
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
+        self.w_eps = 0. ## w_eps = 0.01
 
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
@@ -113,6 +114,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         else:
             ## calculate post-synaptic term
             dWpost = jnp.matmul((x_pre - x_tar).T, post * Aplus)
+
             dWpre = 0.
             if Aminus > 0.:
                 ## calculate pre-synaptic term
@@ -124,7 +126,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     @transition(output_compartments=["weights", "dWeights"])
     @staticmethod
     def evolve(
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights, eta
+            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights, eta
     ):
         dWeights = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
@@ -132,8 +134,8 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         ## do a gradient ascent update/shift
         weights = weights + dWeights * eta
         ## enforce non-negativity
-        eps = 0.01 # 0.001
-        weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
+        #w_eps = 0. # 0.01 # 0.001
+        weights = jnp.clip(weights, w_eps, w_bound - w_eps)  # jnp.abs(w_bound))
         return weights, dWeights
 
     @transition(output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights"])

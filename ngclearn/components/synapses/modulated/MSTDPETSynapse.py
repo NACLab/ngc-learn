@@ -81,6 +81,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             name, shape, A_plus, A_minus, eta=eta, mu=mu, pretrace_target=pretrace_target, weight_init=weight_init,
             resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound, batch_size=batch_size, **kwargs
         )
+        self.w_eps = 0.
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
@@ -91,28 +92,23 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
     @transition(output_compartments=["weights", "dWeights", "eligibility"])
     @staticmethod
     def evolve(
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus, tau_elg, elg_decay, preSpike, postSpike, preTrace,
-            postTrace, weights, eta, modulator, eligibility
-    ):
-        ## compute local synaptic update (via STDP)
-        dW_dt = TraceSTDPSynapse._compute_update(
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
-        ) ## produce dW/dt (ODE for synaptic change dynamics)
+            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, tau_elg, elg_decay, preSpike, postSpike, preTrace,
+            postTrace, weights, dWeights, eta, modulator, eligibility
+    ):        
         if tau_elg > 0.: ## perform dynamics of M-STDP-ET
-            ## update eligibility trace given current local update
-            # dElg_dt = -eligibility * elg_decay + dW_dt * update_scale
-            # eligibility = eligibility + dElg_dt * dt/elg_tau
-            eligibility = eligibility * jnp.exp(-dt / tau_elg) * elg_decay + dW_dt
-        else: ## perform dynamics of M-STDP (no eligibility trace)
-            eligibility = dW_dt
-        ## Perform a trace/update times a modulatory signal (e.g., reward)
-        dWeights = eligibility * modulator
-
+            eligibility = eligibility * jnp.exp(-dt / tau_elg) * elg_decay + dWeights/tau_elg
+        else: ## otherwise, just do M-STDP
+            eligibility = dWeights ## dynamics of M-STDP had no eligibility tracing
         ## do a gradient ascent update/shift
-        weights = weights + dWeights * eta ## modulate update
-        ## enforce non-negativity
-        eps = 0.01
-        weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
+        weights = weights + eligibility * modulator * eta  ## do modulated update
+        dW_dt = TraceSTDPSynapse._compute_update( ## use Hebbian/STDP rule to obtain a non-modulated update
+            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
+        )
+        dWeights = dW_dt ## can think of this as eligibility at time t
+
+        #w_eps = 0. # 0.01
+        weights = jnp.clip(weights, w_eps, w_bound - w_eps)  # jnp.abs(w_bound))
+
         return weights, dWeights, eligibility
 
     @transition(
