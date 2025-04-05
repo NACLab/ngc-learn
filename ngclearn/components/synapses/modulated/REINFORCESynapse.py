@@ -15,7 +15,7 @@ class REINFORCESynapse(DenseSynapse):
 
     # Define Functions
     def __init__(
-            self, name, shape, eta=1e-4, weight_init=None, resist_scale=1., act_fx=None,
+            self, name, shape, eta=1e-4, decay=0.99, weight_init=None, resist_scale=1., act_fx=None,
             p_conn=1., w_bound=1., batch_size=1, **kwargs
     ):
         # This is because we have weights mu and weight log sigma
@@ -37,7 +37,8 @@ class REINFORCESynapse(DenseSynapse):
         self.rewards = Compartment(jnp.zeros((batch_size,))) # the normalized reward (r - r_hat), input compartment
         self.act_fx, self.dact_fx = create_function(act_fx if act_fx is not None else "identity")
         # self.seed = Component(seed)
-
+        self.accumulated_gradients = Compartment(jnp.zeros((input_dim, output_dim * 2)))
+        self.decay = decay
 
     @staticmethod
     def _compute_update(dt, inputs, rewards, act_fx, weights):
@@ -72,9 +73,9 @@ class REINFORCESynapse(DenseSynapse):
         # Finally, return metrics if needed
         return dW, objective, outputs
 
-    @transition(output_compartments=["weights", "dWeights", "objective", "outputs"])
+    @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients"])
     @staticmethod
-    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta):
+    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, decay, accumulated_gradients):
         dWeights, objective, outputs = REINFORCESynapse._compute_update(
             dt, inputs, rewards, act_fx, weights
         )
@@ -83,9 +84,10 @@ class REINFORCESynapse(DenseSynapse):
         ## enforce non-negativity
         eps = 0.01 # 0.001
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
-        return weights, dWeights, objective, outputs
+        accumulated_gradients = accumulated_gradients * decay + dWeights
+        return weights, dWeights, objective, outputs, accumulated_gradients
 
-    @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights"])
+    @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights", "accumulated_gradients"])
     @staticmethod
     def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
@@ -95,7 +97,8 @@ class REINFORCESynapse(DenseSynapse):
         objective = jnp.zeros(())
         rewards = jnp.zeros((batch_size,))
         dWeights = jnp.zeros(shape)
-        return inputs, outputs, objective, rewards, dWeights
+        accumulated_gradients = jnp.zeros((shape[0], shape[1] * 2))
+        return inputs, outputs, objective, rewards, dWeights, accumulated_gradients
 
     @classmethod
     def help(cls): ## component help function
@@ -110,8 +113,8 @@ class REINFORCESynapse(DenseSynapse):
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "outputs = [(W * Rscale) * inputs] ;"
-                            "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
+                # "dynamics": "outputs = [(W * Rscale) * inputs] ;"
+                #             "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
                 "hyperparameters": hyperparams}
         return info
 
