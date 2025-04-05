@@ -21,7 +21,7 @@ def test_MSTDPETSynapse1():
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
         a = MSTDPETSynapse(
-            name="a", shape=(1,1), A_plus=1., A_minus=1., eta=0., key=subkeys[0]
+            name="a", shape=(1,1), A_plus=1., A_minus=1., eta=0.1, key=subkeys[0]
         )
 
         #"""
@@ -49,7 +49,7 @@ def test_MSTDPETSynapse1():
         ctx.add_command(wrap_command(jit(ctx.evolve)), name="adapt")
         """
 
-    a.weights.set(jnp.ones((1, 1)))
+    a.weights.set(jnp.ones((1, 1)) * 0.75)
 
     in_spike = jnp.ones((1, 1))
     in_trace = jnp.ones((1, 1,)) * 1.25
@@ -58,6 +58,7 @@ def test_MSTDPETSynapse1():
     r_neg = -jnp.ones((1, 1))
     r_pos = jnp.ones((1, 1))
 
+    #print(a.weights.value)
     ctx.reset()
     a.preSpike.set(in_spike * 0)
     a.preTrace.set(in_trace)
@@ -66,8 +67,9 @@ def test_MSTDPETSynapse1():
     a.modulator.set(r_pos)
     ctx.run(t=1. * dt, dt=dt)
     ctx.adapt(t=1. * dt, dt=dt)
-    #print(a.dWeights.value)
-    assert_array_equal(a.dWeights.value, jnp.array([[1.25]]))
+    ctx.adapt(t=1. * dt, dt=dt)
+    #print(a.weights.value)
+    assert_array_equal(a.weights.value, jnp.array([[0.875]]))
 
     ctx.reset()
     a.preSpike.set(in_spike * 0)
@@ -77,7 +79,8 @@ def test_MSTDPETSynapse1():
     a.modulator.set(r_neg)
     ctx.run(t=1. * dt, dt=dt)
     ctx.adapt(t=1. * dt, dt=dt)
-    #print(a.dWeights.value)
-    assert_array_equal(a.dWeights.value, jnp.array([[-1.25]]))
+    ctx.adapt(t=1. * dt, dt=dt)
+    #print(a.weights.value)
+    assert_array_equal(a.weights.value, jnp.array([[0.75]]))
 
-#test_MSTDPETSynapse1()
+test_MSTDPETSynapse1()
