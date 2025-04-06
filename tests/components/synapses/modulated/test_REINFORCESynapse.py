@@ -101,4 +101,4 @@ def test_REINFORCESynapse1():
         atol=1e-8
     ) # NOTE: gradient is not exact due to different gradient computation, we need to inspect more closely
 
-test_REINFORCESynapse1()
+# test_REINFORCESynapse1()
