@@ -10,6 +10,11 @@ from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import create_function
 
+def gaussian_logpdf(event, mean, stddev):
+    scale_sqrd = stddev ** 2
+    log_normalizer = jnp.log(2 * jnp.pi * scale_sqrd)
+    quadratic = (jax.lax.stop_gradient(event - 2 * mean) + mean)**2 / scale_sqrd
+    return - 0.5 * (log_normalizer + quadratic)
 
 class REINFORCESynapse(DenseSynapse):
 
@@ -39,6 +44,8 @@ class REINFORCESynapse(DenseSynapse):
         # self.seed = Component(seed)
         self.accumulated_gradients = Compartment(jnp.zeros((input_dim, output_dim * 2)))
         self.decay = decay
+        self.step_count = Compartment(jnp.zeros(()))
+        self.learning_mask = Compartment(jnp.zeros(()))
 
     @staticmethod
     def _compute_update(dt, inputs, rewards, act_fx, weights):
@@ -53,41 +60,44 @@ class REINFORCESynapse(DenseSynapse):
         sample = epsilon * std + mean
         outputs = sample # the actual action that we take
         # Compute log probability density of the Gaussian
-        log_prob = -0.5 * jnp.log(2 * jnp.pi) - logstd - 0.5 * ((sample - mean) / std) ** 2
+        log_prob = gaussian_logpdf(sample, mean, std)
         log_prob = log_prob.sum(-1)
         # Compute objective (negative REINFORCE objective)
         objective = (-log_prob * rewards).mean() * 1e-2
         # Backward pass
         # Compute gradients manually based on the derivation
-        # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * (sample-mu)/sigma^2
-        dlog_prob_dmean = (sample - mean) / (std ** 2)
+        # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
+        dlog_prob_dmean = -(sample - mean) / (std ** 2)
         # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
         dlog_prob_dlogstd = ((sample - mean) / std) ** 2 - 1.0
         # Compute gradients with respect to weights
         # Using chain rule: dL/dW_mu = dL/dmu * dmu/dW_mu = dL/dmu * activation^T
         # Similarly for W_logstd
-        dL_dWmu = activation.T @ (-rewards[:, None] * dlog_prob_dmean) * 1e-2
-        dL_dWlstd = activation.T @ (-rewards[:, None] * dlog_prob_dlogstd) * 1e-2
+        # Gradient ascent instead of descent
+        dL_dWmu = activation.T @ (rewards[:, None] * dlog_prob_dmean) * 1e-2
+        dL_dWlstd = activation.T @ (rewards[:, None] * dlog_prob_dlogstd) * 1e-2
         # Update weights
         dW = jnp.concatenate([dL_dWmu, dL_dWlstd], axis=-1)
         # Finally, return metrics if needed
         return dW, objective, outputs
 
-    @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients"])
+    @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients", "step_count"])
     @staticmethod
-    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, decay, accumulated_gradients):
+    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, learning_mask, decay, accumulated_gradients, step_count):
         dWeights, objective, outputs = REINFORCESynapse._compute_update(
             dt, inputs, rewards, act_fx, weights
         )
         ## do a gradient ascent update/shift
-        weights = weights + dWeights * eta
+        weights = (weights + dWeights * eta) * learning_mask + weights * (1.0 - learning_mask) # update the weights only where learning_mask is 1.0
         ## enforce non-negativity
-        eps = 0.01 # 0.001
+        eps = 0.0 # 0.01 # 0.001
         weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
-        accumulated_gradients = accumulated_gradients * decay + dWeights
-        return weights, dWeights, objective, outputs, accumulated_gradients
+        step_count += 1
+        accumulated_gradients = (step_count - 1) / step_count * accumulated_gradients * decay + 1.0 / step_count * dWeights # EMA update of accumulated gradients
+        step_count = step_count * (1 - learning_mask) # reset the step count to 0 when we have learned
+        return weights, dWeights, objective, outputs, accumulated_gradients, step_count
 
-    @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights", "accumulated_gradients"])
+    @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights", "accumulated_gradients", "step_count"])
     @staticmethod
     def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
@@ -98,7 +108,8 @@ class REINFORCESynapse(DenseSynapse):
         rewards = jnp.zeros((batch_size,))
         dWeights = jnp.zeros(shape)
         accumulated_gradients = jnp.zeros((shape[0], shape[1] * 2))
-        return inputs, outputs, objective, rewards, dWeights, accumulated_gradients
+        step_count = jnp.zeros(())
+        return inputs, outputs, objective, rewards, dWeights, accumulated_gradients, step_count
 
     @classmethod
     def help(cls): ## component help function
