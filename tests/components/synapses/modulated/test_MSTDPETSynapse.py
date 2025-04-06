@@ -83,4 +83,4 @@ def test_MSTDPETSynapse1():
     #print(a.weights.value)
     assert_array_equal(a.weights.value, jnp.array([[0.75]]))
 
-test_MSTDPETSynapse1()
+#test_MSTDPETSynapse1()
