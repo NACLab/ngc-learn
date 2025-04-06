@@ -67,6 +67,8 @@ class REINFORCESynapse(DenseSynapse):
         # Backward pass
         # Compute gradients manually based on the derivation
         # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
+        # -(sample - mean) instead of (sample - mean) because we are doing straight-through gradient in the log_prob function
+        # therefore, computation including the mean in such function does not contribute to the gradient
         dlog_prob_dmean = -(sample - mean) / (std ** 2)
         # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
         dlog_prob_dlogstd = ((sample - mean) / std) ** 2 - 1.0

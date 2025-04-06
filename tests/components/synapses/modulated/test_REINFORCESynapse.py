@@ -24,10 +24,11 @@ def test_REINFORCESynapse1():
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
+    decay = 0.99
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
         a = REINFORCESynapse(
-            name="a", shape=(1,1), act_fx="tanh", key=subkeys[0]
+            name="a", shape=(1,1), decay=decay, act_fx="tanh", key=subkeys[0]
         )
 
         evolve_process = (Process() >> a.evolve)
@@ -48,27 +49,9 @@ def test_REINFORCESynapse1():
         def clamp_weights(x):
             a.weights.set(x)
 
-    # a.weights.set(jnp.ones((1, 1)) * 0.1)
-
-    ## check pre-synaptic STDP only
-    # truth = jnp.array([[1.25]])
-    np.random.seed(42)
-    ctx.reset()
-    clamp_weights(jnp.ones((1, 2)) * 2)
-    clamp_rewards(jnp.ones((1, 1)) * 3)
-    clamp_inputs(jnp.ones((1, 1)) * 0.5)
-    ctx.adapt(t=1., dt=dt)
-    # assert_array_equal(a.dWeights.value, truth)
-    print(f"weights: {a.weights.value}")
-    print(f"dWeights: {a.dWeights.value}")
-    print(f"step_count: {a.step_count.value}")
-    print(f"accumulated_gradients: {a.accumulated_gradients.value}")
-    print(f"objective: {a.objective.value}")
-
-    np.random.seed(42)
-    # JAX Grad output
+    # Function definition
     _act = jax.nn.tanh
-    def fn(params: dict, inputs: jax.Array, outputs: jax.Array, seed):
+    def fn(params: dict, inputs: jax.Array, outputs: jax.Array):
         W_mu, W_logstd = params
         activation = _act(inputs)
         mean = activation @ W_mu
@@ -81,24 +64,111 @@ def test_REINFORCESynapse1():
         return (-logp * outputs).mean() * 1e-2
     grad_fn = jax.value_and_grad(fn)
 
-    weights_mu = jnp.ones((1, 1)) * 2
-    weights_logstd = jnp.ones((1, 1)) * 2
-    inputs = jnp.ones((1, 1)) * 0.5
-    outputs = jnp.ones((1, 1)) * 3 # reward
-    objective, grads = grad_fn(
-        (weights_mu, weights_logstd),
+    # Some setups
+    expected_weights_mu = jnp.asarray([[0.13]])
+    expected_weights_logstd = jnp.asarray([[0.04]])
+    expected_weights = jnp.concatenate([expected_weights_mu, expected_weights_logstd], axis=-1)
+    initial_ngclearn_weights = jnp.concatenate([expected_weights_mu, expected_weights_logstd], axis=-1)[None]
+    expected_gradient_list = []
+    ctx.reset()
+
+    # Loop through 3 steps
+    step = 1
+    # ---------------- Step {step} --------------------
+    print(f"------------ [Step {step}] ------------")
+    inputs = -1**step * jnp.ones((1, 1)) / 10  # * 0.5 * step / 10.0
+    outputs = -1**step * jnp.ones((1, 1)) / 10 # * 3 * step / 10.0# reward
+    # --------- ngclearn ---------
+    clamp_weights(initial_ngclearn_weights)
+    clamp_rewards(outputs)
+    clamp_inputs(inputs)
+    np.random.seed(42)
+    ctx.adapt(t=1., dt=dt)
+    print(f"[ngclearn] objective: {a.objective.value}")
+    print(f"[ngclearn] weights: {a.weights.value}")
+    print(f"[ngclearn] dWeights: {a.dWeights.value}")
+    print(f"[ngclearn] step_count: {a.step_count.value}")
+    print(f"[ngclearn] accumulated_gradients: {a.accumulated_gradients.value}")
+    # -------- Expectation ---------
+    print("--------------")
+    np.random.seed(42)
+    expected_objective, expected_grads = grad_fn(
+        (expected_weights_mu, expected_weights_logstd),
         inputs,
         outputs,
-        jax.random.key(42)
     )
-    print(f"expected grads: {grads}")
-    print(f"expected objective: {objective}")
+    # NOTE: Viet: negate the gradient because gradient in ngc-learn
+    #   is gradient ascent, while gradient in JAX is gradient descent
+    expected_grads = -jnp.concatenate([expected_grads[0], expected_grads[1]], axis=-1)
+    expected_gradient_list.append(expected_grads)
+    print(f"[Expectation] expected_weights: {expected_weights}")
+    print(f"[Expectation] dWeights: {expected_grads}")
+    print(f"[Expectation] objective: {expected_objective}")
     np.testing.assert_allclose(
         a.dWeights.value[0],
-        # NOTE: Viet: negate the gradient because gradient in ngc-learn
-        #   is gradient ascent, while gradient in JAX is gradient descent
-        -jnp.concatenate([grads[0], grads[1]], axis=-1),
+        expected_grads,
         atol=1e-8
-    ) # NOTE: gradient is not exact due to different gradient computation, we need to inspect more closely
+    )
+    np.testing.assert_allclose(
+        a.objective.value,
+        expected_objective,
+        atol=1e-8
+    )
+    print()
 
-# test_REINFORCESynapse1()
+
+    step = 2
+    # ---------------- Step {step} --------------------
+    print(f"------------ [Step {step}] ------------")
+    inputs = -1**step * jnp.ones((1, 1)) / 10  # * 0.5 * step / 10.0
+    outputs = -1**step * jnp.ones((1, 1)) / 10 # * 3 * step / 10.0# reward
+    # --------- ngclearn ---------
+    clamp_weights(initial_ngclearn_weights)
+    clamp_rewards(outputs)
+    clamp_inputs(inputs)
+    np.random.seed(43)
+    ctx.adapt(t=1., dt=dt)
+    print(f"[ngclearn] objective: {a.objective.value}")
+    print(f"[ngclearn] weights: {a.weights.value}")
+    print(f"[ngclearn] dWeights: {a.dWeights.value}")
+    print(f"[ngclearn] step_count: {a.step_count.value}")
+    print(f"[ngclearn] accumulated_gradients: {a.accumulated_gradients.value}")
+    # -------- Expectation ---------
+    print("--------------")
+    np.random.seed(43)
+    expected_objective, expected_grads = grad_fn(
+        (expected_weights_mu, expected_weights_logstd),
+        inputs,
+        outputs,
+    )
+    # NOTE: Viet: negate the gradient because gradient in ngc-learn
+    #   is gradient ascent, while gradient in JAX is gradient descent
+    expected_grads = -jnp.concatenate([expected_grads[0], expected_grads[1]], axis=-1)
+    expected_gradient_list.append(expected_grads)
+    print(f"[Expectation] expected_weights: {expected_weights}")
+    print(f"[Expectation] dWeights: {expected_grads}")
+    print(f"[Expectation] objective: {expected_objective}")
+    np.testing.assert_allclose(
+        a.dWeights.value[0],
+        expected_grads,
+        atol=1e-8
+    )
+    np.testing.assert_allclose(
+        a.objective.value,
+        expected_objective,
+        atol=1e-8
+    )
+    print()
+
+    # Finally, check if the accumulated gradients are correct
+    decay_list = jnp.asarray([decay**1, decay**0])
+    expected_accumulated_gradients = jnp.mean(jnp.stack(expected_gradient_list, 0) * decay_list[:, None, None], axis=0)
+    np.testing.assert_allclose(
+        a.accumulated_gradients.value[0],
+        expected_accumulated_gradients,
+        atol=1e-8
+    )
+
+
+test_REINFORCESynapse1()
+
