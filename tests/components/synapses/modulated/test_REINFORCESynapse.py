@@ -31,10 +31,10 @@ def test_REINFORCESynapse1():
             name="a", shape=(1,1), decay=decay, act_fx="tanh", key=subkeys[0]
         )
 
-        evolve_process = (Process() >> a.evolve)
+        evolve_process = (Process("evolve_proc") >> a.evolve)
         ctx.wrap_and_add_command(jit(evolve_process.pure), name="adapt")
 
-        reset_process = (Process() >> a.reset)
+        reset_process = (Process("reset_proc") >> a.reset)
         ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
         @Context.dynamicCommand
@@ -170,5 +170,5 @@ def test_REINFORCESynapse1():
     )
 
 
-test_REINFORCESynapse1()
+#test_REINFORCESynapse1()
 

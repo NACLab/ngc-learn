@@ -27,11 +27,11 @@ def test_rewardErrorCell():
       name="a", n_units=1, alpha=alpha, ema_window_len=10, 
       use_online_predictor=True, batch_size=1
     )
-    advance_process = (Process() >> a.advance_state)
+    advance_process = (Process("advance_proc") >> a.advance_state)
     ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-    reset_process = (Process() >> a.reset)
+    reset_process = (Process("reset_proc") >> a.reset)
     ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-    evolve_process = (Process() >> a.evolve)
+    evolve_process = (Process("evolve_proc") >> a.evolve)
     ctx.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
     # reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
