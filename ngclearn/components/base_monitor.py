@@ -1,10 +1,10 @@
 import json
 
-from ngclearn import Component, Compartment
+from ngclearn import Component, Compartment, transition
 from ngclearn import numpy as np
-#from ngcsimlib.utils import add_component_resolver, add_resolver_meta, \
 from ngcsimlib.utils import get_current_path
 from ngcsimlib.logger import warn, critical
+
 import matplotlib.pyplot as plt
 
 
@@ -44,9 +44,8 @@ class Base_Monitor(Component):
     """
     auto_resolve = False
 
-
     @staticmethod
-    def build_advance(compartments):
+    def _record_internal(compartments):
         """
         A method to build the method to advance the stored values.
 
@@ -61,8 +60,9 @@ class Base_Monitor(Component):
             "monitor found in ngclearn.components or "
             "ngclearn.components.lava (If using lava)")
 
+    @transition(None, True)
     @staticmethod
-    def build_reset(component):
+    def reset(component):
         """
         A method to build the method to reset the stored values.
         Args:
@@ -87,15 +87,16 @@ class Base_Monitor(Component):
         # pure func, output compartments, args, params, input compartments
         return _reset, output_compartments, [], [], output_compartments
 
+    @transition(None, True)
     @staticmethod
-    def build_advance_state(component):
+    def record(component):
         output_compartments = []
         compartments = []
         for comp in component.compartments:
             output_compartments.append(comp.split("/")[-1] + "*store")
             compartments.append(comp.split("/")[-1])
 
-        _advance = component.build_advance(compartments)
+        _advance = component._record_internal(compartments)
 
         return _advance, output_compartments, [], [], compartments + output_compartments
 
@@ -124,8 +125,15 @@ class Base_Monitor(Component):
         """
         cs, end = self._add_path(compartment.path)
 
-        dtype = compartment.value.dtype
-        shape = compartment.value.shape
+        if hasattr(compartment.value, "dtype"):
+            dtype = compartment.value.dtype
+        else:
+            dtype = type(compartment.value)
+
+        if hasattr(compartment.value, "shape"):
+            shape = compartment.value.shape
+        else:
+            shape = (1,)
         new_comp = Compartment(np.zeros(shape, dtype=dtype))
         new_comp_store = Compartment(np.zeros((window_length, *shape), dtype=dtype))
 

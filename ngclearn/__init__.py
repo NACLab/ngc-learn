@@ -36,6 +36,7 @@ from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.resolver import resolver
 from ngcsimlib import utils as sim_utils
+from ngcsimlib.compilers.process import Process, transition
 
 
 from ngcsimlib import configure, preload_modules
