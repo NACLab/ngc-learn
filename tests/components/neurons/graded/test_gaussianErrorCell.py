@@ -25,9 +25,9 @@ def test_gaussianErrorCell():
     a = GaussianErrorCell(
       name="a", n_units=1, batch_size=1, sigma=1.0, shape=None
     )
-    advance_process = (Process() >> a.advance_state)
+    advance_process = (Process("advance_proc") >> a.advance_state)
     ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-    reset_process = (Process() >> a.reset)
+    reset_process = (Process("reset_proc") >> a.reset)
     ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
     # reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")

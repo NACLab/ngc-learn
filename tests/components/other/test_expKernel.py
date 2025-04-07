@@ -25,11 +25,11 @@ def test_expKernel1():
             name="a", n_units=1, dt=1., tau_w=500., nu=4., key=subkeys[0]
         )
 
-        advance_process = (Process()
+        advance_process = (Process("advance_proc")
                            >> a.advance_state)
         ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
-        reset_process = (Process()
+        reset_process = (Process("reset_proc")
                          >> a.reset)
         ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 

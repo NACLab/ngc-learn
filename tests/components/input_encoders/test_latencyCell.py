@@ -29,13 +29,13 @@ def test_latencyCell1():
         )
 
         ## create and compile core simulation commands
-        advance_process = (Process()
+        advance_process = (Process("advance_proc")
                            >> a.advance_state)
         ctx.wrap_and_add_command(jit(advance_process.pure), name="advance")
-        calc_spike_times_process = (Process()
+        calc_spike_times_process = (Process("calc_sptimes_proc")
                                     >> a.calc_spike_times)
         ctx.wrap_and_add_command(jit(calc_spike_times_process.pure), name="calc_spike_times")
-        reset_process = (Process()
+        reset_process = (Process("reset_proc")
                          >> a.reset)
         ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
