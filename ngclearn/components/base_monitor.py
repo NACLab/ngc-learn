@@ -45,6 +45,14 @@ class Base_Monitor(Component):
     auto_resolve = False
 
     @staticmethod
+    def build_reset(component):
+        return Base_Monitor.reset(component)
+
+    @staticmethod
+    def build_advance_state(component):
+        return Base_Monitor.record(component)
+
+    @staticmethod
     def _record_internal(compartments):
         """
         A method to build the method to advance the stored values.
