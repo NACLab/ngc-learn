@@ -284,7 +284,7 @@ class Base_Monitor(Component):
                 setattr(self, compartment_path, new_comp)
                 self.compartments.append(new_comp.path)
 
-            self._update_resolver()
+            # self._update_resolver()
 
     def make_plot(self, compartment, ax=None, ylabel=None, xlabel=None, title=None, n=None, plot_func=None):
         vals = self.view(compartment)
