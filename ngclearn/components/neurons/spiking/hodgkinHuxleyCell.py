@@ -5,7 +5,7 @@ from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
+                                            step_euler, step_rk2, step_rk4
 
 from ngcsimlib.compilers.process import transition
 #from ngcsimlib.component import Component
@@ -104,10 +104,11 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
             (Default: 0 mV)
 
         integration_type: type of integration to use for this cell's dynamics;
-            current supported forms include "euler" (Euler/RK-1 integration)
-            and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
+            current supported forms include "euler" (Euler/RK-1 integration), 
+            "midpoint" or "rk2" (midpoint method/RK-2 integration), or 
+            "rk4" (RK-4 integration) (Default: "euler")
 
-            :Note: setting the integration type to the midpoint method will
+            :Note: setting the integration type to the midpoint or rk4 method will
                 increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
     """
@@ -158,12 +159,18 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
         _j = j * R_m
         alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = _calc_biophysical_constants(v)
         ## integrate voltage / membrane potential
-        if intgFlag == 1:
+        if intgFlag == 1: ## midpoint method
             _, _v = step_rk2(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
             ## next, integrate different channels
             _, _n = step_rk2(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
             _, _m = step_rk2(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
             _, _h = step_rk2(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
+        elif intgFlag == 4: ## Runge-Kutta 4th order
+             _, _v = step_rk4(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
+            ## next, integrate different channels
+            _, _n = step_rk4(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
+            _, _m = step_rk4(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
+            _, _h = step_rk4(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
         else:  # integType == 0 (default -- Euler)
             _, _v = step_euler(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
             ## next, integrate different channels
