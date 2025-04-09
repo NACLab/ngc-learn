@@ -155,7 +155,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
         else:
             _, _v = step_euler(0., v, _dfv, dt, v_params)
         ## obtain action potentials/spikes
-        s = (_v > thr).astype(jnp.float32)
+        s = (_v > thr) * 1.
         ## update refractory variables
         rfr = (rfr + dt) * (1. - s)
         ## perform hyper-polarization of neuronal cells
