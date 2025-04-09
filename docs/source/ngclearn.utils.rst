@@ -32,6 +32,14 @@ ngclearn.utils.io\_utils module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.jaxProcess module
+--------------------------------
+
+.. automodule:: ngclearn.utils.jaxProcess
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.metric\_utils module
 -----------------------------------
 

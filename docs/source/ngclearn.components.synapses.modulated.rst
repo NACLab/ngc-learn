@@ -12,6 +12,14 @@ ngclearn.components.synapses.modulated.MSTDPETSynapse module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.synapses.modulated.REINFORCESynapse module
+--------------------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.modulated.REINFORCESynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

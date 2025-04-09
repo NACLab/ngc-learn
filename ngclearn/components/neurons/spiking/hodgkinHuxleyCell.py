@@ -166,7 +166,7 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
             _, _m = step_rk2(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
             _, _h = step_rk2(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
         elif intgFlag == 4: ## Runge-Kutta 4th order
-             _, _v = step_rk4(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
+            _, _v = step_rk4(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
             ## next, integrate different channels
             _, _n = step_rk4(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
             _, _m = step_rk4(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
