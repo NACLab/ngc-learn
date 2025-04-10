@@ -47,6 +47,7 @@ work towards more advanced concepts.
   fitzhugh_nagumo_cell
   izhikevich_cell
   adex_cell
+  hodgkin_huxley_cell
 
 .. toctree::
   :maxdepth: 1

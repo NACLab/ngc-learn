@@ -94,13 +94,11 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
     def evolve(
             dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, tau_elg, elg_decay, preSpike, postSpike, preTrace,
             postTrace, weights, dWeights, eta, modulator, eligibility
-    ):  
-        '''
-        dW_dt = TraceSTDPSynapse._compute_update( ## use Hebbian/STDP rule to obtain a non-modulated update
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
-        )
-        dWeights = dW_dt ## can think of this as eligibility at time t
-        '''
+    ):
+        # dW_dt = TraceSTDPSynapse._compute_update( ## use Hebbian/STDP rule to obtain a non-modulated update
+        #     dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
+        # )
+        # dWeights = dW_dt ## can think of this as eligibility at time t
 
         if tau_elg > 0.: ## perform dynamics of M-STDP-ET
             eligibility = eligibility * jnp.exp(-dt / tau_elg) * elg_decay + dWeights/tau_elg
