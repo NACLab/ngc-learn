@@ -11,6 +11,7 @@ While building our dynamical system we will set up a Context and then add the th
 from jax import numpy as jnp, random
 from ngclearn import Context
 from ngclearn.utils import JaxProcess
+from ngcsimlib.compilers.process import Process
 from ngclearn.components import RateCell, HebbianSynapse
 import ngclearn.utils.weight_distribution as dist
 

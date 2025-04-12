@@ -58,7 +58,7 @@ with Context("Circuit") as circuit:
   circuit.wrap_and_add_command(jit(advance_process.pure), name="advance")
   
   reset_process = (JaxProcess()
-                 >> a.reset)
+                   >> a.reset)
   circuit.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
   ## set up non-compiled utility commands

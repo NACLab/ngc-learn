@@ -8,8 +8,6 @@ from numpy.testing import assert_array_equal
 
 from ngcsimlib.compilers.process import Process, transition
 from ngclearn.utils import JaxProcess
-#from ngcsimlib.component import Component
-#from ngcsimlib.compartment import Compartment
 from ngcsimlib.context import Context
 #from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
