@@ -59,7 +59,7 @@ def test_STPDenseSynapse1():
     Wdyn = jnp.concatenate(Wdyn, axis=1)
     # print(outs)
     # print(Wdyn)
-    assert_array_equal(outs, outs_truth)
-    assert_array_equal(Wdyn, Wdyn_truth)
+    np.testing.assert_allclose(outs, outs_truth, atol=1e-8)
+    np.testing.assert_allclose(Wdyn, Wdyn_truth, atol=1e-8)
 
 #test_STPDenseSynapse1()

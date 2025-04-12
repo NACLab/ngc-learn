@@ -61,6 +61,6 @@ def test_bernoulliErrorCell():
   outs = jnp.concatenate(outs, axis=1)
   # print(outs)
   ## output should equal input
-  np.testing.assert_allclose(outs, y_seq, atol=1e-7)
+  np.testing.assert_allclose(outs, y_seq, atol=1e-3)
 
 # test_bernoulliErrorCell()

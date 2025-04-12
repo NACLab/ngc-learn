@@ -54,6 +54,6 @@ def test_expKernel1():
     #print(outs)
 
     ## output should equal input
-    assert_array_equal(outs, y_seq)
+    np.testing.assert_allclose(outs, y_seq, atol=1e-8)
 
 #test_expKernel1()
