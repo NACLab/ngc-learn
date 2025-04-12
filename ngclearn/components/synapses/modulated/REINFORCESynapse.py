@@ -60,12 +60,14 @@ class REINFORCESynapse(DenseSynapse):
         batch_size: batch size dimension of this component (Default: 1)
 
         seed: random seed for reproducibility (Default: 42)
+
+        mu_act_fx: activation function to apply to the mean of the Gaussian distribution (Default: "identity")
     """
 
     # Define Functions
     def __init__(
             self, name, shape, eta=1e-4, decay=0.99, weight_init=None, resist_scale=1., act_fx=None,
-            p_conn=1., w_bound=1., batch_size=1, seed=None, **kwargs
+            p_conn=1., w_bound=1., batch_size=1, seed=None, mu_act_fx=None, **kwargs
     ) -> None:
         # This is because we have weights mu and weight log sigma
         input_dim, output_dim = shape
@@ -77,6 +79,9 @@ class REINFORCESynapse(DenseSynapse):
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
         self.eta = eta ## learning rate
+        # self.out_min = out_min
+        # self.out_max = out_max
+        self.mu_act_fx, self.dmu_act_fx = create_function(mu_act_fx if mu_act_fx is not None else "identity")
 
         ## Compartment setup
         self.dWeights = Compartment(self.weights.value * 0)
@@ -92,21 +97,22 @@ class REINFORCESynapse(DenseSynapse):
         self.seed = Compartment(jax.random.PRNGKey(seed if seed is not None else 42))
 
     @staticmethod
-    def _compute_update(dt, inputs, rewards, act_fx, weights, seed):
+    def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx):
         # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
         W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
         # Forward pass
         activation = act_fx(inputs)
         mean = activation @ W_mu
+        fx_mean = mu_act_fx(mean)
         logstd = activation @ W_logstd
         clip_logstd = jnp.clip(logstd, -10.0, 2.0)
         std = jnp.exp(clip_logstd)
         # Sample using reparameterization trick
-        epsilon = jax.random.normal(seed, mean.shape)
-        sample = epsilon * std + mean
+        epsilon = jax.random.normal(seed, fx_mean.shape)
+        sample = epsilon * std + fx_mean
         outputs = sample # the actual action that we take
         # Compute log probability density of the Gaussian
-        log_prob = gaussian_logpdf(sample, mean, std).sum(-1)
+        log_prob = gaussian_logpdf(sample, fx_mean, std).sum(-1)
         # Compute objective (negative REINFORCE objective)
         objective = (-log_prob * rewards).mean() * 1e-2
 
@@ -116,12 +122,12 @@ class REINFORCESynapse(DenseSynapse):
 
         # Compute gradients manually based on the derivation
         # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
-        dlog_prob_dmean = (sample - mean) / (std ** 2)
-        dL_dmean = dL_dlogp * dlog_prob_dmean # (B, A)
+        dlog_prob_dfxmean = (sample - fx_mean) / (std ** 2)
+        dL_dmean = dL_dlogp * dlog_prob_dfxmean * dmu_act_fx(mean) # (B, A)
         dL_dWmu = activation.T @ dL_dmean
 
         # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
-        dlog_prob_dlogstd = - 1.0 / std + (sample - mean)**2 / std**3
+        dlog_prob_dlogstd = - 1.0 / std + (sample - fx_mean)**2 / std**3
         dL_dstd = dL_dlogp * dlog_prob_dlogstd
         # Apply gradient clipping for logstd
         dL_dlogstd = jnp.where(
@@ -138,10 +144,10 @@ class REINFORCESynapse(DenseSynapse):
 
     @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients", "step_count", "seed"])
     @staticmethod
-    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, learning_mask, decay, accumulated_gradients, step_count, seed):
+    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, learning_mask, decay, accumulated_gradients, step_count, seed, mu_act_fx, dmu_act_fx):
         main_seed, sub_seed = jax.random.split(seed)
         dWeights, objective, outputs = REINFORCESynapse._compute_update(
-            dt, inputs, rewards, act_fx, weights, sub_seed
+            dt, inputs, rewards, act_fx, weights, sub_seed, mu_act_fx, dmu_act_fx
         )
         ## do a gradient ascent update/shift
         weights = (weights + dWeights * eta) * learning_mask + weights * (1.0 - learning_mask) # update the weights only where learning_mask is 1.0
@@ -199,12 +205,13 @@ class REINFORCESynapse(DenseSynapse):
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "w_bound": "Upper bound for weight clipping",
             "batch_size": "Batch size dimension of this component",
-            "seed": "Random seed for reproducibility"
+            "seed": "Random seed for reproducibility",
+            "mu_act_fx": "Activation function to apply to the mean of the Gaussian distribution"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "mean = act_fx(inputs) @ W_mu; logstd = act_fx(inputs) @ W_logstd; "
-                            "outputs ~ N(mean, exp(logstd)); "
+                "dynamics": "mean = act_fx(inputs) @ W_mu; fx_mean = mu_act_fx(mean); logstd = act_fx(inputs) @ W_logstd; "
+                            "outputs ~ N(fx_mean, exp(logstd)); "
                             "dW = -grad_reinforce(rewards, log_prob(outputs)). ",
                             "Check compute_update() for more details."
                 "hyperparameters": hyperparams}
