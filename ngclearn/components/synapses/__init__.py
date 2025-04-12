@@ -8,7 +8,6 @@ from .STPDenseSynapse import STPDenseSynapse
 
 ## dense synaptic components
 from .hebbian.hebbianSynapse import HebbianSynapse
-from .hebbian.STDPSynapse import STDPSynapse
 from .hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .hebbian.eventSTDPSynapse import EventSTDPSynapse
@@ -28,6 +27,7 @@ from .convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 
 ## modulated synaptic components
 from .modulated.MSTDPETSynapse import MSTDPETSynapse
+from .modulated.REINFORCESynapse import REINFORCESynapse
 
 ## patched synaptic components
 from .patched.patchedSynapse import PatchedSynapse

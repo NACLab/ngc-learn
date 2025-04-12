@@ -657,7 +657,7 @@ def layer_normalize(x, shift=0., scale=1.):
 @jit
 def drop_out(dkey, data, rate=0.0):
     """
-    Applies a drop-out transform to an input matrix.
+    Applies a drop-out transform (i.e., a random number of elements will be dropped to zero) to an input matrix.
 
     Args:
         dkey: Jax randomness key for this operator
@@ -674,6 +674,14 @@ def drop_out(dkey, data, rate=0.0):
     mask = mask * (1.0 / (1.0 - rate)) ## apply inverted dropout scheme
     output = data * mask
     return output, mask
+
+@jit
+def clip(x, min_val, max_val):
+    return jnp.clip(x, min_val, max_val)
+
+@jit
+def d_clip(x, min_val, max_val):
+    return jnp.where((x < min_val) | (x > max_val), 0.0, 1.0)
 
 
 def scanner(fn):

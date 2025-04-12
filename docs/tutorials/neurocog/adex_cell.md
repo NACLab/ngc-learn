@@ -23,11 +23,9 @@ from jax import numpy as jnp, random, jit
 import numpy as np
 
 from ngclearn.utils.model_utils import scanner
-from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
+from ngcsimlib.compilers.process import Process
 ## import model-specific mechanisms
-from ngclearn.operations import summation
 from ngclearn.components.neurons.spiking.adExCell import AdExCell
 
 ## create seeding keys (JAX-style)
@@ -43,19 +41,20 @@ w0 = 0.  ## initial recovery value (for its reset condition)
 
 ## create simple system with only one AdEx
 with Context("Model") as model:
-    cell = AdExCell("z0", n_units=1, tau_m=15., resist_m=1., tau_w=400.,
-                    v_sharpness=2.,
-                    intrinsic_mem_thr=-55., v_thr=5., v_rest=-72., v_reset=-75.,
-                    a=0.1, b=0.75,
-                    v0=v0, w0=w0, integration_type="euler", key=subkeys[0])
+    cell = AdExCell(
+        "z0", n_units=1, tau_m=15., resist_m=1., tau_w=400., v_sharpness=2., 
+        intrinsic_mem_thr=-55., v_thr=5., v_rest=-72., v_reset=-75., a=0.1, 
+        b=0.75, v0=v0, w0=w0, integration_type="euler", key=subkeys[0]
+    )
 
     ## create and compile core simulation commands
-    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell,
-                                                     compile_key="advance_state")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    advance_process = (Process()
+                       >> cell.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
+    reset_process = (Process()
+                     >> cell.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
     ## set up non-compiled utility commands
     @Context.dynamicCommand
@@ -189,7 +188,7 @@ disk, like the ones below:
    +------------------------------------------------------------+------------------------------------------------------------+
 ```
 
-A useful note is that the `F-N` above used Euler integration to step through its
+A useful note is that the AdEx cell above used Euler integration to step through its
 dynamics (this is the default/base routine for all cell components in ngc-learn);
 however, one could configure it to use the midpoint method for integration
 by setting its argument `integration_type = rk2` in cases where more

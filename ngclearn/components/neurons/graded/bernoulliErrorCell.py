@@ -2,6 +2,8 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
+from ngclearn.utils.model_utils import sigmoid, d_sigmoid
+from ngcsimlib.compilers.process import transition
 
 class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -10,13 +12,13 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
     Bernoulli distribution.
 
     | --- Cell Input Compartments: ---
-    | p - predicted probability of positive trial (takes in external signals)
+    | p - predicted probability (or logits) of positive trial (takes in external signals)
     | target - desired/goal value (takes in external signals)
     | modulator - modulation signal (takes in optional external signals)
     | mask - binary/gating mask to apply to error neuron calculations
     | --- Cell Output Compartments: ---
     | L - local loss function embodied by this cell
-    | dp - derivative of L w.r.t. p
+    | dp - derivative of L w.r.t. p (or logits, if p = sigmoid(logits))
     | dtarget - derivative of L w.r.t. target
 
     Args:
@@ -26,8 +28,11 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
 
         batch_size: batch size dimension of this cell (Default: 1)
 
+        input_logits: if True, treats compartment `p` as logits and will apply a sigmoidal
+            link, i.e., _p = sigmoid(p), to obtain the param p for Bern(X=1; p)
+
     """
-    def __init__(self, name, n_units, batch_size=1, shape=None, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, input_logits=False, shape=None, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Layer Size Setup
@@ -39,6 +44,7 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.shape = shape
         self.n_units = n_units
         self.batch_size = batch_size
+        self.input_logits = input_logits
 
         ## Convolution shape setup
         self.width = self.height = n_units
@@ -46,64 +52,60 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         ## Compartment setup
         restVals = jnp.zeros(_shape)
         self.L = Compartment(0., display_name="Bernoulli Log likelihood", units="nats") # loss compartment
-        self.p = Compartment(restVals, display_name="Bernoulli prob for B(X=1; p)") # pos trial prob name. input wire
+        self.p = Compartment(restVals, display_name="Bernoulli param (prob or logit) for B(X=1; p)") # pos trial prob name. input wire
         self.dp = Compartment(restVals) # derivative of positive trial prob
         self.target = Compartment(restVals, display_name="Bernoulli data/target variable") # target. input wire
         self.dtarget = Compartment(restVals) # derivative target
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
+    @transition(output_compartments=["dp", "dtarget", "L", "mask"])
     @staticmethod
-    def _advance_state(dt, p, target, modulator, mask): ## compute Bernoulli error cell output
+    def advance_state(dt, p, target, modulator, mask, input_logits): ## compute Bernoulli error cell output
         # Moves Bernoulli error cell dynamics one step forward. Specifically, this routine emulates the error unit
         # behavior of the local cost functional
-        eps = 0.001
-        _p = jnp.clip(p, eps, 1. - eps) ## to prevent division by 0 later on
+        eps = 0.0001
+        _p = p
+        if input_logits: ## convert from "logits" to probs via sigmoidal link function
+            _p = sigmoid(p)
+        _p = jnp.clip(_p, eps, 1. - eps) ## post-process to prevent div by 0
         x = target
-        sum_x = jnp.sum(x) ## Sum^N_{n=1} x_n (n is n-th datapoint)
-        sum_1mx = jnp.sum(1. - x) ## Sum^N_{n=1} (1 - x_n)
-        log_p = jnp.log(_p) ## log(p)
-        log_1mp = jnp.log(1. - _p) ## log(1 - p)
-        L = log_p * sum_x + log_1mp * sum_1mx ## Bern LL
-        dL_dp = sum_x/log_p - sum_1mx/log_1mp ## d(Bern LL)/dp 
-        dL_dx = log_p - log_1mp ## d(Bern LL)/dx
+        #sum_x = jnp.sum(x) ## Sum^N_{n=1} x_n (n is n-th datapoint)
+        #sum_1mx = jnp.sum(1. - x) ## Sum^N_{n=1} (1 - x_n)
 
-        dp = dL_dp * modulator * mask ## not sure how mask will apply to a full covariance...
+        one_min_p = 1. - _p
+        one_min_x = 1. - x
+        log_p = jnp.log(_p) ## ln(p)
+        log_one_min_p = jnp.log(one_min_p) ## ln(1 - p)
+        L = jnp.sum(log_p * x + log_one_min_p * one_min_x) ## Bern LL
+        if input_logits:
+            dL_dp = x - _p ## d(Bern LL)/dp where _p = sigmoid(p)
+        else:
+            dL_dp = x/(_p) - one_min_x/one_min_p  ## d(Bern LL)/dp
+            dL_dp = dL_dp  * d_sigmoid(p)
+        dL_dx = (log_p - log_one_min_p)  ## d(Bern LL)/dx
+        dp = dL_dp
+
+        dp = dp * modulator * mask ## NOTE: how does mask apply to a multivariate Bernoulli?
         dtarget = dL_dx * modulator * mask
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
         return dp, dtarget, jnp.squeeze(L), mask
 
-    @resolver(_advance_state)
-    def advance_state(self, dp, dtarget, L, mask):
-        self.dp.set(dp)
-        self.dtarget.set(dtarget)
-        self.L.set(L)
-        self.mask.set(mask)
-
+    @transition(output_compartments=["dp", "dtarget", "target", "p", "modulator", "L", "mask"])
     @staticmethod
-    def _reset(batch_size, shape): ## reset core components/statistics
+    def reset(batch_size, shape): ## reset core components/statistics
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
-        restVals = jnp.zeros(_shape)
+        restVals = jnp.zeros(_shape) ## "rest"/reset values
         dp = restVals
         dtarget = restVals
         target = restVals
         p = restVals
-        modulator = mu + 1.
-        L = 0. #jnp.zeros((1, 1))
-        mask = jnp.ones(_shape)
+        modulator = restVals + 1. ## reset modulator signal
+        L = 0. #jnp.zeros((1, 1)) ## rest loss
+        mask = jnp.ones(_shape) ## reset mask
         return dp, dtarget, target, p, modulator, L, mask
-
-    @resolver(_reset)
-    def reset(self, dp, dtarget, target, p, modulator, L, mask):
-        self.dp.set(dp)
-        self.dtarget.set(dtarget)
-        self.target.set(target)
-        self.p.set(p)
-        self.modulator.set(modulator)
-        self.L.set(L)
-        self.mask.set(mask)
 
     @classmethod
     def help(cls): ## component help function
@@ -150,5 +152,5 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
-        X = GaussianErrorCell("X", 9)
+        X = BernoulliErrorCell("X", 9)
     print(X)

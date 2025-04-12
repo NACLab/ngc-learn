@@ -1,36 +1,22 @@
+from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
-from ngclearn import resolver, Component, Compartment
-from ngclearn.components.jaxComponent import JaxComponent
+from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
-
-@jit
+#@jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
-    mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+    mask = (rfr >= refract_T) * 1. # get refractory mask
     ## update voltage / membrane potential
     dv_dt = (v_rest - v) * v_decay + (j * mask)
     dv_dt = dv_dt * (1./tau_m)
@@ -40,37 +26,6 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     j, rfr, tau_m, refract_T, v_rest, v_decay = params
     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay)
     return dv_dt
-
-#@partial(jit, static_argnums=[7, 8, 9, 10, 11, 12])
-def _run_cell(dt, j, v, v_thr, v_theta, rfr, skey, tau_m, v_rest, v_reset,
-              v_decay, refract_T, integType=0):
-    ### Runs leaky integrator (or leaky integrate-and-fire; LIF) neuronal dynamics.
-    _v_thr = v_theta + v_thr ## calc present voltage threshold
-    #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
-    ## update voltage / membrane potential
-    v_params = (j, rfr, tau_m, refract_T, v_rest, v_decay)
-    if integType == 1:
-        _, _v = step_rk2(0., v, _dfv, dt, v_params)
-    else: #_v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
-        _, _v = step_euler(0., v, _dfv, dt, v_params)
-    ## obtain action potentials/spikes
-    s = (_v > _v_thr).astype(jnp.float32)
-    ## update refractory variables
-    _rfr = (rfr + dt) * (1. - s)
-    ## perform hyper-polarization of neuronal cells
-    _v = _v * (1. - s) + s * v_reset
-
-    raw_s = s + 0 ## preserve un-altered spikes
-    ############################################################################
-    ## this is a spike post-processing step
-    if skey is not None:
-        m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: not batch-able
-        rS = s * random.uniform(skey, s.shape)
-        rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
-                        dtype=jnp.float32)
-        s = s * (1. - m_switch) + rS * m_switch
-    ############################################################################
-    return _v, s, raw_s, _rfr
 
 #@partial(jit, static_argnums=[3, 4])
 def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
@@ -145,10 +100,10 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
-                increase the accuray of the estimate of the cell's evolution
+                increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
 
-        surrgoate_type: type of surrogate function to use for approximating a
+        surrogate_type: type of surrogate function to use for approximating a
             partial derivative of this cell's spikes w.r.t. its voltage/current
             (default: "straight_through")
 
@@ -159,13 +114,13 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         lower_clamp_voltage: if True, this will ensure voltage never is below
             the value of `v_rest` (default: True)
-    """
+    """ ## batch_size arg?
 
     @deprecate_args(thr_jitter=None)
     def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
                  v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
                  refract_time=5., one_spike=False, integration_type="euler",
-                 surrgoate_type="straight_through", lower_clamp_voltage=True,
+                 surrogate_type="straight_through", lower_clamp_voltage=True,
                  **kwargs):
         super().__init__(name, **kwargs)
 
@@ -195,11 +150,11 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        if surrgoate_type == "secant_lif":
+        if surrogate_type == "secant_lif":
             self.spike_fx, self.d_spike_fx = secant_lif_estimator()
-        elif surrgoate_type == "arctan":
+        elif surrogate_type == "arctan":
             self.spike_fx, self.d_spike_fx = arctan_estimator()
-        elif surrgoate_type == "triangular":
+        elif surrogate_type == "triangular":
             self.spike_fx, self.d_spike_fx = triangular_estimator()
         else: ## default: straight_through
             self.spike_fx, self.d_spike_fx = straight_through_estimator()
@@ -220,41 +175,61 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
                                 units="ms") ## time-of-last-spike
         self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
+    @transition(output_compartments=["v", "s", "s_raw", "rfr", "thr_theta", "tols", "key", "surrogate"])    
     @staticmethod
-    def _advance_state(t, dt, tau_m, resist_m, v_rest, v_reset, v_decay, refract_T,
-                       thr, tau_theta, theta_plus, one_spike, lower_clamp_voltage,
-                       intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols):
+    def advance_state(
+            t, dt, tau_m, resist_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta, theta_plus, 
+            one_spike, lower_clamp_voltage, intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols
+    ):
         skey = None ## this is an empty dkey if single_spike mode turned off
         if one_spike:
             key, skey = random.split(key, 2)
         ## run one integration step for neuronal dynamics
         j = j * resist_m
-        v, s, raw_spikes, rfr = _run_cell(dt, j, v, thr, thr_theta, rfr, skey,
-                                          tau_m, v_rest, v_reset, v_decay,
-                                          refract_T, intgFlag)
-        surrogate = d_spike_fx(v, thr + thr_theta)
+        ############################################################################
+        ### Runs leaky integrator (leaky integrate-and-fire; LIF) neuronal dynamics.
+        _v_thr = thr_theta + thr ## calc present voltage threshold
+        #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
+        ## update voltage / membrane potential
+        v_params = (j, rfr, tau_m, refract_T, v_rest, v_decay)
+        if intgFlag == 1:
+            _, _v = step_rk2(0., v, _dfv, dt, v_params)
+        else:
+            _, _v = step_euler(0., v, _dfv, dt, v_params)
+        ## obtain action potentials/spikes/pulses
+        s = (_v > _v_thr) * 1.
+        ## update refractory variables
+        _rfr = (rfr + dt) * (1. - s)
+        ## perform hyper-polarization of neuronal cells
+        _v = _v * (1. - s) + s * v_reset
+
+        raw_s = s + 0 ## preserve un-altered spikes
+        ############################################################################
+        ## this is a spike post-processing step
+        if skey is not None:
+            m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: not batch-able
+            rS = s * random.uniform(skey, s.shape)
+            rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
+                            dtype=jnp.float32)
+            s = s * (1. - m_switch) + rS * m_switch
+        ############################################################################
+        raw_spikes = raw_s
+        v = _v
+        rfr = _rfr
+
+        surrogate = d_spike_fx(v, _v_thr) #d_spike_fx(v, thr + thr_theta)
         if tau_theta > 0.:
             ## run one integration step for threshold dynamics
             thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
-        tols = _update_times(t, s, tols)
+        tols = (1. - s) * tols + (s * t)
         if lower_clamp_voltage: ## ensure voltage never < v_rest
             v = jnp.maximum(v, v_rest)
         return v, s, raw_spikes, rfr, thr_theta, tols, key, surrogate
 
-    @resolver(_advance_state)
-    def advance_state(self, v, s, s_raw, rfr, thr_theta, tols, key, surrogate):
-        self.v.set(v)
-        self.s.set(s)
-        self.s_raw.set(s_raw)
-        self.rfr.set(rfr)
-        self.thr_theta.set(thr_theta)
-        self.tols.set(tols)
-        self.key.set(key)
-        self.surrogate.set(surrogate)
-
+    @transition(output_compartments=["j", "v", "s", "s_raw", "rfr", "tols", "surrogate"])
     @staticmethod
-    def _reset(batch_size, n_units, v_rest, refract_T):
+    def reset(batch_size, n_units, v_rest, refract_T):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals #+ 0
         v = restVals + v_rest
@@ -265,16 +240,6 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         tols = restVals #+ 0
         surrogate = restVals + 1.
         return j, v, s, s_raw, rfr, tols, surrogate
-
-    @resolver(_reset)
-    def reset(self, j, v, s, s_raw, rfr, tols, surrogate):
-        self.j.set(j)
-        self.v.set(v)
-        self.s.set(s)
-        self.s_raw.set(s_raw)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
-        self.surrogate.set(surrogate)
 
     def save(self, directory, **kwargs):
         ## do a protected save of constants, depending on whether they are floats or arrays

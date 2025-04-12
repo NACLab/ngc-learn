@@ -5,21 +5,20 @@ def linear_2D(t, x, params):
     * suggested init value - x0 = jnp.array([3, -1.5])
 
     Args:
-        param x: 2D vector
+        x: 2D vector
                type: jax array
                shape:(2,)
 
-        param t: Unused
+        t: Unused
 
-        param params: Unused
+        params: Unused
 
     Returns:
-        2D vector: [
-                     -0.1 * x[0] + 2.0 * x[1],
-                     -2.0 * x[0] - 0.1 * x[1]
-                     ]
-        type: jax array
-        shape:(2,)
+        2D vector:
+            [
+            -0.1 * x[0] + 2.0 * x[1],
+            -2.0 * x[0] - 0.1 * x[1]
+            ]; type: jax array, shape:(2,)
     """
     coeff = jnp.array([[-0.1, 2],
                        [-2, -0.1]]).T
@@ -32,21 +31,20 @@ def cubic_2D(t, x, params):
     suggested init value - x0 = jnp.array([2., 0.])
 
     Args:
-        param x: 2D vector
+        x: 2D vector
                   type: jax array
                   shape: (2,)
 
-        param t: Unused
+        t: Unused
 
-        param params: Unused
+        params: Unused
 
     Returns:
-        2D vector: [
-                    -0.1 * x[0] ** 3 + 2.0 * x[1] ** 3,
-                    -2.0 * x[0] ** 3 - 0.1 * x[1] ** 3,
-                    ]
-        type: jax array
-        shape:(2,)
+        2D vector:
+            [
+            -0.1 * x[0] ** 3 + 2.0 * x[1] ** 3,
+            -2.0 * x[0] ** 3 - 0.1 * x[1] ** 3,
+            ]; type: jax array, shape:(2,)
     """
     coeff = jnp.array([[-0.1, 2],
                        [-2, -0.1]]).T
@@ -58,22 +56,21 @@ def lorenz(t, x, params):
     suggested init value - x0 = jnp.array([-8, 7, 27])
 
     Args:
-        param x: 3D vector
+        x: 3D vector
                   type: jax array
                   shape: (3,)
 
-        param t: Unused
+        t: Unused
 
-        param params: Unused
+        params: Unused
 
     Returns:
-        3D vector: [
-                    10 * (x[1] - x[0]),
-                    x[0] * (28 - x[2]) - x[1],
-                    x[0] * x[1] - 8 / 3 * x[2],
-                    ]
-        type: jax array
-        shape:(3,)
+        3D vector:
+            [
+            10 * (x[1] - x[0]),
+            x[0] * (28 - x[2]) - x[1],
+            x[0] * x[1] - 8 / 3 * x[2],
+            ]; type: jax array, shape:(3,)
     """
     x_ = x[..., 0]
     y_ = x[..., 1]
@@ -90,22 +87,21 @@ def linear_3D(t, x, params):
     suggested init value - x0 = jnp.array([1, 1., -1])
 
     Args:
-        param x: 3D vector
+        x: 3D vector
                   type: jax array
                   shape: (3,)
 
-        param t: Unused
+        t: Unused
 
-        param params: Unused
+        params: Unused
 
     Returns:
-        3D vector: [
-                     -0.1 * x[0] + 2 * x[1],
-                     -2 * x[0] - 0.1 * x[1],
-                     -0.3 * x[2]
-                    ]
-        type: jax array
-        shape:(3,)
+        3D vector:
+            [
+            -0.1 * x[0] + 2 * x[1],
+            -2 * x[0] - 0.1 * x[1],
+            -0.3 * x[2]
+            ]; type: jax array, shape:(3,)
     """
     x_ = x[..., 0]
     y_ = x[..., 1]
@@ -117,31 +113,26 @@ def linear_3D(t, x, params):
 
     return jnp.stack([dx, dy, dz], axis=-1)
 
-
-
-
 def oscillator(t, x, params, mu1=0.05, mu2=-0.01, omega=3.0, alpha=-2.0, beta=-5.0, sigma=1.1):
     """
     suggested init value - x0 = jnp.array([0.5, 0.05, 0.1])
 
     Args:
-        param x: 3D vector
+        x: 3D vector
                   type: jax array
                   shape: (3,)
 
-        param t: Unused
+        t: Unused
 
-        param params: Unused
+        params: Unused
 
     Returns:
-        3D vector: [
-                     mu1 * x[0] + sigma * x[0] * x[1],
-                     mu2 * x[1] + (omega + alpha * x[1] + beta * x[2]) * x[2] - sigma * x[0] ** 2,
-                     mu2 * x[2] - (omega + alpha * x[1] + beta * x[2]) * x[1],
-                    ]
-
-        type: jax array
-        shape:(3,)
+        3D vector:
+            [
+            mu1 * x[0] + sigma * x[0] * x[1],
+            mu2 * x[1] + (omega + alpha * x[1] + beta * x[2]) * x[2] - sigma * x[0] ** 2,
+            mu2 * x[2] - (omega + alpha * x[1] + beta * x[2]) * x[1],
+            ]; type: jax array, shape:(3,)
     """
     x_ = x[..., 0]
     y_ = x[..., 1]

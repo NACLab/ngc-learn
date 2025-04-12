@@ -18,8 +18,8 @@ We do this specifically as follows:
 
 ```python
 from jax import numpy as jnp, random, jit
-from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
+from ngcsimlib.compilers.process import Process
 from ngclearn.components import HebbianSynapse, RateCell
 import ngclearn.utils.weight_distribution as dist
 
@@ -48,17 +48,18 @@ with Context("Circuit") as circuit:
   # wire output compartment (rate-coded output zF) of RateCell `b` to postsynaptic compartment of HebbianSynapse `Wab`
   Wab.post << b.zF
 
-  ## create and compile core simulation commands
-  reset_cmd, reset_args = circuit.compile_by_key(a, Wab, b, compile_key="reset")
-  circuit.add_command(wrap_command(jit(circuit.reset)), name="reset")
+  ## create and compile core simulation commands  
+  evolve_process = (Process()
+                    >> a.evolve)
+  circuit.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
-  advance_cmd, advance_args = circuit.compile_by_key(a, Wab, b,
-                                                     compile_key="advance_state")
-  circuit.add_command(wrap_command(jit(circuit.advance_state)), name="advance")
-
-  evolve_cmd, evolve_args = circuit.compile_by_key(Wab, compile_key="evolve")
-  circuit.add_command(wrap_command(jit(circuit.evolve)), name="evolve")
-
+  advance_process = (Process()
+                     >> a.advance_state)
+  circuit.wrap_and_add_command(jit(advance_process.pure), name="advance")
+  
+  reset_process = (Process()
+                 >> a.reset)
+  circuit.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
   ## set up non-compiled utility commands
   @Context.dynamicCommand

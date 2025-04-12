@@ -14,7 +14,7 @@ from functools import partial
 from jax.lax import scan as _scan
 import time, sys
 
-def get_integrator_code(integrationType):
+def get_integrator_code(integrationType): ## integrator type decoding routine
     """
     Convenience function for mapping integrator type string to ngc-learn's
     internal integer code value.
@@ -42,22 +42,20 @@ def get_integrator_code(integrationType):
                   to RK-1/Euler routine".format(integrationType))
     return intgFlag
 
-
 @jit
-def _sum_combine(*args, **kwargs): ## fast co-routine for simple addition
-    sum = 0
-
-    for arg, val in zip(args, kwargs.values()):
-        sum = sum + val * arg
-    return sum
+def _sum_combine(*args, **kwargs): ## fast co-routine for simple addition/summation
+    _sum = 0
+    for arg, val in zip(args, kwargs.values()): ## Sigma^I_{i=1} a_i
+        _sum = _sum + val * arg
+    return _sum
 
 @jit
 def _step_forward(t, x, dx_dt, dt, x_scale): ## internal step co-routine
-    _t = t + dt
-    _x = x * x_scale + dx_dt * dt
+    _t = t + dt ## advance time forward by dt (denominator)
+    _x = x * x_scale + dx_dt * dt ## advance variable(s) forward by dt (numerator)
     return _t, _x
 
-
+@partial(jit, static_argnums=(2))
 def step_euler(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the Euler method, i.e., a
@@ -81,14 +79,12 @@ def step_euler(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-
     carry = (t, x)
     next_state, *_ = _euler(carry, dfx, dt, params, x_scale=x_scale)
     _t, _x = next_state
-
     return _t, _x
 
-@partial(jit, static_argnums=(1, 2, 3, 4, ))
+@partial(jit, static_argnums=(1))
 def _euler(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the Euler method, i.e., a
@@ -111,17 +107,12 @@ def _euler(carry, dfx, dt, params, x_scale=1.):
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
     t, x = carry
-
     dx_dt = dfx(t, x, params)
     _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
-
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
 
-
-
-
-
+@partial(jit, static_argnums=(2))
 def step_heun(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Heun's method, i.e., a
@@ -155,23 +146,11 @@ def step_heun(t, x, dfx, dt, params, x_scale=1.):
     """
 
     carry = (t, x)
-
     next_state, *_ = _heun(carry, dfx, dt, params, x_scale=x_scale)
-
-    #
-    # dx_dt = dfx(t, x, params)
-    #
-    # _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
-    # _dx_dt = dfx(_t, _x, params)
-    # summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
-
-    # _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
     _t, _x = next_state
-
     return _t, _x
 
-
-@partial(jit, static_argnums=(1, 2, 3, 4, ))
+@partial(jit, static_argnums=(1))
 def _heun(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Heun's method, i.e., a
@@ -202,19 +181,15 @@ def _heun(carry, dfx, dt, params, x_scale=1.):
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
     t, x = carry
-
     dx_dt = dfx(t, x, params)
     _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
     _dx_dt = dfx(_t, _x, params)
     summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
     _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
-
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
 
-
-
-
+@partial(jit, static_argnums=(2))
 def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
@@ -244,30 +219,12 @@ def step_rk2(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-
     carry = (t, x)
     next_state, *_ = _rk2(carry, dfx, dt, params, x_scale=x_scale)
     _t, _x = next_state
-
-    #
-    # dx_dt = dfx(t, x, params)
-    #
-    # _t, _x = _step_forward(t, x, dx_dt, dt, x_scale)
-    # _dx_dt = dfx(_t, _x, params)
-    # summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=1, weight2=1)
-
-    # _, _x = _step_forward(t, x, summed_dx_dt, dt * 0.5, x_scale)
-
-
-    # dfx_1 = dfx(t, x, params)
-    #
-    # t1, x1 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
-    # dfx_2 = dfx(t1, x1, params)
-    # _t, _x = _step_forward(t, x, dfx_2, dt, x_scale)
     return _t, _x
 
-
-@partial(jit, static_argnums=(1, 2, 3, 4, ))
+@partial(jit, static_argnums=(1))
 def _rk2(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
@@ -296,22 +253,19 @@ def _rk2(carry, dfx, dt, params, x_scale=1.):
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
     t, x = carry
-
     f_1 = dfx(t, x, params)
     t1, x1 = _step_forward(t, x, f_1, dt * 0.5, x_scale)
     f_2 = dfx(t1, x1, params)
     _t, _x = _step_forward(t, x, f_2, dt, x_scale)
-
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
 
-
-
+@partial(jit, static_argnums=(2))
 def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
     fourth-order Runge-Kutta (RK-4) step.
-    (Note: ngc-learn internally recognizes "rk4" or this routine)
+    (Note: ngc-learn internally recognizes "rk4" for this routine)
 
     | Reference:
     | Ascher, Uri M., and Linda R. Petzold. Computer methods for ordinary
@@ -339,25 +293,9 @@ def step_rk4(t, x, dfx, dt, params, x_scale=1.):
     carry = (t, x)
     next_state, *_ = _rk4(carry, dfx, dt, params, x_scale=x_scale)
     _t, _x = next_state
-
-    # dfx_1 = dfx(t, x, params)
-    # t2, x2 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
-    #
-    # dfx_2 = dfx(t2, x2, params)
-    # t3, x3 = _step_forward(t, x, dfx_2, dt * 0.5, x_scale)
-    #
-    # dfx_3 = dfx(t3, x3, params)
-    # t4, x4 = _step_forward(t, x, dfx_3, dt, x_scale)
-    #
-    # dfx_4 = dfx(t4, x4, params)
-    #
-    # _dx_dt = _sum_combine(dfx_1, dfx_2, dfx_3, dfx_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
-    # _t, _x = _step_forward(t, x, _dx_dt / 6, dt, x_scale)
     return _t, _x
 
-
-
-@partial(jit, static_argnums=(1, 2, 3, 4, ))
+@partial(jit, static_argnums=(1))
 def _rk4(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via the midpoint method, i.e., a
@@ -385,28 +323,22 @@ def _rk4(carry, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-
     t, x = carry
-
-    dfx_1 = dfx(t, x, params)
+    ## carry out 4 steps of RK-4
+    dfx_1 = dfx(t, x, params) ## k1
     t2, x2 = _step_forward(t, x, dfx_1, dt * 0.5, x_scale)
-
-    dfx_2 = dfx(t2, x2, params)
+    dfx_2 = dfx(t2, x2, params) ## k2
     t3, x3 = _step_forward(t, x, dfx_2, dt * 0.5, x_scale)
-
-    dfx_3 = dfx(t3, x3, params)
+    dfx_3 = dfx(t3, x3, params) ## k3
     t4, x4 = _step_forward(t, x, dfx_3, dt, x_scale)
-
-    dfx_4 = dfx(t4, x4, params)
-
+    dfx_4 = dfx(t4, x4, params) ## k4
+    ## produce final estimate and move forward
     _dx_dt = _sum_combine(dfx_1, dfx_2, dfx_3, dfx_4, w_f1=1, w_f2=2, w_f3=2, w_f4=1)
     _t, _x = _step_forward(t, x, _dx_dt / 6, dt, x_scale)
-
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
 
-
-
+@partial(jit, static_argnums=(2))
 def step_ralston(t, x, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Ralston's method, i.e., a
@@ -438,22 +370,12 @@ def step_ralston(t, x, dfx, dt, params, x_scale=1.):
     Returns:
         variable values iteratively integrated/advanced to next step (`t + dt`)
     """
-
     carry = (t, x)
-    next_state, *_ = _rk4(carry, dfx, dt, params, x_scale=x_scale)
+    next_state, *_ = _ralston(carry, dfx, dt, params, x_scale=x_scale)
     _t, _x = next_state
-
-    # dx_dt = dfx(t, x, params) ## k1
-    # tm, xm = _step_forward(t, x, dx_dt, dt * 0.75, x_scale)
-    # _dx_dt = dfx(tm, xm, params)  ## k2
-    # ## Note: new step is a weighted combination of k1 and k2
-    # summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=(1./3.), weight2=(2./3.))
-    # _t, _x = _step_forward(t, x, summed_dx_dt, dt, x_scale)
     return _t, _x
 
-
-
-@partial(jit, static_argnums=(1, 2, 3, 4,))
+@partial(jit, static_argnums=(1))
 def _ralston(carry, dfx, dt, params, x_scale=1.):
     """
     Iteratively integrates one step forward via Ralston's method, i.e., a
@@ -485,22 +407,17 @@ def _ralston(carry, dfx, dt, params, x_scale=1.):
     """
 
     t, x = carry
-
     dx_dt = dfx(t, x, params) ## k1
     tm, xm = _step_forward(t, x, dx_dt, dt * 0.75, x_scale)
     _dx_dt = dfx(tm, xm, params)  ## k2
     ## Note: new step is a weighted combination of k1 and k2
     summed_dx_dt = _sum_combine(dx_dt, _dx_dt, weight1=(1./3.), weight2=(2./3.))
     _t, _x = _step_forward(t, x, summed_dx_dt, dt, x_scale)
-
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
 
-
-
 @partial(jit, static_argnums=(0, 3, 4, 5, 6, 7, 8))
 def solve_ode(method_name, t0, x0, T, dfx, dt, params=None, x_scale=1., sols_only=True):
-
     if method_name =='euler':
         method = _euler
     elif method_name == 'heun':

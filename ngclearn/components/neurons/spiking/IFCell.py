@@ -1,31 +1,19 @@
+from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
+from functools import partial
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
-from ngclearn import resolver, Component, Compartment
-from ngclearn.components.jaxComponent import JaxComponent
+from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-from ngclearn.utils.surrogate_fx import (arctan_estimator,
+from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
@@ -39,22 +27,6 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     j, rfr, tau_m, refract_T = params
     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T)
     return dv_dt
-
-def _run_cell(dt, j, v, v_thr, rfr, tau_m, v_rest, v_reset, refract_T, integType=0):
-    ### Runs integrator (or integrate-and-fire; IF) neuronal dynamics
-    ## update voltage / membrane potential
-    v_params = (j, rfr, tau_m, refract_T)
-    if integType == 1:
-        _, _v = step_rk2(0., v, _dfv, dt, v_params)
-    else:
-        _, _v = step_euler(0., v, _dfv, dt, v_params)
-    ## obtain action potentials/spikes
-    s = (_v > v_thr).astype(jnp.float32)
-    ## update refractory variables
-    _rfr = (rfr + dt) * (1. - s)
-    ## perform hyper-polarization of neuronal cells
-    _v = _v * (1. - s) + s * v_reset
-    return _v, s, _rfr
 
 class IFCell(JaxComponent): ## integrate-and-fire cell
     """
@@ -103,10 +75,10 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
-                increase the accuray of the estimate of the cell's evolution
+                increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
 
-        surrgoate_type: type of surrogate function to use for approximating a
+        surrogate_type: type of surrogate function to use for approximating a
             partial derivative of this cell's spikes w.r.t. its voltage/current
             (default: "straight_through")
 
@@ -121,7 +93,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
     @deprecate_args(thr_jitter=None)
     def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
                  v_reset=-60., refract_time=0., integration_type="euler",
-                 surrgoate_type="straight_through", lower_clamp_voltage=True,
+                 surrogate_type="straight_through", lower_clamp_voltage=True,
                  **kwargs):
         super().__init__(name, **kwargs)
 
@@ -146,9 +118,9 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        if surrgoate_type == "arctan":
+        if surrogate_type == "arctan":
             self.spike_fx, self.d_spike_fx = arctan_estimator()
-        elif surrgoate_type == "triangular":
+        elif surrogate_type == "triangular":
             self.spike_fx, self.d_spike_fx = triangular_estimator()
         else: ## default: straight_through
             self.spike_fx, self.d_spike_fx = straight_through_estimator()
@@ -166,32 +138,39 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
                                 units="ms") ## time-of-last-spike
         self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
+    @transition(output_compartments=["v", "s", "rfr", "tols", "key", "surrogate"])
     @staticmethod
-    def _advance_state(t, dt, tau_m, resist_m, v_rest, v_reset, refract_T,
-                       thr, lower_clamp_voltage, intgFlag, d_spike_fx, key,
-                       j, v, rfr, tols):
+    def advance_state(
+            t, dt, tau_m, resist_m, v_rest, v_reset, refract_T, thr, lower_clamp_voltage, intgFlag, d_spike_fx, key,
+            j, v, rfr, tols
+    ):
         ## run one integration step for neuronal dynamics
         j = j * resist_m
-        v, s, rfr = _run_cell(dt, j, v, thr, rfr, tau_m, v_rest, v_reset,
-                              refract_T, intgFlag)
+
+        ### Runs integrator (or integrate-and-fire; IF) neuronal dynamics
+        ## update voltage / membrane potential
+        v_params = (j, rfr, tau_m, refract_T)
+        if intgFlag == 1:
+            _, _v = step_rk2(0., v, _dfv, dt, v_params)
+        else:
+            _, _v = step_euler(0., v, _dfv, dt, v_params)
+        ## obtain action potentials/spikes
+        s = (_v > thr) * 1.
+        ## update refractory variables
+        rfr = (rfr + dt) * (1. - s)
+        ## perform hyper-polarization of neuronal cells
+        v = _v * (1. - s) + s * v_reset
+
         surrogate = d_spike_fx(v, thr)
         ## update tols
-        tols = _update_times(t, s, tols)
+        tols = (1. - s) * tols + (s * t)
         if lower_clamp_voltage: ## ensure voltage never < v_rest
             v = jnp.maximum(v, v_rest)
         return v, s, rfr, tols, key, surrogate
 
-    @resolver(_advance_state)
-    def advance_state(self, v, s, rfr, tols, key, surrogate):
-        self.v.set(v)
-        self.s.set(s)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
-        self.key.set(key)
-        self.surrogate.set(surrogate)
-
+    @transition(output_compartments=["j", "v", "s", "rfr", "tols", "surrogate"])
     @staticmethod
-    def _reset(batch_size, n_units, v_rest, refract_T):
+    def reset(batch_size, n_units, v_rest, refract_T):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals #+ 0
         v = restVals + v_rest
@@ -200,15 +179,6 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
         tols = restVals #+ 0
         surrogate = restVals + 1.
         return j, v, s, rfr, tols, surrogate
-
-    @resolver(_reset)
-    def reset(self, j, v, s, rfr, tols, surrogate):
-        self.j.set(j)
-        self.v.set(v)
-        self.s.set(s)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
-        self.surrogate.set(surrogate)
 
     def save(self, directory, **kwargs):
         ## do a protected save of constants, depending on whether they are floats or arrays

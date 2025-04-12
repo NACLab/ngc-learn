@@ -2,6 +2,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
+from ngcsimlib.compilers.process import transition
 
 class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -64,8 +65,9 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
+    @transition(output_compartments=["dmu", "dtarget", "dSigma", "L", "mask"])
     @staticmethod
-    def _advance_state(dt, mu, target, Sigma, modulator, mask): ## compute Gaussian error cell output
+    def advance_state(dt, mu, target, Sigma, modulator, mask): ## compute Gaussian error cell output
         # Moves Gaussian cell dynamics one step forward. Specifically, this routine emulates the error unit
         # behavior of the local cost functional:
         # FIXME: Currently, below does: L(targ, mu) = -(1/(2*sigma)) * ||targ - mu||^2_2
@@ -83,16 +85,9 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
         return dmu, dtarget, dSigma, jnp.squeeze(L), mask
 
-    @resolver(_advance_state)
-    def advance_state(self, dmu, dtarget, dSigma, L, mask):
-        self.dmu.set(dmu)
-        self.dtarget.set(dtarget)
-        self.dSigma.set(dSigma)
-        self.L.set(L)
-        self.mask.set(mask)
-
+    @transition(output_compartments=["dmu", "dtarget", "dSigma", "target", "mu", "modulator", "L", "mask"])
     @staticmethod
-    def _reset(batch_size, shape, sigma_shape): ## reset core components/statistics
+    def reset(batch_size, shape, sigma_shape): ## reset core components/statistics
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
@@ -106,17 +101,6 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         L = 0. #jnp.zeros((1, 1))
         mask = jnp.ones(_shape)
         return dmu, dtarget, dSigma, target, mu, modulator, L, mask
-
-    @resolver(_reset)
-    def reset(self, dmu, dtarget, dSigma, target, mu, modulator, L, mask):
-        self.dmu.set(dmu)
-        self.dtarget.set(dtarget)
-        self.dSigma.set(dSigma)
-        self.target.set(target)
-        self.mu.set(mu)
-        self.modulator.set(modulator)
-        self.L.set(L)
-        self.mask.set(mask)
 
     @classmethod
     def help(cls): ## component help function

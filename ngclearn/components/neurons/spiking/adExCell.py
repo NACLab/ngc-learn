@@ -1,28 +1,14 @@
-from jax import numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, random, jit, nn
+from functools import partial
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 @jit
 def _dfv_internal(j, v, w, tau_m, v_rest, sharpV, vT, R_m): ## raw voltage dynamics
@@ -45,30 +31,6 @@ def _dfw(t, w, params): ## recovery dynamics wrapper
     j, v, a, tau_m, v_rest = params
     dv_dt = _dfw_internal(j, v, w, a, tau_m, v_rest)
     return dv_dt
-
-@jit
-def _emit_spike(v, v_thr):
-    s = (v > v_thr).astype(jnp.float32)
-    return s
-
-#@partial(jit, static_argnums=[10])
-def _run_cell(dt, j, v, w, v_thr, tau_m, tau_w, a, b, sharpV, vT,
-              v_rest, v_reset, R_m, integType=0):
-    if integType == 1: ## RK-2/midpoint
-        v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
-        _, _v = step_rk2(0., v, _dfv, dt, v_params)
-        w_params = (j, v, a, tau_w, v_rest)
-        _, _w = step_rk2(0., w, _dfw, dt, w_params)
-    else: # integType == 0 (default -- Euler)
-        v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
-        _, _v = step_euler(0., v, _dfv, dt, v_params)
-        w_params = (j, v, a, tau_w, v_rest)
-        _, _w = step_euler(0., w, _dfw, dt, w_params)
-    s = _emit_spike(_v, v_thr)
-    ## hyperpolarize/reset/snap variables
-    _v = _v * (1. - s) + s * v_reset
-    _w = _w * (1. - s) + s * (_w + b)
-    return _v, _w, s
 
 class AdExCell(JaxComponent):
     """
@@ -131,15 +93,15 @@ class AdExCell(JaxComponent):
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
-                increase the accuray of the estimate of the cell's evolution
+                increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
     """
 
     @deprecate_args(v_thr="thr")
-    def __init__(self, name, n_units, tau_m=15., resist_m=1., tau_w=400.,
-                 v_sharpness=2., intrinsic_mem_thr=-55., thr=5., v_rest=-72.,
-                 v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0.,
-                 integration_type="euler", batch_size=1, **kwargs):
+    def __init__(
+            self, name, n_units, tau_m=15., resist_m=1., tau_w=400., v_sharpness=2., intrinsic_mem_thr=-55., thr=5.,
+            v_rest=-72., v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0., integration_type="euler", batch_size=1, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -174,24 +136,32 @@ class AdExCell(JaxComponent):
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
                                 units="ms") ## time-of-last-spike
 
+    @transition(output_compartments=["j", "v", "w", "s", "tols"])
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, tau_w, thr, a, b, sharpV, vT,
-                     v_rest, v_reset, intgFlag, j, v, w, tols):
-        v, w, s = _run_cell(dt, j, v, w, thr, tau_m, tau_w, a, b, sharpV, vT,
-                            v_rest, v_reset, R_m, intgFlag)
-        tols = _update_times(t, s, tols)
+    def advance_state(
+            t, dt, tau_m, R_m, tau_w, thr, a, b, sharpV, vT, v_rest, v_reset, intgFlag, j, v, w, tols
+    ):
+        if intgFlag == 1:  ## RK-2/midpoint
+            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
+            _, _v = step_rk2(0., v, _dfv, dt, v_params)
+            w_params = (j, v, a, tau_w, v_rest)
+            _, _w = step_rk2(0., w, _dfw, dt, w_params)
+        else:  # intgFlag == 0 (default -- Euler)
+            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
+            _, _v = step_euler(0., v, _dfv, dt, v_params)
+            w_params = (j, v, a, tau_w, v_rest)
+            _, _w = step_euler(0., w, _dfw, dt, w_params)
+        s = (_v > thr) * 1. ## emit spikes/pulses
+        ## hyperpolarize/reset/snap variables
+        v = _v * (1. - s) + s * v_reset
+        w = _w * (1. - s) + s * (_w + b)
+
+        tols = (1. - s) * tols + (s * t) ## update time-of-last spike variable(s)
         return j, v, w, s, tols
 
-    @resolver(_advance_state)
-    def advance_state(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.w.set(w)
-        self.v.set(v)
-        self.s.set(s)
-        self.tols.set(tols)
-
+    @transition(output_compartments=["j", "v", "w", "s", "tols"])
     @staticmethod
-    def _reset(batch_size, n_units, v0, w0):
+    def reset(batch_size, n_units, v0, w0):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals # None
         v = restVals + v0
@@ -199,14 +169,6 @@ class AdExCell(JaxComponent):
         s = restVals #+ 0
         tols = restVals #+ 0
         return j, v, w, s, tols
-
-    @resolver(_reset)
-    def reset(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.v.set(v)
-        self.w.set(w)
-        self.s.set(s)
-        self.tols.set(tols)
 
     @classmethod
     def help(cls): ## component help function

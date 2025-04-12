@@ -3,6 +3,7 @@ from jax import random, numpy as jnp, jit
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
+from ngcsimlib.compilers.process import transition
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
 import math
@@ -135,27 +136,21 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.biases = Compartment(initialize_params(subkeys[2], bias_init,
                                                     (1, self.shape[1]))
                                   if bias_init else 0.0)
+
+    @transition(output_compartments=["outputs"])
     @staticmethod
-    def _advance_state(Rscale, inputs, weights, biases):
+    def advance_state(Rscale, inputs, weights, biases):
         outputs = (jnp.matmul(inputs, weights) * Rscale) + biases
         return outputs
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
-
+    @transition(output_compartments=["inputs", "outputs"])
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
         outputs = postVals
         return inputs, outputs
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

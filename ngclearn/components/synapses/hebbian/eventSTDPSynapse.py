@@ -1,8 +1,10 @@
 from jax import numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
-from ngclearn.utils import tensorstats
-## import parent synapse class/component
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
 from ngclearn.components.synapses import DenseSynapse
+from ngclearn.utils import tensorstats
 
 class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     """
@@ -80,8 +82,9 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         self.eta = Compartment(jnp.ones((1, 1)) * eta)  ## global learning rate governing plasticity
 
     @staticmethod
-    def _compute_update(t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols,
-                        postSpike, weights):
+    def _compute_update(
+            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights
+    ): ## synaptic adjustment calculation co-routine
         ## check if a spike occurred in window of (t - presyn_win_len, t]
         m = (pre_tols > 0.) * 1.  ## ignore default value of tols = 0 ms
         if presyn_win_len > 0.:
@@ -99,39 +102,29 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         dW = (dW * postSpike) ## gate to make sure only post-spikes trigger updates
         return dW
 
+    @transition(output_compartments=["weights", "dWeights"])
     @staticmethod
-    def _evolve(t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols,
-                postSpike, weights, eta):
+    def evolve(
+            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights, eta
+    ):
         dWeights = EventSTDPSynapse._compute_update(
             t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights
         )
         weights = weights + dWeights * eta  # * (1. - w) * eta
-        weights = jnp.clip(weights, 0.01, w_bound)  # not in source paper
+        weights = jnp.clip(weights, 0.01, w_bound)  ## Note: this step not in source paper
         return weights, dWeights
 
-    @resolver(_evolve)
-    def evolve(self, weights, dWeights):
-        self.weights.set(weights)
-        self.dWeights.set(dWeights)
-
+    @transition(output_compartments=["inputs", "outputs", "pre_tols", "postSpike", "dWeights"])
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
         outputs = postVals
-        pre_tols = preVals ## pre-synaptic time-of-last-spike record
+        pre_tols = preVals ## pre-synaptic time-of-last-spike(s) record
         postSpike = postVals
         dWeights = jnp.zeros(shape)
         return inputs, outputs, pre_tols, postSpike, dWeights
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre_tols, postSpike, dWeights):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre_tols.set(pre_tols)
-        self.postSpike.set(postSpike)
-        self.dWeights.set(dWeights)
 
     @classmethod
     def help(cls): ## component help function

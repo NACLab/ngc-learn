@@ -1,5 +1,8 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
@@ -64,8 +67,10 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
 
     # Define Functions
-    def __init__(self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0.,
-                 weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs):
+    def __init__(
+            self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0., weight_init=None, resist_scale=1.,
+            p_conn=1., batch_size=1, **kwargs
+    ):
         super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
                          batch_size=batch_size, **kwargs)
 
@@ -87,8 +92,9 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.theta = Compartment(postVals + self.theta0) ## synaptic modification thresholds
         self.dWeights = Compartment(self.weights.value * 0)
 
+    @transition(output_compartments=["weights", "theta", "dWeights", "post_term"])
     @staticmethod
-    def _evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
+    def evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
         eps = 1e-7
         post_term = post * (post - theta)  # post - theta
         post_term = post_term * (1. / (theta + eps))
@@ -101,18 +107,11 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         ## update synaptic modification threshold as a leaky ODE
         dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True)  ## batch avg
         theta = theta + (-theta + dtheta) * dt / tau_theta
-
         return weights, theta, dWeights, post_term
 
-    @resolver(_evolve)
-    def evolve(self, weights, theta, dWeights, post_term):
-        self.weights.set(weights)
-        self.theta.set(theta)
-        self.dWeights.set(dWeights)
-        self.post_term.set(post_term)
-
+    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dWeights", "post_term"])
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
@@ -122,15 +121,6 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         dWeights = jnp.zeros(shape)
         post_term = postVals
         return inputs, outputs, pre, post, dWeights, post_term
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dWeights, post_term):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.dWeights.set(dWeights)
-        self.post_term.set(post_term)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

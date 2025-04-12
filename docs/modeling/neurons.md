@@ -228,3 +228,20 @@ fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
   .. automethod:: reset
     :noindex:
 ```
+
+### The Hodgkin-Huxley Cell
+
+This cell models dynamics over voltage `v` and three channels/gates (related to 
+potassium and sodium activation/inactivation). This sophisticated cell system is, 
+as a result,  a set of four coupled differential equations and is driven by an appropriately  configured set of biophysical constants/coefficients (default values of which have  been set according to relevant source work). 
+(Note that this cell supports either Euler or midpoint method / RK-2 integration.)
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.HodgkinHuxleyCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```

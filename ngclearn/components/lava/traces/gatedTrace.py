@@ -1,12 +1,15 @@
-from ngclearn import resolver, Component, Compartment
-from ngclearn.utils import tensorstats
-
 from ngclearn import numpy as jnp
-import time, sys
+from ngcsimlib.logger import info, warn
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
+from ngclearn.utils import tensorstats
 
 class GatedTrace(Component): ## gated/piecewise low-pass filter
     """
-    A gated/piecewise variable trace (filter).
+    A gated/piecewise variable trace (filter). This is a Lava-compliant trace component.
 
     | --- Cell Input Compartments: (Takes wired-in signals) ---
     | inputs - input (takes wired-in external signals)
@@ -39,24 +42,17 @@ class GatedTrace(Component): ## gated/piecewise low-pass filter
         self.inputs = Compartment(restVals) # input compartment
         self.trace = Compartment(restVals)
 
+    @transition(output_compartments=["trace"])
     @staticmethod
-    def _advance_state(dt, tau_tr, inputs, trace):
+    def advance_state(dt, tau_tr, inputs, trace):
         trace = (trace * (1. - dt/tau_tr)) * (1. - inputs) + inputs
         return trace
 
-    @resolver(_advance_state)
-    def advance_state(self, trace):
-        self.trace.set(trace)
-
+    @transition(output_compartments=["inputs", "trace"])
     @staticmethod
-    def _reset(batch_size, n_units):
+    def reset(batch_size, n_units):
         restVals = jnp.zeros((batch_size, n_units))
         return restVals, restVals
-
-    @resolver(_reset)
-    def reset(self, inputs, trace):
-        self.inputs.set(inputs)
-        self.trace.set(trace)
 
     def __repr__(self):
         comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]

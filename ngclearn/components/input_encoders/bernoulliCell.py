@@ -1,28 +1,12 @@
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit
+from jax import numpy as jnp, random
 from ngclearn.utils import tensorstats
-from functools import partial
 from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 class BernoulliCell(JaxComponent):
     """
@@ -30,7 +14,7 @@ class BernoulliCell(JaxComponent):
     on-the-fly (to produce data-scaled Bernoulli spike trains).
 
     | --- Cell Input Compartments: ---
-    | inputs - input (takes in external signals)
+    | inputs - input (takes in external signals -- should be probabilities w/ values in [0,1])
     | --- Cell State Compartments: ---
     | key - JAX PRNG key
     | --- Cell Output Compartments: ---
@@ -41,10 +25,13 @@ class BernoulliCell(JaxComponent):
         name: the string name of this cell
 
         n_units: number of cellular entities (neural population size)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     def __init__(self, name, n_units, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
+        #super(BernoulliCell, self).__init__(name, **kwargs)
 
         ## Layer Size Setup
         self.batch_size = batch_size
@@ -56,29 +43,28 @@ class BernoulliCell(JaxComponent):
         self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
 
+    @transition(output_compartments=["outputs", "tols", "key"])
     @staticmethod
-    def _advance_state(t, key, inputs, tols):
-        key, *subkeys = random.split(key, 2)
+    def advance_state(t, key, inputs, tols):
+        ## NOTE: should `inputs` be checked if bounded to [0,1]?
+        # print(key)
+        # print(t)
+        # print(inputs.shape)
+        # print(tols.shape)
+        # print("-----")
+        key, *subkeys = random.split(key, 3)
         outputs = random.bernoulli(subkeys[0], p=inputs).astype(jnp.float32)
-        tols = _update_times(t, outputs, tols)
+        # Updates time-of-last-spike (tols) variable:
+        # output = s = binary spike vector
+        # tols = current time-of-last-spike variable
+        tols = (1. - outputs) * tols + (outputs * t)
         return outputs, tols, key
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs, tols, key):
-        self.outputs.set(outputs)
-        self.tols.set(tols)
-        self.key.set(key)
-
+    @transition(output_compartments=["inputs", "outputs", "tols"])
     @staticmethod
-    def _reset(batch_size, n_units):
+    def reset(batch_size, n_units):
         restVals = jnp.zeros((batch_size, n_units))
         return restVals, restVals, restVals
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, tols):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs) #None
-        self.tols.set(tols)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

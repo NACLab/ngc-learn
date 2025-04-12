@@ -2,6 +2,7 @@ from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compilers.process import transition
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
@@ -40,23 +41,24 @@ def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.,
     """
     _pre = pre * pre_wght
     _post = post * post_wght
-    dW = jnp.matmul(_pre.T, _post)
-    db = jnp.sum(_post, axis=0, keepdims=True)
-    dW_reg = 0.
+    dW = jnp.matmul(_pre.T, _post) ## calc Hebbian adjustment
+    db = jnp.sum(_post, axis=0, keepdims=True) ## calc Hebbian adjustment to bias/base-rates
+    dW_reg = 0. ## synaptic decay term
 
-    if w_bound > 0.:
+    if w_bound > 0.: ## induce any synaptic value bounding
         dW = dW * (w_bound - jnp.abs(W))
-
+    ## apply synaptic priors
     if prior_type == "l2" or prior_type == "ridge":
-        dW_reg = W
+        dW_reg = -W * prior_lmbda
     if prior_type == "l1" or prior_type == "lasso":
-        dW_reg = jnp.sign(W)
+        dW_reg = -jnp.sign(W) * prior_lmbda
     if prior_type == "l1l2" or prior_type == "elastic_net":
         l1_ratio = prior_lmbda[1]
-        prior_lmbda = prior_lmbda[0]
-        dW_reg = jnp.sign(W) * l1_ratio + W * (1-l1_ratio)/2
-
-    dW = dW + prior_lmbda * dW_reg
+        prior_scale = prior_lmbda[0]
+        dW_reg = -jnp.sign(W) * l1_ratio - W * (1-l1_ratio)/2
+        dW_reg = dW_reg * prior_scale
+    ## produce final update/adjustment
+    dW = dW + dW_reg
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2])
@@ -126,14 +128,12 @@ class HebbianSynapse(DenseSynapse):
         prior: a kernel to drive prior of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             prior to use and 2nd element as a floating point number
-            calling the prior parameter lambda (Default: (None, 0.))
-            currently it supports "l1" or "lasso" or "l2" or "ridge" or "l1l2" or "elastic_net".
+            calling the prior parameter lambda (Default: ('constant', 0.))
+            currently it supports "l1"/"lasso"/"laplacian" or "l2"/"ridge"/"gaussian" or "l1l2"/"elastic_net".
             usage guide:
             prior = ('l1', 0.01) or prior = ('lasso', lmbda)
             prior = ('l2', 0.01) or prior = ('ridge', lmbda)
             prior = ('l1l2', (0.01, 0.01)) or prior = ('elastic_net', (lmbda, l1_ratio))
-
-
 
         sign_value: multiplicative factor to apply to final synaptic update before
             it is applied to synapses; this is useful if gradient descent style
@@ -163,7 +163,7 @@ class HebbianSynapse(DenseSynapse):
     # Define Functions
     @deprecate_args(_rebind=False, w_decay='prior')
     def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
-                 w_bound=1., is_nonnegative=False, prior=(None, 0.), w_decay=0., sign_value=1.,
+                 w_bound=1., is_nonnegative=False, prior=("constant", 0.), w_decay=0., sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
                  resist_scale=1., batch_size=1, **kwargs):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
@@ -173,10 +173,16 @@ class HebbianSynapse(DenseSynapse):
             prior = ('l2', w_decay)
 
         prior_type, prior_lmbda = prior
+        if prior_type is None:
+            prior_type = "constant"
         ## synaptic plasticity properties and characteristics
         self.shape = shape
         self.Rscale = resist_scale
         self.prior_type = prior_type
+        if self.prior_type.lower() == "gaussian":
+            self.prior_type = "ridge"
+        elif self.prior_type.lower() == "laplacian":
+            self.prior_type = "lasso"
         self.prior_lmbda = prior_lmbda
         self.w_bound = w_bound
         self.pre_wght = pre_wght
@@ -211,8 +217,9 @@ class HebbianSynapse(DenseSynapse):
             post_wght=post_wght)
         return dW, db
 
+    @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
     @staticmethod
-    def _evolve(opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
+    def evolve(opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dWeights, dBiases = HebbianSynapse._compute_update(
@@ -229,16 +236,9 @@ class HebbianSynapse(DenseSynapse):
         weights = _enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
         return opt_params, weights, biases, dWeights, dBiases
 
-    @resolver(_evolve)
-    def evolve(self, opt_params, weights, biases, dWeights, dBiases):
-        self.opt_params.set(opt_params)
-        self.weights.set(weights)
-        self.biases.set(biases)
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
-
+    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dWeights", "dBiases"])
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         return (
@@ -249,15 +249,6 @@ class HebbianSynapse(DenseSynapse):
             jnp.zeros(shape), # dW
             jnp.zeros(shape[1]), # db
         )
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dWeights, dBiases):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
 
     @classmethod
     def help(cls): ## component help function

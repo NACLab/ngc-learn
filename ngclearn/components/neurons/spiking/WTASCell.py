@@ -1,64 +1,16 @@
 from jax import numpy as jnp, random, jit, nn
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, random, jit, nn
+from functools import partial
 from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
+
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 from ngclearn.utils.model_utils import softmax
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
-@jit
-def _run_cell(dt, j, v, rfr, v_thr, tau_m, R_m, thr_gain=0.002, refract_T=0.):
-    """
-    Runs leaky integrator neuronal dynamics
-
-    Args:
-        dt: integration time constant (milliseconds, or ms)
-
-        j: electrical current value
-
-        v: membrane potential (voltage, in milliVolts or mV) value (at t)
-
-        rfr: refractory variable vector (one per neuronal cell)
-
-        v_thr: base voltage threshold value (in mV)
-
-        tau_m: cell membrane time constant
-
-        R_m: cell membrane resistance
-
-        thr_gain: increment to be applied to threshold upon spike occurrence
-
-        refract_T: (relative) refractory time period (in ms; Default
-            value is 1 ms)
-
-    Returns:
-        voltage(t+dt), spikes, updated voltage thresholds, updated refactory variables
-    """
-    mask = (rfr >= refract_T).astype(jnp.float32) ## check refractory period
-    v = (j * R_m) * mask
-    vp = softmax(v) # convert to Categorical (spike) probabilities
-    #s = nn.one_hot(jnp.argmax(vp, axis=1), j.shape[1]) ## hard-max spike
-    s = (vp > v_thr).astype(jnp.float32) ## calculate action potential
-    q = 1. ## Note: thr_gain ==> "rho_b"
-    dthr = jnp.sum(s, axis=1, keepdims=True) - q
-    v_thr = jnp.maximum(v_thr + dthr * thr_gain, 0.025) ## calc new threshold
-    rfr = (rfr + dt) * (1. - s) + s * dt # set refract to dt
-    return v, s, v_thr, rfr
 
 class WTASCell(JaxComponent): ## winner-take-all spiking cell
     """
@@ -102,8 +54,10 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, resist_m=1., thr_base=0.4, thr_gain=0.002,
-                 refract_time=0., thr_jitter=0.05, **kwargs):
+    def __init__(
+            self, name, n_units, tau_m, resist_m=1., thr_base=0.4, thr_gain=0.002, refract_time=0., thr_jitter=0.05,
+            **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
@@ -134,22 +88,26 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.rfr = Compartment(restVals + self.refract_T)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
+    @transition(output_compartments=["v", "s", "thr", "rfr", "tols"])
     @staticmethod
-    def _advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols):
-        v, s, thr, rfr = _run_cell(dt, j, v, rfr, thr, tau_m, R_m, thr_gain, refract_T)
-        tols = _update_times(t, s, tols) ## update tols
+    def advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols):
+        mask = (rfr >= refract_T) * 1.  ## check refractory period
+        v = (j * R_m) * mask
+        vp = softmax(v)  # convert to Categorical (spike) probabilities
+        # s = nn.one_hot(jnp.argmax(vp, axis=1), j.shape[1]) ## hard-max spike
+        s = (vp > thr) * 1. ## calculate action potential
+        q = 1.  ## Note: thr_gain ==> "rho_b"
+        ## increment threshold upon spike(s) occurrence
+        dthr = jnp.sum(s, axis=1, keepdims=True) - q
+        thr = jnp.maximum(thr + dthr * thr_gain, 0.025)  ## calc new threshold
+        rfr = (rfr + dt) * (1. - s) + s * dt  # set refract to dt
+
+        tols = (1. - s) * tols + (s * t) ## update tols
         return v, s, thr, rfr, tols
 
-    @resolver(_advance_state)
-    def advance_state(self, v, s, thr, rfr, tols):
-        self.v.set(v)
-        self.s.set(s)
-        self.thr.set(thr)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
-
+    @transition(output_compartments=["j", "v", "s", "rfr", "tols"])
     @staticmethod
-    def _reset(batch_size, n_units, refract_T):
+    def reset(batch_size, n_units, refract_T):
         restVals = jnp.zeros((batch_size, n_units))
         j = restVals #+ 0
         v = restVals #+ 0
@@ -157,14 +115,6 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         rfr = restVals + refract_T
         tols = restVals #+ 0
         return j, v, s, rfr, tols
-
-    @resolver(_reset)
-    def reset(self, j, v, s, rfr, tols):
-        self.j.set(j)
-        self.v.set(v)
-        self.s.set(s)
-        self.rfr.set(rfr)
-        self.tols.set(tols)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

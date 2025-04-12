@@ -1,6 +1,13 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
 from .deconvSynapse import DeconvSynapse
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
+from ngclearn.utils import tensorstats
+import ngclearn.utils.weight_distribution as dist
 from ngclearn.components.synapses.convolution.ngcconv import (deconv2d, _calc_dX_deconv,
                                                               _calc_dK_deconv, calc_dX_deconv,
                                                               calc_dK_deconv)
@@ -79,13 +86,15 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
     """
 
     # Define Functions
-    def __init__(self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None,
-                 stride=1, padding=None, resist_scale=1., w_bound=0., is_nonnegative=False,
-                 w_decay=0., sign_value=1., optim_type="sgd", batch_size=1, **kwargs):
-        super().__init__(name, shape, x_shape=x_shape, filter_init=filter_init,
-                         bias_init=bias_init, resist_scale=resist_scale,
-                         stride=stride, padding=padding, batch_size=batch_size,
-                         **kwargs)
+    def __init__(
+            self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None, stride=1, padding=None,
+            resist_scale=1., w_bound=0., is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",
+            batch_size=1, **kwargs
+    ):
+        super().__init__(
+            name, shape, x_shape=x_shape, filter_init=filter_init, bias_init=bias_init, resist_scale=resist_scale,
+            stride=stride, padding=padding, batch_size=batch_size, **kwargs
+        )
 
         self.eta = eta
         self.w_bounds = w_bound
@@ -112,8 +121,7 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
             [self.weights.value, self.biases.value]
             if bias_init else [self.weights.value]))
 
-    def _init(self, batch_size, x_size, shape, stride, padding, pad_args,
-              weights):
+    def _init(self, batch_size, x_size, shape, stride, padding, pad_args, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
         _d = deconv2d(_x, self.weights.value, stride_size=self.stride,
@@ -132,13 +140,12 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         self.x_delta_shape = (dx, dy)
 
     @staticmethod
-    def _compute_update(sign_value, w_decay, bias_init, shape, stride, padding,
-                        delta_shape, pre, post, weights):
+    def _compute_update(sign_value, w_decay, bias_init, shape, stride, padding, delta_shape, pre, post, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         ## compute adjustment to filters
-        dWeights = calc_dK_deconv(pre, post, delta_shape=delta_shape,
-                                  stride_size=stride, out_size=k_size,
-                                  padding=padding)
+        dWeights = calc_dK_deconv(
+            pre, post, delta_shape=delta_shape, stride_size=stride, out_size=k_size, padding=padding
+        )
         dWeights = dWeights * sign_value
         if w_decay > 0.:  ## apply synaptic decay
             dWeights = dWeights - weights * w_decay
@@ -148,17 +155,17 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
             dBiases = jnp.sum(post, axis=0, keepdims=True) * sign_value
         return dWeights, dBiases
 
+    @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
     @staticmethod
-    def _evolve(opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init,
-                shape, stride, padding, delta_shape, pre, post, weights, biases,
-                opt_params):
+    def evolve(
+            opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init, shape, stride, padding, delta_shape,
+            pre, post, weights, biases, opt_params
+    ):
         dWeights, dBiases = HebbianDeconvSynapse._compute_update(
-            sign_value, w_decay, bias_init, shape, stride, padding, delta_shape,
-            pre, post, weights
+            sign_value, w_decay, bias_init, shape, stride, padding, delta_shape, pre, post, weights
         )
         if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases],
-                                                [dWeights, dBiases])
+            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
         else: ## ignore dBiases since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## apply any enforced filter constraints
@@ -169,30 +176,18 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
                 weights = jnp.clip(weights, -w_bounds, w_bounds)
         return opt_params, weights, biases, dWeights, dBiases
 
-    @resolver(_evolve)
-    def evolve(self, opt_params, weights, biases, dWeights, dBiases):
-        self.opt_params.set(opt_params)
-        self.weights.set(weights)
-        self.biases.set(biases)
-        self.dWeights.set(dWeights)
-        self.dBiases.set(dBiases)
-
+    @transition(output_compartments=["dInputs"])
     @staticmethod
-    def _backtransmit(sign_value, stride, padding, x_delta_shape, pre, post,
-                      weights):  ## action-backpropagating routine
+    def backtransmit(sign_value, stride, padding, x_delta_shape, pre, post, weights):  ## action-backpropagating routine
         ## calc dInputs
-        dInputs = calc_dX_deconv(weights, post, delta_shape=x_delta_shape,
-                                 stride_size=stride, padding=padding)
+        dInputs = calc_dX_deconv(weights, post, delta_shape=x_delta_shape, stride_size=stride, padding=padding)
         ## flip sign of back-transmitted signal (if applicable)
         dInputs = dInputs * sign_value
         return dInputs
 
-    @resolver(_backtransmit)
-    def backtransmit(self, dInputs):
-        self.dInputs.set(dInputs)
-
+    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dInputs"])
     @staticmethod
-    def _reset(in_shape, out_shape):
+    def reset(in_shape, out_shape):
         preVals = jnp.zeros(in_shape)
         postVals = jnp.zeros(out_shape)
         inputs = preVals
@@ -201,14 +196,6 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         post = postVals
         dInputs = preVals
         return inputs, outputs, pre, post, dInputs
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, dInputs):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.dInputs.set(dInputs)
 
     @classmethod
     def help(cls): ## component help function

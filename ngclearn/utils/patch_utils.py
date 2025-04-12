@@ -118,7 +118,7 @@ class Create_Patches:
 
 
 
-def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True): ## scikit
+def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True, seed=1234): ## scikit
     """
     Generates a set of patches from an array/list of image arrays (via
     random sampling with replacement). This uses scikit-learn's patch creation
@@ -134,6 +134,8 @@ def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True):
 
         center: centers each patch by subtracting the patch mean (per-patch)
 
+        seed: seed to control the random state of internal patch sampling
+
     Returns:
         an array (D x (pH * pW)), where each row is a flattened patch sample
     """
@@ -143,7 +145,7 @@ def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True):
     for s in range(_x_batch.shape[0]):
         xs = _x_batch[s, :]
         xs = xs.reshape(px, py)
-        patches = extract_patches_2d(xs, patch_size, max_patches=max_patches)#, random_state=69)
+        patches = extract_patches_2d(xs, patch_size, max_patches=max_patches, random_state=seed)#, random_state=69)
         patches = np.reshape(patches, (len(patches), -1)) # flatten each patch in set
         if s > 0:
             p_batch = np.concatenate((p_batch,patches),axis=0)
