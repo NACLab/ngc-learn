@@ -26,13 +26,15 @@ def test_REINFORCESynapse1():
     dt = 1.  # ms
     decay = 0.99
     initial_seed = 42
+    mu_out_min = -jnp.inf
+    mu_out_max = jnp.inf
 
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
         a = REINFORCESynapse(
             name="a", shape=(1,1), decay=decay,
             act_fx="tanh", key=subkeys[0], seed=initial_seed,
-            mu_act_fx="tanh"
+            mu_act_fx="tanh", mu_out_min=mu_out_min, mu_out_max=mu_out_max
         )
 
         evolve_process = (Process("evolve_proc") >> a.evolve)
@@ -64,6 +66,7 @@ def test_REINFORCESynapse1():
         logstd = activation @ W_logstd
         std = jnp.exp(logstd.clip(-10.0, 2.0))
         sample = jax.random.normal(seed, mean.shape) * std + mean
+        sample = jnp.clip(sample, mu_out_min, mu_out_max)
         logp = gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
         return (-logp * outputs).mean() * 1e-2
     grad_fn = jax.value_and_grad(fn)
