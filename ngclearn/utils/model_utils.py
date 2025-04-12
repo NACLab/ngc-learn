@@ -675,6 +675,14 @@ def drop_out(dkey, data, rate=0.0):
     output = data * mask
     return output, mask
 
+@jit
+def clip(x, min_val, max_val):
+    return jnp.clip(x, min_val, max_val)
+
+@jit
+def d_clip(x, min_val, max_val):
+    return jnp.where((x < min_val) | (x > max_val), 0.0, 1.0)
+
 
 def scanner(fn):
     """
