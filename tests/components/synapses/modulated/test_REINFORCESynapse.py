@@ -142,7 +142,7 @@ def test_REINFORCESynapse1():
 
 def test_REINFORCESynapse2():
     # Testing reinforce synapse with scalar stddev = 2.0
-    name = "reinforce_ctx"
+    name = "reinforce_ctx2"
     ## create seeding keys
     np.random.seed(42)
     dkey = random.PRNGKey(1234)
