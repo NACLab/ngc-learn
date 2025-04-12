@@ -38,11 +38,11 @@ Wab.post << b.zF
 as well as (a bit later in the model construction code):
 
 ```python
-evolve_process = (Process()
+evolve_process = (JaxProcess()
                   >> a.evolve)
 circuit.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
-advance_process = (Process()
+advance_process = (JaxProcess()
                    >> a.advance_state)
 circuit.wrap_and_add_command(jit(advance_process.pure), name="advance")
 ```

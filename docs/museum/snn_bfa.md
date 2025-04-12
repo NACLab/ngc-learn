@@ -233,7 +233,7 @@ of $1000$ `SLIF` cells) similar to the one below:
 <img src="../images/museum/bfa_snn/bfasnn_codes.jpg" width="450" />
 
 Intriguingly, we see that the latent codes represented by the BFA-SNN's hidden
-layer spikes yield a rather (piecewise) linearly-separable transformation
+layer spikes yield a rather (piecewise) linearly-separable representation
 of the input digits, making the process of mapping inputs to label vectors
 much easier for the model's second layer of classification LIF units.
 Note that, in the `BFA_SNN` model exhibit class, we estimated

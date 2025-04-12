@@ -2,11 +2,7 @@
 
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
-<b>ngc-learn</b> is a Python library for building, simulating, and analyzing
-biomimetic systems, neurobiological agents, spiking neuronal networks,
-predictive coding circuitry, and models that learn via biologically-plausible
-forms of credit assignment. This simulation toolkit is built on top of JAX and is
-distributed under the 3-Clause BSD license.
+<b>ngc-learn</b> is a Python library for building, simulating, and analyzing biophysical / neurobiological systems, spiking neuronal networks, predictive coding circuitry, and biomimetic (NeuroAI) agents that learn in a biologically-plausible manner. This simulation toolkit, meant to support computational neuroscience and brain-inspired computing research, is built on top of JAX and is distributed under the 3-Clause BSD license.
 
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
@@ -14,7 +10,7 @@ It is currently maintained by the
 ## <b>Documentation</b>
 
 Official documentation, including tutorials, can be found
-<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>. The model museum repo,
+<a href="https://ngc-learn.readthedocs.io/en/latest/#">here</a>. The model museum repo (ngc-museum),
 which implements several historical models, can be found
 <a href="https://github.com/NACLab/ngc-museum">here</a>.
 
@@ -36,8 +32,8 @@ ngc-learn requires:
 1) Python (>=3.10)
 2) NumPy (>=1.26.0)
 3) SciPy (>=1.7.0)
-4) ngcsimlib (>=0.3.b4), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
-5) JAX (>= 0.4.28) (to enable GPU use, make sure to install one of the CUDA variants)
+4) ngcsimlib (>=1.0.0), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
+5) JAX (>=0.4.28) (to enable GPU use, make sure to install one of the CUDA variants)
 <!--
 5) scikit-learn (>=1.3.1) if using `ngclearn.utils.density`
 6) matplotlib (>=3.4.3) if using `ngclearn.utils.viz`
@@ -46,7 +42,7 @@ ngc-learn requires:
 -->
 
 ---
-ngc-learn 1.2.beta2 and later require Python 3.10 or newer as well as ngcsimlib >=0.3.b4.
+ngc-learn 2.0.0 and later require Python 3.10 or newer as well as ngcsimlib >=1.0.0.
 ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require
 Matplotlib (>=3.8.0) and imageio (>=2.31.5) and both plotting and density estimation
 tools (routines within ``ngclearn.utils.density``) will require Scikit-learn (>=0.24.2).
@@ -66,7 +62,7 @@ running the above pip command if you want to use the GPU version.
 
 The documentation includes more detailed
 <a href="https://ngc-learn.readthedocs.io/en/latest/installation.html">installation instructions</a>.
-Note that this library was developed on Ubuntu 20.04 and tested on Ubuntu(s) 18.04 and 20.04.
+Note that this library was developed on Ubuntu 20.04/22.04 and tested on Ubuntu(s) 20.04 and 22.04.
 
 If the installation was successful, you should see the following if you test
 it against your Python interpreter, i.e., run the <code>$ python</code> command

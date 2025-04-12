@@ -68,11 +68,15 @@ History
   * clean-up and additions to utils, including analysis probes (nonlinear attention, linear model) and image patching tools
   * upgrade/clean-up of ode_utils integration backend (includes rk4 now), addition of ode tools
   * now features in-built conv/deconv support and several hebbian/stdp synaptic components for conv/deconv
-  * integration of hodgkin-huxley cell
+  * integration of hodgkin-huxley cell (unit-tested / checked); new tutorial on hodgkin-huxley use written
+  * integration of new reinforce-synapse (unit-tested / checked) 
   * integration of phasor cell, resonate-and-fire cell
   * integration and support for short-term plasticity/dynamic synapse component, modulated stdp
-  * error cells revised to be more flexible (multivariate gaussian/laplacian/bernoulli)
+  * error cells revised to be more flexible (multivariate gaussian/laplacian/bernoulli -- have hooks for 
+    later extension to feature dynamically-evolved covariance structures/parameters)
   * addition of sindy tutorial in docs
+  * model museum (ngc-museum) and tutorials updated to reflect newest format (including use of JaxProcess)
+  * addition of deepmod exhibit in model museum (ngc-museum)
   * integration of reinforce-synapse, block/partitioned synapse component ("patched-synapse")
   * basic unit-tests (pytest framework) integrated to support dev
   * includes support for Intel's lava-nc emulator (several spiking/stdp components that play with ngc-lava)

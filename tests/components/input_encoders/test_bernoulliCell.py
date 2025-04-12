@@ -7,8 +7,7 @@ from ngclearn.components import BernoulliCell
 from numpy.testing import assert_array_equal
 
 from ngcsimlib.compilers.process import Process, transition
-#from ngcsimlib.component import Component
-#from ngcsimlib.compartment import Compartment
+from ngclearn.utils import JaxProcess
 from ngcsimlib.context import Context
 #from ngcsimlib.utils.compartment import Get_Compartment_Batch
 
@@ -24,7 +23,7 @@ def test_bernoulliCell1():
     with Context(name) as ctx:
         a = BernoulliCell(name="a", n_units=1, key=subkeys[0])
 
-        advance_process = (Process("advance_proc")
+        advance_process = (JaxProcess("advance_proc")
                            >> a.advance_state)
         ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
@@ -51,6 +50,6 @@ def test_bernoulliCell1():
 
     ## output should equal input
     assert_array_equal(outs, x_seq)
-    print(outs)
+    #print(outs)
 
 #test_bernoulliCell1()

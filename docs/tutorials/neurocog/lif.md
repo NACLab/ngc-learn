@@ -25,7 +25,7 @@ cell, you would write code akin to the following:
 from jax import numpy as jnp, random, jit
 
 from ngcsimlib.context import Context
-from ngcsimlib.compilers.process import Process
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components.neurons.spiking.LIFCell import LIFCell
 from ngclearn.utils.viz.spike_plot import plot_spiking_neuron
@@ -47,11 +47,11 @@ with Context("Model") as model:
                    refract_time=2., key=subkeys[0])
 
     ## create and compile core simulation commands
-    advance_process = (Process()
+    advance_process = (JaxProcess()
                        >> cell.advance_state)
     model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (Process()
+    reset_process = (JaxProcess()
                      >> cell.reset)
     model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 

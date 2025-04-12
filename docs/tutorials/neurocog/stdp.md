@@ -30,7 +30,7 @@ Writing the above 3-component system can be in the following manner:
 ```python
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-from ngcsimlib.compilers.process import Process
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components.other.varTrace import VarTrace
 from ngclearn.components.synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
@@ -57,16 +57,16 @@ with Context("Model") as model:
     # self.W1.postSpike << self.z1e.s ## we disable this as we will manually
     ##                                   insert a binary value (for a spike)
 
-    evolve_process = (Process()
+    evolve_process = (JaxProcess()
                       >> W.evolve)
     model.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
-    advance_process = (Process()
+    advance_process = (JaxProcess()
                        >> tr0.advance_state
                        >> tr1.advance_state)
     model.wrap_and_add_command(jit(advance_process.pure), name="advance_traces")
 
-    reset_process = (Process()
+    reset_process = (JaxProcess()
                      >> tr0.reset
                      >> tr1.reset
                      >> W.reset)

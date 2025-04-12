@@ -60,7 +60,7 @@ STF-dominated dynamics):
 ```python 
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-from ngcsimlib.compilers.process import Process
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components import PoissonCell, STPDenseSynapse, LIFCell
 import ngclearn.utils.weight_distribution as dist
@@ -98,13 +98,13 @@ with Context("Model") as model:
     W.inputs << z0.outputs ## z0 -> W
     z1.j << W.outputs ## W -> z1
 
-    advance_process = (Process()
+    advance_process = (JaxProcess()
                        >> z0.advance_state
                        >> W.advance_state
                        >> z1.advance_state)
     model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (Process()
+    reset_process = (JaxProcess()
                      >> z0.reset
                      >> z1.reset
                      >> W.reset)

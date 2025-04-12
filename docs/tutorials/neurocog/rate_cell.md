@@ -16,7 +16,7 @@ specifically the rate-cell (RateCell). Let's start with the file's header
 
 ```python
 from jax import numpy as jnp, random, jit
-from ngcsimlib.compilers.process import Process, transition
+from ngclearn.utils import JaxProcess
 from ngcsimlib.context import Context
 ## import model-specific elements
 from ngclearn.components.neurons.graded.rateCell import RateCell
@@ -40,11 +40,11 @@ with Context("Model") as model:  ## model/simulation definition
                     prior=("gaussian", gamma), integration_type="euler", key=subkeys[0])
 
     ## instantiate desired core commands that drive the simulation
-    advance_process = (Process()
+    advance_process = (JaxProcess()
                        >> cell.advance_state)
     model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (Process()
+    reset_process = (JaxProcess()
                      >> cell.reset)
     model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
