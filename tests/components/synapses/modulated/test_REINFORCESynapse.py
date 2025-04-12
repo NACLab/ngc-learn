@@ -61,8 +61,7 @@ def test_REINFORCESynapse1():
         logstd = activation @ W_logstd
         std = jnp.exp(logstd.clip(-10.0, 2.0))
         sample = jax.random.normal(seed, mean.shape) * std + mean
-        logp = gaussian_logpdf(sample, mean, std).sum(-1)
-        # logp = jax.scipy.stats.norm.logpdf(sample, mean, std).sum(-1)
+        logp = gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
         return (-logp * outputs).mean() * 1e-2
     grad_fn = jax.value_and_grad(fn)
 
@@ -130,5 +129,5 @@ def test_REINFORCESynapse1():
     )
 
 
-test_REINFORCESynapse1()
+# test_REINFORCESynapse1()
 

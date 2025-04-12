@@ -11,11 +11,10 @@ from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import create_function
 
 def gaussian_logpdf(event, mean, stddev):
-    # scale_sqrd = stddev ** 2
-    # log_normalizer = jnp.log(2 * jnp.pi * scale_sqrd)
-    # quadratic = (jax.lax.stop_gradient(event - 2 * mean) + mean)**2 / scale_sqrd
-    # return - 0.5 * (log_normalizer + quadratic)
-    return -0.5 * jnp.log(2 * jnp.pi) - jnp.log(stddev) - 0.5 * (  (jax.lax.stop_gradient(event - 2 * mean) + mean) / stddev  )**2
+  scale_sqrd = stddev ** 2
+  log_normalizer = jnp.log(2 * jnp.pi * scale_sqrd)
+  quadratic = (event - mean)**2 / scale_sqrd
+  return - 0.5 * (log_normalizer + quadratic)
 
 class REINFORCESynapse(DenseSynapse):
 
@@ -23,7 +22,7 @@ class REINFORCESynapse(DenseSynapse):
     def __init__(
             self, name, shape, eta=1e-4, decay=0.99, weight_init=None, resist_scale=1., act_fx=None,
             p_conn=1., w_bound=1., batch_size=1, seed=None, **kwargs
-    ):
+    ) -> None:
         # This is because we have weights mu and weight log sigma
         input_dim, output_dim = shape
         super().__init__(name, (input_dim, output_dim * 2), weight_init, None, resist_scale,
@@ -76,12 +75,12 @@ class REINFORCESynapse(DenseSynapse):
         # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
         # -(sample - mean) instead of (sample - mean) because we are doing straight-through gradient in the log_prob function
         # therefore, computation including the mean in such function does not contribute to the gradient
-        dlog_prob_dmean = -(sample - mean) / (std ** 2)
+        dlog_prob_dmean = (sample - mean) / (std ** 2)
         dL_dmean = dL_dlogp * dlog_prob_dmean # (B, A)
         dL_dWmu = activation.T @ dL_dmean
 
         # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
-        dlog_prob_dlogstd = (sample - mean)**2 / std**3 - 1.0 / std
+        dlog_prob_dlogstd = - 1.0 / std + (sample - mean)**2 / std**3
         dL_dstd = dL_dlogp * dlog_prob_dlogstd
         # Apply gradient clipping for logstd
         dL_dlogstd = jnp.where(
