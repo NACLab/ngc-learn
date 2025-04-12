@@ -67,7 +67,8 @@ class REINFORCESynapse(DenseSynapse):
     # Define Functions
     def __init__(
             self, name, shape, eta=1e-4, decay=0.99, weight_init=None, resist_scale=1., act_fx=None,
-            p_conn=1., w_bound=1., batch_size=1, seed=None, mu_act_fx=None, mu_out_min=-jnp.inf, mu_out_max=jnp.inf, **kwargs
+            p_conn=1., w_bound=1., batch_size=1, seed=None, mu_act_fx=None, mu_out_min=-jnp.inf, mu_out_max=jnp.inf,
+            scalar_stddev=-1.0, **kwargs
     ) -> None:
         # This is because we have weights mu and weight log sigma
         input_dim, output_dim = shape
@@ -84,6 +85,7 @@ class REINFORCESynapse(DenseSynapse):
         self.mu_act_fx, self.dmu_act_fx = create_function(mu_act_fx if mu_act_fx is not None else "identity")
         self.mu_out_min = mu_out_min
         self.mu_out_max = mu_out_max
+        self.scalar_stddev = scalar_stddev
 
         ## Compartment setup
         self.dWeights = Compartment(self.weights.value * 0)
@@ -99,7 +101,8 @@ class REINFORCESynapse(DenseSynapse):
         self.seed = Compartment(jax.random.PRNGKey(seed if seed is not None else 42))
 
     @staticmethod
-    def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max):
+    def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev):
+        learning_stddev_mask = jnp.asarray(scalar_stddev <= 0.0, dtype=jnp.float32)
         # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
         W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
         # Forward pass
@@ -109,6 +112,7 @@ class REINFORCESynapse(DenseSynapse):
         logstd = activation @ W_logstd
         clip_logstd = jnp.clip(logstd, -10.0, 2.0)
         std = jnp.exp(clip_logstd)
+        std = learning_stddev_mask * std + (1.0 - learning_stddev_mask) * scalar_stddev # masking trick
         # Sample using reparameterization trick
         epsilon = jax.random.normal(seed, fx_mean.shape)
         sample = epsilon * std + fx_mean
@@ -139,6 +143,7 @@ class REINFORCESynapse(DenseSynapse):
             dL_dstd * std
         )
         dL_dWlogstd = activation.T @ dL_dlogstd # (I, B) @ (B, A) = (I, A)
+        dL_dWlogstd = dL_dWlogstd * learning_stddev_mask # there is no learning for the scalar stddev
 
         # Update weights, negate the gradient because gradient ascent in ngc-learn
         dW = jnp.concatenate([-dL_dWmu, -dL_dWlogstd], axis=-1)
@@ -147,10 +152,10 @@ class REINFORCESynapse(DenseSynapse):
 
     @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients", "step_count", "seed"])
     @staticmethod
-    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, learning_mask, decay, accumulated_gradients, step_count, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max):
+    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, learning_mask, decay, accumulated_gradients, step_count, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev):
         main_seed, sub_seed = jax.random.split(seed)
         dWeights, objective, outputs = REINFORCESynapse._compute_update(
-            dt, inputs, rewards, act_fx, weights, sub_seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max
+            dt, inputs, rewards, act_fx, weights, sub_seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev
         )
         ## do a gradient ascent update/shift
         weights = (weights + dWeights * eta) * learning_mask + weights * (1.0 - learning_mask) # update the weights only where learning_mask is 1.0
