@@ -2,6 +2,7 @@ from jax import random, numpy as jnp, jit
 from ngcsimlib.compilers.process import transition
 from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
+from ngclearn.utils.model_utils import clip, d_clip
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -110,7 +111,7 @@ class REINFORCESynapse(DenseSynapse):
         mean = activation @ W_mu
         fx_mean = mu_act_fx(mean)
         logstd = activation @ W_logstd
-        clip_logstd = jnp.clip(logstd, -10.0, 2.0)
+        clip_logstd = clip(logstd, -10.0, 2.0)
         std = jnp.exp(clip_logstd)
         std = learning_stddev_mask * std + (1.0 - learning_stddev_mask) * scalar_stddev # masking trick
         # Sample using reparameterization trick
@@ -137,11 +138,7 @@ class REINFORCESynapse(DenseSynapse):
         dlog_prob_dlogstd = - 1.0 / std + (sample - fx_mean)**2 / std**3
         dL_dstd = dL_dlogp * dlog_prob_dlogstd
         # Apply gradient clipping for logstd
-        dL_dlogstd = jnp.where(
-            (logstd <= -10.0) | (logstd >= 2.0),
-            0.0,  # Zero gradient when clipped
-            dL_dstd * std
-        )
+        dL_dlogstd = d_clip(logstd, -10.0, 2.0) * dL_dstd * std
         dL_dWlogstd = activation.T @ dL_dlogstd # (I, B) @ (B, A) = (I, A)
         dL_dWlogstd = dL_dWlogstd * learning_stddev_mask # there is no learning for the scalar stddev
 
