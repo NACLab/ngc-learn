@@ -9,7 +9,7 @@ Inconsistent color schemes across visualizations
 -->
 
 
-# Sparse Identification of Non-linear Dynamical Systems (SINDy)[1]
+# Sparse Identification of Non-linear Dynamical Systems (SINDy) 
 
 In this section, we will study, create, simulate, and visualize a model known as the sparse identification of non-linear dynamical systems (SINDy) [1], implementing it in NGC-Learn and JAX. After going through this demonstration, you will:
 
