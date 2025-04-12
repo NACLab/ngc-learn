@@ -17,6 +17,50 @@ def gaussian_logpdf(event, mean, stddev):
   return - 0.5 * (log_normalizer + quadratic)
 
 class REINFORCESynapse(DenseSynapse):
+    """
+    A stochastic synapse implementing the REINFORCE algorithm (policy gradient method). This synapse
+    uses Gaussian distributions for generating actions and performs gradient-based updates.
+    
+    | --- Synapse Compartments: ---
+    | inputs - input (takes in external signals)
+    | outputs - output signals (sampled actions from Gaussian distribution)
+    | weights - current value matrix of synaptic efficacies (contains both mean and log-std parameters)
+    | dWeights - current delta matrix containing changes to be applied to synaptic efficacies
+    | rewards - reward signals used to modulate weight updates (takes in external signals)
+    | objective - scalar value of the current loss/objective
+    | accumulated_gradients - exponential moving average of gradients for tracking learning progress
+    | step_count - counter for number of learning steps
+    | learning_mask - binary mask determining when learning occurs
+    | seed - JAX PRNG key for random sampling
+
+    Args:
+        name: the string name of this component
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
+
+        eta: learning rate for weight updates (Default: 1e-4)
+
+        decay: decay factor for computing exponential moving average of gradients (Default: 0.99)
+
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use
+
+        resist_scale: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.)
+
+        act_fx: activation function to apply to inputs (Default: "identity")
+
+        p_conn: probability of a connection existing (default: 1.); setting
+            this to < 1. will result in a sparser synaptic structure
+
+        w_bound: upper bound for weight clipping (Default: 1.)
+
+        batch_size: batch size dimension of this component (Default: 1)
+
+        seed: random seed for reproducibility (Default: 42)
+    """
 
     # Define Functions
     def __init__(
@@ -41,17 +85,16 @@ class REINFORCESynapse(DenseSynapse):
         self.outputs = Compartment(jnp.zeros((batch_size, output_dim)))
         self.rewards = Compartment(jnp.zeros((batch_size,))) # the normalized reward (r - r_hat), input compartment
         self.act_fx, self.dact_fx = create_function(act_fx if act_fx is not None else "identity")
-        # self.seed = Component(seed)
         self.accumulated_gradients = Compartment(jnp.zeros((input_dim, output_dim * 2)))
         self.decay = decay
         self.step_count = Compartment(jnp.zeros(()))
         self.learning_mask = Compartment(jnp.zeros(()))
-        # self.seed = Component(jnp.array(seed) if seed is not None else jnp.array(42, dtype=jnp.int32))
         self.seed = Compartment(jax.random.PRNGKey(seed if seed is not None else 42))
 
     @staticmethod
     def _compute_update(dt, inputs, rewards, act_fx, weights, seed):
-        W_mu, W_logstd = jnp.split(weights, 2, axis=-1) # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
+        # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
+        W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
         # Forward pass
         activation = act_fx(inputs)
         mean = activation @ W_mu
@@ -73,8 +116,6 @@ class REINFORCESynapse(DenseSynapse):
 
         # Compute gradients manually based on the derivation
         # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
-        # -(sample - mean) instead of (sample - mean) because we are doing straight-through gradient in the log_prob function
-        # therefore, computation including the mean in such function does not contribute to the gradient
         dlog_prob_dmean = (sample - mean) / (std ** 2)
         dL_dmean = dL_dlogp * dlog_prob_dmean # (B, A)
         dL_dWmu = activation.T @ dL_dmean
@@ -130,18 +171,42 @@ class REINFORCESynapse(DenseSynapse):
     @classmethod
     def help(cls): ## component help function
         properties = {
-
+            "synapse_type": "REINFORCESynapse - implements a stochastic synaptic cable that uses "
+                            "the REINFORCE algorithm (policy gradient) to update weights based on rewards"
         }
         compartment_props = {
-
+            "inputs":
+                {"inputs": "Takes in external input signal values",
+                 "rewards": "Takes in reward signals for modulating weight updates. The reward is often normalized by baseline reward (r - r_hat)"},
+            "states":
+                {"weights": "Synapse efficacy/strength parameter values (mean and log-std)",
+                 "dWeights": "Weight update values",
+                 "accumulated_gradients": "EMA of gradients over time",
+                 "step_count": "Counter for learning steps",
+                 "learning_mask": "Binary mask determining when learning occurs",
+                 "seed": "a single integer as initial jax PRNG key for this component"},
+            "outputs":
+                {"outputs": "Output samples from Gaussian distribution",
+                 "objective": "Current value of the loss/objective function"},
         }
         hyperparams = {
-
+            "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
+            "eta": "Learning rate for weight updates",
+            "decay": "Decay factor for EMA of gradients",
+            "weight_init": "Initialization conditions for synaptic weight values",
+            "resist_scale": "Resistance level scaling factor applied to output",
+            "act_fx": "Activation function to apply to inputs",
+            "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
+            "w_bound": "Upper bound for weight clipping",
+            "batch_size": "Batch size dimension of this component",
+            "seed": "Random seed for reproducibility"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                # "dynamics": "outputs = [(W * Rscale) * inputs] ;"
-                #             "dW_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
+                "dynamics": "mean = act_fx(inputs) @ W_mu; logstd = act_fx(inputs) @ W_logstd; "
+                            "outputs ~ N(mean, exp(logstd)); "
+                            "dW = -grad_reinforce(rewards, log_prob(outputs)). ",
+                            "Check compute_update() for more details."
                 "hyperparameters": hyperparams}
         return info
 
