@@ -24,7 +24,7 @@ import numpy as np
 
 from ngclearn.utils.model_utils import scanner
 from ngcsimlib.context import Context
-from ngcsimlib.compilers.process import Process
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components.neurons.spiking.hodgkinHuxleyCell import HodgkinHuxleyCell
 
@@ -52,11 +52,11 @@ with Context("Model") as model:
     )
 
     ## create and compile core simulation commands
-    advance_process = (Process()
+    advance_process = (JaxProcess()
                        >> cell.advance_state)
     model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (Process()
+    reset_process = (JaxProcess()
                      >> cell.reset)
     model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 

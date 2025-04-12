@@ -19,7 +19,7 @@ We do this specifically as follows:
 ```python
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-from ngcsimlib.compilers.process import Process
+from ngclearn.utils import JaxProcess
 from ngclearn.components import HebbianSynapse, RateCell
 import ngclearn.utils.weight_distribution as dist
 
@@ -49,15 +49,15 @@ with Context("Circuit") as circuit:
   Wab.post << b.zF
 
   ## create and compile core simulation commands  
-  evolve_process = (Process()
+  evolve_process = (JaxProcess()
                     >> a.evolve)
   circuit.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
-  advance_process = (Process()
+  advance_process = (JaxProcess()
                      >> a.advance_state)
   circuit.wrap_and_add_command(jit(advance_process.pure), name="advance")
   
-  reset_process = (Process()
+  reset_process = (JaxProcess()
                  >> a.reset)
   circuit.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
@@ -83,7 +83,6 @@ for ts in range(x_seq.shape[1]):
   circuit.advance(t=ts*1., dt=1.)
   circuit.evolve(t=ts*1., dt=1.)
   print(" {}: input = {} ~> Wab = {}".format(ts, x_t, Wab.weights.value))
-
 ```
 
 Your code should produce the same output (towards the bottom):

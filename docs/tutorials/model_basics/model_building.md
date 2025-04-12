@@ -10,7 +10,7 @@ While building our dynamical system we will set up a Context and then add the th
 ```python
 from jax import numpy as jnp, random
 from ngclearn import Context
-from ngcsimlib.compilers.process import Process
+from ngclearn.utils import JaxProcess
 from ngclearn.components import RateCell, HebbianSynapse
 import ngclearn.utils.weight_distribution as dist
 
@@ -71,13 +71,13 @@ This is simply done with the use of the following convenience function calls:
 
 ```python
     ## configure desired commands for simulation object
-    reset_process = (Process()
+    reset_process = (JaxProcess()
                      >> a.reset
                      >> Wab.reset
                      >> b.reset)
     model.wrap_and_add_command(jit(reset_process.pure), name="reset")
     
-    advance_process = (Process()
+    advance_process = (JaxProcess()
                        >> a.advance_state
                        >> Wab.advance_state
                        >> b.advance_state)

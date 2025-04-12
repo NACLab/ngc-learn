@@ -22,7 +22,7 @@ The code below will instantiate the paired Poisson cell and corresponding variab
 
 ```python
 from jax import numpy as jnp, random, jit
-from ngcsimlib.compilers.process import Process
+from ngclearn.utils import JaxProcess
 from ngcsimlib.context import Context
 ## import model-specific mechanisms
 from ngclearn.components.input_encoders.poissonCell import PoissonCell
@@ -39,12 +39,12 @@ with Context("Model") as model:
     ## wire up cell z0 to trace tr0
     trace.inputs << cell.outputs
 
-    advance_process = (Process()
+    advance_process = (JaxProcess()
                        >> cell.advance_state
                        >> trace.advance_state)
     model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (Process()
+    reset_process = (JaxProcess()
                      >> cell.reset
                      >> trace.reset)
     model.wrap_and_add_command(jit(reset_process.pure), name="reset")
