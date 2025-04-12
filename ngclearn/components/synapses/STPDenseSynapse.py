@@ -1,9 +1,12 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
-from ngclearn.components.synapses import DenseSynapse
-from ngclearn.utils import tensorstats
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
+from ngclearn.components.synapses import DenseSynapse
+from ngclearn.utils import tensorstats
 
 class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
     """
@@ -57,8 +60,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
     def __init__(self, name, shape, weight_init=None, bias_init=None,
                  resist_scale=1., p_conn=1., tau_f=750., tau_d=50.,
                  resources_init=None, **kwargs):
-        super().__init__(name, shape, weight_init, bias_init, resist_scale,
-                         p_conn, **kwargs)
+        super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
         ## STP meta-parameters
         self.resources_init = resources_init
         self.tau_f = tau_f
@@ -69,17 +71,19 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         preVals = jnp.zeros((self.batch_size, shape[0]))
         self.u = Compartment(preVals) ## release prob variables
         self.x = Compartment(preVals + 1) ## resource availability variables
-        self.Wdyn = Compartment(self.weights.value * 0)
+        self.Wdyn = Compartment(self.weights.value * 0) ## dynamic synapse values
         if self.resources_init is None:
             info(self.name, "is using default resources value initializer!")
-            self.weight_init = {"dist": "uniform", "amin": 0.125, "amax": 0.175} # 0.15
+            self.resources_init = {"dist": "uniform", "amin": 0.125, "amax": 0.175} # 0.15
         self.resources = Compartment(
-            initialize_params(subkeys[2], resources_init, shape)
+            initialize_params(subkeys[2], self.resources_init, shape)
         ) ## matrix U - synaptic resources matrix
 
+    @transition(output_compartments=["outputs", "u", "x", "Wdyn"])
     @staticmethod
-    def _advance_state(tau_f, tau_d, Rscale, inputs, weights, biases, resources,
-                       u, x, Wdyn):
+    def advance_state(
+            tau_f, tau_d, Rscale, inputs, weights, biases, resources, u, x, Wdyn
+    ):
         s = inputs
         ## compute short-term facilitation
         #u = u - u * (1./tau_f) + (resources * (1. - u)) * s
@@ -95,15 +99,9 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         outputs = jnp.matmul(inputs, Wdyn * Rscale) + biases
         return outputs, u, x, Wdyn
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs, u, x, Wdyn):
-        self.outputs.set(outputs)
-        self.u.set(u)
-        self.x.set(x)
-        self.Wdyn.set(Wdyn)
-
+    @transition(output_compartments=["inputs", "outputs", "u", "x", "Wdyn"])
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
@@ -112,14 +110,6 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         x = preVals + 1
         Wdyn = jnp.zeros(shape)
         return inputs, outputs, u, x, Wdyn
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, u, x, Wdyn):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.u.set(u)
-        self.x.set(x)
-        self.Wdyn.set(Wdyn)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

@@ -191,6 +191,23 @@ cell supports either Euler or midpoint method / RK-2 integration.)
     :noindex:
 ```
 
+### The Resonate-and-Fire (RAF) Cell
+
+This cell models dynamics over voltage `v` and a angular driver state/variable `w`; these 
+two variables result in a dampened oscillatory spiking neuronal cell). In effect, the 
+resonatoe-and-fire (RAF) model (or "resonator") evolves as a result of two coupled 
+differential equations. (Note that this cell supports either Euler or RK-2 integration.)
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.RAFCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### The Izhikevich Cell
 
 This cell models dynamics over voltage `v` and a recover variable `w` (where `w`
@@ -204,6 +221,23 @@ fast spiking (FS), low-threshold spiking (LTS), and resonator (RZ) neurons.
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.IzhikevichCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### The Hodgkin-Huxley Cell
+
+This cell models dynamics over voltage `v` and three channels/gates (related to 
+potassium and sodium activation/inactivation). This sophisticated cell system is, 
+as a result,  a set of four coupled differential equations and is driven by an appropriately  configured set of biophysical constants/coefficients (default values of which have  been set according to relevant source work). 
+(Note that this cell supports either Euler or midpoint method / RK-2 integration.)
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.HodgkinHuxleyCell
   :noindex:
 
   .. automethod:: advance_state

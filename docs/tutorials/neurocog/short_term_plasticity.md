@@ -23,7 +23,7 @@ to emulate dynamics from a STD-dominated perspective.
 
 ### Starting with Facilitation-Dominated Dynamics
 
-One experiment goal with using a "dynamic synapse" <b>[1]</b> is often to computationally 
+One experimental goal with using a "dynamic synapse" <b>[1]</b> is often to computationally 
 model the fact that synaptic efficacy (strength/conductance magnitude) is 
 not a fixed quantity -- even in cases where long-term adaptation/learning is 
 absent -- and instead a time-varying property that depends on a fixed 
@@ -60,7 +60,7 @@ STF-dominated dynamics):
 ```python 
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-from ngcsimlib.compilers import compile_command, wrap_command
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components import PoissonCell, STPDenseSynapse, LIFCell
 import ngclearn.utils.weight_distribution as dist
@@ -90,7 +90,7 @@ with Context("Model") as model:
     W = STPDenseSynapse("W", shape=(1, 1), weight_init=dist.constant(value=2.5),
                         resources_init=dist.constant(value=Rval),
                         tau_f=tau_f, tau_d=tau_d, key=subkeys[0])
-    z0 = PoissonCell("z0", n_units=1, max_freq=firing_rate_e, key=subkeys[0])
+    z0 = PoissonCell("z0", n_units=1, target_freq=firing_rate_e, key=subkeys[0])
     z1 = LIFCell("z1", n_units=1, tau_m=tau_m, resist_m=(tau_m / dt) * R_m,
                  v_rest=-60., v_reset=-70., thr=-50.,
                  tau_theta=0., theta_plus=0., refract_time=0.)
@@ -98,12 +98,17 @@ with Context("Model") as model:
     W.inputs << z0.outputs ## z0 -> W
     z1.j << W.outputs ## W -> z1
 
-    reset_cmd, reset_args = model.compile_by_key(z0, z1, W,
-                                                 compile_key="reset")
-    adv_tr_cmd, _ = model.compile_by_key(z0, W, z1, compile_key="advance_state") #z0
+    advance_process = (JaxProcess()
+                       >> z0.advance_state
+                       >> W.advance_state
+                       >> z1.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    reset_process = (JaxProcess()
+                     >> z0.reset
+                     >> z1.reset
+                     >> W.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
     @Context.dynamicCommand
     def clamp(obs):

@@ -53,12 +53,8 @@ The code you would write amounts to the below:
 
 ```python
 from jax import numpy as jnp, jit
-import time
-
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
-from ngcsimlib.compilers import compile_command, wrap_command
-from ngclearn.utils.viz.raster import create_raster_plot
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components.neurons.graded.gaussianErrorCell import GaussianErrorCell
 
@@ -68,11 +64,13 @@ T = 5  ## number time steps to simulate
 with Context("Model") as model:
     cell = GaussianErrorCell("z0", n_units=3)
 
-    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
+    advance_process = (JaxProcess()
+                       >> cell.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    reset_process = (JaxProcess()
+                     >> cell.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
 
     @Context.dynamicCommand

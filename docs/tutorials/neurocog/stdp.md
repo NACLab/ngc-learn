@@ -30,7 +30,7 @@ Writing the above 3-component system can be in the following manner:
 ```python
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-from ngcsimlib.compilers import compile_command, wrap_command
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components.other.varTrace import VarTrace
 from ngclearn.components.synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
@@ -52,22 +52,25 @@ with Context("Model") as model:
     # wire only relevant compartments to synaptic cable W for demo purposes
     W.preTrace << tr0.trace
     # self.W1.preSpike << self.z0.outputs ## we disable this as we will manually
-    ## insert a binary value (for a spike)
+    ##                                       insert a binary value (for a spike)
     W.postTrace << tr1.trace
     # self.W1.postSpike << self.z1e.s ## we disable this as we will manually
-    ## insert a binary value (for a spike)
+    ##                                   insert a binary value (for a spike)
 
-    reset_cmd, reset_args = model.compile_by_key(tr0, tr1, W,
-                                                 compile_key="reset")
-    adv_tr_cmd, _ = model.compile_by_key(tr0, tr1, compile_key="advance_state",
-                                         name="advance_traces")
-    evolve_cmd, evolve_args = model.compile_by_key(W,
-                                                   compile_key="evolve")  ## M-step
+    evolve_process = (JaxProcess()
+                      >> W.evolve)
+    model.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_traces)),
-                      name="advance_traces")
-    model.add_command(wrap_command(jit(model.evolve)), name="evolve")
+    advance_process = (JaxProcess()
+                       >> tr0.advance_state
+                       >> tr1.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance_traces")
+
+    reset_process = (JaxProcess()
+                     >> tr0.reset
+                     >> tr1.reset
+                     >> W.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
 
     @Context.dynamicCommand

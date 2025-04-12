@@ -39,14 +39,11 @@ spike train over $100$ steps in time as follows:
 
 ```python
 from jax import numpy as jnp, random, jit
-import time
-
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
-from ngcsimlib.compilers import compile_command, wrap_command
+from ngclearn.utils import JaxProcess
+
 from ngclearn.utils.viz.raster import create_raster_plot
 ## import model-specific mechanisms
-from ngclearn.operations import summation
 from ngclearn.components.input_encoders.bernoulliCell import BernoulliCell
 
 ## create seeding keys (JAX-style)
@@ -59,11 +56,13 @@ T = 100  ## number time steps to simulate
 with Context("Model") as model:
     cell = BernoulliCell("z0", n_units=10, key=subkeys[0])
 
-    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
+    advance_process = (JaxProcess()
+                       >> cell.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    reset_process = (JaxProcess()
+                     >> cell.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
 
     @Context.dynamicCommand

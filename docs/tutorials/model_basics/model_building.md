@@ -10,7 +10,8 @@ While building our dynamical system we will set up a Context and then add the th
 ```python
 from jax import numpy as jnp, random
 from ngclearn import Context
-from ngclearn.commands import Reset, Clamp, AdvanceState
+from ngclearn.utils import JaxProcess
+from ngcsimlib.compilers.process import Process
 from ngclearn.components import RateCell, HebbianSynapse
 import ngclearn.utils.weight_distribution as dist
 
@@ -51,8 +52,9 @@ nodes `a` and `b` since a basic synapse component like `Wab` does not have a
 base/resting value), an `advance` (which moves all the nodes one step
 forward in time according to their compartments' ODEs), and `clamp` (which will
 allow us to insert data into particular nodes).
-This is simply done with the following few lines:
+This is simply done with the use of the following convenience function calls:
 
+<!--
 ```python
     ## configure desired commands for simulation object
     Reset(command_name="reset",
@@ -64,6 +66,28 @@ This is simply done with the following few lines:
           components=[a],
           compartment="j",
           clamp_name="x")
+```
+-->
+
+
+```python
+    ## configure desired commands for simulation object
+    reset_process = (JaxProcess()
+                     >> a.reset
+                     >> Wab.reset
+                     >> b.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
+    
+    advance_process = (JaxProcess()
+                       >> a.advance_state
+                       >> Wab.advance_state
+                       >> b.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
+    
+    ## set up clamp as a non-compiled utility commands
+    @Context.dynamicCommand
+    def clamp(x):
+        a.j.set(x)
 ```
 
 ## Running the Dynamical System's Controller

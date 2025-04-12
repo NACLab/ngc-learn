@@ -1,14 +1,16 @@
 from ngclearn import numpy as jnp
-from ngclearn import resolver, Component, Compartment
-from ngclearn.utils import tensorstats
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info, warn
+from ngclearn.components.synapses.hebbian import TraceSTDPSynapse
+from ngclearn.utils import tensorstats
 
 class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
     """
-    A static (dense) synaptic cable; no form of synaptic evolution/adaptation
-    is in-built to this component. This a Lava-compliant version of the
-    static synapse component from the synapses sub-package of components.
+    A static (dense) synaptic cable; no form of synaptic evolution/adaptation is in-built to this component. This a
+    Lava-compliant version of the static synapse component from the synapses sub-package of components.
 
     | --- Synapse Input Compartments: (Takes wired-in signals) ---
     | inputs - input (pre-synaptic) stimulus
@@ -79,28 +81,21 @@ class StaticSynapse(Component): ## Lava-compliant fixed/non-evolvable synapse
         self.outputs.set(postVals)
         self.weights.set(weights)
 
+    @transition(output_compartments=["outputs"])
     @staticmethod
-    def _advance_state(dt, Rscale, inputs, weights):
+    def advance_state(dt, Rscale, inputs, weights):
         outputs = jnp.matmul(inputs, weights) * Rscale
         return outputs
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
-
+    @transition(output_compartments=["inputs", "outputs"])
     @staticmethod
-    def _reset(batch_size, rows, cols):
+    def reset(batch_size, rows, cols):
         preVals = jnp.zeros((batch_size, rows))
         postVals = jnp.zeros((batch_size, cols))
         return (
             preVals, # inputs
             postVals, # outputs
         )
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

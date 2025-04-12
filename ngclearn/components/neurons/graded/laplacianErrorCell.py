@@ -2,46 +2,7 @@ from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
-
-def _run_cell(dt, targ, mu):
-    """
-    Moves cell dynamics one step forward.
-
-    Args:
-        dt: integration time constant
-
-        targ: target pattern value
-
-        mu: prediction value
-
-    Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, local loss
-    """
-    return _run_laplacian_cell(dt, targ, mu)
-
-@jit
-def _run_laplacian_cell(dt, targ, mu):
-    """
-    Moves Laplacian cell dynamics one step forward. Specifically, this
-    routine emulates the error unit behavior of the local cost functional:
-
-    | L(targ, mu) = -||targ - mu||_1
-    | or log likelihood of the Laplace distribution with identity scale
-
-    Args:
-        dt: integration time constant
-
-        targ: target pattern value
-
-        mu: prediction value
-
-    Returns:
-        derivative w.r.t. mean "dmu", derivative w.r.t. target dtarg, loss
-    """
-    dmu = jnp.sign(targ - mu) # e (error unit)
-    dtarg = -dmu # reverse of e
-    L = -jnp.sum(jnp.abs(dmu)) # technically, this is mean absolute error
-    return dmu, dtarg, L
+from ngcsimlib.compilers.process import transition
 
 class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -49,13 +10,15 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
     of a mismatch/error signal.
 
     | --- Cell Input Compartments: ---
-    | mu - predicted value (takes in external signals)
+    | shift - predicted shift value (takes in external signals)
+    | Scale - predicted scale (takes in external signals)
     | target - desired/goal value (takes in external signals)
     | modulator - modulation signal (takes in optional external signals)
     | mask - binary/gating mask to apply to error neuron calculations
     | --- Cell Output Compartments: ---
     | L - local loss function embodied by this cell
-    | dmu - derivative of L w.r.t. mu
+    | dshift - derivative of L w.r.t. shift
+    | dScale - derivative of L w.r.t. Scale
     | dtarget - derivative of L w.r.t. target
 
     Args:
@@ -63,15 +26,27 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
 
         n_units: number of cellular entities (neural population size)
 
-        tau_m: (Unused -- currently cell is a fixed-point model)
+        batch_size: batch size dimension of this cell (Default: 1)
 
-        leakRate: (Unused -- currently cell is a fixed-point model)
+        scale: initial/fixed value for prediction scale matrix in multivariate laplacian distribution;
+            Note that if the compartment `Scale` is never used, then this cell assumes that the scale collapses
+            to a constant/fixed `scale`
     """
 
     # Define Functions
-    def __init__(self, name, n_units, batch_size=1, **kwargs):
+    def __init__(self, name, n_units, batch_size=1, scale=1., shape=None, **kwargs):
         super().__init__(name, **kwargs)
 
+        ## Layer Size Setup
+        _shape = (batch_size, n_units)  ## default shape is 2D/matrix
+        if shape is None:
+            shape = (n_units,)  ## we set shape to be equal to n_units if nothing provided
+        else:
+            _shape = (batch_size, shape[0], shape[1], shape[2])  ## shape is 4D tensor
+        scale_shape = (1, 1)
+        if not isinstance(scale, float) and not isinstance(sigma, int):
+            scale_shape = jnp.array(scale).shape
+        self.scale_shape = scale_shape
         ## Layer Size setup
         self.n_units = n_units
         self.batch_size = batch_size
@@ -80,68 +55,69 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.width = self.height = n_units
 
         ## Compartment setup
-        restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.L = Compartment(0.) # loss compartment
-        self.mu = Compartment(restVals) # mean/mean name. input wire
-        self.dmu = Compartment(restVals) # derivative mean
-        self.target = Compartment(restVals) # target. input wire
-        self.dtarget = Compartment(restVals) # derivative target
-        self.modulator = Compartment(restVals + 1.0) # to be set/consumed
+        restVals = jnp.zeros(_shape)
+        self.L = Compartment(0., display_name="Laplacian Log likelihood", units="nats") ## loss compartment
+        self.shift = Compartment(restVals, display_name="Laplacian shift") ## shift/shift name. input wire
+        _Scale = jnp.zeros(scale_shape)
+        self.Scale = Compartment(_Scale + scale, display_name="Laplacian scale") ## scale/scale name. input wire
+        self.dshift = Compartment(restVals) ## derivative shift
+        self.dScale = Compartment(_Scale) ## derivative scale
+        self.target = Compartment(restVals, display_name="Laplacian data/target variable") ## target. input wire
+        self.dtarget = Compartment(restVals) ## derivative target
+        self.modulator = Compartment(restVals + 1.0) ## to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
+    @transition(output_compartments=["dshift", "dtarget", "dScale", "L", "mask"])
     @staticmethod
-    def _advance_state(dt, mu, target, modulator, mask):
-        ## compute Laplacian error cell output
-        dmu, dtarget, L = _run_cell(dt, target * mask, mu * mask)
-        dmu = dmu * modulator * mask
+    def advance_state(dt, shift, target, Scale, modulator, mask): ## compute Laplacian error cell output
+        # Moves Laplacian cell dynamics one step forward. Specifically, this routine emulates the error unit
+        # behavior of the local cost functional:
+        # FIXME: Currently, below does: L(targ, shift) = -||targ - shift||_1/scale
+        #        but should support full log likelihood of the multivariate Laplacian with scale matrix of different types
+        # TODO: could introduce a variant of LaplacianErrorCell that moves according to an ODE
+        #       (using integration time constant dt)
+        _dshift = jnp.sign(target - shift)  # e (error unit)
+        dshift = _dshift/Scale
+        dtarget = -dshift  # reverse of e
+        dScale = Scale * 0 + 1.  # no derivative is calculated at this time for the scale
+        L = -jnp.sum(jnp.abs(_dshift)) * (1. / Scale) # technically, this is mean absolute error
+
+        dshift = dshift * modulator * mask
         dtarget = dtarget * modulator * mask
         mask = mask * 0. + 1.  ## "eat" the mask as it should only apply at time t
-        return dmu, dtarget, L, mask
+        return dshift, dtarget, dScale, jnp.squeeze(L), mask
 
-    @resolver(_advance_state)
-    def advance_state(self, dmu, dtarget, L, mask):
-        self.dmu.set(dmu)
-        self.dtarget.set(dtarget)
-        self.L.set(L)
-        self.mask.set(mask)
-
+    @transition(output_compartments=["dshift", "dtarget", "dScale", "target", "shift", "modulator", "L", "mask"])
     @staticmethod
-    def _reset(batch_size, n_units):
+    def reset(batch_size, n_units, scale_shape):
         restVals = jnp.zeros((batch_size, n_units))
-        dmu = restVals
+        dshift = restVals
         dtarget = restVals
+        dScale = jnp.zeros(scale_shape)
         target = restVals
-        mu = restVals
-        modulator = mu + 1.
+        shift = restVals
+        modulator = shift + 1.
         L = 0.
         mask = jnp.ones((batch_size, n_units))
-        return dmu, dtarget, target, mu, modulator, L, mask
-
-    @resolver(_reset)
-    def reset(self, dmu, dtarget, target, mu, modulator, L, mask):
-        self.dmu.set(dmu)
-        self.dtarget.set(dtarget)
-        self.target.set(target)
-        self.mu.set(mu)
-        self.modulator.set(modulator)
-        self.L.set(L)
-        self.mask.set(mask)
+        return dshift, dtarget, dScale, target, shift, modulator, L, mask
 
     @classmethod
     def help(cls): ## component help function
         properties = {
             "cell_type": "LaplacianErrorcell - computes mismatch/error signals at "
-                         "each time step t (between a `target` and a prediction `mu`)"
+                         "each time step t (between a `target` and a prediction `shift`)"
         }
         compartment_props = {
             "inputs":
-                {"mu": "External input prediction value(s)",
+                {"shift": "External input prediction value(s)",
+                 "Scale": "External scale prediction value(s)",
                  "target": "External input target signal value(s)",
                  "modulator": "External input modulatory/scaling signal(s)",
                  "mask": "External binary/gating mask to apply to signals"},
             "outputs":
                 {"L": "Local loss value computed/embodied by this error-cell",
-                 "dmu": "first derivative of loss w.r.t. prediction value(s)",
+                 "dshift": "first derivative of loss w.r.t. prediction value(s)",
+                 "dScale": "first derivative of loss w.r.t. scale value(s)",
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},
         }
         hyperparams = {
@@ -150,7 +126,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "Laplacian(x=target; shift=mu, scale=1)",
+                "dynamics": "Laplacian(x=target; shift, scale)",
                 "hyperparameters": hyperparams}
         return info
 

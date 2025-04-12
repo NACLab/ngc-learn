@@ -1,6 +1,7 @@
 from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
+from ngcsimlib.compilers.process import transition
 from ngclearn.utils import tensorstats
 
 class RewardErrorCell(JaxComponent): ## Reward prediction error cell
@@ -50,8 +51,9 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         self.accum_reward = Compartment(restVals)  ## accumulated reward signal(s)
         self.n_ep_steps = Compartment(jnp.zeros((self.batch_size, 1))) ## number of episode steps taken
 
+    @transition(output_compartments=["mu", "rpe", "n_ep_steps", "accum_reward"])
     @staticmethod
-    def _advance_state(dt, use_online_predictor, alpha, mu, rpe, reward,
+    def advance_state(dt, use_online_predictor, alpha, mu, rpe, reward,
                        n_ep_steps, accum_reward):
         ## compute/update RPE and predictor values
         accum_reward = accum_reward + reward
@@ -61,15 +63,9 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         n_ep_steps = n_ep_steps + 1
         return mu, rpe, n_ep_steps, accum_reward
 
-    @resolver(_advance_state)
-    def advance_state(self, mu, rpe, n_ep_steps, accum_reward):
-        self.mu.set(mu)
-        self.rpe.set(rpe)
-        self.n_ep_steps.set(n_ep_steps)
-        self.accum_reward.set(accum_reward)
-
+    @transition(output_compartments=["mu"])
     @staticmethod
-    def _evolve(dt, use_online_predictor, ema_window_len, n_ep_steps, mu,
+    def evolve(dt, use_online_predictor, ema_window_len, n_ep_steps, mu,
                 accum_reward):
         if use_online_predictor:
             ## total episodic reward signal
@@ -77,12 +73,9 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
             mu = (1. - 1./ema_window_len) * mu + (1./ema_window_len) * r
         return mu
 
-    @resolver(_evolve)
-    def evolve(self, mu):
-        self.mu.set(mu)
-
+    @transition(output_compartments=["mu", "rpe", "accum_reward", "n_ep_steps"])
     @staticmethod
-    def _reset(batch_size, n_units):
+    def reset(batch_size, n_units):
         restVals = jnp.zeros((batch_size, n_units))
         mu = restVals
         rpe = restVals
@@ -90,12 +83,6 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         n_ep_steps = jnp.zeros((batch_size, 1))
         return mu, rpe, accum_reward, n_ep_steps
 
-    @resolver(_reset)
-    def reset(self, mu, rpe, accum_reward, n_ep_steps):
-        self.mu.set(mu)
-        self.rpe.set(rpe)
-        self.accum_reward.set(accum_reward)
-        self.n_ep_steps.set(n_ep_steps)
 
     @classmethod
     def help(cls): ## component help function

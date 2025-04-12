@@ -1,8 +1,13 @@
-from jax import numpy as jnp, jit
-from functools import partial
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, random, jit
+from functools import partial
 from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
+
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[5,6])
 def _apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
@@ -40,6 +45,8 @@ class ExpKernel(JaxComponent): ## exponential kernel
         nu: (ms, spike time interval for window)
 
         tau_w: spike window time constant (in micro-secs, or nano-s)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     # Define Functions
@@ -60,30 +67,21 @@ class ExpKernel(JaxComponent): ## exponential kernel
         ## window of spike times
         self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units)))
 
+    @transition(output_compartments=["epsp", "tf"])
     @staticmethod
-    def _advance_state(t, tau_w, win_len, inputs, tf):
+    def advance_state(t, tau_w, win_len, inputs, tf):
         s = inputs
         ## update spike time window and corresponding window volume
         tf, epsp = _apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,
                                  krn_end=win_len-1) #0:win_len-1)
         return epsp, tf
 
-    @resolver(_advance_state)
-    def advance_state(self, epsp, tf):
-        self.epsp.set(epsp)
-        self.tf.set(tf)
-
+    @transition(output_compartments=["inputs", "epsp", "tf"])
     @staticmethod
-    def _reset(batch_size, n_units, win_len):
+    def reset(batch_size, n_units, win_len):
         restVals = jnp.zeros((batch_size, n_units))
         restTensor = jnp.zeros([win_len, batch_size, n_units], jnp.float32) # tf
         return restVals, restVals, restTensor # inputs, epsp, tf
-
-    @resolver(_reset)
-    def reset(self, inputs, epsp, tf):
-        self.inputs.set(inputs)
-        self.epsp.set(epsp)
-        self.tf.set(tf)
 
     @classmethod
     def help(cls): ## component help function

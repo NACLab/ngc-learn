@@ -1,27 +1,16 @@
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
-from ngclearn.utils.model_utils import clamp_min, clamp_max
 from jax import numpy as jnp, random, jit
 from functools import partial
+from ngclearn.utils import tensorstats
+from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib.logger import info, warn
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
+from ngcsimlib.compilers.process import transition
+#from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
-    Args:
-        t: current time (a scalar/int value)
+from ngclearn.utils.model_utils import clamp_min, clamp_max
 
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
 
 @partial(jit, static_argnums=[5])
 def _calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
@@ -47,7 +36,7 @@ def _calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
         projected spike times
     """
     _tau = tau
-    if normalize == True:
+    if normalize:
         _tau = num_steps - 1. - first_spk_t ## linear normalization
     #torch.clamp_max((-tau * (data - 1)), -tau * (threshold - 1))
     stimes = -_tau * (data - 1.) ## calc raw latency code values
@@ -84,7 +73,7 @@ def _calc_spike_times_nonlinear(data, tau, thr, first_spk_t, eps=1e-7,
     stimes = jnp.log(_data / (_data - thr)) * tau ## calc spike times
     stimes = stimes + first_spk_t
 
-    if normalize == True:
+    if normalize:
         term1 = (stimes - first_spk_t)
         term2 = (num_steps - first_spk_t - 1.)
         term3 = jnp.max(stimes - first_spk_t)
@@ -148,14 +137,20 @@ class LatencyCell(JaxComponent):
             :Note: if this set to True, you will need to choose a useful value
                 for the "num_steps" argument (>1), depending on how many steps simulated
 
+        clip_spikes: should values under threshold be removed/suppressed?
+            (default: False)
+
         num_steps: number of discrete time steps to consider for normalized latency
             code (only useful if "normalize" is set to True) (Default: 1)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau=1., threshold=0.01, first_spike_time=0.,
-                 linearize=False, normalize=False, num_steps=1.,
-                 batch_size=1, **kwargs):
+    def __init__(
+            self, name, n_units, tau=1., threshold=0.01, first_spike_time=0., linearize=False, normalize=False,
+            clip_spikes=False, num_steps=1., batch_size=1, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## latency meta-parameters
@@ -163,6 +158,7 @@ class LatencyCell(JaxComponent):
         self.tau = tau
         self.threshold = threshold
         self.linearize = linearize
+        self.clip_spikes = clip_spikes
         ## normalize latency code s.t. final spike(s) occur w/in num_steps
         self.normalize = normalize
         self.num_steps = num_steps
@@ -173,19 +169,26 @@ class LatencyCell(JaxComponent):
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.inputs = Compartment(restVals) # input compartment
-        self.outputs = Compartment(restVals) # output compartment
-        self.mask = Compartment(restVals)  # output compartment
-        self.tols = Compartment(restVals) # time of last spike
-        self.targ_sp_times = Compartment(restVals)
+        self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
+        self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
+        self.mask = Compartment(restVals, display_name="Spike Time Mask")
+        self.clip_mask = Compartment(restVals, display_name="Clip Mask")
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
+        self.targ_sp_times = Compartment(restVals, display_name="Target Spike Time", units="ms")
         #self.reset()
 
+    @transition(output_compartments=["targ_sp_times", "clip_mask"])
     @staticmethod
-    def _calc_spike_times(linearize, tau, threshold, first_spike_time, num_steps,
-                          normalize, inputs):
+    def calc_spike_times(
+            linearize, tau, threshold, first_spike_time, num_steps, normalize, clip_spikes, inputs
+    ):
         ## would call this function before processing a spike train (at start)
         data = inputs
-        if linearize == True: ## linearize spike time calculation
+        if clip_spikes:
+            clip_mask = (data < threshold) * 1. ## find values under threshold
+        else:
+            clip_mask = data * 0.  ## all values allowed to fire spikes
+        if linearize: ## linearize spike time calculation
             stimes = _calc_spike_times_linear(data, tau, threshold,
                                               first_spike_time,
                                               num_steps, normalize)
@@ -196,40 +199,28 @@ class LatencyCell(JaxComponent):
                                                  num_steps=num_steps,
                                                  normalize=normalize)
             targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
-        return targ_sp_times
+        return targ_sp_times, clip_mask
 
-    @resolver(_calc_spike_times)
-    def calc_spike_times(self, targ_sp_times):
-        self.targ_sp_times.set(targ_sp_times)
-
+    @transition(output_compartments=["outputs", "tols", "mask", "targ_sp_times", "key"])
     @staticmethod
-    def _advance_state(t, dt, key, inputs, mask, targ_sp_times, tols):
+    def advance_state(t, dt, key, inputs, mask, clip_mask, targ_sp_times, tols):
         key, *subkeys = random.split(key, 2)
-        data = inputs ## get sensory pattern data / features
-        spikes, spk_mask = _extract_spike(targ_sp_times, t, mask) ## get spikes at t
-        tols = _update_times(t, spikes, tols)
+        data = inputs  ## get sensory pattern data / features
+        spikes, spk_mask = _extract_spike(targ_sp_times, t, mask)  ## get spikes at t
+
+        # Updates time-of-last-spike (tols) variable:
+        # output = s = binary spike vector
+        # tols = current time-of-last-spike variable
+        tols = (1. - spikes) * tols + (spikes * t)
+
+        spikes = spikes * (1. - clip_mask)
         return spikes, tols, spk_mask, targ_sp_times, key
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs, tols, mask, targ_sp_times, key):
-        self.outputs.set(outputs)
-        self.tols.set(tols)
-        self.mask.set(mask)
-        self.targ_sp_times.set(targ_sp_times)
-        self.key.set(key)
-
+    @transition(output_compartments=["inputs", "outputs", "tols", "mask", "clip_mask", "targ_sp_times"])
     @staticmethod
-    def _reset(batch_size, n_units):
+    def reset(batch_size, n_units):
         restVals = jnp.zeros((batch_size, n_units))
-        return (restVals, restVals, restVals, restVals, restVals)
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, tols, mask, targ_sp_times):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.tols.set(tols)
-        self.mask.set(mask)
-        self.targ_sp_times.set(targ_sp_times)
+        return (restVals, restVals, restVals, restVals, restVals, restVals)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

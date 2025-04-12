@@ -19,12 +19,9 @@ single component system made up of the Izhikevich (`IZH`) cell.
 from jax import numpy as jnp, random, jit
 import numpy as np
 
-from ngclearn.utils.model_utils import scanner
-from ngcsimlib.compilers import compile_command, wrap_command
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
-from ngclearn.operations import summation
 from ngclearn.components.neurons.spiking.izhikevichCell import IzhikevichCell
 
 ## create seeding keys (JAX-style)
@@ -47,11 +44,13 @@ with Context("Model") as model:
                           integration_type="euler", v0=v0, w0=w0, key=subkeys[0])
 
     ## create and compile core simulation commands
-    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    advance_process = (JaxProcess()
+                       >> cell.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
+    reset_process = (JaxProcess()
+                     >> cell.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
     ## set up non-compiled utility commands
     @Context.dynamicCommand

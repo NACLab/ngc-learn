@@ -12,14 +12,6 @@ ngclearn.components.synapses.hebbian.BCMSynapse module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.components.synapses.hebbian.STDPSynapse module
--------------------------------------------------------
-
-.. automodule:: ngclearn.components.synapses.hebbian.STDPSynapse
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.components.synapses.hebbian.eventSTDPSynapse module
 ------------------------------------------------------------
 
@@ -40,6 +32,14 @@ ngclearn.components.synapses.hebbian.hebbianSynapse module
 ----------------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.hebbian.hebbianSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.components.synapses.hebbian.hebbianSynapseOld module
+-------------------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.hebbian.hebbianSynapseOld
    :members:
    :undoc-members:
    :show-inheritance:

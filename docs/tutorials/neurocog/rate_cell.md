@@ -1,16 +1,9 @@
 # Lecture 3A: The Rate Cell Model
 
-Graded neurons are one of the main classes/collections of cell components
-in ngc-learn. These specifically offer cell models that operate under real-valued
-dynamics -- in other words, they do not spike or use discrete pulse-like
-values in their operation. These are useful for building biophysical systems
-that evolve under continuous, time-varying dynamics, e.g., continuous-time
-recurrent neural networks, various kinds of predictive coding circuit models,   
-as well as for continuous components in discrete systems, e.g. electrical
+Graded neurons are one of the main classes/collections of cell components in ngc-learn. These specifically offer cell models that operate under real-valued dynamics -- in other words, they do not spike or use discrete pulse-like values in their operation. These are useful for building biophysical systems that evolve under continuous, time-varying dynamics, e.g., continuous-time recurrent neural networks, various kinds of predictive coding circuit models, as well as for continuous components in discrete systems, e.g. electrical
 current differential equations in spiking networks.
 
-In this tutorial, we will study one of ngc-learn's workhorse in-built graded
-cell components, the rate cell ([RateCell](ngclearn.components.neurons.graded.rateCell)).
+In this tutorial, we will study one of ngc-learn's workhorse in-built graded cell components, the rate cell ([RateCell](ngclearn.components.neurons.graded.rateCell)).
 
 ## Creating and Using a Rate Cell
 
@@ -23,22 +16,15 @@ specifically the rate-cell (RateCell). Let's start with the file's header
 
 ```python
 from jax import numpy as jnp, random, jit
-import time
-
+from ngclearn.utils import JaxProcess
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
-from ngcsimlib.compilers import compile_command, wrap_command
 ## import model-specific elements
-from ngclearn.operations import summation
 from ngclearn.components.neurons.graded.rateCell import RateCell
 ```
 
 and move on to constructing the one component model:
 
 ```python
-from ngcsimlib.controller import Controller
-from jax import numpy as jnp, random
-
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(1234)
 dkey, *subkeys = random.split(dkey, 2)
@@ -54,10 +40,13 @@ with Context("Model") as model:  ## model/simulation definition
                     prior=("gaussian", gamma), integration_type="euler", key=subkeys[0])
 
     ## instantiate desired core commands that drive the simulation
-    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    advance_process = (JaxProcess()
+                       >> cell.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
+
+    reset_process = (JaxProcess()
+                     >> cell.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
 
     ## instantiate some non-jitted dynamic utility commands

@@ -17,3 +17,4 @@ relevant, referenced publicly available ngc-learn simulation code.
   sparse_coding
   snn_dc
   snn_bfa
+  sindy

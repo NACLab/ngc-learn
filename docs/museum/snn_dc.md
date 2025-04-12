@@ -209,7 +209,7 @@ To use your saved model and examine its performance on the MNIST test-set, you
 can execute the evaluation script like so:
 
 ```console
-$ python analyze_dcsnn.py --dataX=../data/mnist/testX.npy --sample_idx=0
+$ python analyze_dcsnn.py --dataX=../../data/mnist/testX.npy --sample_idx=0
 ```
 
 while will produce a visualization of your DC-SNN's receptive fields (the

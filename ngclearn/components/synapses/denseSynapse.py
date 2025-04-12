@@ -1,9 +1,12 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
+
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 class DenseSynapse(JaxComponent): ## base dense synaptic cable
     """
@@ -13,7 +16,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output signals
-    | weights - current value matrix of synaptic efficacies
+    | weights - current value matrix of synaptic efficacies (strength values)
     | biases - current value vector of synaptic bias values
 
     Args:
@@ -47,8 +50,8 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.bias_init = bias_init
 
         ## Synapse meta-parameters
-        self.shape = shape ## shape of synaptic efficacy matrix
-        self.Rscale = resist_scale ## post-transformation scale factor
+        self.shape = shape
+        self.Rscale = resist_scale
 
         ## Set up synaptic weight values
         tmp_key, *subkeys = random.split(self.key.value, 4)
@@ -75,27 +78,20 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
                                                     (1, shape[1]))
                                   if bias_init else 0.0)
 
+    @transition(output_compartments=["outputs"])
     @staticmethod
-    def _advance_state(Rscale, inputs, weights, biases):
+    def advance_state(Rscale, inputs, weights, biases):
         outputs = (jnp.matmul(inputs, weights) * Rscale) + biases
         return outputs
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs):
-        self.outputs.set(outputs)
-
+    @transition(output_compartments=["inputs", "outputs"])
     @staticmethod
-    def _reset(batch_size, shape):
+    def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
         outputs = postVals
         return inputs, outputs
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

@@ -1,14 +1,16 @@
-from ngclearn import resolver, Component, Compartment
-from ngclearn.utils import tensorstats
 from ngclearn import numpy as jnp
-from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info, warn
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
+from ngclearn.utils import tensorstats
 
 class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
     """
-    A synaptic cable that adjusts its efficacies via a two-factor Hebbian
-    adjustment rule. This is a Lava-compliant synaptic cable that adjusts
-    with a hard-coded form of (stochastic) gradient ascent.
+    A synaptic cable that adjusts its efficacies via a two-factor Hebbian adjustment rule. This is a Lava-compliant
+    synaptic cable that adjusts with a hard-coded form of (stochastic) gradient ascent.
 
     | --- Synapse Input Compartments: (Takes wired-in signals) ---
     | inputs - input (pre-synaptic) stimulus
@@ -102,8 +104,9 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         self.post.set(postVals)
         self.weights.set(weights)
 
+    @transition(output_compartments=["outputs", "weights"])
     @staticmethod
-    def _advance_state(dt, Rscale, w_bounds, w_decay, inputs, weights,
+    def advance_state(dt, Rscale, w_bounds, w_decay, inputs, weights,
                        pre, post, eta):
         outputs = jnp.matmul(inputs, weights) * Rscale
         ########################################################################
@@ -119,13 +122,9 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
         ########################################################################
         return outputs, weights
 
-    @resolver(_advance_state)
-    def advance_state(self, outputs, weights):
-        self.outputs.set(outputs)
-        self.weights.set(weights)
-
+    @transition(output_compartments=["inputs", "outputs", "pre", "post", "eta"])
     @staticmethod
-    def _reset(batch_size, rows, cols, eta0):
+    def reset(batch_size, rows, cols, eta0):
         preVals = jnp.zeros((batch_size, rows))
         postVals = jnp.zeros((batch_size, cols))
         return (
@@ -135,14 +134,6 @@ class HebbianSynapse(Component): ## Lava-compliant Hebbian synapse
             postVals, # post
             jnp.ones((1,1)) * eta0
         )
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, pre, post, eta):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs)
-        self.pre.set(pre)
-        self.post.set(post)
-        self.eta.set(eta)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

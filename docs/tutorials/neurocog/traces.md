@@ -22,14 +22,9 @@ The code below will instantiate the paired Poisson cell and corresponding variab
 
 ```python
 from jax import numpy as jnp, random, jit
-import time
-
+from ngclearn.utils import JaxProcess
 from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
-from ngcsimlib.compilers import compile_command, wrap_command
-from ngclearn.utils.viz.raster import create_raster_plot
 ## import model-specific mechanisms
-from ngclearn.operations import summation
 from ngclearn.components.input_encoders.poissonCell import PoissonCell
 from ngclearn.components.other.varTrace import VarTrace
 
@@ -38,17 +33,21 @@ dkey = random.PRNGKey(231)
 dkey, *subkeys = random.split(dkey, 2)
 
 with Context("Model") as model:
-    cell = PoissonCell("z0", n_units=1, max_freq=63.75, key=subkeys[0])
+    cell = PoissonCell("z0", n_units=1, target_freq=63.75, key=subkeys[0])
     trace = VarTrace("tr0", n_units=1, tau_tr=30., a_delta=0.5)
 
     ## wire up cell z0 to trace tr0
     trace.inputs << cell.outputs
 
-    reset_cmd, reset_args = model.compile_by_key(cell, trace, compile_key="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, trace, compile_key="advance_state")
+    advance_process = (JaxProcess()
+                       >> cell.advance_state
+                       >> trace.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    reset_process = (JaxProcess()
+                     >> cell.reset
+                     >> trace.reset)
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
 
     @Context.dynamicCommand

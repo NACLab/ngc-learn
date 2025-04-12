@@ -121,7 +121,7 @@ $\frac{\partial y(t)}{\partial t} = -2 t^3 + 12 t^2 - 20 t + 8.5$ which
 has the analytic solution $y(t) = -(1/2) t^4 + 4 t^3 - 10 t^2 + 8.5 t + C$ (
 where we will set $C = 1$). You can write code like below, importing from
 `ngclearn.utils.diffeq.ode_utils` the Euler routine (`step_euler`),
-the RK-2 routine (`step_rk2`), RK-4 routine (`step_rk4`), and Heun's method (`step_heun`), and compare
+the RK-2 routine (`step_rk2`), the RK-4 routine (`step_rk4`), and Heun's method (`step_heun`), and compare
 how these methods approximate the nonlinear dynamics inherent to our
 constructed $\frac{\partial y(t)}{\partial t}$ ODE below:
 

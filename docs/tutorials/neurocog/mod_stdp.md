@@ -42,7 +42,7 @@ and the required compiled simulation and dynamic commands, can be done as follow
 ```python 
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-from ngcsimlib.compilers import compile_command, wrap_command
+from ngclearn.utils import JaxProcess
 ## import model-specific mechanisms
 from ngclearn.components import (TraceSTDPSynapse, MSTDPETSynapse,
                                  RewardErrorCell, VarTrace)
@@ -75,16 +75,30 @@ with Context("Model") as model:
     tr1 = VarTrace("tr1", n_units=1, tau_tr=tau_post, a_delta=Aminus)
     rpe = RewardErrorCell("r", n_units=1, alpha=0.)
 
-    reset_cmd, reset_args = model.compile_by_key(
-        W_stdp, W_mstdp, W_mstdpet, rpe, tr0, tr1, compile_key="reset")
-    adv_tr_cmd, _ = model.compile_by_key(
-        tr0, tr1, rpe, W_stdp, W_mstdp, W_mstdpet, compile_key="advance_state")
-    evolve_cmd, _ = model.compile_by_key(
-        W_stdp, W_mstdp, W_mstdpet, compile_key="evolve")
+    evolve_process = (JaxProcess()
+                      >> W_stdp.evolve
+                      >> W_mstdp.evolve
+                      >> W_mstdpet.evolve)
+    model.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
-    model.add_command(wrap_command(jit(model.evolve)), name="evolve")
+    advance_process = (JaxProcess()
+                       >> tr0.advance_state
+                       >> tr1.advance_state
+                       >> rpe.advance_state
+                       >> W_stdp.advance_state
+                       >> W_mstdp.advance_state
+                       >> W_mstdpet.advance_state)
+    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
+
+    reset_process = (JaxProcess()
+                     >> W_stdp.reset
+                     >> W_mstdp.reset
+                     >> W_mstdpet.reset
+                     >> rpe.reset
+                     >> tr0.reset
+                     >> tr1.reset
+                     )
+    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
     @Context.dynamicCommand
     def clamp_spikes(f_j, f_i):

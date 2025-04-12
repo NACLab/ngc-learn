@@ -4,16 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ngclearn"
-version = "1.2.beta3"
+version = "2.0.0"
 description = "Simulation software for building and analyzing arbitrary predictive coding, spiking network, and biomimetic neural systems."
 authors = [
   {name = "Alexander Ororbia", email = "ago@cs.rit.edu"},
   {name = "William Gebhardt", email = "wdg1351@rit.edu"},
 ]
 readme = "README.md"
-keywords = ['python', 'ngc-learn', 'predictive-processing', 'predictive-coding',
+keywords = ['python', 'ngc-learn', 'predictive-processing', 'predictive-coding', 'neuro-ai', 
             'jax', 'spiking-neural-networks', 'biomimetics', 'bionics', 'computational-neuroscience']
-requires-python = ">=3.8" #3.10
+requires-python = ">=3.10" #3.8
 license = {text = "BSD-3-Clause License"}
 classifiers=[
   "Development Status :: 4 - Beta", #3 - Alpha", # 5 - Production/Stable

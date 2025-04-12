@@ -1,6 +1,8 @@
 import time
 from jax import random
-from ngclearn import resolver, Component, Compartment
+#from ngclearn import resolver, Component, Compartment
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
 
 class JaxComponent(Component):
     """
@@ -21,4 +23,3 @@ class JaxComponent(Component):
         self.directory = directory
         self.key = Compartment(
             random.PRNGKey(time.time_ns()) if key is None else key)
-

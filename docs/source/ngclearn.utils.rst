@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   ngclearn.utils.analysis
    ngclearn.utils.density
    ngclearn.utils.diffeq
    ngclearn.utils.optim
@@ -27,6 +28,14 @@ ngclearn.utils.io\_utils module
 -------------------------------
 
 .. automodule:: ngclearn.utils.io_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.utils.jaxProcess module
+--------------------------------
+
+.. automodule:: ngclearn.utils.jaxProcess
    :members:
    :undoc-members:
    :show-inheritance:

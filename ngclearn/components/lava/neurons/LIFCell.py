@@ -1,8 +1,11 @@
-from ngclearn import resolver, Component, Compartment
-from ngclearn.utils import tensorstats
 from ngclearn import numpy as jnp
-from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info, warn
+from ngcsimlib.compilers.process import transition
+from ngcsimlib.component import Component
+from ngcsimlib.compartment import Compartment
+from ngclearn.utils.weight_distribution import initialize_params
+from ngcsimlib.logger import info
+from ngclearn.utils import tensorstats
 
 class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     """
@@ -113,8 +116,9 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
     def _init(self, thr_theta0):
         self.thr_theta.set(thr_theta0)
 
+    @transition(output_compartments=["v", "s", "rfr", "thr_theta"])
     @staticmethod
-    def _advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
+    def advance_state(dt, tau_m, R_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta,
                        theta_plus, j_exc, j_inh, v, s, rfr, thr_theta):
         #j = j * (tau_m/dt) ## scale electrical current
         j = j_exc - j_inh ## sum the excitatory and inhibitory input channels
@@ -136,16 +140,9 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         #tols = (1. - s) * tols + (s * t)
         return v, s, rfr, thr_theta #, tols
 
-    @resolver(_advance_state)
-    def advance_state(self, v, s, rfr, thr_theta): #, tols):
-        self.v.set(v)
-        self.s.set(s)
-        self.rfr.set(rfr)
-        self.thr_theta.set(thr_theta)
-        #self.tols.set(tols)
-
+    @transition(output_compartments=["j_exc", "j_inh", "v", "s", "rfr"])
     @staticmethod
-    def _reset(batch_size, n_units, v_rest, refract_T):
+    def reset(batch_size, n_units, v_rest, refract_T):
         restVals = jnp.zeros((batch_size, n_units))
         j_exc = restVals #+ 0
         j_inh = restVals #+ 0
@@ -153,14 +150,6 @@ class LIFCell(Component): ## Lava-compliant leaky integrate-and-fire cell
         s = restVals #+ 0
         rfr = restVals + refract_T
         return j_exc, j_inh, v, s, rfr #, tols
-
-    @resolver(_reset)
-    def reset(self, j_exc, j_inh, v, s, rfr):#, tols):
-        self.j_exc.set(j_exc)
-        self.j_inh.set(j_inh)
-        self.v.set(v)
-        self.s.set(s)
-        self.rfr.set(rfr)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

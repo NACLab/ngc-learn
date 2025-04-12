@@ -1,33 +1,38 @@
+# %%
+
 from jax import numpy as jnp, random, jit
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngclearn import resolver, Component, Compartment
+# from ngclearn import resolver, Component, Compartment
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.compilers.process import transition
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
 
-## rewritten code
-@partial(jit, static_argnums=[3, 4, 5])
-def _dfz_internal(z, j, j_td, tau_m, leak_gamma, prior_type=None): ## raw dynamics
-    z_leak = z # * 2 ## Default: assume Gaussian
-    if prior_type != None:
-        if prior_type == "laplacian": ## Laplace dist
-            z_leak = jnp.sign(z) ## d/dx of Laplace is signum
-        elif prior_type == "cauchy":  ## Cauchy dist: x ~ (1.0 + tf.math.square(z))
-            z_leak = (z * 2)/(1. + jnp.square(z))
-        elif prior_type == "exp":  ## Exp dist: x ~ -exp(-x^2)
-            z_leak = jnp.exp(-jnp.square(z)) * z * 2
+def _dfz_internal_laplace(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
+    z_leak = jnp.sign(z) ## d/dx of Laplace is signum
     dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
     return dz_dt
 
-def _dfz(t, z, params): ## diff-eq dynamics wrapper
-    j, j_td, tau_m, leak_gamma, priorType = params
-    dz_dt = _dfz_internal(z, j, j_td, tau_m, leak_gamma, priorType)
+def _dfz_internal_cauchy(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
+    z_leak = (z * 2)/(1. + jnp.square(z))
+    dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
     return dz_dt
 
-@jit
+def _dfz_internal_exp(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
+    z_leak = jnp.exp(-jnp.square(z)) * z * 2
+    dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
+    return dz_dt
+
+def _dfz_internal_gaussian(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
+    z_leak = z # * 2 ## Default: assume Gaussian
+    dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
+    return dz_dt
+
+# @jit
 def _modulate(j, dfx_val):
     """
     Apply a signal modulator to j (typically of the form of a derivative/dampening function)
@@ -42,7 +47,8 @@ def _modulate(j, dfx_val):
     """
     return j * dfx_val
 
-def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None):
+# @partial(jit, static_argnames=["integType", "priorType"])
+def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=0):
     """
     Runs leaky rate-coded state dynamics one step in time.
 
@@ -66,18 +72,24 @@ def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=None)
     Returns:
         New value of membrane/state for next time step
     """
-    if integType == 1:
-        params = (j, j_td, tau_m, leak_gamma, priorType)
-        _, _z = step_rk2(0., z, _dfz, dt, params)
-    elif integType == 2:
-        params = (j, j_td, tau_m, leak_gamma, priorType)
-        _, _z = step_rk4(0., z, _dfz, dt, params)
-    else:
-        params = (j, j_td, tau_m, leak_gamma, priorType)
-        _, _z = step_euler(0., z, _dfz, dt, params)
+    _dfz_fns = {
+        0: lambda t, z, params: _dfz_internal_gaussian(z, *params),
+        1: lambda t, z, params: _dfz_internal_laplace(z, *params),
+        2: lambda t, z, params: _dfz_internal_cauchy(z, *params),
+        3: lambda t, z, params: _dfz_internal_exp(z, *params),
+    }
+    _dfz_fn = _dfz_fns.get(priorType, _dfz_internal_gaussian)
+    _step_fns = {
+        0: step_euler,
+        1: step_rk2,
+        2: step_rk4,
+    }
+    _step_fn = _step_fns.get(integType, step_euler)
+    params = (j, j_td, tau_m, leak_gamma)
+    _, _z = _step_fn(0., z, _dfz_fn, dt, params)
     return _z
 
-@jit
+# @jit
 def _run_cell_stateless(j):
     """
     A simplification of running a stateless set of dynamics over j (an identity
@@ -147,18 +159,28 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     # Define Functions
     def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
                  threshold=("none", 0.), integration_type="euler",
-                 batch_size=1, resist_scale=1., shape=None, **kwargs):
+                 batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
+        self.is_stateful = is_stateful
+        if isinstance(tau_m, float):
+            if tau_m <= 0: ## trigger stateless mode
+                self.is_stateful = False
         priorType, leakRate = prior
-        self.priorType = priorType ## type of scale-shift prior to impose over the leak
+        priorTypeDict = {
+            "gaussian": 0,
+            "laplacian": 1,
+            "cauchy": 2,
+            "exp": 3
+        }
+        self.priorType = priorTypeDict.get(priorType, 0)
         self.priorLeakRate = leakRate ## degree to which rate neurons leak (according to prior)
         thresholdType, thr_lmbda = threshold
         self.thresholdType = thresholdType ## type of thresholding function to use
         self.thr_lmbda = thr_lmbda ## scale to drive thresholding dynamics
-        self.Rscale = resist_scale ## a "resistance" scaling factor
+        self.resist_scale = resist_scale ## a "resistance" scaling factor
 
         ## integration properties
         self.integrationType = integration_type
@@ -173,26 +195,33 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.shape = shape
         self.n_units = n_units
         self.batch_size = batch_size
-        self.fx, self.dfx = create_function(fun_name=act_fx)
+
+        
+        omega_0 = None
+        if act_fx == "sine":
+            omega_0 = kwargs["omega_0"]
+        self.fx, self.dfx = create_function(fun_name=act_fx, args=omega_0)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
         restVals = jnp.zeros(_shape)
-        self.j = Compartment(restVals) # electrical current
-        self.zF = Compartment(restVals) # rate-coded output - activity
-        self.j_td = Compartment(restVals) # top-down electrical current - pressure
-        self.z = Compartment(restVals) # rate activity
+        self.j = Compartment(restVals, display_name="Input Stimulus Current", units="mA") # electrical current
+        self.zF = Compartment(restVals, display_name="Transformed Rate Activity") # rate-coded output - activity
+        self.j_td = Compartment(restVals, display_name="Modulatory Stimulus Current", units="mA") # top-down electrical current - pressure
+        self.z = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
 
+    @transition(output_compartments=["j", "j_td", "z", "zF"])
     @staticmethod
-    def _advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
-                       Rscale, thresholdType, thr_lmbda, j, j_td, z):
-        if tau_m > 0.:
+    def advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
+                       resist_scale, thresholdType, thr_lmbda, is_stateful, j, j_td, z):
+        #if tau_m > 0.:
+        if is_stateful:
             ### run a step of integration over neuronal dynamics
             ## Notes:
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal
             dfx_val = dfx(z)
             j = _modulate(j, dfx_val)
-            j = j * Rscale
+            j = j * resist_scale
             tmp_z = _run_cell(dt, j, j_td, z,
                               tau_m, leak_gamma=priorLeakRate,
                               integType=intgFlag, priorType=priorType)
@@ -210,27 +239,39 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             zF = fx(z)
         return j, j_td, z, zF
 
-    @resolver(_advance_state)
-    def advance_state(self, j, j_td, z, zF):
-        self.j.set(j)
-        self.j_td.set(j_td)
-        self.z.set(z)
-        self.zF.set(zF)
-
+    @transition(output_compartments=["j", "j_td", "z", "zF"])
     @staticmethod
-    def _reset(batch_size, shape): #n_units
+    def reset(batch_size, shape): #n_units
         _shape = (batch_size, shape[0])
         if len(shape) > 1:
             _shape = (batch_size, shape[0], shape[1], shape[2])
         restVals = jnp.zeros(_shape)
         return tuple([restVals for _ in range(4)])
 
-    @resolver(_reset)
-    def reset(self, j, zF, j_td, z):
-        self.j.set(j) # electrical current
-        self.zF.set(zF) # rate-coded output - activity
-        self.j_td.set(j_td) # top-down electrical current - pressure
-        self.z.set(z) # rate activity
+
+    def save(self, directory, **kwargs):
+        ## do a protected save of constants, depending on whether they are floats or arrays
+        tau_m = (self.tau_m if isinstance(self.tau_m, float)
+                 else jnp.ones([[self.tau_m]]))
+        priorLeakRate = (self.priorLeakRate if isinstance(self.priorLeakRate, float)
+                         else jnp.ones([[self.priorLeakRate]]))
+        resist_scale = (self.resist_scale if isinstance(self.resist_scale, float)
+                        else jnp.ones([[self.resist_scale]]))
+
+        file_name = directory + "/" + self.name + ".npz"
+        jnp.savez(file_name,
+                  tau_m=tau_m, priorLeakRate=priorLeakRate,
+                  resist_scale=resist_scale) #, key=self.key.value)
+
+    def load(self, directory, seeded=False, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        ## constants loaded in
+        self.tau_m = data['tau_m']
+        self.priorLeakRate = data['priorLeakRate']
+        self.resist_scale = data['resist_scale']
+        #if seeded:
+        #    self.key.set(data['key'])
 
     @classmethod
     def help(cls): ## component help function
