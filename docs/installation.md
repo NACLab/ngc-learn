@@ -6,13 +6,13 @@ without a GPU.
 <i>Setup:</i> <a href="https://github.com/NACLab/ngc-learn">ngc-learn</a>,
 in its entirety (including its supporting utilities),
 requires that you ensure that you have installed the following base dependencies in
-your system. Note that this library was developed and tested on Ubuntu 22.04 (and 18.04).
+your system. Note that this library was developed and tested on Ubuntu 22.04 (and earlier versions on 18.04/20.04).
 Specifically, ngc-learn requires:
 * Python (>=3.10)
-* ngcsimlib (>=0.3.b4), (<a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
+* ngcsimlib (>=1.0.0), (<a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
 * NumPy (>=1.26.0)
 * SciPy (>=1.7.0)
-* JAX (>= 0.4.18; and jaxlib>=0.4.18) <!--(tested for cuda 11.8)-->
+* JAX (>= 0.4.28; and jaxlib>=0.4.28) <!--(tested for cuda 11.8)-->
 * Matplotlib (>=3.4.2), (for `ngclearn.utils.viz`)
 * Scikit-learn (>=1.3.1), (for `ngclearn.utils.patch_utils` and `ngclearn.utils.density`)
 
@@ -45,7 +45,7 @@ $ git clone https://github.com/NACLab/ngc-learn.git
 $ cd ngc-learn
 ```
 
-2. (<i>Optional</i>; only for GPU version) Install JAX for either CUDA 11 or 12 , depending
+2. (<i>Optional</i>; only for GPU version) Install JAX for either CUDA 12 , depending
    on your system setup. Follow the
    <a href="https://jax.readthedocs.io/en/latest/installation.html">installation instructions</a>
    on the official JAX page to properly install the CUDA 11 or 12 version.
