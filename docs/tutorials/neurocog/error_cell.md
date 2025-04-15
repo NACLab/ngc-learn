@@ -1,6 +1,8 @@
-<img src="../../images/tutorials/neurocog/SingleGEC.png" width="200" align="right"/>
+
 
 # Lecture 3B: Error Cell Models
+
+<img src="../../images/tutorials/neurocog/SingleGEC.png" width="200" align="center"/>
 
 Error cells are a particularly useful component cell that offers a simple and
 fast way of computing mismatch signals, i.e., error values that compare a
