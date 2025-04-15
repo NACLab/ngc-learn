@@ -3,6 +3,9 @@
 ![Gaussian Errro Cells](https://github.com/Faezehabibi/ngc-learn-faeze/blob/715f3ee1615af642f52541dd0702e2a486957b17/docs/images/tutorials/neurocog/GaussianErrorCells_figure.png?raw=true)
 
 
+<img src="../../images/tutorials/neurocog/GaussianErrorCells_figure.png" width="500" align="center" />
+
+
 Error cells are a particularly useful component cell that offers a simple and
 fast way of computing mismatch signals, i.e., error values that compare a
 target value against a predicted value. In predictive coding literature, mismatch
