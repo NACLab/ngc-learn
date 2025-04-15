@@ -16,6 +16,8 @@ briefly review one of the most commonly used ones -- the
 
 <img src="../../images/tutorials/neurocog/GaussianErrorCells_figure.png" width="500" align="center"/>
 
+<img src="../../images/tutorials/neurocog/GEC.png" width="500" align="center"/>
+
 ## Calculating Mismatch Values with the Gaussian Error Cell
 
 The Gaussian error cell, much like most error neurons, is in fact a derived
