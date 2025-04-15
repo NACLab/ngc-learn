@@ -2,7 +2,7 @@
 
 
 
-<img src="../../images/tutorials/neurocog/GaussianErrorCells_figure.png" width="500" align="center" />
+<img src="../../images/tutorials/neurocog/GaussianErrorCells_figure.png" width="500" align="center"/>
 
 
 Error cells are a particularly useful component cell that offers a simple and
