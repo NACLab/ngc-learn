@@ -1,5 +1,5 @@
 # Lecture 3B: Error Cell Models
-<img src="../../images/tutorials/neurocog/SingleGEC.png" width="400" align="right"/>
+<img src="../../images/tutorials/neurocog/SingleGEC.png" width="300" align="right"/>
 
 Error cells are a particularly useful component cell that offers a simple and
 fast way of computing mismatch signals, i.e., error values that compare a
@@ -13,10 +13,6 @@ neural networks (see the [ngc-museum](https://github.com/NACLab/ngc-museum) for
 key examples of where error neurons come into play). In this lesson, we will
 briefly review one of the most commonly used ones -- the
 [Gaussian error cell](ngclearn.components.neurons.graded.gaussianErrorCell).
-
-<img src="../../images/tutorials/neurocog/SingleGEC.png" width="200" align="center"/>
-
-hi
 
 <img src="../../images/tutorials/neurocog/GEC.png" width="200" align="right"/>
 
