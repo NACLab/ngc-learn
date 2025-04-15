@@ -1,10 +1,8 @@
 # Lecture 3B: Error Cell Models
 
+[[![Gaussian Errro Cells](https://github.com/Faezehabibi/ngc-learn-faeze/blob/3c15189c2d332d1b26c25844a5ce955ad1974333/docs/images/tutorials/neurocog/GaussianErrorCells.png?raw=true)](https://github.com/Faezehabibi/ngc-learn-faeze/blob/715f3ee1615af642f52541dd0702e2a486957b17/docs/images/tutorials/neurocog/GaussianErrorCells_figure.png)](https://github.com/Faezehabibi/ngc-learn-faeze/blob/715f3ee1615af642f52541dd0702e2a486957b17/docs/images/tutorials/neurocog/GaussianErrorCells_figure.png)
 
-
-![Gaussian Errro Cells](https://github.com/Faezehabibi/ngc-learn-faeze/blob/3c15189c2d332d1b26c25844a5ce955ad1974333/docs/images/tutorials/neurocog/GaussianErrorCells.png?raw=true)
-
-![Gaussian Errro Cells](https://github.com/Faezehabibi/ngc-learn-faeze/blob/3c15189c2d332d1b26c25844a5ce955ad1974333/docs/images/tutorials/neurocog/GaussianErrorCells_figure.png?raw=true)
+![Gaussian Errro Cells](?raw=true)
 
 Error cells are a particularly useful component cell that offers a simple and
 fast way of computing mismatch signals, i.e., error values that compare a
