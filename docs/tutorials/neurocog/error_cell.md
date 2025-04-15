@@ -14,6 +14,7 @@ key examples of where error neurons come into play). In this lesson, we will
 briefly review one of the most commonly used ones -- the
 [Gaussian error cell](ngclearn.components.neurons.graded.gaussianErrorCell).
 
+<img src="../../images/tutorials/neurocog/SingleGEC.png" width="200" align="right"/>
 <img src="../../images/tutorials/neurocog/GEC.png" width="200" align="right"/>
 
 ## Calculating Mismatch Values with the Gaussian Error Cell
