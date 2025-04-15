@@ -1,10 +1,6 @@
 # Lecture 3B: Error Cell Models
 
 
-
-<img src="../../images/tutorials/neurocog/GaussianErrorCells_figure.png" width="500" align="center"/>
-
-
 Error cells are a particularly useful component cell that offers a simple and
 fast way of computing mismatch signals, i.e., error values that compare a
 target value against a predicted value. In predictive coding literature, mismatch
@@ -17,6 +13,8 @@ neural networks (see the [ngc-museum](https://github.com/NACLab/ngc-museum) for
 key examples of where error neurons come into play). In this lesson, we will
 briefly review one of the most commonly used ones -- the
 [Gaussian error cell](ngclearn.components.neurons.graded.gaussianErrorCell).
+
+<img src="../../images/tutorials/neurocog/GaussianErrorCells_figure.png" width="500" align="center"/>
 
 ## Calculating Mismatch Values with the Gaussian Error Cell
 
