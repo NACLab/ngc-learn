@@ -1,6 +1,5 @@
 # Lecture 3B: Error Cell Models
 
-![Gaussian Errro Cells](https://github.com/Faezehabibi/ngc-learn-faeze/blob/715f3ee1615af642f52541dd0702e2a486957b17/docs/images/tutorials/neurocog/GaussianErrorCells_figure.png?raw=true)
 
 
 <img src="../../images/tutorials/neurocog/GaussianErrorCells_figure.png" width="500" align="center" />
