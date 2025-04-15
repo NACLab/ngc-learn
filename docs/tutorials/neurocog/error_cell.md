@@ -1,4 +1,4 @@
-<img src="../../images/tutorials/neurocog/SingleGEC.png" width="200" align="center"/>
+<img src="../../images/tutorials/neurocog/SingleGEC.png" width="200" align="right"/>
 
 # Lecture 3B: Error Cell Models
 
