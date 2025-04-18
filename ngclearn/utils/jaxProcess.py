@@ -1,7 +1,9 @@
+from ngcsimlib.compartment import Compartment
 from ngcsimlib.compilers.process import Process
 from jax.lax import scan as _scan
 from ngcsimlib.logger import warn
 from jax import numpy as jnp
+
 
 class JaxProcess(Process):
     """
@@ -9,18 +11,70 @@ class JaxProcess(Process):
     functionality added by this subclass is the use of the jax scanner to run a
     process quickly through the use of jax's JIT compiler.
     """
-    def scan(self, compartments_to_monitor=None,
-             save_state=True, scan_length=None, **kwargs):
+
+    def __init__(self, name):
+        super().__init__(name)
+        self._process_scan_method = None
+        self._monitoring = []
+
+    def _make_scanner(self):
+        arg_order = self.get_required_args()
+
+        def _pure(current_state, x):
+            v = self.pure(current_state,
+                          **{key: value for key, value in zip(arg_order, x)})
+            return v, [v[m] for m in self._monitoring]
+
+        return _pure
+
+    def watch(self, compartment):
+        """
+        Adds a compartment to the process to watch during a scan
+        Args:
+            compartment: The compartment to watch
+        """
+        if not isinstance(compartment, Compartment):
+            warn(
+                "Jax Process trying to watch a value that is not a compartment")
+
+        self._monitoring.append(compartment.path)
+        self._process_scan_method = self._make_scanner()
+
+    def clear_watch_list(self):
+        """
+        Clears the watch list so no values are watched
+        """
+        self._monitoring = []
+        self._process_scan_method = self._make_scanner()
+
+    def transition(self, transition_call):
+        """
+        Appends to the base transition call to create pure method for use by its
+        scanner
+        Args:
+            transition_call: the transition being passed into the default
+                process
+
+        Returns: this JaxProcess instance for chaining
+
+        """
+        super().transition(transition_call)
+        self._process_scan_method = self._make_scanner()
+        return self
+
+    def scan(self, save_state=True, scan_length=None, **kwargs):
         """
         There a quite a few ways to initialize the scan method for the
-        jaxProcess. To start the straight forward arguments are
-        "compartments_to_monitor" and "save_state". Monitoring compartments
-        means at the end of each process cycle record the value of each
-        compartment in the list and then at the end a tuple of concatenated
-        values will be returned that correspond to each compartment in the
-        original list. The save_state flag is simply there to note if the state
+        jaxProcess. To start the straight forward arguments is "save_state".
+        The save_state flag is simply there to note if the state
         of the model should reflect the final state of the model after the scan
         is complete.
+
+        This scan method can also watch and report intermediate compartment
+        values defined through calling the JaxProcess.watch() method watching a
+        compartment means at the end of each process cycle record the value of
+        the compartment and then at the end a tuple of concatenated values will
+        be returned that correspond to each compartment the process is watching.
 
         Where there are options for the arguments is when defining the keyword
         arguments for the process. The process will do its best to broadcast all
@@ -39,7 +93,6 @@ class JaxProcess(Process):
 
 
         Args:
-            compartments_to_monitor: A list of compartments to monitor
             save_state: A boolean flag to indicate if the model state should be
             saved
             scan_length: a value to be used to denote the number of iterations
@@ -49,8 +102,6 @@ class JaxProcess(Process):
         Returns: the final state of the model, the stacked output of the scan method
 
         """
-        if compartments_to_monitor is None:
-            compartments_to_monitor = []
         arg_order = list(self.get_required_args())
 
         args = []
@@ -91,7 +142,7 @@ class JaxProcess(Process):
             max_next_axis = 0
             new_args = []
             for a in args:
-                if len(a.shape) >= axis+1:
+                if len(a.shape) >= axis + 1:
                     if a.shape[axis] == current_axis:
                         new_args.append(a)
                     else:
@@ -99,20 +150,20 @@ class JaxProcess(Process):
                              "broadcasted to the largest shape")
                         return
                 else:
-                    new_args.append(jnp.zeros(list(a.shape) + [current_axis], dtype=a.dtype) + a.reshape(*a.shape, 1))
+                    new_args.append(jnp.zeros(list(a.shape) + [current_axis],
+                                              dtype=a.dtype) + a.reshape(
+                        *a.shape, 1))
 
-                if len(a.shape) > axis+1:
-                    max_next_axis = max(max_next_axis, a.shape[axis+1])
+                if len(a.shape) > axis + 1:
+                    max_next_axis = max(max_next_axis, a.shape[axis + 1])
 
             args = new_args
 
-        args = jnp.array(args).transpose([1, 0] + [i for i in range(2, max_axis+1)])
-
-        def _pure(current_state, x):
-            v = self.pure(current_state, **{key: value for key, value in zip(arg_order, x)})
-            return v, [v[c.path] for c in compartments_to_monitor]
-
-        vals, stacked = _scan(_pure, init=self.get_required_state(include_special_compartments=True), xs=args)
+        args = jnp.array(args).transpose(
+            [1, 0] + [i for i in range(2, max_axis + 1)])
+        state, stacked = _scan(self._process_scan_method,
+                               init=self.get_required_state(
+                                   include_special_compartments=True), xs=args)
         if save_state:
-            self.updated_modified_state(vals)
-        return vals, stacked
+            self.updated_modified_state(state)
+        return state, stacked
