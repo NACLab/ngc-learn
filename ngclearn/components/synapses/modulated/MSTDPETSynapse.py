@@ -61,6 +61,8 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
 
         elg_decay: eligibility decay constant (default: 1)
 
+        tau_w: amount of synaptic decay to augment each MSTDP/MSTDP-ET update with
+
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use
@@ -74,7 +76,7 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
 
     # Define Functions
     def __init__(
-            self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., tau_elg=0., elg_decay=1.,
+            self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., tau_elg=0., elg_decay=1., tau_w=0.,
             weight_init=None, resist_scale=1., p_conn=1., w_bound=1., batch_size=1, **kwargs
     ):
         super().__init__(
@@ -82,18 +84,20 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
             resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound, batch_size=batch_size, **kwargs
         )
         self.w_eps = 0.
+        self.tau_w = tau_w
         ## MSTDP/MSTDP-ET meta-parameters
         self.tau_elg = tau_elg
         self.elg_decay = elg_decay
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
         self.eligibility = Compartment(jnp.zeros(shape))
+        self.outmask = Compartment(jnp.zeros((1, shape[1])))
 
     @transition(output_compartments=["weights", "dWeights", "eligibility"])
     @staticmethod
     def evolve(
-            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, tau_elg, elg_decay, preSpike, postSpike, preTrace,
-            postTrace, weights, dWeights, eta, modulator, eligibility
+            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, tau_elg, elg_decay, tau_w, preSpike, postSpike,
+            preTrace, postTrace, weights, dWeights, eta, modulator, eligibility, outmask
     ):
         # dW_dt = TraceSTDPSynapse._compute_update( ## use Hebbian/STDP rule to obtain a non-modulated update
         #     dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
@@ -105,21 +109,25 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         else: ## otherwise, just do M-STDP
             eligibility = dWeights ## dynamics of M-STDP had no eligibility tracing
         ## do a gradient ascent update/shift
-        weights = weights + eligibility * modulator * eta  ## do modulated update
-        #'''
+        decayTerm = 0.
+        if tau_w > 0.:
+            decayTerm = weights * (1. / tau_w)
+        weights = weights + (eligibility * modulator * eta) * outmask - decayTerm ## do modulated update
+
         dW_dt = TraceSTDPSynapse._compute_update( ## use Hebbian/STDP rule to obtain a non-modulated update
             dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
         )
         dWeights = dW_dt ## can think of this as eligibility at time t
-        #'''
-    
+
         #w_eps = 0.01
         weights = jnp.clip(weights, w_eps, w_bound - w_eps)  # jnp.abs(w_bound))
 
         return weights, dWeights, eligibility
 
     @transition(
-        output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights", "eligibility"]
+        output_compartments=[
+            "inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights", "eligibility", "outmask"
+        ]
     )
     @staticmethod
     def reset(batch_size, shape):
@@ -134,7 +142,8 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
         postTrace = postVals
         dWeights = synVals
         eligibility = synVals
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights, eligibility
+        outmask = postVals + 1.
+        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights, eligibility, outmask
 
     @classmethod
     def help(cls): ## component help function

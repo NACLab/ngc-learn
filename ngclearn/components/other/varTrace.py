@@ -59,6 +59,8 @@ class VarTrace(JaxComponent): ## low-pass filter
         a_delta: value to increment a trace by in presence of a spike; note if set
             to a value <= 0, then a piecewise gated trace will be used instead
 
+        P_scale: if `a_delta=0`, then this scales the value that the trace snaps to upon receiving a pulse value
+
         gamma_tr: an extra multiplier in front of the leak of the trace (Default: 1)
 
         decay_type: string indicating the decay type to be applied to ODE
@@ -73,13 +75,14 @@ class VarTrace(JaxComponent): ## low-pass filter
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_tr, a_delta, gamma_tr=1, decay_type="exp",
+    def __init__(self, name, n_units, tau_tr, a_delta, P_scale=1., gamma_tr=1, decay_type="exp",
                  batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Trace control coefficients
         self.tau_tr = tau_tr ## trace time constant
         self.a_delta = a_delta ## trace increment (if spike occurred)
+        self.P_scale = P_scale ## trace scale if non-additive trace to be used
         self.gamma_tr = gamma_tr
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
 
@@ -94,7 +97,7 @@ class VarTrace(JaxComponent): ## low-pass filter
 
     @transition(output_compartments=["outputs", "trace"])
     @staticmethod
-    def advance_state(dt, decay_type, tau_tr, a_delta, gamma_tr, inputs, trace):
+    def advance_state(dt, decay_type, tau_tr, a_delta, P_scale, gamma_tr, inputs, trace):
         decayFactor = 0.
         if "exp" in decay_type:
             decayFactor = jnp.exp(-dt/tau_tr)
@@ -104,7 +107,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         if a_delta > 0.:
             _x_tr = _x_tr + inputs * a_delta
         else:
-            _x_tr = _x_tr * (1. - inputs) + inputs
+            _x_tr = _x_tr * (1. - inputs) + inputs * P_scale
         trace = _x_tr
         return trace, trace
 
