@@ -122,7 +122,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-2.0.0 <!--1.2.3-Beta--> <!-- -Alpha -->
+2.0.1 <!--1.2.3-Beta--> <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>

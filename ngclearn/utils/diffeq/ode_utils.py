@@ -112,6 +112,30 @@ def _euler(carry, dfx, dt, params, x_scale=1.):
     new_carry = (_t, _x)
     return new_carry, (new_carry, carry)
 
+@partial(jit, static_argnums=(1))
+def _leapfrog(carry, dfq, dt, params):
+    t, q, p = carry
+    dq_dt = dfq(t, q, params)
+
+    _p = p + dq_dt * (dt/2.)
+    _q = q + p * dt
+    dq_dtpdt = dfq(t+dt, _q, params)
+    _p = _p + dq_dtpdt * (dt/2.)
+    _t = t + dt
+    new_carry = (_t, _q, _p)
+    return new_carry, (new_carry, carry)
+
+@partial(jit, static_argnums=(3, 4))
+def leapfrog(t_curr, q_curr, p_curr, dfq, L, step_size, params):
+    t = t_curr + 0.
+    q = q_curr + 0.
+    p = p_curr + 0.
+    def scanner(carry, _):
+        return _leapfrog(carry, dfq, step_size, params)
+    new_values, (xs_next, xs_carry) = _scan(scanner, init=(t, q, p), xs=jnp.arange(L))
+    t, q, p = new_values
+    return t, q, p
+
 @partial(jit, static_argnums=(2))
 def step_heun(t, x, dfx, dt, params, x_scale=1.):
     """
