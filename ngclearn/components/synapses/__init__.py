@@ -4,7 +4,7 @@ from .staticSynapse import StaticSynapse
 
 ## short-term plasticity components
 from .STPDenseSynapse import STPDenseSynapse
-
+from .exponentialSynapse import ExponentialSynapse
 
 ## dense synaptic components
 from .hebbian.hebbianSynapse import HebbianSynapse
