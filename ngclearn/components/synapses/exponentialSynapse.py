@@ -18,18 +18,14 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
 
 
     | --- Synapse Compartments: ---
-    | inputs - input (takes in external signals)
-    | outputs - output signals
+    | inputs - input (takes in external signals, e.g., pre-synaptic pulses/spikes)
+    | outputs - output signals (also equal to i_syn, total electrical current)
+    | v - coupled voltages from post-synaptic neurons this synaptic cable connects to
     | weights - current value matrix of synaptic efficacies
     | biases - current value vector of synaptic bias values
-    | --- Short-Term Plasticity Compartments: ---
-    | resources - fixed value matrix of synaptic resources (U)
-    | u - release probability; fraction of resources ready for use
-    | x - fraction of resources available after neurotransmitter depletion
-
-    | Dynamics note:
-    | If tau_d >> tau_f and resources U are large, then synapse is STD-dominated
-    | If tau_d << tau_f and resources U are small, then synases is STF-dominated
+    | --- Dynamic / Short-term Plasticity Compartments: ---
+    | g_syn - fixed value matrix of synaptic resources (U)
+    | i_syn - derived total electrical current variable
 
     Args:
         name: the string name of this cell
@@ -37,12 +33,18 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
+        tau_syn: synaptic time constant (ms)
+
+        g_syn_bar: maximum conductance elicited by each incoming spike ("synaptic weight")
+
+        syn_rest: synaptic reversal potential
+
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
         bias_init: a kernel to drive initialization of biases for this synaptic cable
-            (Default: None, which turns off/disables biases)
+            (Default: None, which turns off/disables biases) <unused>
 
         resist_scale: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
@@ -51,52 +53,56 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
             this to < 1 and > 0. will result in a sparser synaptic structure
             (lower values yield sparse structure)
 
-        tau_f: short-term facilitation (STF) time constant (default: `750` ms); note
-            that setting this to `0` ms will disable STF
+        is_nonplastic: boolean indicating if this synapse permits plasticity adjustments (Default: True)
 
-        tau_d: shoft-term depression time constant (default: `50` ms); note
-            that setting this to `0` ms will disable STD
-
-        resources_int: initialization kernel for synaptic resources matrix
     """
 
     # Define Functions
-    def __init__(self, name, shape, weight_init=None, bias_init=None,
-                 resist_scale=1., p_conn=1., tau_f=750., tau_d=50.,
-                 resources_init=None, **kwargs):
+    def __init__(
+            self, name, shape, tau_syn, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1., p_conn=1.,
+            is_nonplastic=True, **kwargs
+    ):
         super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
-        ## STP meta-parameters
-        self.resources_init = resources_init
-        self.tau_f = tau_f
-        self.tau_d = tau_d
+        ## dynamic synapse meta-parameters
+        self.tau_syn = tau_syn
+        self.g_syn_bar = g_syn_bar
+        self.syn_rest = syn_rest ## synaptic resting potential
 
         ## Set up short-term plasticity / dynamic synapse compartment values
-        tmp_key, *subkeys = random.split(self.key.value, 4)
-        preVals = jnp.zeros((self.batch_size, shape[0]))
-        self.i = Compartment(preVals) ## electrical current output
-        self.g = Compartment(preVals) ## conductance variable
+        #tmp_key, *subkeys = random.split(self.key.value, 4)
+        #preVals = jnp.zeros((self.batch_size, shape[0]))
+        postVals = jnp.zeros((self.batch_size, shape[1]))
+        self.v = Compartment(postVals)  ## coupled voltage (from a post-synaptic neuron)
+        self.i_syn = Compartment(postVals) ## electrical current output
+        self.g_syn = Compartment(postVals) ## conductance variable
+        if is_nonplastic:
+            self.weights.set(self.weights * 0 + 1.)
 
-
-    @transition(output_compartments=["outputs", "i", "g"])
+    @transition(output_compartments=["outputs", "i_syn", "g_syn"])
     @staticmethod
     def advance_state(
-            tau_f, tau_d, Rscale, inputs, weights, biases, i, g
+            dt, tau_syn, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, v
     ):
         s = inputs
+        ## advance conductance variable
+        _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
+        dgsyn_dt = _out * g_syn_bar - g_syn/tau_syn
+        g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance
+        i_syn = g_syn * (v - syn_rest)
+        outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases
+        return outputs, i_syn, g_syn
 
-        outputs = None #jnp.matmul(inputs, Wdyn * Rscale) + biases
-        return outputs
-
-    @transition(output_compartments=["inputs", "outputs", "i", "g"])
+    @transition(output_compartments=["inputs", "outputs", "i_syn", "g_syn", "v"])
     @staticmethod
     def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
         outputs = postVals
-        i = preVals
-        g = preVals
-        return inputs, outputs, i, g
+        i_syn = postVals
+        g_syn = postVals
+        v = postVals
+        return inputs, outputs, i_syn, g_syn, v
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -135,11 +141,14 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
+            "tau_syn": "Synaptic time constant (ms)",
+            "g_bar_syn": "Maximum conductance value",
+            "syn_rest": "Synaptic reversal potential"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "outputs = [(W * Rscale) * inputs] + b; "
-                            "dg/dt = ",
+                "dynamics": "outputs = g_syn * (v - syn_rest); "
+                            "dgsyn_dt = (W * inputs) * g_syn_bar - g_syn/tau_syn ",
                 "hyperparameters": hyperparams}
         return info
 
