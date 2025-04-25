@@ -28,7 +28,7 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
     | i_syn - derived total electrical current variable
 
     Args:
-        name: the string name of this cell
+        name: the string name of this synapse
 
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
@@ -76,7 +76,7 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         self.i_syn = Compartment(postVals) ## electrical current output
         self.g_syn = Compartment(postVals) ## conductance variable
         if is_nonplastic:
-            self.weights.set(self.weights * 0 + 1.)
+            self.weights.set(self.weights.value * 0 + 1.)
 
     @transition(output_compartments=["outputs", "i_syn", "g_syn"])
     @staticmethod
@@ -88,7 +88,7 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
         dgsyn_dt = _out * g_syn_bar - g_syn/tau_syn
         g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance
-        i_syn = g_syn * (v - syn_rest)
+        i_syn = -g_syn * (v - syn_rest)
         outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases
         return outputs, i_syn, g_syn
 
