@@ -58,4 +58,4 @@ def test_exponentialSynapse1():
 
     np.testing.assert_allclose(outs, outs_truth, atol=1e-8)
 
-test_exponentialSynapse1()
+#test_exponentialSynapse1()
