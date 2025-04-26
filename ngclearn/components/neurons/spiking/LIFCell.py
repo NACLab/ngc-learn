@@ -14,18 +14,28 @@ from ngcsimlib.compilers.process import transition
 #from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 
-#@jit
-def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
-    mask = (rfr >= refract_T) * 1. # get refractory mask
-    ## update voltage / membrane potential
-    dv_dt = (v_rest - v) * v_decay + (j * mask)
-    dv_dt = dv_dt * (1./tau_m)
-    return dv_dt
+# def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
+#     mask = (rfr >= refract_T) * 1. # get refractory mask
+#     ## update voltage / membrane potential
+#     dv_dt = (v_rest - v) * v_decay + (j * mask)
+#     dv_dt = dv_dt * (1./tau_m)
+#     return dv_dt
+#
+# def _dfv(t, v, params): ## voltage dynamics wrapper
+#     j, rfr, tau_m, refract_T, v_rest, v_decay = params
+#     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay)
+#     return dv_dt
+
+
 
 def _dfv(t, v, params): ## voltage dynamics wrapper
-    j, rfr, tau_m, refract_T, v_rest, v_decay = params
-    dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay)
+    j, rfr, tau_m, refract_T, v_rest, g_L = params
+    mask = (rfr >= refract_T) * 1.  # get refractory mask
+    ## update voltage / membrane potential
+    dv_dt = (v_rest - v) * g_L + (j * mask)
+    dv_dt = dv_dt * (1. / tau_m)
     return dv_dt
+
 
 #@partial(jit, static_argnums=[3, 4])
 def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
@@ -37,6 +47,7 @@ def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
     _v_theta = v_theta * theta_decay + s * theta_plus
     #_V_theta = V_theta + -V_theta * (dt/tau_theta) + S * alpha
     return _v_theta
+
 
 class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     """
@@ -73,14 +84,14 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         thr: base value for adaptive thresholds that govern short-term
             plasticity (in milliVolts, or mV; default: -52. mV)
 
-        v_rest: membrane resting potential (in mV; default: -65 mV)
+        v_rest: reversal potential or membrane resting potential (in mV; default: -65 mV)
 
         v_reset: membrane reset potential (in mV) -- upon occurrence of a spike,
             a neuronal cell's membrane potential will be set to this value;
             (default: -60 mV)
 
-        v_decay: decay factor applied to voltage leak (Default: 1.); setting this
-            to 0 mV recovers pure integrate-and-fire (IF) dynamics
+        conduct_leak: leak conductance (g_L) value or decay factor applied to voltage leak 
+            (Default: 1.); setting this to 0 mV recovers pure integrate-and-fire (IF) dynamics
 
         tau_theta: homeostatic threshold time constant
 
@@ -116,12 +127,12 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             the value of `v_rest` (default: True)
     """ ## batch_size arg?
 
-    @deprecate_args(thr_jitter=None)
-    def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
-                 v_reset=-60., v_decay=1., tau_theta=1e7, theta_plus=0.05,
-                 refract_time=5., one_spike=False, integration_type="euler",
-                 surrogate_type="straight_through", lower_clamp_voltage=True,
-                 **kwargs):
+    @deprecate_args(thr_jitter=None, v_decay="conduct_leak")
+    def __init__(
+            self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., conduct_leak=1., tau_theta=1e7,
+            theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler", surrogate_type="straight_through",
+            lower_clamp_voltage=True, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -136,7 +147,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         self.v_rest = v_rest #-65. # mV
         self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
-        self.v_decay = v_decay ## controls strength of voltage leak (1 -> LIF, 0 => IF)
+        self.g_L = conduct_leak ## controls strength of voltage leak (1 -> LIF, 0 => IF)
         ## basic asserts to prevent neuronal dynamics breaking...
         #assert (self.v_decay * self.dt / self.tau_m) <= 1. ## <-- to integrate in verify...
         assert self.resist_m > 0.
@@ -178,7 +189,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     @transition(output_compartments=["v", "s", "s_raw", "rfr", "thr_theta", "tols", "key", "surrogate"])    
     @staticmethod
     def advance_state(
-            t, dt, tau_m, resist_m, v_rest, v_reset, v_decay, refract_T, thr, tau_theta, theta_plus, 
+            t, dt, tau_m, resist_m, v_rest, v_reset, g_L, refract_T, thr, tau_theta, theta_plus, 
             one_spike, lower_clamp_voltage, intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols
     ):
         skey = None ## this is an empty dkey if single_spike mode turned off
@@ -191,7 +202,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         _v_thr = thr_theta + thr ## calc present voltage threshold
         #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
         ## update voltage / membrane potential
-        v_params = (j, rfr, tau_m, refract_T, v_rest, v_decay)
+        v_params = (j, rfr, tau_m, refract_T, v_rest, g_L)
         if intgFlag == 1:
             _, _v = step_rk2(0., v, _dfv, dt, v_params)
         else:
