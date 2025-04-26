@@ -88,7 +88,7 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         s = inputs
         ## advance conductance variable
         _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
-        dgsyn_dt = _out * g_syn_bar - g_syn/tau_syn
+        dgsyn_dt = -g_syn/tau_syn + _out * g_syn_bar
         g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance
         i_syn =  -g_syn * (v - syn_rest)
         outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases

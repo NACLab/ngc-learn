@@ -74,6 +74,20 @@ This (chemical) synapse performs a linear transform of its input signals. Note t
     :noindex:
 ```
 
+### Alpha Synapse
+
+This (chemical) synapse performs a linear transform of its input signals. Note that this synapse is "dynamic" in the sense that its efficacies are a function of their pre-synaptic inputs; there is no inherent form of long-term plasticity in this base implementation. Synaptic strength values can be viewed as being filtered/smoothened through a kernel that models more realistic rise and fall times of synaptic conductance..
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.AlphaSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### Short-Term Plasticity (Dense) Synapse
 
 This synapse performs a linear transform of its input signals. Note that this synapse is "dynamic" in the sense that it engages in short-term plasticity (STP), meaning that its efficacy values change as a function of its inputs/time (and simulated consumed resources), but it does not provide any long-term form of plasticity/adjustment.
