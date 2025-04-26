@@ -8,13 +8,14 @@ from ngcsimlib.logger import info
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
+class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
     """
-    A dynamic exponential synaptic cable; this synapse evolves according to exponential synaptic conductance dynamics.
+    A dynamic alpha synaptic cable; this synapse evolves according to alpha synaptic conductance dynamics.
     Specifically, the conductance dynamics are as follows:
 
-    |  dg/dt = -g/tau_syn + gBar sum_k (t - t_k) 
-    |  i_syn = g * (syn_rest - v)  // g is `g_syn` in this synapse implementation
+    |  dh/dt = -h/tau_syn + gBar sum_k (t - t_k) // h is an intermediate variable
+    |  dg/dt = -g/tau_syn + h/tau_syn 
+    |  i_syn = g * (syn_rest - v)  // g is `g_syn` and h is `h_syn` in this synapse implementation
     |  where: syn_rest is the post-synaptic reverse potential for this synapse
     |         t_k marks time of -pre-synaptic k-th pulse received by post-synaptic unit
 
@@ -77,24 +78,29 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         self.v = Compartment(postVals)  ## coupled voltage (from a post-synaptic neuron)
         self.i_syn = Compartment(postVals) ## electrical current output
         self.g_syn = Compartment(postVals) ## conductance variable
+        self.h_syn = Compartment(postVals) ## intermediate conductance variable
         if is_nonplastic:
             self.weights.set(self.weights.value * 0 + 1.)
 
-    @transition(output_compartments=["outputs", "i_syn", "g_syn"])
+    @transition(output_compartments=["outputs", "i_syn", "g_syn", "h_syn"])
     @staticmethod
     def advance_state(
-            dt, tau_syn, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, v
+            dt, tau_syn, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, h_syn, v
     ):
         s = inputs
         ## advance conductance variable
         _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
-        dgsyn_dt = _out * g_syn_bar - g_syn/tau_syn
-        g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance
+        dhsyn_dt = _out * g_syn_bar - h_syn/tau_syn
+        h_syn = h_syn + dhsyn_dt * dt ## run Euler step to move intermediate conductance h
+
+        dgsyn_dt = -g_syn/tau_syn + h_syn/tau_syn
+        g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance g
+
         i_syn =  -g_syn * (v - syn_rest)
         outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases
-        return outputs, i_syn, g_syn
+        return outputs, i_syn, g_syn, h_syn
 
-    @transition(output_compartments=["inputs", "outputs", "i_syn", "g_syn", "v"])
+    @transition(output_compartments=["inputs", "outputs", "i_syn", "g_syn", "h_syn", "v"])
     @staticmethod
     def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
@@ -103,8 +109,9 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         outputs = postVals
         i_syn = postVals
         g_syn = postVals
+        h_syn = postVals
         v = postVals
-        return inputs, outputs, i_syn, g_syn, v
+        return inputs, outputs, i_syn, g_syn, h_syn, v
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
