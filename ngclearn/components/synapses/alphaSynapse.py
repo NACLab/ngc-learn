@@ -40,7 +40,9 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
 
         g_syn_bar: maximum conductance elicited by each incoming spike ("synaptic weight")
 
-        syn_rest: synaptic reversal potential
+        syn_rest: synaptic reversal potential; note, if this is set to `None`, then this 
+            synaptic conductance model will no longer be voltage-dependent (and will ignore 
+            the voltage compartment provided by an external spiking cell)
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
             typically a tuple with 1st element as a string calling the name of
@@ -96,7 +98,9 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
         dgsyn_dt = -g_syn/tau_syn + h_syn # or -g_syn/tau_syn + h_syn/tau_syn
         g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance g
 
-        i_syn =  -g_syn * (v - syn_rest)
+        i_syn = -g_syn
+        if syn_rest is not None:
+            i_syn =  -g_syn * (v - syn_rest)
         outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases
         return outputs, i_syn, g_syn, h_syn
 
