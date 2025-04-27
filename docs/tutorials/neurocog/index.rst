@@ -58,8 +58,9 @@ work towards more advanced concepts.
 
 .. toctree::
   :maxdepth: 1
-  :caption: Forms of Plasticity
+  :caption: Synapses and Forms of Plasticity
 
+  synaptic_conductance
   hebbian
   stdp
   mod_stdp

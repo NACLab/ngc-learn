@@ -19,7 +19,7 @@ synapse that evolves according to STP. We will first write our
 simulation of this dynamic synapse from the perspective of STF-dominated 
 dynamics, plotting out the results under two different Poisson spike trains 
 with different spiking frequencies. Then, we will modify our simulation 
-to emulate dynamics from a STD-dominated perspective.
+to emulate dynamics from an STD-dominated perspective.
 
 ### Starting with Facilitation-Dominated Dynamics
 
@@ -39,10 +39,10 @@ some mixture of the two.
 
 Ultimately, the above means that, in the context of spiking cells, when a 
 pre-synaptic neuron emits a pulse, this act will affect the relative magnitude 
-of the synapse's efficacy; 
-in some cases, this will result in an increase (facilitation) and, in others, 
-this will result in a decrease (depression) that lasts over a short period 
-of time (several hundreds to thousands of milliseconds in many instances). 
+of the synapse's efficacy. In some cases, this will result in an increase 
+(facilitation) and, in others, this will result in a decrease (depression) 
+that lasts over a short period of time (several hundreds to thousands of 
+milliseconds in many instances). 
 As a result of considering synapses to have a dynamic nature to them, both over 
 short and long time-scales, plasticity can now be thought of as a stimulus and 
 resource-dependent quantity, reflecting an important biophysical aspect that 
@@ -87,13 +87,16 @@ tau_d = 50. # ms
 plot_fname = "{}Hz_stp_{}.jpg".format(firing_rate_e, tag)
 
 with Context("Model") as model:
-    W = STPDenseSynapse("W", shape=(1, 1), weight_init=dist.constant(value=2.5),
-                        resources_init=dist.constant(value=Rval),
-                        tau_f=tau_f, tau_d=tau_d, key=subkeys[0])
+    W = STPDenseSynapse(
+	"W", shape=(1, 1), weight_init=dist.constant(value=2.5),
+        resources_init=dist.constant(value=Rval), tau_f=tau_f, tau_d=tau_d, 
+        key=subkeys[0]
+    )
     z0 = PoissonCell("z0", n_units=1, target_freq=firing_rate_e, key=subkeys[0])
-    z1 = LIFCell("z1", n_units=1, tau_m=tau_m, resist_m=(tau_m / dt) * R_m,
-                 v_rest=-60., v_reset=-70., thr=-50.,
-                 tau_theta=0., theta_plus=0., refract_time=0.)
+    z1 = LIFCell(
+	"z1", n_units=1, tau_m=tau_m, resist_m=(tau_m / dt) * R_m, v_rest=-60., 
+        v_reset=-70., thr=-50., tau_theta=0., theta_plus=0., refract_time=0.
+    )
 
     W.inputs << z0.outputs ## z0 -> W
     z1.j << W.outputs ## W -> z1
@@ -156,7 +159,7 @@ resources ready for the dynamic synapse's use.
 
 ### Simulating and Visualizing STF
 
-Now that we understand the basics of how an ngc-learn STP works, we can next 
+Now that we understand the basics of how an ngc-learn STP synapse works, we can next 
 try it out on a simple pre-synaptic Poisson spike train.  Writing out the 
 simulated input Poisson spike train and our STP model's processing of this 
 data can be done as follows:
