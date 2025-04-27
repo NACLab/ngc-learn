@@ -65,6 +65,12 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
+    @staticmethod
+    def eval_log_density(target, mu, Sigma):
+        _dmu = (target - mu)
+        log_density = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
+        return log_density
+
     @transition(output_compartments=["dmu", "dtarget", "dSigma", "L", "mask"])
     @staticmethod
     def advance_state(dt, mu, target, Sigma, modulator, mask): ## compute Gaussian error cell output
@@ -79,6 +85,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         dtarget = -dmu  # reverse of e
         dSigma = Sigma * 0 + 1. # no derivative is calculated at this time for sigma
         L = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
+        #L = GaussianErrorCell.eval_log_density(target, mu, Sigma)
 
         dmu = dmu * modulator * mask ## not sure how mask will apply to a full covariance...
         dtarget = dtarget * modulator * mask

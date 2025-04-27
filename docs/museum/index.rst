@@ -18,3 +18,4 @@ relevant, referenced publicly available ngc-learn simulation code.
   snn_dc
   snn_bfa
   sindy
+  rl_snn
