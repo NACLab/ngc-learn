@@ -133,7 +133,8 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         }
         compartment_props = {
             "inputs":
-                {"inputs": "Takes in external input signal values"},
+                {"inputs": "Takes in external input signal values", 
+                 "v" : "Post-synaptic voltage dependence (comes from a wired-to spiking cell)"},
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",

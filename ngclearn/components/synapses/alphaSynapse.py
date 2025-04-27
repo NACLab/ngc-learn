@@ -140,8 +140,8 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
         }
         compartment_props = {
             "inputs":
-                {"inputs": "Takes in external input signal values"
-                 "v" : "Post-synaptic voltage dependence (comes from a wired-to spiking cell) "},
+                {"inputs": "Takes in external input signal values",
+                 "v" : "Post-synaptic voltage dependence (comes from a wired-to spiking cell)"},
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",
@@ -165,7 +165,7 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = g_syn * (v - syn_rest); "
-                            "dhsyn_dt = (W * inputs) * g_syn_bar - h_syn/tau_syn ",
+                            "dhsyn_dt = (W * inputs) * g_syn_bar - h_syn/tau_syn "
                             "dgsyn_dt = -g_syn/tau_syn + h_syn", 
                 "hyperparameters": hyperparams}
         return info
