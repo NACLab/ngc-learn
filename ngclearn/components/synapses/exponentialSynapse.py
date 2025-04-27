@@ -127,9 +127,9 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
     @classmethod
     def help(cls): ## component help function
         properties = {
-            "synapse_type": "STPDenseSynapse - performs a synaptic transformation of inputs to produce "
+            "synapse_type": "ExponentialSynapse - performs a synaptic transformation of inputs to produce "
                             "output signals (e.g., a scaled linear multivariate transformation); "
-                            "this synapse is dynamic, adapting via a form of short-term plasticity"
+                            "this synapse is dynamic, evolving according to an exponential kernel"
         }
         compartment_props = {
             "inputs":
@@ -137,6 +137,9 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",
+                 "g_syn" : "Synaptic conductnace",
+                 "h_syn" : "Intermediate synaptic conductance",
+                 "i_syn" : "Total electrical current", 
                  "key": "JAX PRNG key"},
             "outputs":
                 {"outputs": "Output of synaptic transformation"},

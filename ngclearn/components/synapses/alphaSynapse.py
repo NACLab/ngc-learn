@@ -134,16 +134,20 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
     @classmethod
     def help(cls): ## component help function
         properties = {
-            "synapse_type": "STPDenseSynapse - performs a synaptic transformation of inputs to produce "
+            "synapse_type": "AlphaSynapse - performs a synaptic transformation of inputs to produce "
                             "output signals (e.g., a scaled linear multivariate transformation); "
-                            "this synapse is dynamic, adapting via a form of short-term plasticity"
+                            "this synapse is dynamic, changing according to an alpha function"
         }
         compartment_props = {
             "inputs":
-                {"inputs": "Takes in external input signal values"},
+                {"inputs": "Takes in external input signal values"
+                 "v" : "Post-synaptic voltage dependence (comes from a wired-to spiking cell) "},
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",
+                 "g_syn" : "Synaptic conductnace", 
+                 "h_syn" : "Intermediate synaptic conductance", 
+                 "i_syn" : "Total electrical current", 
                  "key": "JAX PRNG key"},
             "outputs":
                 {"outputs": "Output of synaptic transformation"},
@@ -161,7 +165,8 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = g_syn * (v - syn_rest); "
-                            "dgsyn_dt = (W * inputs) * g_syn_bar - g_syn/tau_syn ",
+                            "dhsyn_dt = (W * inputs) * g_syn_bar - h_syn/tau_syn ",
+                            "dgsyn_dt = -g_syn/tau_syn + h_syn", 
                 "hyperparameters": hyperparams}
         return info
 
