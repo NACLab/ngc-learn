@@ -60,7 +60,7 @@ work towards more advanced concepts.
   :maxdepth: 1
   :caption: Synapses and Forms of Plasticity
 
-  synaptic_conductance
+  dynamic_synapses
   hebbian
   stdp
   mod_stdp

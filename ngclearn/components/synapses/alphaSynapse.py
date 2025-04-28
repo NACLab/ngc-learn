@@ -97,6 +97,7 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
 
         dgsyn_dt = -g_syn/tau_syn + h_syn # or -g_syn/tau_syn + h_syn/tau_syn
         g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance g
+        g_syn = g_syn * Rscale
 
         i_syn = -g_syn
         if syn_rest is not None:

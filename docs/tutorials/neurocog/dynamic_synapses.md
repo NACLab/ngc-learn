@@ -20,14 +20,10 @@ response (as opposed to a chemical one, e.g., an influx of calcium), such models
 to emulate the time-course of what is known as post-synaptic receptor conductance. Note 
 that these dynamic synapse models will end being a bit more sophisticated than the strength
 value matrices we might initially employ (as in synapse components such as the 
-[DenseSynapse](ngclearn.components.synapses.DenseSynapse)).
+[DenseSynapse](ngclearn.components.synapses.denseSynapse)).
 
-Building a dynamic synapse can be done by importing 
-[ExponentialSynapse](ngclearn.components.synapses.ExponentialSynapse) or  
-[AlphaSynapse](ngclearn.components.synapses.AlphaSynapse)
-from ngc-learn's in-built components and setting them up within a model 
-context for easy analysis. For the first part of this lesson, we will import 
-both of these and compare their behavior. 
+Building a dynamic synapse can be done by importing [ExponentialSynapse](ngclearn.components.synapses.exponentialSynapse) or 
+[AlphaSynapse](ngclearn.components.synapses.alphaSynapse) from ngc-learn's in-built components and setting them up within a model context for easy analysis. For the first part of this lesson, we will import both of these and compare their behavior. 
 This can be done as follows (using the meta-parameters we provide in the 
 code block below to ensure reasonable dynamics):
 
@@ -48,8 +44,6 @@ dkey = random.PRNGKey(1234) ## creating seeding keys for synapses
 dkey, *subkeys = random.split(dkey, 6)
 dt = 0.1 # ms ## integration time constant
 T = 8. # ms ## total duration time
-
-Tsteps = int(T/dt) + 1
 
 ## ---- build a dual-synapse system ----
 with Context("dual_syn_system") as ctx:
@@ -107,10 +101,10 @@ Finally, we seek model the electrical current that results from some amount of n
 Thus, for both the exponential and the alpha synapse, the changes in conductance are finally converted (via Ohm's law) to electrical current to produce the final derived variable $j_{\text{syn}}(t)$:
 
 $$
-j_{\text{syn}}(t) = g_{\text{syn}}(t) (v(t) - E_{\text{rest}})
+j_{\text{syn}}(t) = g_{\text{syn}}(t) (v(t) - E_{\text{rev}})
 $$
 
-where $v_{\text{rest}$ (or $E_{\text{rest}}$) is the post-synaptic reverse potential of the ion channels that mediate the synaptic current; this is typically set to $E_{\text{rest}} = 0$ (millivolts; mV)for the case of excitatory changes and $E_{\text{rest}} = -75$ (mV) for the case of inhibitory changes. $v(t)$ is the voltage/membrane potential of the post-synaptic the synaptic cable wires to, meaning that the conductance models above are voltage-dependent (in ngc-learn, if you want voltage-independent conductance, then set `syn_rest = None`). 
+where $E_{\text{rev}}$ is the post-synaptic reverse potential of the ion channels that mediate the synaptic current; this is typically set to $E_{\text{rev}} = 0$ (millivolts; mV)for the case of excitatory changes and $E_{\text{rev}} = -75$ (mV) for the case of inhibitory changes. $v(t)$ is the voltage/membrane potential of the post-synaptic the synaptic cable wires to, meaning that the conductance models above are voltage-dependent (in ngc-learn, if you want voltage-independent conductance, then set `syn_rest = None`). 
 
 
 ### Examining the Conductances of Dynamic Synapses
@@ -121,6 +115,7 @@ To create the simulation of a single input pulse stream, you can write the follo
 ```python
 time_ticks = []
 time_labs = []
+Tsteps = int(T/dt) + 1
 for t in range(Tsteps):
     if t % 10 == 0:
         time_ticks.append(t)
@@ -194,11 +189,11 @@ expoential and alpha synapse conductance trajectories:
 .. table::
    :align: center
 
-   +---------------------------------------------------------+-----------------------------------------------------------+
-   | .. image:: ../docs/images/tutorials/neurocog/expsyn.jpg | .. image:: ../docs/images/tutorials/neurocog/alphasyn.jpg |
-   |   :width: 100px                                         |   :width: 100px                                           |
-   |   :align: center                                        |   :align: center                                          |
-   +---------------------------------------------------------+-----------------------------------------------------------+
+   +--------------------------------------------------------+----------------------------------------------------------+
+   | .. image:: ../../images/tutorials/neurocog/expsyn.jpg  | .. image:: ../../images/tutorials/neurocog/alphasyn.jpg  |
+   |   :width: 400px                                        |   :width: 400px                                          |
+   |   :align: center                                       |   :align: center                                         |
+   +--------------------------------------------------------+----------------------------------------------------------+
 ```
 
 Note that the alpha synapse (right figure) would produce a more realistic fit to recorded synaptic currents (as it attempts to model 
@@ -213,7 +208,7 @@ and often-used conductance model that is paired with spiking cells such as the l
 we seek to simulate the following post-synaptic conductance dynamics for a single LIF unit:
 
 $$
-\tau_{m} \frac{\partial v(t)}{\partial t} = -(v(t) - E_{L}) - \frac{g_{E}(t)}{g_{L}} (v(t) - E_{E}) - \frac{g_{I}(t)}{g_{L}} (v(t) - E_{I})
+\tau_{m} \frac{\partial v(t)}{\partial t} = -\big( v(t) - E_{L} \big) - \frac{g_{E}(t)}{g_{L}} \big( v(t) - E_{E} \big) - \frac{g_{I}(t)}{g_{L}} \big( v(t) - E_{I} \big)
 $$
 
 where $g_{L}$ is the leak conductance value for the post-synaptic LIF, $g_{E}(t)$ is the post-synaptic conductance produced by excitatory pre-synaptic spike trains (with excitatory synaptic reverse potential $E_{E}$), and $g_{I}(t)$ is the post-synaptic conductance produced by inhibitory pre-synaptic spike trains (with inhibitory synaptic reverse potential $E_{I}$). Note that the first term of the above ODE is the normal leak portion of the LIF's standard dynamics (scaled by conductance factor $g_{L}$) and the last two terms of the above ODE can be modeled each separately with a dynamic synapse. To differentiate between excitatory and inhibitory conductance changes, we will just configure a different reverse potential for each to induce either excitatory (i.e., $E_{\text{syn}} = E_{E} = 0$ mV) or inhibitory (i.e., $E_{\text{syn}} = E_{I} = -80$ mV) pressure/drive. 
@@ -364,10 +359,10 @@ voltage threshold.
 .. table::
    :align: center
 
-   +----------------------------------------------------------------------+
-   | .. image:: ../docs/images/tutorials/neurocog/ei_circuit_dynamics.jpg |
-   |   :width: 100px                                                      |
-   |   :align: center                                                     |
-   +----------------------------------------------------------------------+
+   +--------------------------------------------------------------------+
+   | .. image:: ../../images/tutorials/neurocog/ei_circuit_dynamics.jpg |
+   |   :width: 400px                                                    |
+   |   :align: center                                                   |
+   +--------------------------------------------------------------------+
 ```
 
