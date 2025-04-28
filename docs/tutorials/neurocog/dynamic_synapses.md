@@ -383,7 +383,7 @@ Notice that the above shows the behavior of the post-synaptic LIF in response to
    :align: center
 
    +-----------------------------------------------------------------------+-----------------------------------------------------------------------+
-   | .. image:: ../../images/tutorials/neurocog/ei_circuit_dense_exc.jpg  | .. image:: ../../images/tutorials/neurocog/ei_circuit_sparse_inh.jpg  |
+   | .. image:: ../../images/tutorials/neurocog/ei_circuit_dense_exc.jpg   | .. image:: ../../images/tutorials/neurocog/ei_circuit_sparse_inh.jpg  |
    |   :width: 400px                                                       |   :width: 400px                                                       |
    |   :align: center                                                      |   :align: center                                                      |
    +-----------------------------------------------------------------------+-----------------------------------------------------------------------+
