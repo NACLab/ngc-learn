@@ -12,14 +12,22 @@ construct and study a small neuronal circuit involving a leaky integrator that
 is driven by exponential synapses relaying pulses from an excitatory and an 
 inhibitory population of Poisson input encoding cells.
 
-## Chemical Synapses
+## Synaptic Conductance Modeling
 
+Synapse models are typically used to model the post-synaptic response produced by 
+action potentials (or pulses) at a pre-synaptic terminal. Assuming an electrical 
+response (as opposed to a chemical one, e.g., an influx of calcium), such models seek 
+to emulate the time-course of what is known as post-synaptic receptor conductance. Note 
+that these dynamic synapse models will end being a bit more sophisticated than the strength
+value matrices we might initially employ (as in synapse components such as the 
+[DenseSynapse](ngclearn.components.synapses.DenseSynapse)).
 
 Building a dynamic synapse can be done by importing 
-[ExponentialSynapse](ngclearn.components.synapses.ExponentialSynapse) and 
+[ExponentialSynapse](ngclearn.components.synapses.ExponentialSynapse) or  
 [AlphaSynapse](ngclearn.components.synapses.AlphaSynapse)
 from ngc-learn's in-built components and setting them up within a model 
-context for easy analysis.
+context for easy analysis. For the first part of this lesson, we will import 
+both of these and compare their behavior. 
 This can be done as follows (using the meta-parameters we provide in the 
 code block below to ensure reasonable dynamics):
 
@@ -43,7 +51,7 @@ T = 8. # ms ## total duration time
 
 Tsteps = int(T/dt) + 1
 
-# ---- build a two-synapse system ----
+## ---- build a dual-synapse system ----
 with Context("dual_syn_system") as ctx:
     Wexp = ExponentialSynapse( ## exponential dynamic synapse
         name="Wexp", shape=(1, 1), tau_syn=3., g_syn_bar=1., syn_rest=0., resist_scale=1.,
@@ -78,8 +86,7 @@ important hyper-parameters to configure:
     excitatory nature for non-negative values of `syn_rest` or a synapse with an inhibitory 
     nature for negative values of `syn_rest`.
 
-
-The flow of electrical current from a pre-synaptic neuron to a post-synaptic one is often modeled under the assumption that pre-synaptic pulses result in impermanent (transient; lasting for a short period of time) changes in the conductance of a post-synaptic neuron. As a result, the resulting conductance dynamics $g_{\text{syn}}(t)$ of each of the two synapses that you have built above can be simulated in ngc-learn according to one or more ordinary differential equations (ODEs). 
+The flow of electrical current from a pre-synaptic neuron to a post-synaptic one is often modeled under the assumption that pre-synaptic pulses result in impermanent (transient; lasting for a short period of time) changes in the conductance of a post-synaptic neuron. As a result, the resulting conductance dynamics $g_{\text{syn}}(t)$ -- or the effect (conductance changes in the post-synaptic membrane) of a transmitter binding to and opening post-synaptic receptors -- of each of the two synapses that you have built above can be simulated in ngc-learn according to one or more ordinary differential equations (ODEs), which themselves iteratively model different waveform equations of the time-course of synaptic conductance. 
 For the exponential synapse, the dynamics adhere to the following ODE: 
 
 $$
@@ -96,13 +103,14 @@ $$
 
 where $h_{\text{syn}}(t)$ is an intermediate variable that operates in service of driving the conductance variable $g_{\text{syn}}(t)$ itself.
 
-For both the exponential and the alpha synapse, the changes in conductance are finally converted (via Ohm's law) to electrical current to produce the final derived variable $j_{\text{syn}}(t)$:
+Finally, we seek model the electrical current that results from some amount of neurotransmitter in previous time steps. 
+Thus, for both the exponential and the alpha synapse, the changes in conductance are finally converted (via Ohm's law) to electrical current to produce the final derived variable $j_{\text{syn}}(t)$:
 
 $$
 j_{\text{syn}}(t) = g_{\text{syn}}(t) (v(t) - E_{\text{rest}})
 $$
 
-where $v_{\text{rest}$ (or $E_{\text{rest}}$) is the post-synaptic reverse potential of the synapse; this is typically set to $E_{\text{rest}} = 0$ (millivolts; mV)for the case of excitatory changes and $E_{\text{rest}} = -75$ (mV) for the case of inhibitory changes. $v(t)$ is the voltage/membrane potential of the post-synaptic the synaptic cable wires to, meaning that the conductance models above are voltage-dependent (in ngc-learn, if one wants voltage-independent conductance, then `syn_rest` must be set to `None`). 
+where $v_{\text{rest}$ (or $E_{\text{rest}}$) is the post-synaptic reverse potential of the ion channels that mediate the synaptic current; this is typically set to $E_{\text{rest}} = 0$ (millivolts; mV)for the case of excitatory changes and $E_{\text{rest}} = -75$ (mV) for the case of inhibitory changes. $v(t)$ is the voltage/membrane potential of the post-synaptic the synaptic cable wires to, meaning that the conductance models above are voltage-dependent (in ngc-learn, if you want voltage-independent conductance, then set `syn_rest = None`). 
 
 
 ### Examining the Conductances of Dynamic Synapses
@@ -187,13 +195,179 @@ expoential and alpha synapse conductance trajectories:
    :align: center
 
    +---------------------------------------------------------+-----------------------------------------------------------+
-   | .. image:: ../docs/images/tutorials/neurocog/expsyn.png | .. image:: ../docs/images/tutorials/neurocog/alphasyn.png |
+   | .. image:: ../docs/images/tutorials/neurocog/expsyn.jpg | .. image:: ../docs/images/tutorials/neurocog/alphasyn.jpg |
    |   :width: 100px                                         |   :width: 100px                                           |
    |   :align: center                                        |   :align: center                                          |
    +---------------------------------------------------------+-----------------------------------------------------------+
 ```
 
+Note that the alpha synapse (right figure) would produce a more realistic fit to recorded synaptic currents (as it attempts to model 
+the rise and fall of current in a less simplified manner) at the cost of extra compute, given it uses two ODEs to 
+emulate condutance, as opposed to the faster yet less-biophysically-realistic exponential synapse (left figure). 
+
 ## Excitatory-Inhibitory Driven Dynamics
 
+Let's next examine a more interesting use-case of the above dynamic synapses -- modeling excitatory and inhibitory 
+pressures produced by different groups of pre-synaptic spike trains. This allows us to examine a very common 
+and often-used conductance model that is paired with spiking cells such as the leaky integrate-and-fire (LIF). Specifically, 
+we seek to simulate the following post-synaptic conductance dynamics for a single LIF unit:
 
+$$
+\tau_{m} \frac{\partial v(t)}{\partial t} = -(v(t) - E_{L}) - \frac{g_{E}(t)}{g_{L}} (v(t) - E_{E}) - \frac{g_{I}(t)}{g_{L}} (v(t) - E_{I})
+$$
+
+where $g_{L}$ is the leak conductance value for the post-synaptic LIF, $g_{E}(t)$ is the post-synaptic conductance produced by excitatory pre-synaptic spike trains (with excitatory synaptic reverse potential $E_{E}$), and $g_{I}(t)$ is the post-synaptic conductance produced by inhibitory pre-synaptic spike trains (with inhibitory synaptic reverse potential $E_{I}$). Note that the first term of the above ODE is the normal leak portion of the LIF's standard dynamics (scaled by conductance factor $g_{L}$) and the last two terms of the above ODE can be modeled each separately with a dynamic synapse. To differentiate between excitatory and inhibitory conductance changes, we will just configure a different reverse potential for each to induce either excitatory (i.e., $E_{\text{syn}} = E_{E} = 0$ mV) or inhibitory (i.e., $E_{\text{syn}} = E_{I} = -80$ mV) pressure/drive. 
+
+We will specifically model the excitatory and inhibitory conductance changes using exponential synapses and the input spike trains for each with Poisson encoding cells; in other words, two different groups of Poisson cells will be wired to a single LIF cell via exponential dynamic synapses. The code for doing this is as follows:
+
+```python 
+from jax import numpy as jnp, random, jit
+from ngcsimlib.context import Context
+import numpy as np
+np.random.seed(42)
+from ngclearn.components import ExponentialSynapse, PoissonCell, LIFCell
+from ngclearn.operations import summation
+
+from ngcsimlib.compilers.process import Process
+from ngcsimlib.context import Context
+import ngclearn.utils.weight_distribution as dist
+
+## create seeding keys
+dkey = random.PRNGKey(1234)
+dkey, *subkeys = random.split(dkey, 6)
+
+## simulation properties
+dt = 0.1 # ms
+T = 1000. # ms ## total duration time
+
+## post-syn LIF cell properties
+tau_m = 10.
+g_L = 10.
+v_rest = -75.
+v_thr = -55.
+
+## excitatory group properties
+exc_freq = 10. # Hz
+n_exc = 80
+g_e_bar = 2.4 
+tau_syn_exc = 2.
+E_rest_exc = 0.
+
+## inhibitory group properties
+inh_freq = 10. # Hz
+n_inh = 20
+g_i_bar = 2.4 
+tau_syn_inh = 5.
+E_rest_inh = -80.
+
+Tsteps = int(T/dt)
+
+## ---- build a simple E-I spiking circuit ----
+with Context("ei_snn") as ctx:
+    pre_exc = PoissonCell("pre_exc", n_units=n_exc, target_freq=exc_freq, key=subkeys[0]) ## pre-syn excitatory group
+    pre_inh = PoissonCell("pre_inh", n_units=n_inh, target_freq=inh_freq, key=subkeys[1]) ## pre-syn inhibitory group
+    Wexc = ExponentialSynapse( ## dynamic synapse between excitatory group and LIF
+        name="Wexc", shape=(n_exc,1), tau_syn=tau_syn_exc, g_syn_bar=g_e_bar, syn_rest=E_rest_exc, resist_scale=1./g_L,
+        weight_init=dist.constant(value=1.), key=subkeys[2]
+    )
+    Winh = ExponentialSynapse( ## dynamic synapse between inhibitory group and LIF
+        name="Winh", shape=(n_inh, 1), tau_syn=tau_syn_inh, g_syn_bar=g_i_bar, syn_rest=E_rest_inh, resist_scale=1./g_L,
+        weight_init=dist.constant(value=1.), key=subkeys[2]
+    )
+    post_exc = LIFCell( ## post-syn LIF cell
+        "post_exc", n_units=1, tau_m=tau_m, resist_m=1., thr=v_thr, v_rest=v_rest, conduct_leak=1., v_reset=-75.,
+        tau_theta=0., theta_plus=0., refract_time=2., key=subkeys[3]
+    )
+
+    Wexc.inputs << pre_exc.outputs 
+    Winh.inputs << pre_inh.outputs
+    Wexc.v << post_exc.v ## couple voltage to exc synapse
+    Winh.v << post_exc.v ## couple voltage to inh synapse
+    post_exc.j << summation(Wexc.i_syn, Winh.i_syn) ## sum together excitatory & inhibitory pressures
+
+    advance_process = (Process("advance_proc")
+                       >> pre_exc.advance_state
+                       >> pre_inh.advance_state
+                       >> Wexc.advance_state
+                       >> Winh.advance_state
+                       >> post_exc.advance_state)
+    # ctx.wrap_and_add_command(advance_process.pure, name="run")
+    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
+
+    reset_process = (Process("reset_proc")
+                     >> pre_exc.reset
+                     >> pre_inh.reset
+                     >> Wexc.reset
+                     >> Winh.reset
+                     >> post_exc.reset)
+    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
+```
+
+### Examining the Simple Spiking Circuit's Behavior
+
+To run the above spiking circuit, we then write the next block of code (making sure to track/store the resulting membrane potential and pulse values emitted by the post-synaptic LIF):
+
+```python
+volts = []
+time_span = []
+spikes = []
+
+ctx.reset()
+pre_exc.inputs.set(jnp.ones((1, n_exc))) 
+pre_inh.inputs.set(jnp.ones((1, n_inh)))
+post_exc.v.set(post_exc.v.value * 0 - 65.) ## initial condition for LIF is -65 mV
+volts.append(post_exc.v.value)
+time_span.append(0.)
+Tsteps = int(T/dt)
+for t in range(1, Tsteps):
+    ctx.run(t=t * dt, dt=dt)
+    print(f"\r v {post_exc.v.value}", end="")
+    volts.append(post_exc.v.value)
+    spikes.append(post_exc.s.value)
+    time_span.append(t) #* dt)
+print()
+volts = jnp.squeeze(jnp.concatenate(volts, axis=1))
+spikes = jnp.squeeze(jnp.concatenate(spikes, axis=1))
+```
+
+from which we may then write the following plotting code to visualize the post-synaptic LIF unit's membrane potential time-course along with any spikes it might have produced in response to the pre-synaptic spike trains:
+
+```python
+import matplotlib 
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+cmap = plt.cm.jet
+
+fig, ax = plt.subplots()
+
+volt_vals = ax.plot(time_span, volts, '-.', color='tab:red')
+stat = jnp.where(spikes > 0.)
+indx = (stat[0] * 1. - 1.).tolist()
+v_thr_below = -0.75
+v_thr_above = 2.
+spk = ax.vlines(x=indx, ymin=v_thr-v_thr_below, ymax=v_thr+v_thr_above, colors='black', ls='-', lw=2)
+_v_thr = v_thr
+ax.hlines(y=_v_thr, xmin=0., xmax=time_span[-1], colors='blue', ls='-.', lw=2)
+
+ax.set(xlabel='Time (ms)', ylabel='Voltage',
+      title='Exponential Synapse LIF')
+ax.grid()
+fig.savefig("ei_circuit_dynamics.jpg")
+```
+
+which should produce a figure depicting dynamics similar to the one below. Black tick 
+marks indicate post-synaptic pulses whereas the horizontal dashed blue shows the LIF unit's 
+voltage threshold.
+
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +----------------------------------------------------------------------+
+   | .. image:: ../docs/images/tutorials/neurocog/ei_circuit_dynamics.jpg |
+   |   :width: 100px                                                      |
+   |   :align: center                                                     |
+   +----------------------------------------------------------------------+
+```
 
