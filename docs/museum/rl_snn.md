@@ -11,6 +11,11 @@ exhibit can be found
 
 ## Modeling Operant Conditioning through Modulation
 
+Operant conditioning refers to the idea that there are environmental stimuli that can either increase or decrease the occurrence of (voluntary) behaviors; in other words, positive stimuli can lead to future repeats of a certain behavior whereas negative stimuli can lead to (i.e., punish) a decrease in future occurences. Ultimately, operant conditioning, through consequences, shapes voluntary behavior where actions followed by rewards are repeated and actions followed by punished/negative outcomes diminish. 
+
+In this lesson, we will model very simple case of operant conditioning for a neuronal motor circuit used to engage in the navigation of a simple maze. The maze's design will be the rat T-maze and the "rat" will be allowed to move, at a particular point in the maze, in one of four directions (North, South, West, and East). A positive reward will be supplied to our rat neuronal circuit if it makes progress towards the direction of food (placed in the upper right corner of the T-maze) and a negative reward will be provided if fails to make progress/gets stuck, i.e., a dense reward functional will be employed.
+
+
 
 ### Reward-Modulated Spike-Timing-Dependent Plasticity (R-STDP)
 
