@@ -365,7 +365,19 @@ voltage threshold.
    +--------------------------------------------------------------------+
 ```
 
-Notice that the above shows the behavior of the post-synaptic LIF in response to the integration of pulses coming from two Poisson spike trains both at rates of $10$ Hz (since both `exc_freq` and `inh_freq` have been set to ten). Messing with the frequencies of the excitatory and inhibitory pulse trains can lead to sparser or denser post-synaptic spike outputs. 
+Notice that the above shows the behavior of the post-synaptic LIF in response to the integration of pulses coming from two Poisson spike trains both at rates of $10$ Hz (since both `exc_freq` and `inh_freq` have been set to ten). Messing with the frequencies of the excitatory and inhibitory pulse trains can lead to sparser or denser post-synaptic spike outputs. For instance, if we increase the frequency of the excitatory train to $15$ Hz (keeping the inhibitory one at $10$ Hz), we get a denser post-synaptic output pulse pattern as in the left figure below. In contrast, if we instead increase the inhibitory frequency to $30$ Hz (keeping the excitatory at $10$ Hz), we obtain a sparser post-synaptic output pulse train as in the right figure below.
+
+
+```{eval-rst}
+.. table::
+   :align: center
+
+   +-----------------------------------------------------------------------+-----------------------------------------------------------------------+
+   | .. image:: ../../images/tutorials/neurocog/ei_circuit_denser_exc.jpg  | .. image:: ../../images/tutorials/neurocog/ei_circuit_sparse_inh.jpg  |
+   |   :width: 400px                                                       |   :width: 400px                                                       |
+   |   :align: center                                                      |   :align: center                                                      |
+   +-----------------------------------------------------------------------+-----------------------------------------------------------------------+
+```
 
 ## References
 
