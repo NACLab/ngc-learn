@@ -90,18 +90,18 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
             dt, tau_syn, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, h_syn, v
     ):
         s = inputs
-        ## advance conductance variable
+        ## advance conductance variable(s)
         _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
         dhsyn_dt = -h_syn/tau_syn + _out * g_syn_bar
         h_syn = h_syn + dhsyn_dt * dt ## run Euler step to move intermediate conductance h
 
         dgsyn_dt = -g_syn/tau_syn + h_syn # or -g_syn/tau_syn + h_syn/tau_syn
         g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance g
-        g_syn = g_syn * Rscale
 
-        i_syn = -g_syn
+        ## compute derive electrical current variable
+        i_syn = -g_syn * Rscale
         if syn_rest is not None:
-            i_syn =  -g_syn * (v - syn_rest)
+            i_syn =  -(g_syn  * Rscale) * (v - syn_rest)
         outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases
         return outputs, i_syn, g_syn, h_syn
 

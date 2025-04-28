@@ -4,8 +4,7 @@ In this lesson, we will study dynamic synapses, or synaptic cable components in
 ngc-learn that evolve on fast time-scales in response to their pre-synaptic inputs. 
 These types of chemical synapse components are useful for modeling time-varying 
 conductance which ultimately drives eletrical current input into neuronal units 
-(such as spiking cells).  
-Here, we will learn how to build two important types of dynamic synapses in 
+(such as spiking cells).  Here, we will learn how to build two important types of dynamic synapses in 
 ngc-learn -- the exponential synapse and the alpha synapse -- and visualize 
 the time-course of their resulting conductances. In addition, we will then 
 construct and study a small neuronal circuit involving a leaky integrator that 
@@ -366,3 +365,8 @@ voltage threshold.
    +--------------------------------------------------------------------+
 ```
 
+Notice that the above shows the behavior of the post-synaptic LIF in response to the integration of pulses coming from two Poisson spike trains both at rates of $10$ Hz (since both `exc_freq` and `inh_freq` have been set to ten). Messing with the frequencies of the excitatory and inhibitory pulse trains can lead to sparser or denser post-synaptic spike outputs. 
+
+## References
+
+<b>[1]</b> Sterratt, David, et al. Principles of computational modelling in neuroscience. Cambridge university press, 2023.
