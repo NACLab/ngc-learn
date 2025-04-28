@@ -30,8 +30,6 @@ This can be done as follows (using the meta-parameters we provide in the code bl
 ```python
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-import numpy as np
-np.random.seed(42)
 from ngclearn.components import ExponentialSynapse, AlphaSynapse, DoupleExpSynapse
 
 from ngcsimlib.compilers.process import Process
@@ -246,8 +244,6 @@ We will specifically model the excitatory and inhibitory conductance changes usi
 ```python 
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
-import numpy as np
-np.random.seed(42)
 from ngclearn.components import ExponentialSynapse, PoissonCell, LIFCell
 from ngclearn.operations import summation
 
