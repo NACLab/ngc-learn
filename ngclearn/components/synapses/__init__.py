@@ -5,6 +5,7 @@ from .staticSynapse import StaticSynapse
 ## short-term plasticity components
 from .STPDenseSynapse import STPDenseSynapse
 from .exponentialSynapse import ExponentialSynapse
+from .doubleExpSynapse import DoupleExpSynapse
 from .alphaSynapse import AlphaSynapse
 
 ## dense synaptic components

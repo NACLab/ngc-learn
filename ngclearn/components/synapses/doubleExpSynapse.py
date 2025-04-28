@@ -8,16 +8,17 @@ from ngcsimlib.logger import info
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
-class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
+class DoupleExpSynapse(DenseSynapse): ## dynamic double-exponential synapse cable
     """
-    A dynamic exponential synaptic cable; this synapse evolves according to exponential synaptic conductance dynamics.
+    A dynamic double-exponential synaptic cable; this synapse evolves according to difference of two exponentials
+    synaptic conductance dynamics.
     Specifically, the conductance dynamics are as follows:
 
-    |  dg/dt = -g/tau_decay + gBar sum_k (t - t_k)
-    |  i_syn = g * (syn_rest - v)  // g is `g_syn` in this synapse implementation
+    |  dh/dt = -h/tau_rise + gBar sum_k (t - t_k) * (1/tau_rise - 1/tau_decay) // h is an intermediate variable
+    |  dg/dt = -g/tau_decay + h
+    |  i_syn = g * (syn_rest - v)  // g is `g_syn` and h is `h_syn` in this synapse implementation
     |  where: syn_rest is the post-synaptic reverse potential for this synapse
     |         t_k marks time of -pre-synaptic k-th pulse received by post-synaptic unit
-
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals, e.g., pre-synaptic pulses/spikes)
@@ -37,10 +38,12 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
 
         tau_decay: synaptic decay time constant (ms)
 
+        tau_rise: synaptic increase/rise time constant (ms)
+
         g_syn_bar: maximum conductance elicited by each incoming spike ("synaptic weight")
 
-        syn_rest: synaptic reversal potential; note, if this is set to `None`, then this 
-            synaptic conductance model will no longer be voltage-dependent (and will ignore 
+        syn_rest: synaptic reversal potential; note, if this is set to `None`, then this
+            synaptic conductance model will no longer be voltage-dependent (and will ignore
             the voltage compartment provided by an external spiking cell)
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
@@ -63,12 +66,13 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
 
     # Define Functions
     def __init__(
-            self, name, shape, tau_decay, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1., p_conn=1.,
+            self, name, shape, tau_decay, tau_rise, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1., p_conn=1.,
             is_nonplastic=True, **kwargs
     ):
         super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
         ## dynamic synapse meta-parameters
         self.tau_decay = tau_decay
+        self.tau_rise = tau_rise
         self.g_syn_bar = g_syn_bar
         self.syn_rest = syn_rest ## synaptic resting potential
 
@@ -79,27 +83,34 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         self.v = Compartment(postVals)  ## coupled voltage (from a post-synaptic neuron)
         self.i_syn = Compartment(postVals) ## electrical current output
         self.g_syn = Compartment(postVals) ## conductance variable
+        self.h_syn = Compartment(postVals) ## intermediate conductance variable
         if is_nonplastic:
             self.weights.set(self.weights.value * 0 + 1.)
 
-    @transition(output_compartments=["outputs", "i_syn", "g_syn"])
+    @transition(output_compartments=["outputs", "i_syn", "g_syn", "h_syn"])
     @staticmethod
     def advance_state(
-            dt, tau_decay, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, v
+            dt, tau_decay, tau_rise, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, h_syn, v
     ):
         s = inputs
-        ## advance conductance variable
+        #A = tau_decay/(tau_decay - tau_rise) * jnp.power((tau_rise/tau_decay), tau_rise/(tau_rise - tau_decay))
+        A = 1.
+        ## advance conductance variable(s)
         _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
-        dgsyn_dt = -g_syn/tau_decay + (_out * g_syn_bar) * (1./dt)
-        g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance
+        dhsyn_dt = -h_syn/tau_rise + ((_out * g_syn_bar) * (1. / tau_rise - 1. / tau_decay) * A) * (1./dt)
+        h_syn = h_syn + dhsyn_dt * dt ## run Euler step to move intermediate conductance h
+
+        dgsyn_dt = -g_syn/tau_decay + h_syn * (1./dt)
+        g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance g
+
         ## compute derive electrical current variable
         i_syn = -g_syn * Rscale
         if syn_rest is not None:
-            i_syn =  -(g_syn * Rscale) * (v - syn_rest)
+            i_syn =  -(g_syn  * Rscale) * (v - syn_rest)
         outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases
-        return outputs, i_syn, g_syn
+        return outputs, i_syn, g_syn, h_syn
 
-    @transition(output_compartments=["inputs", "outputs", "i_syn", "g_syn", "v"])
+    @transition(output_compartments=["inputs", "outputs", "i_syn", "g_syn", "h_syn", "v"])
     @staticmethod
     def reset(batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
@@ -108,8 +119,9 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         outputs = postVals
         i_syn = postVals
         g_syn = postVals
+        h_syn = postVals
         v = postVals
-        return inputs, outputs, i_syn, g_syn, v
+        return inputs, outputs, i_syn, g_syn, h_syn, v
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -128,20 +140,20 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
     @classmethod
     def help(cls): ## component help function
         properties = {
-            "synapse_type": "ExponentialSynapse - performs a synaptic transformation of inputs to produce "
+            "synapse_type": "DoubleExpSynapse - performs a synaptic transformation of inputs to produce "
                             "output signals (e.g., a scaled linear multivariate transformation); "
-                            "this synapse is dynamic, evolving according to an exponential kernel"
+                            "this synapse is dynamic, changing according to a difference of exponentials kernel"
         }
         compartment_props = {
             "inputs":
-                {"inputs": "Takes in external input signal values", 
+                {"inputs": "Takes in external input signal values",
                  "v" : "Post-synaptic voltage dependence (comes from a wired-to spiking cell)"},
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",
                  "g_syn" : "Synaptic conductnace",
                  "h_syn" : "Intermediate synaptic conductance",
-                 "i_syn" : "Total electrical current", 
+                 "i_syn" : "Total electrical current",
                  "key": "JAX PRNG key"},
             "outputs":
                 {"outputs": "Output of synaptic transformation"},
@@ -153,13 +165,15 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "tau_decay": "Conductance decay time constant (ms)",
+            "tau_rise": "Conductance rise/increase time constant (ms)",
             "g_bar_syn": "Maximum conductance value",
             "syn_rest": "Synaptic reversal potential"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = g_syn * (v - syn_rest); "
-                            "dgsyn_dt = (W * inputs) * g_syn_bar - g_syn/tau_decay ",
+                            "dhsyn_dt = (1/tau_rise - 1/tau_decay) * (W * inputs) * g_syn_bar - h_syn/tau_rise "
+                            "dgsyn_dt = -g_syn/tau_decay + h_syn",
                 "hyperparameters": hyperparams}
         return info
 

@@ -13,8 +13,8 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
     A dynamic alpha synaptic cable; this synapse evolves according to alpha synaptic conductance dynamics.
     Specifically, the conductance dynamics are as follows:
 
-    |  dh/dt = -h/tau_syn + gBar sum_k (t - t_k) // h is an intermediate variable
-    |  dg/dt = -g/tau_syn + h/tau_syn 
+    |  dh/dt = -h/tau_decay + gBar sum_k (t - t_k) // h is an intermediate variable
+    |  dg/dt = -g/tau_decay + h/tau_decay
     |  i_syn = g * (syn_rest - v)  // g is `g_syn` and h is `h_syn` in this synapse implementation
     |  where: syn_rest is the post-synaptic reverse potential for this synapse
     |         t_k marks time of -pre-synaptic k-th pulse received by post-synaptic unit
@@ -36,7 +36,7 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
-        tau_syn: synaptic time constant (ms)
+        tau_decay: synaptic decay time constant (ms)
 
         g_syn_bar: maximum conductance elicited by each incoming spike ("synaptic weight")
 
@@ -64,12 +64,12 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
 
     # Define Functions
     def __init__(
-            self, name, shape, tau_syn, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1., p_conn=1.,
+            self, name, shape, tau_decay, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1., p_conn=1.,
             is_nonplastic=True, **kwargs
     ):
         super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
         ## dynamic synapse meta-parameters
-        self.tau_syn = tau_syn
+        self.tau_decay = tau_decay
         self.g_syn_bar = g_syn_bar
         self.syn_rest = syn_rest ## synaptic resting potential
 
@@ -87,15 +87,15 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
     @transition(output_compartments=["outputs", "i_syn", "g_syn", "h_syn"])
     @staticmethod
     def advance_state(
-            dt, tau_syn, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, h_syn, v
+            dt, tau_decay, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, h_syn, v
     ):
         s = inputs
         ## advance conductance variable(s)
         _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
-        dhsyn_dt = -h_syn/tau_syn + _out * g_syn_bar
+        dhsyn_dt = -h_syn/tau_decay + (_out * g_syn_bar) * (1./dt)
         h_syn = h_syn + dhsyn_dt * dt ## run Euler step to move intermediate conductance h
 
-        dgsyn_dt = -g_syn/tau_syn + h_syn # or -g_syn/tau_syn + h_syn/tau_syn
+        dgsyn_dt = -g_syn/tau_decay + h_syn * (1./dt) # or -g_syn/tau_decay + h_syn/tau_decay
         g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance g
 
         ## compute derive electrical current variable
@@ -159,15 +159,15 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
-            "tau_syn": "Synaptic time constant (ms)",
+            "tau_decay": "Conductance decay time constant (ms)",
             "g_bar_syn": "Maximum conductance value",
             "syn_rest": "Synaptic reversal potential"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "outputs = g_syn * (v - syn_rest); "
-                            "dhsyn_dt = (W * inputs) * g_syn_bar - h_syn/tau_syn "
-                            "dgsyn_dt = -g_syn/tau_syn + h_syn", 
+                            "dhsyn_dt = (W * inputs) * g_syn_bar - h_syn/tau_decay "
+                            "dgsyn_dt = -g_syn/tau_decay + h_syn",
                 "hyperparameters": hyperparams}
         return info
 

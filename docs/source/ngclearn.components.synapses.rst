@@ -39,6 +39,14 @@ ngclearn.components.synapses.denseSynapse module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.synapses.doubleExpSynapse module
+----------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.doubleExpSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.synapses.exponentialSynapse module
 ------------------------------------------------------
 

@@ -4,8 +4,8 @@ In this lesson, we will study dynamic synapses, or synaptic cable components in
 ngc-learn that evolve on fast time-scales in response to their pre-synaptic inputs. 
 These types of chemical synapse components are useful for modeling time-varying 
 conductance which ultimately drives eletrical current input into neuronal units 
-(such as spiking cells).  Here, we will learn how to build two important types of dynamic synapses in 
-ngc-learn -- the exponential synapse and the alpha synapse -- and visualize 
+(such as spiking cells).  Here, we will learn how to build three important types of dynamic synapses in 
+ngc-learn -- the exponential, the alpha, and the double-exponential synapse -- and visualize 
 the time-course of their resulting conductances. In addition, we will then 
 construct and study a small neuronal circuit involving a leaky integrator that 
 is driven by exponential synapses relaying pulses from an excitatory and an 
@@ -19,20 +19,20 @@ response (as opposed to a chemical one, e.g., an influx of calcium), such models
 to emulate the time-course of what is known as post-synaptic receptor conductance. Note 
 that these dynamic synapse models will end being a bit more sophisticated than the strength
 value matrices we might initially employ (as in synapse components such as the 
-[DenseSynapse](ngclearn.components.synapses.denseSynapse)).
+[DenseSynapse](ngclearn.components.synapses.denseSynapse)). 
 
-Building a dynamic synapse can be done by importing [ExponentialSynapse](ngclearn.components.synapses.exponentialSynapse) or 
-[AlphaSynapse](ngclearn.components.synapses.alphaSynapse) from ngc-learn's in-built components and setting them up within a model context for easy analysis. For the first part of this lesson, we will import both of these and compare their behavior. 
-This can be done as follows (using the meta-parameters we provide in the 
-code block below to ensure reasonable dynamics):
+Building a dynamic synapse can be done by importing the [exponential synapse](ngclearn.components.synapses.exponentialSynapse), 
+the [double-exponential synapse](ngclearn.components.synapses.doubleExpSynapse), or the [alpha synapse](ngclearn.components.synapses.alphaSynapse) from ngc-learn's in-built components and setting them up within a model context for easy analysis. Go ahead and create a Python script named `probe_synapses.py` to place 
+the code you will write within. 
+For the first part of this lesson, we will import all three dynamic synpapse models and compare their behavior.
+This can be done as follows (using the meta-parameters we provide in the code block below to ensure reasonable dynamics):
 
 ```python
 from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import ExponentialSynapse, AlphaSynapse
-from ngclearn.operations import summation
+from ngclearn.components import ExponentialSynapse, AlphaSynapse, DoupleExpSynapse
 
 from ngcsimlib.compilers.process import Process
 from ngcsimlib.context import Context
@@ -47,31 +47,36 @@ T = 8. # ms ## total duration time
 ## ---- build a dual-synapse system ----
 with Context("dual_syn_system") as ctx:
     Wexp = ExponentialSynapse( ## exponential dynamic synapse
-        name="Wexp", shape=(1, 1), tau_syn=3., g_syn_bar=1., syn_rest=0., resist_scale=1.,
+        name="Wexp", shape=(1, 1), tau_decay=3., g_syn_bar=1., syn_rest=0., resist_scale=1.,
         weight_init=dist.constant(value=1.), key=subkeys[0]
     )
     Walpha = AlphaSynapse( ## alpha dynamic synapse
-        name="Walpha", shape=(1, 1), tau_syn=1., g_syn_bar=1., syn_rest=0., resist_scale=1.,
+        name="Walpha", shape=(1, 1), tau_decay=1., g_syn_bar=1., syn_rest=0., resist_scale=1.,
+        weight_init=dist.constant(value=1.), key=subkeys[0]
+    )
+    Wexp2 = DoupleExpSynapse(
+        name="Wexp2", shape=(1, 1), tau_rise=1., tau_decay=3., g_syn_bar=1., syn_rest=0., resist_scale=1.,
         weight_init=dist.constant(value=1.), key=subkeys[0]
     )
 
     ## set up basic simulation process calls
     advance_process = (Process("advance_proc")
                        >> Wexp.advance_state
-                       >> Walpha.advance_state)
+                       >> Walpha.advance_state
+                       >> Wexp2.advance_state)
     ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
     reset_process = (Process("reset_proc")
                      >> Wexp.reset
-                     >> Walpha.reset)
+                     >> Walpha.reset
+                     >> Wexp2.reset)
     ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 ```
 
-where we notice in the above we have instantiated two different kinds of chemical synapse components 
+where we notice in the above we have instantiated three different kinds of chemical synapse components 
 that we will run side-by-side in order to extract their produced conductance values in response to 
-the exact same input stream. For both the exponential and the alpha synapse, there are at least three 
-important hyper-parameters to configure:
-1. `tau_syn` ($\tau_{\text{syn}}$): the synaptic conductance decay time constant; 
+the exact same input stream. For both the exponential and the alpha synapse, there are at least three important hyper-parameters to configure:
+1. `tau_decay` ($\tau_{\text{decay}}$): the synaptic conductance decay time constant (for the double-exponential synapse, we also have `tau_rise`); 
 2. `g_syn_bar` ($\bar{g}_{\text{syn}}$): the maximal conductance value produced by each pulse transmitted 
    across this synapse; and,  
 3. `syn_rest` ($E_{rest}$): the (post-synaptic) reversal potential for this synapse -- note that this value 
@@ -79,14 +84,15 @@ important hyper-parameters to configure:
     excitatory nature for non-negative values of `syn_rest` or a synapse with an inhibitory 
     nature for negative values of `syn_rest`.
 
-The flow of electrical current from a pre-synaptic neuron to a post-synaptic one is often modeled under the assumption that pre-synaptic pulses result in impermanent (transient; lasting for a short period of time) changes in the conductance of a post-synaptic neuron. As a result, the resulting conductance dynamics $g_{\text{syn}}(t)$ -- or the effect (conductance changes in the post-synaptic membrane) of a transmitter binding to and opening post-synaptic receptors -- of each of the two synapses that you have built above can be simulated in ngc-learn according to one or more ordinary differential equations (ODEs), which themselves iteratively model different waveform equations of the time-course of synaptic conductance. 
+The flow of electrical current from a pre-synaptic neuron to a post-synaptic one is often modeled under the assumption that pre-synaptic pulses result in impermanent (transient; lasting for a short period of time) changes in the conductance of a post-synaptic neuron. As a result, the resulting conductance dynamics $g_{\text{syn}}(t)$ -- or the effect (conductance changes in the post-synaptic membrane) of a transmitter binding to and opening post-synaptic receptors -- of each of the synapses that you have built above can be simulated in ngc-learn according to one or more ordinary differential equations (ODEs), which themselves iteratively model different waveform equations of the time-course of synaptic conductance. 
 For the exponential synapse, the dynamics adhere to the following ODE: 
 
 $$
 \frac{\partial g_{\text{syn}}(t)}{\partial t} = -g_{\text{syn}}(t)/\tau_{\text{syn}} + \bar{g}_{\text{syn}} \sum_{k} \delta(t - t_{k}) 
 $$
 
-where the conductance (for a post-synaptic unit) output of this synapse is driven by a sum over all of its incoming pre-synaptic spikes; this ODE means that pre-synaptic spikes are filtered via an expoential kernel (i.e., a low-pass filter). 
+where the conductance (for a post-synaptic unit) output of this synapse is driven by a sum over all of its incoming 
+pre-synaptic spikes; this ODE means that pre-synaptic spikes are filtered via an expoential kernel (i.e., a low-pass filter). 
 On the other hand, for the alpha synapse, the dynamics adhere to the following coupled set of ODEs:
 
 $$
@@ -94,10 +100,18 @@ $$
 \frac{\partial g_{\text{syn}}(t)}{\partial t} &= -g_{\text{syn}}(t)/\tau_{\text{syn}} + h_{\text{syn}}(t)/\tau_{\text{syn}}
 $$
 
-where $h_{\text{syn}}(t)$ is an intermediate variable that operates in service of driving the conductance variable $g_{\text{syn}}(t)$ itself.
+where $h_{\text{syn}}(t)$ is an intermediate variable that operates in service of driving the conductance variable $g_{\text{syn}}(t)$ itself. 
+The double-exponential (or difference of exponentials) synapse model looks similar to the alpha synapse except that the 
+rise and fall/decay of its condutance dynamics are set separately using two different time constants, i.e., $\tau_{\text{rise}}$ and $\tau_{\text{decay}}$, 
+as follows:
+
+$$
+\frac{\partial h_{\text{syn}}(t)}{\partial t} &= -h_{\text{syn}}(t)/\tau_{\text{rise}} + \big(\frac{1}{\tau_{\text{rise}}} - \frac{1}{\tau_{\text{decay}}} \big) \bar{g}_{\text{syn}} \sum_{k} \delta(t - t_{k}) \\
+\frac{\partial g_{\text{syn}}(t)}{\partial t} &= -g_{\text{syn}}(t)/\tau_{\text{decay}} + h_{\text{syn}}(t) .
+$$
 
 Finally, we seek model the electrical current that results from some amount of neurotransmitter in previous time steps. 
-Thus, for both the exponential and the alpha synapse, the changes in conductance are finally converted (via Ohm's law) to electrical current to produce the final derived variable $j_{\text{syn}}(t)$:
+Thus, for both any of these three synapses, the changes in conductance are finally converted (via Ohm's law) to electrical current to produce the final derived variable $j_{\text{syn}}(t)$:
 
 $$
 j_{\text{syn}}(t) = g_{\text{syn}}(t) (v(t) - E_{\text{rev}})
@@ -108,13 +122,14 @@ where $E_{\text{rev}}$ is the post-synaptic reverse potential of the ion channel
 
 ### Examining the Conductances of Dynamic Synapses
 
-We can track and visualize the conductance outputs of our two different dynamic synapses by running a stream of controlled pre-synaptic pulses. Specifically, we will observe the output behavior of each in response to a sparse stream, eight milliseconds in length, where only a single spike is emitted at one millisecond. 
+We can track and visualize the conductance outputs of our different dynamic synapses by running a stream of controlled pre-synaptic pulses. Specifically, we will observe the output behavior of each in response to a sparse stream, eight milliseconds in length, where only a single spike is emitted at one millisecond. 
 To create the simulation of a single input pulse stream, you can write the following code:
 
 ```python
 time_span = []
 g = []
 ga = []
+gexp2 = []
 ctx.reset()
 Tsteps = int(T/dt) + 1
 for t in range(Tsteps):
@@ -124,10 +139,12 @@ for t in range(Tsteps):
     Wexp.inputs.set(s_t)
     Walpha.inputs.set(s_t)
     Wexp.v.set(Wexp.v.value * 0)
+    Wexp2.inputs.set(s_t)
     Walpha.v.set(Walpha.v.value * 0)
+    Wexp2.v.set(Wexp2.v.value * 0)
     ctx.run(t=t * dt, dt=dt)
 
-    print(f"\r g = {Wexp.g_syn.value}  ga = {Walpha.g_syn.value}", end="")
+    print(f"\r g = {Wexp.g_syn.value}  ga = {Walpha.g_syn.value}  gexp2 = {Wexp2.g_syn.value}", end="")
     g.append(Wexp.g_syn.value)
     ga.append(Walpha.g_syn.value)
     time_span.append(t) #* dt)
@@ -136,12 +153,12 @@ g = jnp.squeeze(jnp.concatenate(g, axis=1))
 g = g/jnp.amax(g)
 ga = jnp.squeeze(jnp.concatenate(ga, axis=1))
 ga = ga/jnp.amax(ga)
+gexp2 = gexp2/jnp.amax(gexp2)
 ```
 
-Note that we further normalize the conductance trajectories of both synapses to lie within 
-the range of $[0, 1]$, primarily for visualization purposes. 
-Finally, to visualize the conductance time-course of both synapses, you can write the 
-following: 
+Note that we further normalize the conductance trajectories of all synapses to lie within the range of $[0, 1]$, 
+primarily for visualization purposes. 
+Finally, to visualize the conductance time-course of the synapses, you can write the following: 
 
 ```python 
 import matplotlib #.pyplot as plt
@@ -179,20 +196,30 @@ ax.set(xlabel='Time (ms)', ylabel='Conductance',
 ax.grid(which="major")
 fig.savefig("alpha_syn.jpg")
 plt.close()
+
+gvals = ax.plot(time_span, gexp2, '-', color='tab:blue')
+#plt.xticks(time_span, time_labs)
+ax.set_xticks(time_ticks, time_labs)
+#plt.vlines(x=[0, 10, 20, 30, 40, 50, 60, 70, 80], ymin=-0.2, ymax=1.2, colors='gray', linestyles='dashed') #, label='Vertical Lines')
+ax.set(xlabel='Time (ms)', ylabel='Conductance',
+      title='Double-Exponential Synapse Conductance Time-Course')
+ax.grid(which="major")
+fig.savefig("exp2_syn.jpg")
+plt.close()
 ```
 
-which should produce and save two plots to disk. You can then compare and contrast the plots of the 
-expoential and alpha synapse conductance trajectories:
+which should produce and save three plots to disk. You can then compare and contrast the plots of the 
+expoential, alpha synapse, and double-exponential conductance trajectories:
 
 ```{eval-rst}
 .. table::
    :align: center
 
-   +--------------------------------------------------------+----------------------------------------------------------+
-   | .. image:: ../../images/tutorials/neurocog/expsyn.jpg  | .. image:: ../../images/tutorials/neurocog/alphasyn.jpg  |
-   |   :width: 400px                                        |   :width: 400px                                          |
-   |   :align: center                                       |   :align: center                                         |
-   +--------------------------------------------------------+----------------------------------------------------------+
+   +--------------------------------------------------------+----------------------------------------------------------+---------------------------------------------------------+
+   | .. image:: ../../images/tutorials/neurocog/expsyn.jpg  | .. image:: ../../images/tutorials/neurocog/alphasyn.jpg  | .. image:: ../../images/tutorials/neurocog/exp2syn.jpg  |
+   |   :width: 400px                                        |   :width: 400px                                          |   :width: 400px                                         |
+   |   :align: center                                       |   :align: center                                         |   :align: center                                        |
+   +--------------------------------------------------------+----------------------------------------------------------+---------------------------------------------------------+
 ```
 
 Note that the alpha synapse (right figure) would produce a more realistic fit to recorded synaptic currents (as it attempts to model 
@@ -201,7 +228,9 @@ emulate condutance, as opposed to the faster yet less-biophysically-realistic ex
 
 ## Excitatory-Inhibitory Driven Dynamics
 
-Let's next examine a more interesting use-case of the above dynamic synapses -- modeling excitatory and inhibitory 
+For this next part of the lesson, create a new Python script named `sim_ei_dynamics.py` for the next portions of code 
+you will write. 
+Let's next examine a more interesting use-case of the above dynamic synapses -- modeling excitatory (E) and inhibitory (I)
 pressures produced by different groups of pre-synaptic spike trains. This allows us to examine a very common 
 and often-used conductance model that is paired with spiking cells such as the leaky integrate-and-fire (LIF). Specifically, 
 we seek to simulate the following post-synaptic conductance dynamics for a single LIF unit:
@@ -261,11 +290,11 @@ with Context("ei_snn") as ctx:
     pre_exc = PoissonCell("pre_exc", n_units=n_exc, target_freq=exc_freq, key=subkeys[0]) ## pre-syn excitatory group
     pre_inh = PoissonCell("pre_inh", n_units=n_inh, target_freq=inh_freq, key=subkeys[1]) ## pre-syn inhibitory group
     Wexc = ExponentialSynapse( ## dynamic synapse between excitatory group and LIF
-        name="Wexc", shape=(n_exc,1), tau_syn=tau_syn_exc, g_syn_bar=g_e_bar, syn_rest=E_rest_exc, resist_scale=1./g_L,
+        name="Wexc", shape=(n_exc,1), tau_decay=tau_syn_exc, g_syn_bar=g_e_bar, syn_rest=E_rest_exc, resist_scale=1./g_L,
         weight_init=dist.constant(value=1.), key=subkeys[2]
     )
     Winh = ExponentialSynapse( ## dynamic synapse between inhibitory group and LIF
-        name="Winh", shape=(n_inh, 1), tau_syn=tau_syn_inh, g_syn_bar=g_i_bar, syn_rest=E_rest_inh, resist_scale=1./g_L,
+        name="Winh", shape=(n_inh, 1), tau_decay=tau_syn_inh, g_syn_bar=g_i_bar, syn_rest=E_rest_inh, resist_scale=1./g_L,
         weight_init=dist.constant(value=1.), key=subkeys[2]
     )
     post_exc = LIFCell( ## post-syn LIF cell
@@ -391,4 +420,6 @@ Notice that the above shows the behavior of the post-synaptic LIF in response to
 
 ## References
 
-<b>[1]</b> Sterratt, David, et al. Principles of computational modelling in neuroscience. Cambridge university press, 2023.
+<b>[1]</b> Sterratt, David, et al. Principles of computational modelling in neuroscience. Cambridge university 
+press, 2023. <br>
+<b>[2]</b> Roth, Arnd, and Mark CW van Rossum. "Modeling synapses." Computational modeling methods for neuroscientists 6.139 (2009): 700.

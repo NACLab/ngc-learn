@@ -39,6 +39,7 @@ from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .synapses.hebbian.BCMSynapse import BCMSynapse
 from .synapses.STPDenseSynapse import STPDenseSynapse
 from .synapses.exponentialSynapse import ExponentialSynapse
+from .synapses.doubleExpSynapse import DoupleExpSynapse
 from .synapses.alphaSynapse import AlphaSynapse
 
 ## point to convolutional component types
