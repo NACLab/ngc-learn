@@ -1,4 +1,4 @@
-# Dynamic Synapses and Conductance
+# Lecture 4A: Dynamic Synapses and Conductance
 
 In this lesson, we will study dynamic synapses, or synaptic cable components in 
 ngc-learn that evolve on fast time-scales in response to their pre-synaptic inputs. 

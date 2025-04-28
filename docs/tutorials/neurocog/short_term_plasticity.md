@@ -1,4 +1,4 @@
-# Lecture 4D: Short-Term Plasticity
+# Lecture 4E: Short-Term Plasticity
 
 In this lesson, we will study how short-term plasticity (STP) <b>[1]</b> dynamics 
 -- where synaptic efficacy is cast in terms of the history of presynaptic activity -- 

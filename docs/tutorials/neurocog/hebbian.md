@@ -1,4 +1,4 @@
-# Lecture 4A: Hebbian Synaptic Plasticity
+# Lecture 4B: Hebbian Synaptic Plasticity
 
 In ngc-learn, synaptic plasticity is a key concept at the forefront of its
 design in order to promote research into novel ideas and framings of how

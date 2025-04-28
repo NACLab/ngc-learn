@@ -1,4 +1,4 @@
-# Lecture 4C: Reward-Modulated Spike-Timing-Dependent Plasticity
+# Lecture 4D: Reward-Modulated Spike-Timing-Dependent Plasticity
 
 In this lesson, we will build on the notions of spike-timing-dependent 
 plasticity (STDP), covered [earlier here](../neurocog/stdp.md), to construct 
@@ -247,9 +247,8 @@ for i in range(T_max):
 ```
 
 which will run all three models simultaneously for `200` simulated milliseconds 
-and collect statistics of interest. We may then finally make several 
-plots of what happens under each STDP mode. First, we will plot the resulting  
-synaptic magnitude over time, like so:
+and collect statistics of interest. We may then finally make several plots of what happens under each STDP mode 
+(reproducing some key results in <b>[1]</b>. First, we will plot the resulting  synaptic magnitude over time, like so:
 
 ```python 
 import matplotlib.pyplot as plt
@@ -374,3 +373,8 @@ modulated STDP updates will only occur when the signal is non-zero; this is
 the advantage that MSTDP-ET offers over MSTDP as the synaptic change 
 dynamics persist (yet decay) in between reward presentation times and thus 
 MSTDP-ET will be more effective in cases when the reward signal is delayed.
+
+## References
+
+<b>[1]</b> Florian, Răzvan V. "Reinforcement learning through modulation of spike-timing-dependent synaptic plasticity." 
+Neural computation 19.6 (2007): 1468-1502.
