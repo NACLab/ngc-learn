@@ -112,18 +112,11 @@ We can track and visualize the conductance outputs of our two different dynamic 
 To create the simulation of a single input pulse stream, you can write the following code:
 
 ```python
-time_ticks = []
-time_labs = []
-Tsteps = int(T/dt) + 1
-for t in range(Tsteps):
-    if t % 10 == 0:
-        time_ticks.append(t)
-        time_labs.append(f"{t * dt:.1f}")
-
 time_span = []
 g = []
 ga = []
 ctx.reset()
+Tsteps = int(T/dt) + 1
 for t in range(Tsteps):
     s_t = jnp.zeros((1, 1))
     if t * dt == 1.: ## pulse at 1 ms
@@ -156,6 +149,13 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 cmap = plt.cm.jet
 
+time_ticks = []
+time_labs = []
+for t in range(Tsteps):
+    if t % 10 == 0:
+        time_ticks.append(t)
+        time_labs.append(f"{t * dt:.1f}")
+        
 ## ---- plot the exponential synapse conductance time-course ----
 fig, ax = plt.subplots()
 
@@ -312,7 +312,7 @@ pre_inh.inputs.set(jnp.ones((1, n_inh)))
 post_exc.v.set(post_exc.v.value * 0 - 65.) ## initial condition for LIF is -65 mV
 volts.append(post_exc.v.value)
 time_span.append(0.)
-Tsteps = int(T/dt)
+Tsteps = int(T/dt) + 1
 for t in range(1, Tsteps):
     ctx.run(t=t * dt, dt=dt)
     print(f"\r v {post_exc.v.value}", end="")
@@ -332,6 +332,16 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 cmap = plt.cm.jet
 
+time_ticks = []
+time_labs = []
+time_ticks.append(0)
+time_labs.append(f"{0.}")
+tdiv = 1000
+for t in range(Tsteps):
+    if t % tdiv == 0:
+        time_ticks.append(t)
+        time_labs.append(f"{t * dt:.0f}")
+        
 fig, ax = plt.subplots()
 
 volt_vals = ax.plot(time_span, volts, '-.', color='tab:red')
@@ -373,7 +383,7 @@ Notice that the above shows the behavior of the post-synaptic LIF in response to
    :align: center
 
    +-----------------------------------------------------------------------+-----------------------------------------------------------------------+
-   | .. image:: ../../images/tutorials/neurocog/ei_circuit_denser_exc.jpg  | .. image:: ../../images/tutorials/neurocog/ei_circuit_sparse_inh.jpg  |
+   | .. image:: ../../images/tutorials/neurocog/ei_circuit_dense_exc.jpg  | .. image:: ../../images/tutorials/neurocog/ei_circuit_sparse_inh.jpg  |
    |   :width: 400px                                                       |   :width: 400px                                                       |
    |   :align: center                                                      |   :align: center                                                      |
    +-----------------------------------------------------------------------+-----------------------------------------------------------------------+
