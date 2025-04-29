@@ -36,14 +36,6 @@ ngclearn.components.neurons.graded.rateCell module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.components.neurons.graded.rateCellOld module
------------------------------------------------------
-
-.. automodule:: ngclearn.components.neurons.graded.rateCellOld
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.components.neurons.graded.rewardErrorCell module
 ---------------------------------------------------------
 

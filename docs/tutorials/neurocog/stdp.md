@@ -1,4 +1,4 @@
-# Lecture 4B: Spike-Timing-Dependent Plasticity
+# Lecture 4C: Spike-Timing-Dependent Plasticity
 
 In the context of spiking neuronal networks, one of the most important forms
 of adaptation that is often simulated is that of spike-timing-dependent

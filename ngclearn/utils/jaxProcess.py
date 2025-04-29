@@ -7,9 +7,9 @@ from jax import numpy as jnp
 
 class JaxProcess(Process):
     """
-    The JaxProcess is a subclass of the ngcsimlib Process class. The
-    functionality added by this subclass is the use of the jax scanner to run a
-    process quickly through the use of jax's JIT compiler.
+        The JaxProcess is a subclass of the ngcsimlib Process class. The
+        functionality added by this subclass is the use of the jax scanner to run a
+        process quickly through the use of jax's JIT compiler.
     """
 
     def __init__(self, name):
@@ -30,8 +30,9 @@ class JaxProcess(Process):
     def watch(self, compartment):
         """
         Adds a compartment to the process to watch during a scan
+
         Args:
-            compartment: The compartment to watch
+            compartment: the compartment to watch
         """
         if not isinstance(compartment, Compartment):
             warn(
@@ -51,12 +52,12 @@ class JaxProcess(Process):
         """
         Appends to the base transition call to create pure method for use by its
         scanner
+
         Args:
-            transition_call: the transition being passed into the default
-                process
+            transition_call: the transition being passed into the default process
 
-        Returns: this JaxProcess instance for chaining
-
+        Returns:
+            this JaxProcess instance for chaining
         """
         super().transition(transition_call)
         self._process_scan_method = self._make_scanner()
@@ -93,10 +94,11 @@ class JaxProcess(Process):
 
 
         Args:
-            save_state: A boolean flag to indicate if the model state should be
-            saved
-            scan_length: a value to be used to denote the number of iterations
-            of the scanner if all keyword arguments are passed as ints or floats
+            save_state: A boolean flag to indicate if the model state should be saved
+
+            scan_length: a value to be used to denote the number of iterations of the scanner if all keyword
+                arguments are passed as ints or floats
+
             **kwargs: the required keyword arguments for the process to run
 
         Returns: the final state of the model, the stacked output of the scan method
