@@ -1,4 +1,8 @@
+
+
 # Lecture 3B: Error Cell Models
+
+<img src="../../images/tutorials/neurocog/SingleGEC.png" width="250" align="right"/>
 
 Error cells are a particularly useful component cell that offers a simple and
 fast way of computing mismatch signals, i.e., error values that compare a
@@ -13,7 +17,10 @@ key examples of where error neurons come into play). In this lesson, we will
 briefly review one of the most commonly used ones -- the
 [Gaussian error cell](ngclearn.components.neurons.graded.gaussianErrorCell).
 
+
 ## Calculating Mismatch Values with the Gaussian Error Cell
+
+<img src="../../images/tutorials/neurocog/GEC.png" width="200" align="right"/>
 
 The Gaussian error cell, much like most error neurons, is in fact a derived
 calculation when considering a cost function. Specifically, this error cell
