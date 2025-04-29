@@ -121,7 +121,6 @@ RL-SNN model:
    fill up the bottom layer receptive fields with redundant information and make it more difficult for the control 
    layer to learn the consequences of taking different actions).
 
-
 <!-- References/Citations -->
 ## References
 <b>[1]</b> Chevtchenko, Sérgio F., and Teresa B. Ludermir. "Learning from sparse 
