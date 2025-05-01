@@ -65,7 +65,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
-        n_sub_models: The number of submodels in each layer
+        n_sub_models: The number of submodels in each layer (Default: 1 similar functionality as DenseSynapse)
         
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
@@ -92,7 +92,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             this to < 1. will result in a sparser synaptic structure
     """
 
-    def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), w_mask=None, weight_init=None, bias_init=None,
+    def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), w_mask=None, weight_init=None, bias_init=None,
                  resist_scale=1., p_conn=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
