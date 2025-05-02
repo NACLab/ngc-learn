@@ -124,7 +124,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
-        n_sub_models: The number of submodels in each layer
+        n_sub_models: The number of submodels in each layer (Default: 1 similar functionality as DenseSynapse)
 
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
@@ -185,7 +185,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         batch_size: the size of each mini batch
     """
 
-    def __init__(self, name, shape, n_sub_models, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
+    def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
                  w_mask=None, w_bound=1., is_nonnegative=False, prior=(None, 0.), sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
                  resist_scale=1., batch_size=1, **kwargs):
