@@ -118,7 +118,7 @@ class Create_Patches:
 
 
 
-def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True, seed=1234): ## scikit
+def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True, seed=1234, vis_mode=False): ## scikit
     """
     Generates a set of patches from an array/list of image arrays (via
     random sampling with replacement). This uses scikit-learn's patch creation
@@ -151,10 +151,16 @@ def generate_patch_set(x_batch, patch_size=(8, 8), max_patches=50, center=True, 
             p_batch = np.concatenate((p_batch,patches),axis=0)
         else:
             p_batch = patches
+            
+    mu = 0
     if center: ## center patches by subtracting out their means
         mu = np.mean(p_batch, axis=1, keepdims=True)
         p_batch = p_batch - mu
-    return jnp.array(p_batch)
+    if vis_mode:
+        return jnp.array(p_batch), mu
+    else:
+        return jnp.array(p_batch)
+        
 
 def generate_pacthify_patch_set(x_batch_, patch_size=(5, 5), center=True): ## patchify
     ## this is a patchify-specific function (only use if you have patchify installed...)
