@@ -71,12 +71,15 @@ class VarTrace(JaxComponent): ## low-pass filter
                 2) `'exp'` = exponential trace filter, i.e., decay = exp(-dt/tau_tr) * x_tr;
                 3) `'step'` = step trace, i.e., decay = 0 (a pulse applied upon input value)
 
+        n_nearest_spikes: (k) if k > 0, this makes the trace act like a nearest-neighbor trace, 
+            i.e., k = 1 yields the 1-nearest (neighbor) trace (Default: 0)
+
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
     # Define Functions
     def __init__(self, name, n_units, tau_tr, a_delta, P_scale=1., gamma_tr=1, decay_type="exp",
-                 batch_size=1, **kwargs):
+                 n_nearest_spikes=0, batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
         ## Trace control coefficients
@@ -85,6 +88,7 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.P_scale = P_scale ## trace scale if non-additive trace to be used
         self.gamma_tr = gamma_tr
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
+        self.n_nearest_spikes = n_nearest_spikes
 
         ## Layer Size Setup
         self.batch_size = batch_size
@@ -97,17 +101,22 @@ class VarTrace(JaxComponent): ## low-pass filter
 
     @transition(output_compartments=["outputs", "trace"])
     @staticmethod
-    def advance_state(dt, decay_type, tau_tr, a_delta, P_scale, gamma_tr, inputs, trace):
+    def advance_state(
+            dt, decay_type, tau_tr, a_delta, P_scale, gamma_tr, inputs, trace, n_nearest_spikes
+    ):
         decayFactor = 0.
         if "exp" in decay_type:
             decayFactor = jnp.exp(-dt/tau_tr)
         elif "lin" in decay_type:
             decayFactor = (1. - dt/tau_tr)
         _x_tr = gamma_tr * trace * decayFactor
-        if a_delta > 0.:
-            _x_tr = _x_tr + inputs * a_delta
+        if n_nearest_spikes > 0: ## run k-nearest neighbor trace
+            _x_tr = _x_tr + inputs * (a_delta - (trace/n_nearest_spikes))
         else:
-            _x_tr = _x_tr * (1. - inputs) + inputs * P_scale
+            if a_delta > 0.: ## run full convolution trace
+                _x_tr = _x_tr + inputs * a_delta
+            else: ## run simple max-clamped trace
+                _x_tr = _x_tr * (1. - inputs) + inputs * P_scale
         trace = _x_tr
         return trace, trace
 
@@ -138,12 +147,15 @@ class VarTrace(JaxComponent): ## low-pass filter
             "tau_tr": "Trace/filter time constant",
             "a_delta": "Increment to apply to trace (if not set to 0); "
                        "otherwise, traces clamp to 1 and then decay",
+            "P_scale": "Max value to snap trace to if a max-clamp trace is triggered/configured", 
             "decay_type": "Indicator of what type of decay dynamics to use "
-                          "as filter is updated at time t"
+                          "as filter is updated at time t", 
+            "n_nearest_neighbors": "Number of nearest pulses to affect/increment trace (if > 0)"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "tau_tr * dz/dt ~ -z + inputs",
+                "dynamics": "tau_tr * dz/dt ~ -z + inputs * a_delta (full convolution trace); " 
+                            "tau_tr * dz/dt ~ -z + inputs * (a_delta - z/n_nearest_neighbors) (near trace)",
                 "hyperparameters": hyperparams}
         return info
 
