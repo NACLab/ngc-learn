@@ -8,7 +8,7 @@ from ngclearn.utils import tensorstats
 from ngcsimlib.compilers.process import transition
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
-def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
+def _calc_update(pre, post, W, mask, w_bound, is_nonnegative=True, signVal=1.,
                  prior_type=None, prior_lmbda=0.,
                  pre_wght=1., post_wght=1.):
     """
@@ -21,7 +21,7 @@ def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
 
         W: synaptic weight values (at time t)
 
-        w_mask: synaptic weight masking matrix (same shape as W)
+        mask: synaptic weight masking matrix (same shape as W)
 
         w_bound: maximum value to enforce over newly computed efficacies
 
@@ -64,13 +64,13 @@ def _calc_update(pre, post, W, w_mask, w_bound, is_nonnegative=True, signVal=1.,
 
     dW = dW + prior_lmbda * dW_reg
 
-    if w_mask!=None:
-        dW = dW * w_mask
+    if mask!=None:
+        dW = dW * mask
 
     return dW * signVal, db * signVal
 
 @partial(jit, static_argnums=[1,2, 3])
-def _enforce_constraints(W, w_mask, w_bound, is_nonnegative=True):
+def _enforce_constraints(W, block_mask, w_bound, is_nonnegative=True):
     """
     Enforces constraints that the (synaptic) efficacies/values within matrix
     `W` must adhere to.
@@ -78,7 +78,7 @@ def _enforce_constraints(W, w_mask, w_bound, is_nonnegative=True):
     Args:
         W: synaptic weight values (at time t)
 
-         w_mask: weight mask matrix
+         block_mask: weight mask matrix
 
         w_bound: maximum value to enforce over newly computed efficacies
 
@@ -94,8 +94,8 @@ def _enforce_constraints(W, w_mask, w_bound, is_nonnegative=True):
         else:
             _W = jnp.clip(_W, -w_bound, w_bound)
 
-    if w_mask!=None:
-        _W = _W * w_mask
+    if block_mask!=None:
+        _W = _W * block_mask
 
     return _W
 
@@ -138,7 +138,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
 
-        w_mask: weight mask matrix
+        block_mask: weight mask matrix
 
         w_bound: maximum weight to softly bound this cable's value matrix to; if
             set to 0, then no synaptic value bounding will be applied
@@ -186,10 +186,10 @@ class HebbianPatchedSynapse(PatchedSynapse):
     """
 
     def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
-                 w_mask=None, w_bound=1., is_nonnegative=False, prior=(None, 0.), sign_value=1.,
+                 block_mask=None, w_bound=1., is_nonnegative=False, prior=(None, 0.), sign_value=1.,
                  optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
                  resist_scale=1., batch_size=1, **kwargs):
-        super().__init__(name, shape, n_sub_models, stride_shape, w_mask, weight_init, bias_init, resist_scale,
+        super().__init__(name, shape, n_sub_models, stride_shape, block_mask, weight_init, bias_init, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
 
         prior_type, prior_lmbda = prior
@@ -221,7 +221,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         self.postVals = jnp.zeros((self.batch_size, self.shape[1]))
         self.pre = Compartment(self.preVals)
         self.post = Compartment(self.postVals)
-        self.w_mask = w_mask
+        self.block_mask = block_mask
         self.dWeights = Compartment(jnp.zeros(self.shape))
         self.dBiases = Compartment(jnp.zeros(self.shape[1]))
 
@@ -231,11 +231,11 @@ class HebbianPatchedSynapse(PatchedSynapse):
             if bias_init else [self.weights.value]))
 
     @staticmethod
-    def _compute_update(w_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
+    def _compute_update(block_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
                         post_wght, pre, post, weights):
         ## calculate synaptic update values
         dW, db = _calc_update(
-            pre, post, weights, w_mask, w_bound, is_nonnegative=is_nonnegative,
+            pre, post, weights, block_mask, w_bound, is_nonnegative=is_nonnegative,
             signVal=sign_value, prior_type=prior_type, prior_lmbda=prior_lmbda, pre_wght=pre_wght,
             post_wght=post_wght)
 
@@ -243,11 +243,11 @@ class HebbianPatchedSynapse(PatchedSynapse):
 
     @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
     @staticmethod
-    def evolve(w_mask, opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
+    def evolve(block_mask, opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
                 post_wght, bias_init, pre, post, weights, biases, opt_params):
         ## calculate synaptic update values
         dWeights, dBiases = HebbianPatchedSynapse._compute_update(
-            w_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda,
+            block_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda,
             pre_wght, post_wght, pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
@@ -257,7 +257,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
             # ignore db since no biases configured
             opt_params, [weights] = opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = _enforce_constraints(weights, w_mask, w_bound, is_nonnegative=is_nonnegative)
+        weights = _enforce_constraints(weights, block_mask, w_bound, is_nonnegative=is_nonnegative)
         return opt_params, weights, biases, dWeights, dBiases
 
     @transition(output_compartments=["inputs", "outputs", "pre", "post", "dWeights", "dBiases"])
@@ -313,7 +313,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
             "w_bound": "Soft synaptic bound applied to synapses post-update",
             "prior": "prior name and value for synaptic updating prior",
-            "w_mask": "weight mask matrix",
+            "block_mask": "weight mask matrix",
             "optim_type": "Choice of optimizer to adjust synaptic weights"
         }
         info = {cls.__name__: properties,
