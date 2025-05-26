@@ -60,8 +60,8 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
         weights = initialize_params(subkeys[0], self.weight_init, shape)
         if 0. < p_conn < 1.: ## only non-zero and <1 probs allowed
-            mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
-            weights = weights * mask ## sparsify matrix
+            p_mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
+            weights = weights * p_mask ## sparsify matrix
 
         self.batch_size = 1
         ## Compartment setup
