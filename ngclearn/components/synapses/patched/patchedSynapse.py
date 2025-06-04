@@ -79,7 +79,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
 
-        w_mask: weight mask matrix
+        block_mask: weight mask matrix
 
         pre_wght: pre-synaptic weighting factor (Default: 1.)
 
@@ -92,7 +92,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             this to < 1. will result in a sparser synaptic structure
     """
 
-    def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), w_mask=None, weight_init=None, bias_init=None,
+    def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), block_mask=None, weight_init=None, bias_init=None,
                  resist_scale=1., p_conn=1., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -112,7 +112,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         weights = create_multi_patch_synapses(key=subkeys, shape=shape, n_sub_models=self.n_sub_models, sub_stride=self.sub_stride,
                                               weight_init=self.weight_init)
 
-        self.w_mask = jnp.where(weights!=0, 1, 0)
+        self.block_mask = jnp.where(weights!=0, 1, 0)
         self.sub_shape = (shape[0]//n_sub_models, shape[1]//n_sub_models)
 
         self.shape = weights.shape
@@ -192,7 +192,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "resist_scale": "Resistance level scaling factor (Rscale); applied to output of transformation",
-            "w_mask": "weight mask matrix",
+            "block_mask": "weight mask matrix",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)"
         }
         info = {cls.__name__: properties,
