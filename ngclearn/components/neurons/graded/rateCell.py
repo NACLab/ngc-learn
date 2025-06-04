@@ -145,6 +145,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         act_fx: string name of activation function/nonlinearity to use
 
+        output_scale: factor to multiply output of nonlinearity of this cell by (Default: 1.)
+
         integration_type: type of integration to use for this cell's dynamics;
             current supported forms include "euler" (Euler/RK-1 integration)
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
@@ -157,12 +159,13 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     """
 
     # Define Functions
-    def __init__(self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity",
-                 threshold=("none", 0.), integration_type="euler",
-                 batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):
+    def __init__(
+            self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity", output_scale=1., threshold=("none", 0.),
+            integration_type="euler", batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):
         super().__init__(name, **kwargs)
 
         ## membrane parameter setup (affects ODE integration)
+        self.output_scale = output_scale
         self.tau_m = tau_m ## membrane time constant -- setting to 0 triggers "stateless" mode
         self.is_stateful = is_stateful
         if isinstance(tau_m, float):
@@ -211,8 +214,9 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
     @transition(output_compartments=["j", "j_td", "z", "zF"])
     @staticmethod
-    def advance_state(dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType,
-                       resist_scale, thresholdType, thr_lmbda, is_stateful, j, j_td, z):
+    def advance_state(
+            dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType, resist_scale, thresholdType, thr_lmbda, is_stateful,
+            output_scale, j, j_td, z):
         #if tau_m > 0.:
         if is_stateful:
             ### run a step of integration over neuronal dynamics
@@ -231,12 +235,12 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             elif thresholdType == "cauchy_threshold":
                 tmp_z = threshold_cauchy(tmp_z, thr_lmbda)
             z = tmp_z ## pre-activation function value(s)
-            zF = fx(z) ## post-activation function value(s)
+            zF = fx(z) * output_scale ## post-activation function value(s)
         else:
             ## run in "stateless" mode (when no membrane time constant provided)
             j_total = j + j_td
             z = _run_cell_stateless(j_total)
-            zF = fx(z)
+            zF = fx(z) * output_scale
         return j, j_td, z, zF
 
     @transition(output_compartments=["j", "j_td", "z", "zF"])

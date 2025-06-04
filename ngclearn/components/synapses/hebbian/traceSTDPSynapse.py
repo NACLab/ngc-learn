@@ -68,13 +68,14 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     # Define Functions
     def __init__(
             self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., weight_init=None, resist_scale=1.,
-            p_conn=1., w_bound=1., batch_size=1, **kwargs
+            p_conn=1., w_bound=1., tau_w=0., weight_mask=None, batch_size=1, **kwargs
     ):
         super().__init__(name, shape, weight_init, None, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
 
         ## Synaptic hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
+        self.tau_w = tau_w
         self.mu = mu ## controls power-scaling of STDP rule
         self.preTrace_target = pretrace_target ## target (pre-synaptic) trace activity value # 0.7
         self.Aplus = A_plus ## LTP strength
@@ -82,6 +83,10 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
         self.w_eps = 0. ## w_eps = 0.01
+        self.weight_mask = weight_mask
+        if self.weight_mask is None:
+            self.weight_mask = jnp.ones((1, 1))
+        self.weights.set(self.weights.value * self.weight_mask)
 
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
@@ -92,6 +97,12 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.postTrace = Compartment(postVals)
         self.dWeights = Compartment(self.weights.value * 0)
         self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate
+
+    #@transition(output_compartments=["outputs"])
+    #@staticmethod
+    #def advance_state(Rscale, inputs, weights, biases, weight_mask):
+    #    outputs = (jnp.matmul(inputs, weights * weight_mask) * Rscale) + biases
+    #    return outputs
 
     @staticmethod
     def _compute_update(
@@ -126,16 +137,23 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     @transition(output_compartments=["weights", "dWeights"])
     @staticmethod
     def evolve(
-            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights, eta
+            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, tau_w, preSpike, postSpike, preTrace, 
+            postTrace, weights, eta, weight_mask
     ):
+        #_wm = weight_mask #
+        _wm = (weight_mask != 0.)
         dWeights = TraceSTDPSynapse._compute_update(
             dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
         )
         ## do a gradient ascent update/shift
-        weights = weights + dWeights * eta
+        decayTerm = 0.
+        if tau_w > 0.:
+            decayTerm = weights / tau_w
+        weights = weights + (dWeights * eta) - decayTerm #weight_mask * eta)
         ## enforce non-negativity
         #w_eps = 0. # 0.01 # 0.001
         weights = jnp.clip(weights, w_eps, w_bound - w_eps)  # jnp.abs(w_bound))
+        weights = weights * _wm # weight_mask
         return weights, dWeights
 
     @transition(output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights"])

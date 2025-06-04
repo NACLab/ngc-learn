@@ -123,15 +123,14 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
                 "arctan" (arc-tangent estimator), and "secant_lif" (the
                 LIF-specialized secant estimator)
 
-        lower_clamp_voltage: if True, this will ensure voltage never is below
-            the value of `v_rest` (default: True)
+        v_min: minimum voltage to clamp dynamics to (Default: None)
     """ ## batch_size arg?
 
     @deprecate_args(thr_jitter=None, v_decay="conduct_leak")
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., conduct_leak=1., tau_theta=1e7,
             theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler", surrogate_type="straight_through",
-            lower_clamp_voltage=True, **kwargs
+            v_min=None, max_one_spike=False, **kwargs
     ):
         super().__init__(name, **kwargs)
 
@@ -143,7 +142,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.tau_m = tau_m ## membrane time constant
         self.resist_m = resist_m ## resistance value
         self.one_spike = one_spike ## True => constrains system to simulate 1 spike per time step
-        self.lower_clamp_voltage = lower_clamp_voltage ## True ==> ensures voltage is never < v_rest
+        self.max_one_spike = max_one_spike
+        self.v_min = v_min ## ensures voltage is never < v_min
 
         self.v_rest = v_rest #-65. # mV
         self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
@@ -189,11 +189,11 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     @transition(output_compartments=["v", "s", "s_raw", "rfr", "thr_theta", "tols", "key", "surrogate"])    
     @staticmethod
     def advance_state(
-            t, dt, tau_m, resist_m, v_rest, v_reset, g_L, refract_T, thr, tau_theta, theta_plus, 
-            one_spike, lower_clamp_voltage, intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols
+            t, dt, tau_m, resist_m, v_rest, v_reset, g_L, refract_T, thr, tau_theta, theta_plus, one_spike, max_one_spike,
+            v_min, intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols
     ):
         skey = None ## this is an empty dkey if single_spike mode turned off
-        if one_spike:
+        if one_spike and not max_one_spike:
             key, skey = random.split(key, 2)
         ## run one integration step for neuronal dynamics
         j = j * resist_m
@@ -209,6 +209,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             _, _v = step_euler(0., v, _dfv, dt, v_params)
         ## obtain action potentials/spikes/pulses
         s = (_v > _v_thr) * 1.
+        v_prespike = v
         ## update refractory variables
         _rfr = (rfr + dt) * (1. - s)
         ## perform hyper-polarization of neuronal cells
@@ -223,6 +224,9 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
                             dtype=jnp.float32)
             s = s * (1. - m_switch) + rS * m_switch
+        if max_one_spike:
+            rS = nn.one_hot(jnp.argmax(v_prespike, axis=1), num_classes=s.shape[1], dtype=jnp.float32) ## get max-volt spike
+            s = s * rS ## mask out non-max volt spikes
         ############################################################################
         raw_spikes = raw_s
         v = _v
@@ -234,8 +238,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
         ## update tols
         tols = (1. - s) * tols + (s * t)
-        if lower_clamp_voltage: ## ensure voltage never < v_rest
-            v = jnp.maximum(v, v_rest)
+        if v_min is not None: ## ensures voltage never < v_rest
+            v = jnp.maximum(v, v_min)
         return v, s, raw_spikes, rfr, thr_theta, tols, key, surrogate
 
     @transition(output_compartments=["j", "v", "s", "s_raw", "rfr", "tols", "surrogate"])

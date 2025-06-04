@@ -41,8 +41,10 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
     """
 
     # Define Functions
-    def __init__(self, name, shape, weight_init=None, bias_init=None,
-                 resist_scale=1., p_conn=1., batch_size=1, **kwargs):
+    def __init__(
+            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., 
+            p_conn=1., batch_size=1, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         self.batch_size = batch_size
@@ -63,7 +65,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
             weights = weights * mask ## sparsify matrix
 
-        self.batch_size = 1
+        self.batch_size = batch_size #1
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))

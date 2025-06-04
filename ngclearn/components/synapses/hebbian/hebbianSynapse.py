@@ -162,10 +162,11 @@ class HebbianSynapse(DenseSynapse):
 
     # Define Functions
     @deprecate_args(_rebind=False, w_decay='prior')
-    def __init__(self, name, shape, eta=0., weight_init=None, bias_init=None,
-                 w_bound=1., is_nonnegative=False, prior=("constant", 0.), w_decay=0., sign_value=1.,
-                 optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
-                 resist_scale=1., batch_size=1, **kwargs):
+    def __init__(
+            self, name, shape, eta=0., weight_init=None, bias_init=None, w_bound=1., is_nonnegative=False,
+            prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
+            resist_scale=1., batch_size=1, **kwargs
+    ):
         super().__init__(name, shape, weight_init, bias_init, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
 

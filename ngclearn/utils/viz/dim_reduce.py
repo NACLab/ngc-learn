@@ -29,7 +29,7 @@ def extract_pca_latents(vectors): ## PCA mapping routine
         z_2D = vectors
     return z_2D
 
-def extract_tsne_latents(vectors, perplexity=30, n_pca_comp=32): ## tSNE mapping routine
+def extract_tsne_latents(vectors, perplexity=30, n_pca_comp=32, batch_size=500): ## tSNE mapping routine
     """
     Projects collection of K vectors (stored in a matrix) to a two-dimensional (2D)
     visualization space via the t-distributed stochastic neighbor embedding
@@ -42,10 +42,13 @@ def extract_tsne_latents(vectors, perplexity=30, n_pca_comp=32): ## tSNE mapping
 
         perplexity: the perplexity control factor for t-SNE (Default: 30)
 
+        batch_size: number of sampled embedding vectors to use per iteration 
+            of online internal PCA
+
     Returns:
         a matrix (K x 2) of projected vectors (to 2D space)
     """
-    batch_size = 500 #50
+    #batch_size = 500 #50
     z_dim = vectors.shape[1]
     z_2D = None
     if z_dim != 2:
