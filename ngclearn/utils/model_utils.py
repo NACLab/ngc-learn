@@ -112,6 +112,9 @@ def create_function(fun_name, args=None):
     elif fun_name == "gelu":
         fx = gelu
         dfx = d_gelu
+    elif fun_name == "telu":
+        fx = telu
+        dfx = d_telu
     elif fun_name == "softplus":
         fx = softplus
         dfx = d_softplus
@@ -293,6 +296,35 @@ def d_relu(x):
     """
     return (x >= 0.).astype(jnp.float32)
 
+@jit
+def telu(x):
+    """
+    Proposed by Fernandez and Mali 24, https://arxiv.org/abs/2412.20269 and https://arxiv.org/abs/2402.02790
+    TeLU activation: f(x) = x * tanh(e^x)
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
+    return x * jnp.tanh(jnp.exp(x))
+
+@jit
+def d_telu(x):
+    """
+    
+    Derivative of TeLU: f'(x) = tanh(e^x) + x * e^x * (1 - tanh^2(e^x))
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input)
+    """
+    ex = jnp.exp(x)
+    tanh_ex = jnp.tanh(ex)
+    return tanh_ex + x * ex * (1.0 - tanh_ex ** 2)
 @jit
 def sine(x, omega_0=30):
     """
