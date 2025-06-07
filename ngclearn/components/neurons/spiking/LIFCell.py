@@ -14,20 +14,6 @@ from ngcsimlib.compilers.process import transition
 #from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 
-# def _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay=1.): ## raw voltage dynamics
-#     mask = (rfr >= refract_T) * 1. # get refractory mask
-#     ## update voltage / membrane potential
-#     dv_dt = (v_rest - v) * v_decay + (j * mask)
-#     dv_dt = dv_dt * (1./tau_m)
-#     return dv_dt
-#
-# def _dfv(t, v, params): ## voltage dynamics wrapper
-#     j, rfr, tau_m, refract_T, v_rest, v_decay = params
-#     dv_dt = _dfv_internal(j, v, rfr, tau_m, refract_T, v_rest, v_decay)
-#     return dv_dt
-
-
-
 def _dfv(t, v, params): ## voltage dynamics wrapper
     j, rfr, tau_m, refract_T, v_rest, g_L = params
     mask = (rfr >= refract_T) * 1.  # get refractory mask
@@ -149,7 +135,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
         self.g_L = conduct_leak ## controls strength of voltage leak (1 -> LIF, 0 => IF)
         ## basic asserts to prevent neuronal dynamics breaking...
-        #assert (self.v_decay * self.dt / self.tau_m) <= 1. ## <-- to integrate in verify...
+        #assert (self.conduct_leak * self.dt / self.tau_m) <= 1. ## <-- to integrate in verify...
         assert self.resist_m > 0.
         self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
         self.theta_plus = theta_plus #0.05 ## threshold increment
@@ -266,8 +252,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
                   else jnp.asarray([[self.v_rest * 1.]]))
         v_reset = (self.v_reset if isinstance(self.v_reset, float)
                    else jnp.asarray([[self.v_reset * 1.]]))
-        v_decay = (self.v_decay if isinstance(self.v_decay, float)
-                   else jnp.asarray([[self.v_decay * 1.]]))
+        conduct_leak = (self.conduct_leak if isinstance(self.conduct_leak, float)
+                   else jnp.asarray([[self.conduct_leak * 1.]]))
         resist_m = (self.resist_m if isinstance(self.resist_m, float)
                     else jnp.asarray([[self.resist_m * 1.]]))
         tau_theta = (self.tau_theta if isinstance(self.tau_theta, float)
@@ -279,7 +265,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         jnp.savez(file_name,
                   threshold_theta=self.thr_theta.value,
                   tau_m=tau_m, thr=thr, v_rest=v_rest,
-                  v_reset=v_reset, v_decay=v_decay,
+                  v_reset=v_reset, conduct_leak=conduct_leak,
                   resist_m=resist_m, tau_theta=tau_theta,
                   theta_plus=theta_plus,
                   key=self.key.value)
@@ -293,7 +279,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.thr = data['thr']
         self.v_rest = data['v_rest']
         self.v_reset = data['v_reset']
-        self.v_decay = data['v_decay']
+        self.conduct_leak = data['conduct_leak']
         self.resist_m = data['resist_m']
         self.tau_theta = data['tau_theta']
         self.theta_plus = data['theta_plus']
@@ -327,7 +313,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "thr": "Base voltage threshold value",
             "v_rest": "Resting membrane potential value",
             "v_reset": "Reset membrane potential value",
-            "v_decay": "Voltage leak/decay factor",
+            "conduct_leak": "Conductance leak / voltage decay factor",
             "tau_theta": "Threshold/homoestatic increment time constant",
             "theta_plus": "Amount to increment threshold by upon occurrence "
                           "of spike",
