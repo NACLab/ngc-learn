@@ -10,11 +10,11 @@ your system. Note that this library was developed and tested on Ubuntu 22.04 (an
 Specifically, ngc-learn requires:
 * Python (>=3.10)
 * ngcsimlib (>=1.0.0), (<a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
-* NumPy (>=1.26.0)
+* NumPy (>=1.22.0)
 * SciPy (>=1.7.0)
 * JAX (>= 0.4.28; and jaxlib>=0.4.28) <!--(tested for cuda 11.8)-->
-* Matplotlib (>=3.4.2), (for `ngclearn.utils.viz`)
-* Scikit-learn (>=1.3.1), (for `ngclearn.utils.patch_utils` and `ngclearn.utils.density`)
+* Matplotlib (>=3.8.0), (for `ngclearn.utils.viz`)
+* Scikit-learn (>=1.6.1), (for `ngclearn.utils.patch_utils` and `ngclearn.utils.density`)
 
 Note that the above requirements are taken care of if one installs ngc-learn
 through either `pip`. One can either install the CPU version of ngc-learn (if no JAX is
@@ -24,7 +24,7 @@ $ pip install ngclearn
 ```
 
 or install the GPU version of ngc-learn by first installing the
-<a href="https://jax.readthedocs.io/en/latest/installation.html">CUDA 11 or 12
+<a href="https://jax.readthedocs.io/en/latest/installation.html">CUDA 12
 version of JAX</a> before running the above pip command.
 
 Alternatively, one may locally, step-by-step (see below), install and setup
@@ -78,7 +78,7 @@ Python 3.11.4 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'1.2b3'
+'2.0.2'
 ```
 
 <i>Note</i>: If you do not have a JSON configuration file in place (see tutorials
