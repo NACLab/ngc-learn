@@ -252,8 +252,8 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
                   else jnp.asarray([[self.v_rest * 1.]]))
         v_reset = (self.v_reset if isinstance(self.v_reset, float)
                    else jnp.asarray([[self.v_reset * 1.]]))
-        conduct_leak = (self.conduct_leak if isinstance(self.conduct_leak, float)
-                   else jnp.asarray([[self.conduct_leak * 1.]]))
+        g_L = (self.g_L if isinstance(self.g_L, float)
+               else jnp.asarray([[self.g_L * 1.]]))
         resist_m = (self.resist_m if isinstance(self.resist_m, float)
                     else jnp.asarray([[self.resist_m * 1.]]))
         tau_theta = (self.tau_theta if isinstance(self.tau_theta, float)
@@ -265,7 +265,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         jnp.savez(file_name,
                   threshold_theta=self.thr_theta.value,
                   tau_m=tau_m, thr=thr, v_rest=v_rest,
-                  v_reset=v_reset, conduct_leak=conduct_leak,
+                  v_reset=v_reset, g_L=g_L,
                   resist_m=resist_m, tau_theta=tau_theta,
                   theta_plus=theta_plus,
                   key=self.key.value)
@@ -279,7 +279,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.thr = data['thr']
         self.v_rest = data['v_rest']
         self.v_reset = data['v_reset']
-        self.conduct_leak = data['conduct_leak']
+        self.g_L = data['g_L']
         self.resist_m = data['resist_m']
         self.tau_theta = data['tau_theta']
         self.theta_plus = data['theta_plus']
