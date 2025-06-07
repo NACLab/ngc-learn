@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ngclearn"
-version = "2.0.1"
+version = "2.0.2"
 description = "Simulation software for building and analyzing arbitrary predictive coding, spiking network, and biomimetic neural systems."
 authors = [
   {name = "Alexander Ororbia", email = "ago@cs.rit.edu"},
