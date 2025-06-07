@@ -1,6 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=61.0",    # default
+  "wheel",               # also often needed
+  "numpy>=1.19.5"        # add numpy here for build-time use
+]
+build-backend = "setuptools.build_meta" # using setuptool building engine
 
 [project]
 name = "ngclearn"
