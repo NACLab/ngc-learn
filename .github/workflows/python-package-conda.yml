@@ -16,13 +16,13 @@ jobs:
       with:
         auto-update-conda: true
         python-version: 3.11
-        environment-name: testenv
+        environment-name: test
     
     - name: Install dependencies
       run: |
-        conda install -n testenv numpy=1.26 pytest pip
-        conda run -n testenv pip install -e .
+        conda install -n test numpy=1.26 pytest pip
+        conda run -n test pip install -e .
 
     - name: Run tests
       run: |
-        conda run -n testenv pytest
+        conda run -n test pytest
