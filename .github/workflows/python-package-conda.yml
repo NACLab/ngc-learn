@@ -18,9 +18,12 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
+    - name: Pre-install numpy (build dependency)
+      run: |
+        pip install 'numpy>=1.19.5'
     - name: Install current library and dependencies
       run: |
-        pip install -e .
+        pip install --no-build-isolation -e .
     # - name: Lint with flake8
     #   run: |
     #     conda install flake8
