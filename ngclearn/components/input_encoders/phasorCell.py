@@ -1,12 +1,10 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
-from ngcsimlib.logger import info, warn
+import jax
+from typing import Union
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 
 class PhasorCell(JaxComponent):
@@ -35,19 +33,25 @@ class PhasorCell(JaxComponent):
 
     # Define Functions
     def __init__(
-            self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs):
-        super().__init__(name, **kwargs)
+            self, name: str, n_units: int, target_freq: float = 63.75,
+            batch_size: int = 1, key: Union[jax.Array, None] = None):
+        super().__init__(name=name, key=key)
+
+        _key, subkey = random.split(self.key.get(), 2)
+        self.key.set(_key)
 
         ## Phasor meta-parameters
-        self.target_freq = target_freq  ## maximum frequency (in Hertz/Hz)
+        self.target_freq = Compartment(target_freq, fixed=True)  ## maximum frequency (in Hertz/Hz)
+        self.base_scale = Compartment(random.poisson(subkey[0], lam=target_freq, shape=(batch_size, n_units)) / target_freq, fixed=True)
 
         ## Layer Size Setup
-        self.batch_size = batch_size
-        self.n_units = n_units
-        _key, *subkey = random.split(self.key.value, 3)
-        self.key.set(_key)
+        self.batch_size = Compartment(batch_size, fixed=True)
+        self.n_units = Compartment(n_units, fixed=True)
+
+
+
         ## Compartment setup
-        restVals = jnp.zeros((self.batch_size, self.n_units))
+        restVals = jnp.zeros((batch_size, n_units))
         self.inputs = Compartment(restVals,
                                   display_name="Input Stimulus")  # input
         # compartment
@@ -56,80 +60,41 @@ class PhasorCell(JaxComponent):
         self.tols = Compartment(initial_value=restVals,
                                 display_name="Time-of-Last-Spike", units="ms")  # time of last spike
         self.angles = Compartment(restVals, display_name="Angles", units="deg")
-        # self.base_scale = random.uniform(subkey, self.angles.value.shape,
-        #                                  minval=0.75, maxval=1.25)
-        # self.base_scale = ((random.normal(subkey, self.angles.value.shape) * 0.15) + 1)
-        # alpha = ((random.normal(subkey, self.angles.value.shape) * (jnp.sqrt(target_freq) / target_freq)) + 1)
-        # beta = random.poisson(subkey, lam=target_freq, shape=self.angles.value.shape) / target_freq
 
-        self.base_scale = random.poisson(subkey[0], lam=target_freq, shape=self.angles.value.shape) / target_freq
-        self.disable_phasor = disable_phasor
-
-    def validate(self, dt=None, **validation_kwargs):
-        valid = super().validate(**validation_kwargs)
-        if dt is None:
-            warn(f"{self.name} requires a validation kwarg of `dt`")
-            return False
-        ## check for unstable combinations of dt and target-frequency
-        # meta-params
-        events_per_timestep = (dt / 1000.) * self.target_freq  ##
-        # compute scaled probability
-        if events_per_timestep > 1.:
-            valid = False
-            warn(
-                f"{self.name} will be unable to make as many temporal events "
-                f"as "
-                f"requested! ({events_per_timestep} events/timestep) Unstable "
-                f"combination of dt = {dt} and target_freq = "
-                f"{self.target_freq} "
-                f"being used!"
-            )
-        return valid
-
-    @transition(output_compartments=["outputs", "tols", "key", "angles"])
-    @staticmethod
-    def advance_state(t, dt, target_freq, key, inputs, angles, tols, base_scale, disable_phasor):
+    @compilable
+    def advance_state(self, t, dt):
         ms_per_second = 1000  # ms/s
-        events_per_ms = target_freq / ms_per_second  # e/s s/ms -> e/ms
+        events_per_ms = self.target_freq.get() / ms_per_second  # e/s s/ms -> e/ms
         ms_per_event = 1 / events_per_ms  # ms/e
         time_step_per_event = ms_per_event / dt  # ms/e * ts/ms -> ts / e
         angle_per_event = 2 * jnp.pi  # rad / e
         angle_per_timestep = angle_per_event / time_step_per_event  # rad / e
         # * e/ts -> rad / ts
-        key, *subkey = random.split(key, 3)
-        # scatter = random.uniform(subkey, angles.shape, minval=0.5,
-        #                          maxval=1.5) * base_scale
+        key, *subkey = random.split(self.key.get(), 3)
 
-        scatter = ((random.normal(subkey[0], angles.shape) * 0.2) + 1) * base_scale
+        scatter = ((random.normal(subkey[0], self.angles.get().shape) * 0.2) + 1) * self.base_scale.get()
         scattered_update = angle_per_timestep * scatter
-        scaled_scattered_update = scattered_update * inputs
+        scaled_scattered_update = scattered_update * self.inputs.get()
 
-        updated_angles = angles + scaled_scattered_update
-        outputs = jnp.where(updated_angles > angle_per_event, 1., 0.)
-        updated_angles = jnp.where(updated_angles > angle_per_event,
+        updated_angles = self.angles.get() + scaled_scattered_update
+        self.outputs.set(jnp.where(updated_angles > angle_per_event, 1., 0.))
+
+        self.angles.set(jnp.where(updated_angles > angle_per_event,
                                    updated_angles - angle_per_event,
-                                   updated_angles)
-        if disable_phasor:
-            outputs = inputs + 0
-        tols = tols * (1. - outputs) + t * outputs
+                                   updated_angles))
 
-        return outputs, tols, key, updated_angles
+        self.tols.set(self.tols.get() * (1. - self.outputs.get()) + t * self.outputs.get())
 
-    @transition(output_compartments=["inputs", "outputs", "tols", "angles", "key"])
-    @staticmethod
-    def reset(batch_size, n_units, key, target_freq):
-        restVals = jnp.zeros((batch_size, n_units))
-        key, *subkey = random.split(key, 3)
-        return restVals, restVals, restVals, restVals, key
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        self.inputs.set(restVals)
+        self.outputs.set(restVals)
+        self.tols.set(restVals)
+        self.angles.set(restVals)
+        key, _ = random.split(self.key.get(), 2)
+        self.key.set(key)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.key.set(data['key'])
 
     @classmethod
     def help(cls):  ## component help function
@@ -156,20 +121,5 @@ class PhasorCell(JaxComponent):
                 "compartments": compartment_props,
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if
-                 Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 

@@ -1,9 +1,8 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
-from ngclearn.components.synapses import DenseSynapse
+from ngclearn.components.synapses.denseSynapse import DenseSynapse
 from ngclearn.utils import tensorstats
 
 
@@ -73,102 +72,81 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         super().__init__(name, shape, weight_init, None, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
 
-        ## Synaptic hyper-parameters
-        self.shape = shape ## shape of synaptic efficacy matrix
-        self.tau_w = tau_w
-        self.mu = mu ## controls power-scaling of STDP rule
-        self.preTrace_target = pretrace_target ## target (pre-synaptic) trace activity value # 0.7
-        self.Aplus = A_plus ## LTP strength
-        self.Aminus = A_minus ## LTD strength
-        self.Rscale = resist_scale ## post-transformation scale factor
-        self.w_bound = w_bound #1. ## soft weight constraint
-        self.w_eps = 0. ## w_eps = 0.01
-        self.weight_mask = weight_mask
-        if self.weight_mask is None:
-            self.weight_mask = jnp.ones((1, 1))
-        self.weights.set(self.weights.value * self.weight_mask)
+        self.tau_w = Compartment(tau_w, fixed=True)
+        self.mu = Compartment(mu, fixed=True) ## controls power-scaling of STDP rule
+        self.preTrace_target = Compartment(pretrace_target, fixed=True) ## target (pre-synaptic) trace activity value # 0.7
+        self.Aplus = Compartment(A_plus, fixed=True) ## LTP strength
+        self.Aminus = Compartment(A_minus, fixed=True) ## LTD strength
+        self.w_bound = Compartment(w_bound, fixed=True) #1. ## soft weight constraint
+        self.w_eps = Compartment(0., fixed=True) ## w_eps = 0.01
+
+        if weight_mask is None:
+            self.weight_mask = Compartment(jnp.ones((1, 1)), fixed=True)
+        else:
+            self.weight_mask = Compartment(self.weight_mask, fixed=True)
+
+        self.weights.set(self.weights.get() * self.weight_mask.get())
 
         ## Compartment setup
-        preVals = jnp.zeros((self.batch_size, shape[0]))
-        postVals = jnp.zeros((self.batch_size, shape[1]))
+        preVals = jnp.zeros((self.batch_size.get(), shape[0]))
+        postVals = jnp.zeros((self.batch_size.get(), shape[1]))
         self.preSpike = Compartment(preVals)
         self.postSpike = Compartment(postVals)
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
-        self.dWeights = Compartment(self.weights.value * 0)
+        self.dWeights = Compartment(self.weights.get() * 0)
         self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate
 
-    #@transition(output_compartments=["outputs"])
-    #@staticmethod
-    #def advance_state(Rscale, inputs, weights, biases, weight_mask):
-    #    outputs = (jnp.matmul(inputs, weights * weight_mask) * Rscale) + biases
-    #    return outputs
+    def _compute_update(self):
+        if self.mu.get() > 0.:
+            post_shift = jnp.power(self.w_bound.get() - self.weights.get(), self.mu.get())
+            pre_shift = jnp.power(self.weights.get(), self.mu.get())
+            dWpost = (post_shift * jnp.matmul((self.preSpike.get() - self.preTrace_target.get()).T, self.postSpike.get())) * self.Aplus.get()
 
-    @staticmethod
-    def _compute_update(
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
-    ):
-        pre = preSpike
-        x_pre = preTrace
-        post = postSpike
-        x_post = postTrace
-        W = weights
-        x_tar = preTrace_target
-        if mu > 0.:
-            ## equations 3, 5, & 6 from Diehl and Cook - full power-law STDP
-            post_shift = jnp.power(w_bound - W, mu)
-            pre_shift = jnp.power(W, mu)
-            dWpost = (post_shift * jnp.matmul((x_pre - x_tar).T, post)) * Aplus
-            dWpre = 0.
-            if Aminus > 0.:
-                dWpre = -(pre_shift * jnp.matmul(pre.T, x_post)) * Aminus
+            if self.Aminus.get() > 0.:
+                dWpre = -(pre_shift * jnp.matmul(self.preSpike.get().T, self.postTrace.get())) * self.Aminus.get()
+            else:
+                dWpre = 0.
+
         else:
-            ## calculate post-synaptic term
-            dWpost = jnp.matmul((x_pre - x_tar).T, post * Aplus)
+            dWpost = jnp.matmul((self.preSpike.get() - self.preTrace_target.get()).T, self.postSpike.get() * self.Aplus.get())
+            if self.Aminus.get() > 0.:
+                dWpre = -jnp.matmul(self.preSpike.get().T, self.postTrace.get() * self.Aminus.get())
+            else:
+                dWpre = 0.
 
-            dWpre = 0.
-            if Aminus > 0.:
-                ## calculate pre-synaptic term
-                dWpre = -jnp.matmul(pre.T, x_post * Aminus)
-        ## calc final weighted adjustment
-        dW = (dWpost + dWpre)
+        dW = (dWpost - dWpre)
         return dW
 
-    @transition(output_compartments=["weights", "dWeights"])
-    @staticmethod
-    def evolve(
-            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, tau_w, preSpike, postSpike, preTrace, 
-            postTrace, weights, eta, weight_mask
-    ):
-        #_wm = weight_mask #
-        _wm = (weight_mask != 0.)
-        dWeights = TraceSTDPSynapse._compute_update(
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
-        )
-        ## do a gradient ascent update/shift
-        decayTerm = 0.
-        if tau_w > 0.:
-            decayTerm = weights / tau_w
-        weights = weights + (dWeights * eta) - decayTerm #weight_mask * eta)
-        ## enforce non-negativity
-        #w_eps = 0. # 0.01 # 0.001
-        weights = jnp.clip(weights, w_eps, w_bound - w_eps)  # jnp.abs(w_bound))
-        weights = weights * _wm # weight_mask
-        return weights, dWeights
+    @compilable
+    def evolve(self):
+        dWeights = self._compute_update()
+        if self.tau_w.get() > 0.:
+            decayTerm = self.weights.get() / self.tau_w.get()
+        else:
+            decayTerm = 0.
 
-    @transition(output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        preSpike = preVals
-        postSpike = postVals
-        preTrace = preVals
-        postTrace = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights
+        # print(jnp.nonzero(dWeights))
+        w = self.weights.get() + (dWeights * self.eta.get()) - decayTerm
+        w = jnp.clip(w, self.w_eps.get(), self.w_bound.get() - self.w_eps.get())
+        w = jnp.where(self.weight_mask.get() != 0., w, 0.)
+        self.weights.set(w)
+        self.dWeights.set(dWeights)
+
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
+        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
+
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.preSpike.set(preVals)
+        self.postSpike.set(postVals)
+        self.preTrace.set(preVals)
+        self.postTrace.set(postVals)
+        self.dWeights.set(jnp.zeros(self.shape.get()))
+
 
     @classmethod
     def help(cls): ## component help function
@@ -214,19 +192,6 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

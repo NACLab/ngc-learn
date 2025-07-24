@@ -1,9 +1,6 @@
 import sys
-import subprocess
 import pkg_resources
 from pkg_resources import get_distribution
-#from pathlib import Path
-#from sys import argv
 
 __version__ = get_distribution('ngclearn').version
 
@@ -31,33 +28,27 @@ import numpy
 
 import ngcsimlib
 
-from ngcsimlib.context import Context
-from ngcsimlib.component import Component
+from ngcsimlib import Component, MethodProcess, JointProcess
+from ngcsimlib.context import Context, ContextObjectTypes
 from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
-from ngcsimlib import utils as sim_utils
 
 from ngclearn.utils.jaxProcess import JaxProcess
-from ngcsimlib.compilers.process import transition, Process
-
-
-from ngcsimlib import configure, preload_modules
 from ngcsimlib import logger
 
-if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
-    if "readthedocs" not in argv[0]:  ## prevent readthedocs execution of preload
-        configure()
-        logger.init_logging()
-        from ngcsimlib.configManager import get_config
-        pkg_config = get_config("packages")
-        if pkg_config is not None:
-            use_base_numpy = pkg_config.get("use_base_numpy", False)
-            if use_base_numpy:
-                import numpy as numpy
-            else:
-                from jax import numpy
-        else:
-            from jax import numpy
-
-
-        preload_modules()
+# if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
+#     if "readthedocs" not in argv[0]:  ## prevent readthedocs execution of preload
+#         configure()
+#         logger.init_logging()
+#         from ngcsimlib.configManager import get_config
+#         pkg_config = get_config("packages")
+#         if pkg_config is not None:
+#             use_base_numpy = pkg_config.get("use_base_numpy", False)
+#             if use_base_numpy:
+#                 import numpy as numpy
+#             else:
+#                 from jax import numpy
+#         else:
+#             from jax import numpy
+#
+#
+#         preload_modules()

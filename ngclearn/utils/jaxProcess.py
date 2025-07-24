@@ -1,11 +1,11 @@
 from ngcsimlib.compartment import Compartment
-from ngcsimlib.compilers.process import Process
+from ngcsimlib import MethodProcess
 from jax.lax import scan as _scan
 from ngcsimlib.logger import warn
 from jax import numpy as jnp
 
 
-class JaxProcess(Process):
+class JaxProcess(MethodProcess):
     """
         The JaxProcess is a subclass of the ngcsimlib Process class. The
         functionality added by this subclass is the use of the jax scanner to run a

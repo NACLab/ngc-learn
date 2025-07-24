@@ -5,7 +5,6 @@ from functools import partial
 from ngclearn.utils import tensorstats
 # from ngclearn import resolver, Component, Compartment
 from ngcsimlib.compartment import Compartment
-from ngcsimlib.compilers.process import transition
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy

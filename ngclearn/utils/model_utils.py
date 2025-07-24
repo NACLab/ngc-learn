@@ -6,7 +6,6 @@ and develop ngc-learn internal components.
 import jax
 from jax import numpy as jnp, grad, jit, vmap, random, lax, nn
 from jax.lax import scan as _scan
-from ngcsimlib.utils import Get_Compartment_Batch, Set_Compartment_Batch, get_current_context
 import os, sys
 from functools import partial
 import numpy as np
@@ -716,39 +715,39 @@ def d_clip(x, min_val, max_val):
     return jnp.where((x < min_val) | (x > max_val), 0.0, 1.0)
 
 
-def scanner(fn):
-    """
-    A wrapper for Jax's scanner that handles the "getting" of the current
-    state and "setting" of the final state to and from the model.
-
-    | @scanner
-    | def process(current_state, args):
-    |    t = args[0]
-    |    dt = args[1]
-    |    current_state = model.advance_state(current_state, t, dt)
-    |    current_state = model.evolve(current_state, t, dt)
-    |    return current_state, (current_state[COMPONENT.COMPARTMENT.path], ...)
-    |
-    | outputs = models.process(jnp.array([[ARG0, ARG1] for i in range(NUM_LOOPS)]))
-
-    | Notes on the scanner function call:
-    | 1) `current_state` is a hash-map mapped to all compartment values by path
-    | 2) `args` is the external arguments defined in the passed Jax array
-    | 3) `outputs` is a tuple containing time-concatenated Jax arrays of the
-    |     compartment statistics you want tracked
-
-    Args:
-        fn: function that is executed at every time step of a Jax-unrolled loop,
-            it must take in the current state and external arguments
-
-    Returns:
-        wrapped (fast) function that is Jax-scanned/jit-i-fied
-    """
-    def _scanned(_xs):
-        vals, stacked = _scan(fn, init=Get_Compartment_Batch(), xs=_xs)
-        Set_Compartment_Batch(vals)
-        return stacked
-
-    if get_current_context() is not None:
-        get_current_context().__setattr__(fn.__name__, _scanned)
-    return _scanned
+# def scanner(fn):
+#     """
+#     A wrapper for Jax's scanner that handles the "getting" of the current
+#     state and "setting" of the final state to and from the model.
+#
+#     | @scanner
+#     | def process(current_state, args):
+#     |    t = args[0]
+#     |    dt = args[1]
+#     |    current_state = model.advance_state(current_state, t, dt)
+#     |    current_state = model.evolve(current_state, t, dt)
+#     |    return current_state, (current_state[COMPONENT.COMPARTMENT.path], ...)
+#     |
+#     | outputs = models.process(jnp.array([[ARG0, ARG1] for i in range(NUM_LOOPS)]))
+#
+#     | Notes on the scanner function call:
+#     | 1) `current_state` is a hash-map mapped to all compartment values by path
+#     | 2) `args` is the external arguments defined in the passed Jax array
+#     | 3) `outputs` is a tuple containing time-concatenated Jax arrays of the
+#     |     compartment statistics you want tracked
+#
+#     Args:
+#         fn: function that is executed at every time step of a Jax-unrolled loop,
+#             it must take in the current state and external arguments
+#
+#     Returns:
+#         wrapped (fast) function that is Jax-scanned/jit-i-fied
+#     """
+#     def _scanned(_xs):
+#         vals, stacked = _scan(fn, init=Get_Compartment_Batch(), xs=_xs)
+#         Set_Compartment_Batch(vals)
+#         return stacked
+#
+#     if get_current_context() is not None:
+#         get_current_context().__setattr__(fn.__name__, _scanned)
+#     return _scanned

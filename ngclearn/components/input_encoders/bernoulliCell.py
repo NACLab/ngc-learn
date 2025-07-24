@@ -1,12 +1,9 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
-from ngcsimlib.logger import info, warn
-
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
+import jax
+from typing import Union
 
 class BernoulliCell(JaxComponent):
     """
@@ -29,51 +26,31 @@ class BernoulliCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    def __init__(self, name, n_units, batch_size=1, **kwargs):
-        super().__init__(name, **kwargs)
-        #super(BernoulliCell, self).__init__(name, **kwargs)
+    def __init__(self, name: str, n_units: int, batch_size: int = 1, key: Union[jax.Array, None] = None):
+        super().__init__(name=name, key=key)
 
         ## Layer Size Setup
-        self.batch_size = batch_size
-        self.n_units = n_units
+        self.batch_size = Compartment(batch_size, fixed=True)
+        self.n_units = Compartment(n_units, fixed=True)
 
-        # Compartments (state of the cell, parameters, will be updated through stateless calls)
-        restVals = jnp.zeros((self.batch_size, self.n_units))
+        restVals = jnp.zeros((batch_size, n_units))
         self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
         self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
 
-    @transition(output_compartments=["outputs", "tols", "key"])
-    @staticmethod
-    def advance_state(t, key, inputs, tols):
-        ## NOTE: should `inputs` be checked if bounded to [0,1]?
-        # print(key)
-        # print(t)
-        # print(inputs.shape)
-        # print(tols.shape)
-        # print("-----")
-        key, *subkeys = random.split(key, 3)
-        outputs = random.bernoulli(subkeys[0], p=inputs).astype(jnp.float32)
-        # Updates time-of-last-spike (tols) variable:
-        # output = s = binary spike vector
-        # tols = current time-of-last-spike variable
-        tols = (1. - outputs) * tols + (outputs * t)
-        return outputs, tols, key
+    @compilable
+    def advance_state(self, t):
+        key, subkey = random.split(self.key.get(), 2)
+        self.outputs.set(random.bernoulli(subkey, p=self.inputs.get()).astype(jnp.float32))
+        self.tols.set((1. - self.outputs.get()) * self.tols.get() + (self.outputs.get() * t))
+        self.key.set(key)
 
-    @transition(output_compartments=["inputs", "outputs", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
-        return restVals, restVals, restVals
-
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.key.set(data['key'])
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        self.inputs.set(restVals)
+        self.outputs.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -101,22 +78,23 @@ class BernoulliCell(JaxComponent):
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
+    # def __repr__(self):
+    #     comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+    #     maxlen = max(len(c) for c in comps) + 5
+    #     lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+    #     for c in comps:
+    #         stats = tensorstats(getattr(self, c).value)
+    #         if stats is not None:
+    #             line = [f"{k}: {v}" for k, v in stats.items()]
+    #             line = ", ".join(line)
+    #         else:
+    #             line = "None"
+    #         lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+    #     return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         X = BernoulliCell("X", 9)
-    print(X)
+
+    X.batch_size.set(10)
