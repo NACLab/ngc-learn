@@ -34,14 +34,14 @@ class PoissonCell(JaxComponent):
         super().__init__(name=name, key=key)
 
         ## Constrained Bernoulli meta-parameters
-        self.target_freq = Compartment(target_freq, fixed=True)  ## maximum frequency (in Hertz/Hz)
+        self.target_freq = target_freq  ## maximum frequency (in Hertz/Hz)
 
         ## Layer Size Setup
-        self.batch_size = Compartment(batch_size, fixed=True)
-        self.n_units = Compartment(n_units, fixed=True)
+        self.batch_size = batch_size
+        self.n_units = n_units
 
         # Compartments (state of the cell, parameters, will be updated through stateless calls)
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
         self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
@@ -49,7 +49,7 @@ class PoissonCell(JaxComponent):
     @compilable
     def advance_state(self, t, dt):
         key, subkey = random.split(self.key.get(), 2)
-        pspike = self.inputs.get() * (dt / 1000.) * self.target_freq.get()
+        pspike = self.inputs.get() * (dt / 1000.) * self.target_freq
         eps = random.uniform(subkey, self.inputs.get().shape, minval=0., maxval=1.,
                              dtype=jnp.float32)
 
@@ -59,7 +59,7 @@ class PoissonCell(JaxComponent):
 
     @compilable
     def reset(self):
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         if not self.inputs.targeted:
             self.inputs.set(restVals)
         self.outputs.set(restVals)

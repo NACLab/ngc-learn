@@ -72,46 +72,46 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         super().__init__(name, shape, weight_init, None, resist_scale,
                          p_conn, batch_size=batch_size, **kwargs)
 
-        self.tau_w = Compartment(tau_w, fixed=True)
-        self.mu = Compartment(mu, fixed=True) ## controls power-scaling of STDP rule
-        self.preTrace_target = Compartment(pretrace_target, fixed=True) ## target (pre-synaptic) trace activity value # 0.7
-        self.Aplus = Compartment(A_plus, fixed=True) ## LTP strength
-        self.Aminus = Compartment(A_minus, fixed=True) ## LTD strength
-        self.w_bound = Compartment(w_bound, fixed=True) #1. ## soft weight constraint
-        self.w_eps = Compartment(0., fixed=True) ## w_eps = 0.01
+        self.tau_w = tau_w
+        self.mu = mu ## controls power-scaling of STDP rule
+        self.preTrace_target = pretrace_target ## target (pre-synaptic) trace activity value # 0.7
+        self.Aplus = A_plus ## LTP strength
+        self.Aminus = A_minus ## LTD strength
+        self.w_bound = w_bound #1. ## soft weight constraint
+        self.w_eps = 0. ## w_eps = 0.01
 
         if weight_mask is None:
-            self.weight_mask = Compartment(jnp.ones((1, 1)), fixed=True)
+            self.weight_mask = jnp.ones((1, 1))
         else:
-            self.weight_mask = Compartment(self.weight_mask, fixed=True)
+            self.weight_mask = self.weight_mask
 
-        self.weights.set(self.weights.get() * self.weight_mask.get())
+        self.weights.set(self.weights.get() * self.weight_mask)
 
         ## Compartment setup
-        preVals = jnp.zeros((self.batch_size.get(), shape[0]))
-        postVals = jnp.zeros((self.batch_size.get(), shape[1]))
+        preVals = jnp.zeros((self.batch_size, shape[0]))
+        postVals = jnp.zeros((self.batch_size, shape[1]))
         self.preSpike = Compartment(preVals)
         self.postSpike = Compartment(postVals)
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
         self.dWeights = Compartment(self.weights.get() * 0)
-        self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate
+        self.eta = jnp.ones((1, 1)) * eta ## global learning rate
 
     def _compute_update(self):
-        if self.mu.get() > 0.:
-            post_shift = jnp.power(self.w_bound.get() - self.weights.get(), self.mu.get())
-            pre_shift = jnp.power(self.weights.get(), self.mu.get())
-            dWpost = (post_shift * jnp.matmul((self.preSpike.get() - self.preTrace_target.get()).T, self.postSpike.get())) * self.Aplus.get()
+        if self.mu > 0.:
+            post_shift = jnp.power(self.w_bound - self.weights.get(), self.mu)
+            pre_shift = jnp.power(self.weights.get(), self.mu)
+            dWpost = (post_shift * jnp.matmul((self.preSpike.get() - self.preTrace_target).T, self.postSpike.get())) * self.Aplus
 
-            if self.Aminus.get() > 0.:
-                dWpre = -(pre_shift * jnp.matmul(self.preSpike.get().T, self.postTrace.get())) * self.Aminus.get()
+            if self.Aminus > 0.:
+                dWpre = -(pre_shift * jnp.matmul(self.preSpike.get().T, self.postTrace.get())) * self.Aminus
             else:
                 dWpre = 0.
 
         else:
-            dWpost = jnp.matmul((self.preSpike.get() - self.preTrace_target.get()).T, self.postSpike.get() * self.Aplus.get())
-            if self.Aminus.get() > 0.:
-                dWpre = -jnp.matmul(self.preSpike.get().T, self.postTrace.get() * self.Aminus.get())
+            dWpost = jnp.matmul((self.preSpike.get() - self.preTrace_target).T, self.postSpike.get() * self.Aplus)
+            if self.Aminus > 0.:
+                dWpre = -jnp.matmul(self.preSpike.get().T, self.postTrace.get() * self.Aminus)
             else:
                 dWpre = 0.
 
@@ -121,15 +121,15 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
     @compilable
     def evolve(self):
         dWeights = self._compute_update()
-        if self.tau_w.get() > 0.:
-            decayTerm = self.weights.get() / self.tau_w.get()
+        if self.tau_w > 0.:
+            decayTerm = self.weights.get() / self.tau_w
         else:
             decayTerm = 0.
 
         # print(jnp.nonzero(dWeights))
-        w = self.weights.get() + (dWeights * self.eta.get()) - decayTerm
-        w = jnp.clip(w, self.w_eps.get(), self.w_bound.get() - self.w_eps.get())
-        w = jnp.where(self.weight_mask.get() != 0., w, 0.)
+        w = self.weights.get() + (dWeights * self.eta) - decayTerm
+        w = jnp.clip(w, self.w_eps, self.w_bound - self.w_eps)
+        w = jnp.where(self.weight_mask != 0., w, 0.)
         self.weights.set(w)
         self.dWeights.set(dWeights)
 

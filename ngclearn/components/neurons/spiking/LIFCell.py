@@ -121,25 +121,25 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.max_one_spike = max_one_spike
 
         ## membrane parameter setup (affects ODE integration)
-        self.tau_m = Compartment(tau_m, fixed=True) ## membrane time constant
-        self.resist_m = Compartment(resist_m, fixed=True) ## resistance value
+        self.tau_m = tau_m ## membrane time constant
+        self.resist_m = resist_m ## resistance value
 
-        self.v_min = Compartment(v_min, fixed=True) ## ensures voltage is never < v_min
+        self.v_min = v_min ## ensures voltage is never < v_min
 
-        self.v_rest = Compartment(v_rest, fixed=True) #-65. # mV
-        self.v_reset = Compartment(v_reset, fixed=True) # -60. # -65. # mV (milli-volts)
-        self.g_L = Compartment(conduct_leak, fixed=True) ## controls strength of voltage leak (1 -> LIF, 0 => IF)
+        self.v_rest = v_rest #-65. # mV
+        self.v_reset = v_reset # -60. # -65. # mV (milli-volts)
+        self.g_L = conduct_leak ## controls strength of voltage leak (1 -> LIF, 0 => IF)
         ## basic asserts to prevent neuronal dynamics breaking...
         #assert (self.conduct_leak * self.dt / self.tau_m) <= 1. ## <-- to integrate in verify...
-        assert self.resist_m.get() > 0.
-        self.tau_theta = Compartment(tau_theta, fixed=True) ## threshold time constant # ms (0 turns off)
-        self.theta_plus = Compartment(theta_plus, fixed=True) #0.05 ## threshold increment
-        self.refract_T = Compartment(refract_time, fixed=True) #5. # 2. ## refractory period  # ms
-        self.thr = Compartment(thr, fixed=True) ## (fixed) base value for threshold  #-52 # -72. # mV
+        assert self.resist_m > 0.
+        self.tau_theta = tau_theta ## threshold time constant # ms (0 turns off)
+        self.theta_plus = theta_plus #0.05 ## threshold increment
+        self.refract_T = refract_time #5. # 2. ## refractory period  # ms
+        self.thr = thr ## (fixed) base value for threshold  #-52 # -72. # mV
 
         ## Layer Size Setup
-        self.batch_size = Compartment(1, fixed=True)
-        self.n_units = Compartment(n_units, fixed=True)
+        self.batch_size = 1
+        self.n_units = n_units
 
         # ## set up surrogate function for spike emission
         # if surrogate_type == "secant_lif":
@@ -153,7 +153,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
 
         ## Compartment setup
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         self.j = Compartment(restVals, display_name="Current", units="mA")
         self.v = Compartment(restVals + self.v_rest,
                              display_name="Voltage", units="mV")
@@ -169,11 +169,11 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
     @compilable
     def advance_state(self, dt, t):
-        j = self.j.get() * self.resist_m.get()
+        j = self.j.get() * self.resist_m
 
-        _v_thr = self.thr_theta.get() + self.thr.get()  ## calc present voltage threshold
+        _v_thr = self.thr_theta.get() + self.thr  ## calc present voltage threshold
 
-        v_params = (j, self.rfr.get(), self.tau_m.get(), self.refract_T.get(), self.v_rest.get(), self.g_L.get())
+        v_params = (j, self.rfr.get(), self.tau_m.get(), self.refract_T, self.v_rest, self.g_L)
 
         if self.intgFlag == 1:
             _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
@@ -182,7 +182,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         s = (_v > _v_thr) * 1.
         _rfr = (self.rfr.get() + dt) * (1. - s)
-        _v = _v * (1. - s) + s * self.v_reset.get()
+        _v = _v * (1. - s) + s * self.v_reset
 
         raw_s = s
 
@@ -200,16 +200,16 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             rS = nn.one_hot(jnp.argmax(self.v.get(), axis=1), num_classes=s.shape[1], dtype=jnp.float32) ## get max-volt spike
             s = s * rS ## mask out non-max volt spikes
 
-        if self.tau_theta.get() > 0.:
+        if self.tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta.get(), self.theta_plus.get())
+            thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus.get())
             self.thr_theta.set(thr_theta)
 
         ## update tols
         self.tols.set((1. - s) * self.tols.get() + (s * t))
 
-        if self.v_min.get() is not None: ## ensures voltage never < v_rest
-            _v = jnp.maximum(_v, self.v_min.get())
+        if self.v_min is not None: ## ensures voltage never < v_rest
+            _v = jnp.maximum(_v, self.v_min)
 
 
         self.v.set(_v)
@@ -220,13 +220,13 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
     @compilable
     def reset(self):
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         if not self.j.targeted:
             self.j.set(restVals)
-        self.v.set(restVals + self.v_rest.get())
+        self.v.set(restVals + self.v_rest)
         self.s.set(restVals)
         self.s_raw.set(restVals)
-        self.rfr.set(restVals + self.refract_T.get())
+        self.rfr.set(restVals + self.refract_T)
         self.tols.set(restVals)
 
 

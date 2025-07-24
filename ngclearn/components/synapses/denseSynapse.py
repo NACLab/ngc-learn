@@ -46,13 +46,13 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
     ):
         super().__init__(name, **kwargs)
 
-        self.batch_size = Compartment(batch_size, fixed=True)
+        self.batch_size = batch_size
         self.weight_init = weight_init
         self.bias_init = bias_init
 
         ## Synapse meta-parameters
-        self.shape = Compartment(shape, fixed=True)
-        self.resist_scale = Compartment(resist_scale, fixed=True)
+        self.shape = shape
+        self.resist_scale = resist_scale
 
         ## Set up synaptic weight values
         tmp_key, *subkeys = random.split(self.key.get(), 4)
@@ -67,8 +67,8 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             weights = weights * p_mask ## sparsify matrix
 
         ## Compartment setup
-        preVals = jnp.zeros((self.batch_size.get(), shape[0]))
-        postVals = jnp.zeros((self.batch_size.get(), shape[1]))
+        preVals = jnp.zeros((self.batch_size, shape[0]))
+        postVals = jnp.zeros((self.batch_size, shape[1]))
 
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
@@ -83,14 +83,14 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     @compilable
     def advance_state(self):
-        self.outputs.set((jnp.matmul(self.inputs.get(), self.weights.get()) * self.resist_scale.get()) + self.biases.get())
+        self.outputs.set((jnp.matmul(self.inputs.get(), self.weights.get()) * self.resist_scale) + self.biases.get())
 
     @compilable
     def reset(self):
         if not self.inputs.targeted:
-            self.inputs.set(jnp.zeros((self.batch_size.get(), self.shape.get()[0])))
+            self.inputs.set(jnp.zeros((self.batch_size, self.shape[0])))
 
-        self.outputs.set(jnp.zeros((self.batch_size.get(), self.shape.get()[1])))
+        self.outputs.set(jnp.zeros((self.batch_size, self.shape[1])))
 
     @classmethod
     def help(cls): ## component help function

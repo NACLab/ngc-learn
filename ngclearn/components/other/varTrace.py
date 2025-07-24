@@ -83,17 +83,17 @@ class VarTrace(JaxComponent): ## low-pass filter
         ## Trace control coefficients
         self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
 
-        self.tau_tr = Compartment(tau_tr, fixed=True) ## trace time constant
-        self.a_delta = Compartment(a_delta, fixed=True) ## trace increment (if spike occurred)
-        self.P_scale = Compartment(P_scale, fixed=True) ## trace scale if non-additive trace to be used
-        self.gamma_tr = Compartment(gamma_tr, fixed=True)
-        self.n_nearest_spikes = Compartment(n_nearest_spikes, fixed=True)
+        self.tau_tr = tau_tr ## trace time constant
+        self.a_delta = a_delta ## trace increment (if spike occurred)
+        self.P_scale = P_scale ## trace scale if non-additive trace to be used
+        self.gamma_tr = gamma_tr
+        self.n_nearest_spikes = n_nearest_spikes
 
         ## Layer Size Setup
-        self.batch_size = Compartment(batch_size, fixed=True)
-        self.n_units = Compartment(n_units, fixed=True)
+        self.batch_size = batch_size
+        self.n_units = n_units
 
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         self.inputs = Compartment(restVals) # input compartment
         self.outputs = Compartment(restVals) # output compartment
         self.trace = Compartment(restVals)
@@ -101,21 +101,21 @@ class VarTrace(JaxComponent): ## low-pass filter
     @compilable
     def advance_state(self, dt):
         if "exp" in self.decay_type:
-            decayFactor = jnp.exp(-dt/self.tau_tr.get())
+            decayFactor = jnp.exp(-dt/self.tau_tr)
         elif "lin" in self.decay_type:
-            decayFactor = (1. - dt/self.tau_tr.get())
+            decayFactor = (1. - dt/self.tau_tr)
         else:
             decayFactor = 0.
 
 
-        _x_tr = self.gamma_tr.get() * self.trace.get() * decayFactor
-        if self.n_nearest_spikes.get() > 0:
-            _x_tr = _x_tr + self.inputs.get() * (self.a_delta.get() - (self.trace.get() / self.n_nearest_spikes.get()))
+        _x_tr = self.gamma_tr * self.trace.get() * decayFactor
+        if self.n_nearest_spikes > 0:
+            _x_tr = _x_tr + self.inputs.get() * (self.a_delta - (self.trace.get() / self.n_nearest_spikes))
         else:
-            if self.a_delta.get() > 0.:
-                _x_tr = _x_tr + self.inputs.get() * self.a_delta.get()
+            if self.a_delta > 0.:
+                _x_tr = _x_tr + self.inputs.get() * self.a_delta
             else:
-                _x_tr = _x_tr * (1. - self.inputs.get()) + self.inputs.get() * self.P_scale.get()
+                _x_tr = _x_tr * (1. - self.inputs.get()) + self.inputs.get() * self.P_scale
 
         self.trace.set(_x_tr)
         self.outputs.set(_x_tr)
@@ -123,7 +123,7 @@ class VarTrace(JaxComponent): ## low-pass filter
 
     @compilable
     def reset(self):
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         self.inputs.set(restVals)
         self.outputs.set(restVals)
         self.trace.set(restVals)
