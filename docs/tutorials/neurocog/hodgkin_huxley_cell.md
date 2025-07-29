@@ -82,7 +82,7 @@ neurons and muscle cells. It is a continuous-time dynamical system.
 Formally, the core dynamics of the H-H cell can be written out as follows:
 
 $$
-\tau_v \frac{\partial \mathbf{v}_t}{\partial t} &= \mathbf{j}_t - g_Na * \mathbf{m}^3_t * \mathbf{h}_t * (\mathbf{v}_t - v_Na) - g_K * \mathbf{n}^4_t * (\mathbf{v}_t - v_K) - g_L * (\mathbf{v}_t - v_L) \\
+\tau_v \frac{\partial \mathbf{v}_t}{\partial t} &= \mathbf{j}_t - g_{Na} * \mathbf{m}^3_t * \mathbf{h}_t * (\mathbf{v}_t - v_{Na}) - g_K * \mathbf{n}^4_t * (\mathbf{v}_t - v_K) - g_L * (\mathbf{v}_t - v_L) \\
 \frac{\partial \mathbf{n}_t}{\partial t} &= \alpha_n(\mathbf{v}_t) * (1 - \mathbf{n}_t) - \beta_n(\mathbf{v}_t) * \mathbf{n}_t \\
 \frac{\partial \mathbf{m}_t}{\partial t} &= \alpha_m(\mathbf{v}_t) * (1 - \mathbf{m}_t) - \beta_m(\mathbf{v}_t) * \mathbf{m}_t \\
 \frac{\partial \mathbf{h}_t}{\partial t} &= \alpha_h(\mathbf{v}_t) * (1 - \mathbf{h}_t) - \beta_h(\mathbf{v}_t) * \mathbf{h}_t
