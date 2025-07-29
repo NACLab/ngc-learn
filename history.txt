@@ -80,3 +80,8 @@ History
   * integration of reinforce-synapse, block/partitioned synapse component ("patched-synapse")
   * basic unit-tests (pytest framework) integrated to support dev
   * includes support for Intel's lava-nc emulator (several spiking/stdp components that play with ngc-lava)
+
+2.0.3
+— — — — — — — — -
+  * Minor patch to point / depend on minor-patched ngcsimlib 1.0.1 (nudge to minor patched release)
+  * Added wrapper `inverse_sigmoid` for original `inverse_logistic` routine in model_utils (for convenience)
