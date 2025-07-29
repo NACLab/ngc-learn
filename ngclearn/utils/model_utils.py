@@ -508,10 +508,13 @@ def d_sigmoid(x):
     sigm_x = nn.sigmoid(x) ## pre-compute once
     return sigm_x * (1. - sigm_x)
 
+def inverse_sigmoid(x, clip_bound=0.03): ## wrapper call for naming convention ease
+    return inverse_logistic(x, clip_bound=clip_bound)
+
 @jit
-def inverse_logistic(x, clip_bound=0.03): # 0.03
+def inverse_logistic(x, clip_bound=0.03):
     """
-    The inverse logistic link - logit function.
+    The inverse logistic link - the logit function.
 
     Args:
         x: data to transform via inverse logistic function

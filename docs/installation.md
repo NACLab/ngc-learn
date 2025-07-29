@@ -9,7 +9,7 @@ requires that you ensure that you have installed the following base dependencies
 your system. Note that this library was developed and tested on Ubuntu 22.04 (and earlier versions on 18.04/20.04).
 Specifically, ngc-learn requires:
 * Python (>=3.10)
-* ngcsimlib (>=1.0.0), (<a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
+* ngcsimlib (>=1.0.1), (<a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
 * NumPy (>=1.22.0)
 * SciPy (>=1.7.0)
 * JAX (>= 0.4.28; and jaxlib>=0.4.28) <!--(tested for cuda 11.8)-->
