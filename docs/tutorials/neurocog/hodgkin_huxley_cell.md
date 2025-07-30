@@ -77,8 +77,6 @@ essentially probability values:
 `m` ($\mathbf{m}_t$)  for the probability of sodium channel subunit activation, and 
 `h` ($\mathbf{h}_t$)  for the probability of sodium channel subunit inactivation.  
 
-neurons and muscle cells. It is a continuous-time dynamical system.
-
 Formally, the core dynamics of the H-H cell can be written out as follows:
 
 $$
