@@ -50,7 +50,7 @@ with Context("Circuit") as circuit:
 
   ## create and compile core simulation commands  
   evolve_process = (JaxProcess()
-                    >> a.evolve)
+                    >> Wab.evolve)
   circuit.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
   advance_process = (JaxProcess()
