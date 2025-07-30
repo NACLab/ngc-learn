@@ -194,7 +194,7 @@ which should yield you a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/ode_method_comparison.jpg" width="500" />
 
-As you might observe, RK-4 give the best approximation of the solution. In addition, 
+As you might observe, RK-4 gives the best approximation of the solution. In addition, 
 when the integration step size is held constant, Euler integration
 does quite poorly over just a few steps while RK-2 and Heun's method do much better
 at approximating the analytical equation. In the end, the type of numerical integration method employed can
