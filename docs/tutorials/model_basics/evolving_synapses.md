@@ -29,14 +29,13 @@ dkey, *subkeys = random.split(dkey, 6)
 
 ## create simple system with only one F-N cell
 with Context("Circuit") as circuit:
-  a = RateCell(name="a", n_units=1, tau_m=0.,
-               act_fx="identity", key=subkeys[0])
-  b = RateCell(name="b", n_units=1, tau_m=0.,
-               act_fx="identity", key=subkeys[1])
+  a = RateCell(name="a", n_units=1, tau_m=0., act_fx="identity", key=subkeys[0])
+  b = RateCell(name="b", n_units=1, tau_m=0., act_fx="identity", key=subkeys[1])
 
-  Wab = HebbianSynapse(name="Wab", shape=(1, 1), eta=1.,
-                       sign_value=-1., weight_init=dist.constant(value=1.),
-                       w_bound=0., key=subkeys[3])
+  Wab = HebbianSynapse(
+    name="Wab", shape=(1, 1), eta=1., sign_value=-1., weight_init=dist.constant(value=1.),
+    w_bound=0., key=subkeys[3]
+  )
 
   # wire output compartment (rate-coded output zF) of RateCell `a` to input compartment of HebbianSynapse `Wab`
   Wab.inputs << a.zF

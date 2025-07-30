@@ -10,7 +10,7 @@ integrator components, the simplified leaky integrate-and-fire (SLIF).
 With our JSON configuration in place, go ahead and create a Python script,
 i.e., `run_slif.py`, to write your code for this part of the tutorial.
 
-Now let's go ahead and set up the controller for this lesson's simulation,
+Now let's go ahead and set up the controller/context for this lesson's simulation,
 where we will a dynamical system with only a single component,
 specifically the simplified LIF (sLIF), like so:
 
@@ -55,14 +55,14 @@ with Context("Model") as model:
 ```
 
 This node has quite a few compartments and constants but only a handful are important
-for understanding how this model governs spiking/firing rates during
-a controller's simulation window. Specifically, in this lesson, we will focus on
+for understanding how this model governs spiking/firing rates within its simulation window. 
+Specifically, in this lesson, we will focus on 
 its electrical current `j` (formally labeled here as $\mathbf{j}_t$),
 its voltage `v` (formally labeled: $\mathbf{v}_t$), its spike emission
 (or action potential) `s` (formally $\mathbf{s}_t$), and its refractory
 variable/marker (formally $\mathbf{r}_t$). The subscript $t$ indicates
 that this compartment variable takes on a certain value at a certain time step
-$t$ and we will refer to the ngc-learn controller's integration time constant,
+$t$ and we will refer to the ngc-learn context's integration time constant,
 the amount of time we move forward by, as $\Delta t$. The constants or
 hyper-parameters we will be most interested in are the cell's membrane resistance
 `R_m` (formally $R$ with its capacitance $C$ implied), its membrane time
@@ -198,7 +198,7 @@ its synaptic current over time - we will not, however, cover this functionality
 in this walkthrough.)-->
 
 In effect, given the above, every time the `sLIF`'s `.advanceState()` function is
-called within a simulation controller (`Controller()`), the above Euler integration of
+called within a simulation controller context (`Context()`), the above Euler integration of
 the membrane potential differential equation is happening each time step. Knowing this,
 the last item required to understand ngc-learn's `sLIF` node's computation is
 related to its spike $\mathbf{s}_t$. The spike reading is computed simply by

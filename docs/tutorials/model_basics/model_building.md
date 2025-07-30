@@ -21,12 +21,11 @@ dkey, *subkeys = random.split(dkey, 4)
 
 ## create simple dynamical system: a --> w_ab --> b
 with Context("model") as model:
-   a = RateCell(name="a", n_units=1, tau_m=0.,
-                act_fx="identity", key=subkeys[0])
-   b = RateCell(name="b", n_units=1, tau_m=20.,
-                act_fx="identity", key=subkeys[1])
-   Wab = HebbianSynapse(name="Wab", shape=(1, 1),
-                        weight_init=dist.constant(value=1.), key=subkeys[2])
+   a = RateCell(name="a", n_units=1, tau_m=0., act_fx="identity", key=subkeys[0])
+   b = RateCell(name="b", n_units=1, tau_m=20., act_fx="identity", key=subkeys[1])
+   Wab = HebbianSynapse(
+      name="Wab", shape=(1, 1), weight_init=dist.constant(value=1.), key=subkeys[2]
+   )
 ```
 
 Next, we will want to wire together the three components we have embedded into
