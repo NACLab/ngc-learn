@@ -83,7 +83,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         if weight_mask is None:
             self.weight_mask = jnp.ones((1, 1))
         else:
-            self.weight_mask = self.weight_mask
+            self.weight_mask = weight_mask
 
         self.weights.set(self.weights.get() * self.weight_mask)
 
@@ -95,13 +95,13 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
         self.dWeights = Compartment(self.weights.get() * 0)
-        self.eta = jnp.ones((1, 1)) * eta ## global learning rate
+        self.eta = eta ## global learning rate
 
     def _compute_update(self):
         if self.mu > 0.:
             post_shift = jnp.power(self.w_bound - self.weights.get(), self.mu)
             pre_shift = jnp.power(self.weights.get(), self.mu)
-            dWpost = (post_shift * jnp.matmul((self.preSpike.get() - self.preTrace_target).T, self.postSpike.get())) * self.Aplus
+            dWpost = (post_shift * jnp.matmul((self.preTrace.get() - self.preTrace_target).T, self.postSpike.get())) * self.Aplus
 
             if self.Aminus > 0.:
                 dWpre = -(pre_shift * jnp.matmul(self.preSpike.get().T, self.postTrace.get())) * self.Aminus
@@ -109,13 +109,13 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
                 dWpre = 0.
 
         else:
-            dWpost = jnp.matmul((self.preSpike.get() - self.preTrace_target).T, self.postSpike.get() * self.Aplus)
+            dWpost = jnp.matmul((self.preTrace.get() - self.preTrace_target).T, self.postSpike.get() * self.Aplus)
             if self.Aminus > 0.:
                 dWpre = -jnp.matmul(self.preSpike.get().T, self.postTrace.get() * self.Aminus)
             else:
                 dWpre = 0.
 
-        dW = (dWpost - dWpre)
+        dW = (dWpost + dWpre)
         return dW
 
     @compilable

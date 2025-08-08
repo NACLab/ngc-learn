@@ -1,6 +1,6 @@
 import time
 
-from typing import Union
+from typing import Union, Dict, Any
 import jax
 from jax import numpy as jnp
 from jax import random
@@ -24,7 +24,6 @@ class JaxComponent(Component):
         super().__init__(name)
         self.key = Compartment(
             random.PRNGKey(time.time_ns()) if key is None else key)
-
 
     def save(self, directory: str):
         """
