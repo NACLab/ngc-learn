@@ -202,7 +202,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         if self.tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus.get())
+            thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus) #.get())
             self.thr_theta.set(thr_theta)
 
         ## update tols

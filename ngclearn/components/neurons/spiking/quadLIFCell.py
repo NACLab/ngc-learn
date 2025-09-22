@@ -1,17 +1,16 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit, nn
+from jax import numpy as jnp, random, jit, nn, Array
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
-                                         triangular_estimator,
-                                         straight_through_estimator)
+# from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
+#                                          triangular_estimator,
+#                                          straight_through_estimator)
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
 from ngclearn.components.neurons.spiking.LIFCell import LIFCell
@@ -30,7 +29,7 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     return dv_dt
 
 #@partial(jit, static_argnums=[3, 4])
-def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
+def _update_theta(dt, v_theta, s, tau_theta, theta_plus: Array | float=0.05):
     ### Runs homeostatic threshold update dynamics one step (via Euler integration).
     #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
     #theta_plus = 0.05
@@ -133,71 +132,69 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
         self.v_c = v_scale
         self.a0 = critical_v
 
-    @transition(output_compartments=["v", "s", "s_raw", "rfr", "thr_theta", "tols", "key", "surrogate"])
-    @staticmethod
-    def advance_state(
-            t, dt, tau_m, resist_m, v_rest, v_reset, v_c, a0, refract_T, thr, tau_theta, theta_plus,
-            one_spike, lower_clamp_voltage, intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols
-    ):
-        skey = None ## this is an empty dkey if single_spike mode turned off
-        if one_spike:
-            key, skey = random.split(key, 2)
-        ## run one integration step for neuronal dynamics
-        j = j * resist_m
-        ############################################################################
-        ### Runs leaky integrator (leaky integrate-and-fire; LIF) neuronal dynamics.
-        _v_thr = thr_theta + thr #v_theta + v_thr ## calc present voltage threshold
-        #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
-        ## update voltage / membrane potential
-        v_params = (j, rfr, tau_m, refract_T, v_rest, v_c, a0)
-        if intgFlag == 1:
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)
-        else: #_v = v + (v_rest - v) * (dt/tau_m) + (j * mask)
-            _, _v = step_euler(0., v, _dfv, dt, v_params)
-        ## obtain action potentials/spikes
-        s = (_v > _v_thr) * 1.
-        ## update refractory variables
-        _rfr = (rfr + dt) * (1. - s)
-        ## perform hyper-polarization of neuronal cells
-        _v = _v * (1. - s) + s * v_reset
+    @compilable
+    def advance_state(self, dt, t):
+        j = self.j.get() * self.resist_m
 
-        raw_s = s + 0 ## preserve un-altered spikes
-        ############################################################################
-        ## this is a spike post-processing step
-        if skey is not None:
-            m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: not batch-able
+        _v_thr = self.thr_theta.get() + self.thr  ## calc present voltage threshold
+
+        v_params = (j, self.rfr.get(), self.tau_m.get(), self.refract_T, self.v_rest, self.v_c, self.a0)
+
+        if self.intgFlag == 1:
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
+        else:
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
+
+        s = (_v > _v_thr) * 1.
+        _rfr = (self.rfr.get() + dt) * (1. - s)
+        _v = _v * (1. - s) + s * self.v_reset
+
+        raw_s = s
+
+        #surrogate = d_spike_fx(v, _v_thr)  # d_spike_fx(v, thr + thr_theta)
+
+        if self.one_spike and not self.max_one_spike:
+            key, skey = random.split(self.key.get(), 2)
+
+            m_switch = (jnp.sum(s) > 0.).astype(jnp.float32)  ## TODO: not batch-able
             rS = s * random.uniform(skey, s.shape)
             rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
                             dtype=jnp.float32)
             s = s * (1. - m_switch) + rS * m_switch
-        ############################################################################
-        raw_spikes = raw_s
-        v = _v
-        rfr = _rfr
+            self.key.set(key)
 
-        surrogate = d_spike_fx(v, _v_thr) #d_spike_fx(v, thr + thr_theta)
-        if tau_theta > 0.:
+        if self.max_one_spike:
+            rS = nn.one_hot(jnp.argmax(self.v.get(), axis=1), num_classes=s.shape[1],
+                            dtype=jnp.float32)  ## get max-volt spike
+            s = s * rS  ## mask out non-max volt spikes
+
+        if self.tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
-        ## update tols
-        tols = (1. - s) * tols + (s * t)
-        if lower_clamp_voltage: ## ensure voltage never < v_rest
-            v = jnp.maximum(v, v_rest)
-        return v, s, raw_spikes, rfr, thr_theta, tols, key, surrogate
+            thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus)  # .get())
+            self.thr_theta.set(thr_theta)
 
-    @transition(output_compartments=["j", "v", "s", "s_raw", "rfr", "tols", "surrogate"])
-    @staticmethod
-    def reset(batch_size, n_units, v_rest, refract_T):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals #+ 0
-        v = restVals + v_rest
-        s = restVals #+ 0
-        s_raw = restVals
-        rfr = restVals + refract_T
-        #thr_theta = restVals ## do not reset thr_theta
-        tols = restVals #+ 0
-        surrogate = restVals + 1.
-        return j, v, s, s_raw, rfr, tols, surrogate
+        ## update tols
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
+
+        if self.v_min is not None:  ## ensures voltage never < v_rest
+            _v = jnp.maximum(_v, self.v_min)
+
+        self.v.set(_v)
+        self.s.set(s)
+        self.s_raw.set(raw_s)
+        self.rfr.set(_rfr)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v_rest)
+        self.s.set(restVals)
+        self.s_raw.set(restVals)
+        self.rfr.set(restVals + self.refract_T)
+        self.tols.set(restVals)
+        #self.surrogate.set(restVals)
 
     def save(self, directory, **kwargs):
         ## do a protected save of constants, depending on whether they are floats or arrays
