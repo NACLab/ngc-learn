@@ -19,7 +19,7 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
 
 
 #@partial(jit, static_argnums=[3, 4])
-def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
+def _update_theta(dt, v_theta, s, tau_theta, theta_plus: Array=0.05):
     ### Runs homeostatic threshold update dynamics one step (via Euler integration).
     #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
     #theta_plus = 0.05

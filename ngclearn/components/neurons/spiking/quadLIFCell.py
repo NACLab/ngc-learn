@@ -29,7 +29,7 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
     return dv_dt
 
 #@partial(jit, static_argnums=[3, 4])
-def _update_theta(dt, v_theta, s, tau_theta, theta_plus: Array | float=0.05):
+def _update_theta(dt, v_theta, s, tau_theta, theta_plus: Array=0.05):
     ### Runs homeostatic threshold update dynamics one step (via Euler integration).
     #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
     #theta_plus = 0.05
@@ -138,7 +138,7 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
 
         _v_thr = self.thr_theta.get() + self.thr  ## calc present voltage threshold
 
-        v_params = (j, self.rfr.get(), self.tau_m.get(), self.refract_T, self.v_rest, self.v_c, self.a0)
+        v_params = (j, self.rfr.get(), self.tau_m, self.refract_T, self.v_rest, self.v_c, self.a0)
 
         if self.intgFlag == 1:
             _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
