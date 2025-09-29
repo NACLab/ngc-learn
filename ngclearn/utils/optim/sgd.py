@@ -1,13 +1,4 @@
-# %%
-
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
-
-import numpy as np
-from jax import jit, numpy as jnp, random, nn, lax
-from functools import partial
-import time
+from jax import jit, numpy as jnp
 
 def step_update(param, update, lr):
     """
