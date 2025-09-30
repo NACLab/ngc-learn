@@ -2,15 +2,16 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
+########################################################################################################################
+## RAF dynamics (multi-dimensional ODEs)
 @jit
 def _dfv_internal(j, v, w, tau_m, omega, b): ## "voltage" dynamics
     # dy/dt =  omega x + b y
@@ -34,6 +35,7 @@ def _dfw(t, w, params): ## angular driver dynamics wrapper
     j, v, tau_w, omega, b = params
     dv_dt = _dfw_internal(j, v, w, tau_w, omega, b)
     return dv_dt
+########################################################################################################################
 
 class RAFCell(JaxComponent):
     """
@@ -60,8 +62,7 @@ class RAFCell(JaxComponent):
     | tols - time-of-last-spike
 
     | References:
-    | Izhikevich, Eugene M. "Resonate-and-fire neurons." Neural networks
-    | 14.6-7 (2001): 883-894.
+    | Izhikevich, Eugene M. "Resonate-and-fire neurons." Neural networks 14.6-7 (2001): 883-894.
 
     Args:
         name: the string name of this cell
@@ -77,7 +78,7 @@ class RAFCell(JaxComponent):
 
         omega: angular frequency (Default: 10)
 
-        b: oscillation dampening factor (Default: -1)
+        dampen_factor: oscillation dampening factor (Default: -1) ("b" in Izhikevich 2001)
 
         v_reset: reset condition for membrane potential (Default: 1 mV)
 
@@ -98,10 +99,10 @@ class RAFCell(JaxComponent):
                 at an increase in computational cost (and simulation time)
     """
 
-    @deprecate_args(resist_m="resist_v", tau_m="tau_v")
+    @deprecate_args(resist_m="resist_v", tau_m="tau_v", b="dampen_factor")
     def __init__(
-            self, name, n_units, tau_v=1., tau_w=1., thr=1., omega=10., b=-1., v_reset=0., w_reset=0., v0=0., w0=0.,
-            resist_v=1., integration_type="euler", batch_size=1, **kwargs
+            self, name, n_units, tau_v=1., tau_w=1., thr=1., omega=10., dampen_factor=-1., v_reset=0., w_reset=0.,
+            v0=0., w0=0., resist_v=1., integration_type="euler", batch_size=1, **kwargs
     ):
         #v_rest=-72., v_reset=-75., w_reset=0., thr=5., v0=-70., w0=0., tau_w=400., thr=5., omega=10., b=-1.
         super().__init__(name, **kwargs)
@@ -115,8 +116,8 @@ class RAFCell(JaxComponent):
         self.resist_v = resist_v
         self.tau_w = tau_w
         self.omega = omega ## angular frequency
-        self.b = b ## dampening factor
-        ## note: the smaller b is, the faster the oscillation dampens to resting state values
+        self.dampen_factor = dampen_factor ## dampening factor (b)
+        ## Note: the smaller that dampen_factor "b" is, the faster the oscillation dampens to resting state values
         self.v_reset = v_reset
         self.w_reset = w_reset
         self.v0 = v0
@@ -137,42 +138,46 @@ class RAFCell(JaxComponent):
             restVals, display_name="Time-of-Last-Spike", units="ms"
         ) ## time-of-last-spike
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def advance_state(t, dt, tau_v, resist_v, tau_w, thr, omega, b,
-                       v_reset, w_reset, intgFlag, j, v, w, tols):
+    @compilable
+    def advance_state(
+            self, t, dt
+    ):
         ## continue with centered dynamics
-        j_ = j * resist_v
-        if intgFlag == 1:  ## RK-2/midpoint
+        j_ = self.j.get() * self.resist_v
+        if self.intgFlag == 1:  ## RK-2/midpoint
             ## Note: we integrate ODEs in order: first w, then v
-            w_params = (j_, v, tau_w, omega, b)
-            _, _w = step_rk2(0., w, _dfw, dt, w_params)
-            v_params = (j_, _w, tau_v, omega, b)
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)
+            w_params = (j_, self.v.get(), self.tau_w, self.omega, self.dampen_factor)
+            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)
+            v_params = (j_, _w, self.tau_v, self.omega, self.dampen_factor)
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
         else:  # integType == 0 (default -- Euler)
             ## Note: we integrate ODEs in order: first w, then v
-            w_params = (j_, v, tau_w, omega, b)
-            _, _w = step_euler(0., w, _dfw, dt, w_params)
-            v_params = (j_, _w, tau_v, omega, b)
-            _, _v = step_euler(0., v, _dfv, dt, v_params)
-        s = (_v > thr) * 1. ## emit spikes/pulses
+            w_params = (j_, self.v.get(), self.tau_w, self.omega, self.dampen_factor)
+            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)
+            v_params = (j_, _w, self.tau_v, self.omega, self.dampen_factor)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
+
+        s = (_v > self.thr) * 1. ## emit spikes/pulses
         ## hyperpolarize/reset/snap variables
-        w = _w * (1. - s) + s * w_reset
-        v = _v * (1. - s) + s * v_reset
+        w = _w * (1. - s) + s * self.w_reset
+        v = _v * (1. - s) + s * self.v_reset
 
-        tols = (1. - s) * tols + (s * t) ## update times-of-last-spike(s)
-        return j, v, w, s, tols
+        self.tols.set((1. - s) * self.tols.get() + (s * t)) ## update times-of-last-spike(s)
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
+        #self.j.set(j_)
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v0)
+        self.w.set(restVals + self.w0)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -198,7 +203,7 @@ class RAFCell(JaxComponent):
             "tau_w": "Recovery variable time constant",
             "v_reset": "Reset membrane potential value",
             "w_reset": "Reset angular driver value",
-            "b": "Exponential dampening factor applied to oscillations",
+            "dampen_factor": "Exponential dampening factor applied to oscillations",
             "omega": "Angular frequency of neuronal progress per second (radians)",
             "v0": "Initial condition for membrane potential/voltage",
             "w0": "Initial condition for membrane angular driver variable",
@@ -207,8 +212,8 @@ class RAFCell(JaxComponent):
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
-                "dynamics": "tau_v * dv/dt = omega * w + v * b; "
-                            "tau_w * dw/dt = w * b - v * omega + j",
+                "dynamics": "tau_v * dv/dt = omega * w + v * dampen_factor; "
+                            "tau_w * dw/dt = w * dampen_factor - v * omega + j",
                 "hyperparameters": hyperparams}
         return info
 
