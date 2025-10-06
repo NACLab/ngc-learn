@@ -73,7 +73,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         ## base threshold setup
         ## according to eqn 26 of the source paper, the initial condition for the
         ## threshold should technically be between: 1/n_units < threshold0 << 0.5, e.g., 0.15
-        key, subkey = random.split(self.key.value)
+        key, subkey = random.split(self.key.get())
         self.threshold0 = thr_base + random.uniform(subkey, (1, n_units),
                                                    minval=-thr_jitter, maxval=thr_jitter,
                                                    dtype=jnp.float32)
@@ -125,7 +125,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
 
     # def save(self, directory, **kwargs):
     #     file_name = directory + "/" + self.name + ".npz"
-    #     jnp.savez(file_name, threshold=self.thr.value)
+    #     jnp.savez(file_name, threshold=self.thr.get())
     #
     # def load(self, directory, seeded=False, **kwargs):
     #     file_name = directory + "/" + self.name + ".npz"
@@ -170,7 +170,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).value)
+            stats = tensorstats(getattr(self, c).get())
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)
