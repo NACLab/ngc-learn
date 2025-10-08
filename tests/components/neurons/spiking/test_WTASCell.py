@@ -6,7 +6,6 @@ np.random.seed(42)
 from ngclearn import Context, MethodProcess
 from ngclearn.components.neurons.spiking.WTASCell import WTASCell
 from numpy.testing import assert_array_equal
-from ngcsimlib.context import Context
 
 
 def test_WTASCell1():
@@ -48,8 +47,7 @@ def test_WTASCell1():
     reset_process.run()
     for ts in range(x_seq.shape[0]):
         x_t = x_seq[ts:ts+1, :]  ## get data at time t
-        #ctx.clamp(x_t)
-        clamp(x_t)
+        clamp(x_t) #ctx.clamp(x_t)
         advance_process.run(t=ts * 1., dt=dt)
         outs.append(a.s.get())
     outs = jnp.concatenate(outs, axis=0)

@@ -1,5 +1,5 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, nn
+from jax import numpy as jnp, random, nn, Array
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
