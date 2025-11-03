@@ -1,14 +1,12 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit, nn
-from functools import partial
+from jax import numpy as jnp, random, nn, Array, jit
 from ngclearn.utils import tensorstats
 from ngcsimlib import deprecate_args
-from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-# from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
-#                                          triangular_estimator,
-#                                          straight_through_estimator)
+from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
+                                         triangular_estimator,
+                                         straight_through_estimator)
 
 from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
@@ -135,7 +133,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
                                display_name="Refractory Time Period", units="ms")
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
                                 units="ms") ## time-of-last-spike
-        self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
+        #self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
     @compilable
     def advance_state(
