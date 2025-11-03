@@ -1,9 +1,13 @@
-from ngclearn import resolver, Component, Compartment
+# %%
+
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import sigmoid, d_sigmoid
-from ngcsimlib.compilers.process import transition
+
+from ngcsimlib.logger import info
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -59,14 +63,20 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator = Compartment(restVals + 1.0) # to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
-    @transition(output_compartments=["dp", "dtarget", "L", "mask"])
-    @staticmethod
-    def advance_state(dt, p, target, modulator, mask, input_logits): ## compute Bernoulli error cell output
+    # @transition(output_compartments=["dp", "dtarget", "L", "mask"])
+    @compilable
+    def advance_state(self, dt): ## compute Bernoulli error cell output
+        # Get the variables
+        p = self.p.get()
+        target = self.target.get()
+        modulator = self.modulator.get()
+        mask = self.mask.get()
+
         # Moves Bernoulli error cell dynamics one step forward. Specifically, this routine emulates the error unit
         # behavior of the local cost functional
         eps = 0.0001
         _p = p
-        if input_logits: ## convert from "logits" to probs via sigmoidal link function
+        if self.input_logits: ## convert from "logits" to probs via sigmoidal link function
             _p = sigmoid(p)
         _p = jnp.clip(_p, eps, 1. - eps) ## post-process to prevent div by 0
         x = target
@@ -78,7 +88,7 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         log_p = jnp.log(_p) ## ln(p)
         log_one_min_p = jnp.log(one_min_p) ## ln(1 - p)
         L = jnp.sum(log_p * x + log_one_min_p * one_min_x) ## Bern LL
-        if input_logits:
+        if self.input_logits:
             dL_dp = x - _p ## d(Bern LL)/dp where _p = sigmoid(p)
         else:
             dL_dp = x/(_p) - one_min_x/one_min_p  ## d(Bern LL)/dp
@@ -89,14 +99,21 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         dp = dp * modulator * mask ## NOTE: how does mask apply to a multivariate Bernoulli?
         dtarget = dL_dx * modulator * mask
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
-        return dp, dtarget, jnp.squeeze(L), mask
 
-    @transition(output_compartments=["dp", "dtarget", "target", "p", "modulator", "L", "mask"])
-    @staticmethod
-    def reset(batch_size, shape): ## reset core components/statistics
-        _shape = (batch_size, shape[0])
-        if len(shape) > 1:
-            _shape = (batch_size, shape[0], shape[1], shape[2])
+        # Set state
+        # dp, dtarget, jnp.squeeze(L), mask
+        self.dp.set(dp)
+        self.dtarget.set(dtarget)
+        self.L.set(jnp.squeeze(L))
+        self.mask.set(mask)
+
+
+    # @transition(output_compartments=["dp", "dtarget", "target", "p", "modulator", "L", "mask"])
+    @compilable
+    def reset(self, batch_size): ## reset core components/statistics
+        _shape = (batch_size, self.shape[0])
+        if len(self.shape) > 1:
+            _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape) ## "rest"/reset values
         dp = restVals
         dtarget = restVals
@@ -105,7 +122,16 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         modulator = restVals + 1. ## reset modulator signal
         L = 0. #jnp.zeros((1, 1)) ## rest loss
         mask = jnp.ones(_shape) ## reset mask
-        return dp, dtarget, target, p, modulator, L, mask
+
+        # Set compartment
+        self.dp.set(dp)
+        self.dtarget.set(dtarget)
+        self.target.set(target)
+        self.p.set(p)
+        self.modulator.set(modulator)
+        self.L.set(L)
+        self.mask.set(mask)
+
 
     @classmethod
     def help(cls): ## component help function
@@ -136,11 +162,11 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).value)
+            stats = tensorstats(getattr(self, c).get())
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)

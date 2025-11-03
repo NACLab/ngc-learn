@@ -11,6 +11,9 @@ from ngclearn.utils.model_utils import create_function, threshold_soft, \
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
 
+from ngcsimlib.logger import info
+from ngcsimlib.parser import compilable
+
 def _dfz_internal_laplace(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
     z_leak = jnp.sign(z) ## d/dx of Laplace is signum
     dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
@@ -198,7 +201,6 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.n_units = n_units
         self.batch_size = batch_size
 
-        
         omega_0 = None
         if act_fx == "sine":
             omega_0 = kwargs["omega_0"]
@@ -211,46 +213,43 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.j_td = Compartment(restVals, display_name="Modulatory Stimulus Current", units="mA") # top-down electrical current - pressure
         self.z = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
 
-    @transition(output_compartments=["j", "j_td", "z", "zF"])
-    @staticmethod
-    def advance_state(
-            dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType, resist_scale, thresholdType, thr_lmbda, is_stateful,
-            output_scale, j, j_td, z):
+    @compilable
+    def advance_state(self, dt):
+        # Get the compartment values
+        j = self.j.get()
+        j_td = self.j_td.get()
+        z = self.z.get()
+
         #if tau_m > 0.:
-        if is_stateful:
+        if self.is_stateful:
             ### run a step of integration over neuronal dynamics
             ## Notes:
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal
-            dfx_val = dfx(z)
+            dfx_val = self.dfx(z)
             j = _modulate(j, dfx_val)
-            j = j * resist_scale
+            j = j * self.resist_scale
             tmp_z = _run_cell(dt, j, j_td, z,
-                              tau_m, leak_gamma=priorLeakRate,
-                              integType=intgFlag, priorType=priorType)
+                              self.tau_m, leak_gamma=self.priorLeakRate,
+                              integType=self.intgFlag, priorType=self.priorType)
             ## apply optional thresholding sub-dynamics
-            if thresholdType == "soft_threshold":
-                tmp_z = threshold_soft(tmp_z, thr_lmbda)
-            elif thresholdType == "cauchy_threshold":
-                tmp_z = threshold_cauchy(tmp_z, thr_lmbda)
+            if self.thresholdType == "soft_threshold":
+                tmp_z = threshold_soft(tmp_z, self.thr_lmbda)
+            elif self.thresholdType == "cauchy_threshold":
+                tmp_z = threshold_cauchy(tmp_z, self.thr_lmbda)
             z = tmp_z ## pre-activation function value(s)
-            zF = fx(z) * output_scale ## post-activation function value(s)
+            zF = self.fx(z) * self.output_scale ## post-activation function value(s)
         else:
             ## run in "stateless" mode (when no membrane time constant provided)
             j_total = j + j_td
             z = _run_cell_stateless(j_total)
-            zF = fx(z) * output_scale
-        return j, j_td, z, zF
+            zF = self.fx(z) * self.output_scale
 
-    @transition(output_compartments=["j", "j_td", "z", "zF"])
-    @staticmethod
-    def reset(batch_size, shape): #n_units
-        _shape = (batch_size, shape[0])
-        if len(shape) > 1:
-            _shape = (batch_size, shape[0], shape[1], shape[2])
-        restVals = jnp.zeros(_shape)
-        return tuple([restVals for _ in range(4)])
-
+        # Update compartments
+        self.j.set(j)
+        self.j_td.set(j_td)
+        self.z.set(z)
+        self.zF.set(zF)
 
     def save(self, directory, **kwargs):
         ## do a protected save of constants, depending on whether they are floats or arrays
@@ -308,11 +307,11 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).value)
+            stats = tensorstats(getattr(self, c).get())
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)
