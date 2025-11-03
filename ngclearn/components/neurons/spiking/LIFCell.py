@@ -151,20 +151,15 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         # else: ## default: straight_through
         #     spike_fx, d_spike_fx = straight_through_estimator()
 
-
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.j = Compartment(restVals, display_name="Current", units="mA")
-        self.v = Compartment(restVals + self.v_rest,
-                             display_name="Voltage", units="mV")
+        self.v = Compartment(restVals + self.v_rest, display_name="Voltage", units="mV")
         self.s = Compartment(restVals, display_name="Spikes")
         self.s_raw = Compartment(restVals, display_name="Raw Spike Pulses")
-        self.rfr = Compartment(restVals + self.refract_T,
-                               display_name="Refractory Time Period", units="ms")
-        self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift",
-                                     units="mV")
-        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
-                                units="ms") ## time-of-last-spike
+        self.rfr = Compartment(restVals + self.refract_T, display_name="Refractory Time Period", units="ms")
+        self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift", units="mV")
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") ## time-of-last-spike
         # self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
     @compilable
@@ -258,17 +253,13 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "v_reset": "Reset membrane potential value",
             "conduct_leak": "Conductance leak / voltage decay factor",
             "tau_theta": "Threshold/homoestatic increment time constant",
-            "theta_plus": "Amount to increment threshold by upon occurrence "
-                          "of spike",
+            "theta_plus": "Amount to increment threshold by upon occurrence of a spike",
             "refract_time": "Length of relative refractory period (ms)",
-            "one_spike": "Should only one spike be sampled/allowed to emit at "
-                         "any given time step?",
-            "integration_type": "Type of numerical integration to use for the "
-                                "cell dynamics",
+            "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
+            "integration_type": "Type of numerical integration to use for the cell dynamics",
             "surrgoate_type": "Type of surrogate function to use approximate "
                               "derivative of spike w.r.t. voltage/current",
-            "lower_bound_clamp": "Should voltage be lower bounded to be never "
-                                 "be below `v_rest`"
+            "v_min": "Minimum voltage allowed before voltage variables are min-clipped/clamped"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

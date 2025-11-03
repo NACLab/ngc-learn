@@ -55,4 +55,4 @@ def test_IFCell1():
     ## output should equal input
     assert_array_equal(outs, y_seq)
 
-test_IFCell1()
+#test_IFCell1()
