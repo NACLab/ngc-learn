@@ -128,6 +128,7 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
             name, n_units, tau_m, resist_m, thr, v_rest, v_reset, 1., tau_theta, theta_plus, refract_time,
             one_spike, integration_type, surrogate_type, lower_clamp_voltage, **kwargs
         )
+
         ## only two distinct additional constants distinguish the Quad-LIF cell
         self.v_c = v_scale
         self.a0 = critical_v
