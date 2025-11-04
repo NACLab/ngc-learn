@@ -213,7 +213,7 @@ class AdExCell(JaxComponent): ## adaptive exponential integrate-and-fire cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
