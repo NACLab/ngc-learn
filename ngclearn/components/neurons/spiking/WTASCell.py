@@ -87,12 +87,8 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.rfr = Compartment(restVals + self.refract_T)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    # @transition(output_compartments=["v", "s", "thr", "rfr", "tols"])
-    # @staticmethod
     @compilable
-    def advance_state(
-            self, t, dt #, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols
-    ):
+    def advance_state(self, t, dt):
         mask = (self.rfr.get() >= self.refract_T) * 1.  ## check refractory period
         v = (self.j.get() * self.R_m) * mask
         vp = softmax(v)  # convert to Categorical (spike) probabilities
@@ -111,8 +107,6 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.thr.set(thr)
         self.rfr.set(rfr)
 
-    # @transition(output_compartments=["j", "v", "s", "rfr", "tols"])
-    # @staticmethod
     @compilable
     def reset(self):
         restVals = jnp.zeros((self.batch_size, self.n_units))

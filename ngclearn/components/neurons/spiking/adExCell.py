@@ -2,12 +2,12 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
 @jit
@@ -97,7 +97,7 @@ class AdExCell(JaxComponent):
                 at an increase in computational cost (and simulation time)
     """
 
-    @deprecate_args(v_thr="thr")
+    #@deprecate_args(v_thr="thr")
     def __init__(
             self, name, n_units, tau_m=15., resist_m=1., tau_w=400., v_sharpness=2., intrinsic_mem_thr=-55., thr=5.,
             v_rest=-72., v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0., integration_type="euler", batch_size=1, **kwargs
@@ -136,39 +136,40 @@ class AdExCell(JaxComponent):
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
                                 units="ms") ## time-of-last-spike
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def advance_state(
-            t, dt, tau_m, R_m, tau_w, thr, a, b, sharpV, vT, v_rest, v_reset, intgFlag, j, v, w, tols
-    ):
-        if intgFlag == 1:  ## RK-2/midpoint
-            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)
-            w_params = (j, v, a, tau_w, v_rest)
-            _, _w = step_rk2(0., w, _dfw, dt, w_params)
+    @compilable
+    def advance_state(self, t, dt):
+        if self.intgFlag == 1:  ## RK-2/midpoint
+            v_params = (self.j.get(), self.w.get(), self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
+            w_params = (self.j.get(), self.v.get(), self.a, self.tau_w, self.v_rest)
+            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)
         else:  # intgFlag == 0 (default -- Euler)
-            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
-            _, _v = step_euler(0., v, _dfv, dt, v_params)
-            w_params = (j, v, a, tau_w, v_rest)
-            _, _w = step_euler(0., w, _dfw, dt, w_params)
-        s = (_v > thr) * 1. ## emit spikes/pulses
+            v_params = (self.j.get(), self.w.get(), self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
+            w_params = (self.j.get(), self.v.get(), self.a, self.tau_w, self.v_rest)
+            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)
+        s = (_v > self.thr) * 1. ## emit spikes/pulses
         ## hyperpolarize/reset/snap variables
-        v = _v * (1. - s) + s * v_reset
-        w = _w * (1. - s) + s * (_w + b)
+        v = _v * (1. - s) + s * self.v_reset
+        w = _w * (1. - s) + s * (_w + self.b)
 
-        tols = (1. - s) * tols + (s * t) ## update time-of-last spike variable(s)
-        return j, v, w, s, tols
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
+        #self.j.set(j) ## j is not getting modified in these dynamics
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v0)
+        self.w.set(restVals + self.w0)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function

@@ -139,9 +139,7 @@ class RAFCell(JaxComponent):
         ) ## time-of-last-spike
 
     @compilable
-    def advance_state(
-            self, t, dt
-    ):
+    def advance_state(self, t, dt):
         ## continue with centered dynamics
         j_ = self.j.get() * self.resist_v
         if self.intgFlag == 1:  ## RK-2/midpoint

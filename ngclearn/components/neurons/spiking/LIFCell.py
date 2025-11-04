@@ -200,7 +200,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus) #.get())
             self.thr_theta.set(thr_theta)
 
-        ## update tols
+        ## update time-of-last spike variable(s)
         self.tols.set((1. - s) * self.tols.get() + (s * t))
 
         if self.v_min is not None: ## ensures voltage never < v_rest
