@@ -32,7 +32,7 @@ def _dfw(t, w, params): ## recovery dynamics wrapper
     dv_dt = _dfw_internal(j, v, w, a, tau_m, v_rest)
     return dv_dt
 
-class AdExCell(JaxComponent):
+class AdExCell(JaxComponent): ## adaptive exponential integrate-and-fire cell
     """
     The AdEx (adaptive exponential leaky integrate-and-fire) neuronal cell
     model; a two-variable model. This cell model iteratively evolves
