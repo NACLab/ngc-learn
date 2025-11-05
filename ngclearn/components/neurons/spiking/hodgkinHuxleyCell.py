@@ -2,13 +2,11 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2, step_rk4
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2, step_rk4
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
 
@@ -113,7 +111,6 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
                 at an increase in computational cost (and simulation time)
     """
 
-    # Define Functions
     def __init__(
             self, name, n_units, tau_v, resist_m=1., v_Na=115., v_K=-35., v_L=10.6, g_Na=100., g_K=5., g_L=0.3, thr=4.,
             spike_reset=False, v_reset=0., integration_type="euler", **kwargs
@@ -126,7 +123,7 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
 
         ## cell properties / biophysical parameter setup (affects ODE integration)
         self.tau_v = tau_v ## membrane time constant
-        self.R_m = resist_m ## resistance value
+        self.resist_m = resist_m ## resistance value R_m
         self.spike_reset = spike_reset
         self.thr = thr # mV ## base value for threshold
         self.v_reset = v_reset ## base value to reset voltage to (if spike_reset = True)
@@ -151,38 +148,49 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
         self.s = Compartment(restVals, display_name="Spike pulse")
         self.tols = Compartment(restVals, display_name="Time-of-last-spike") ## time-of-last-spike
 
-    @transition(output_compartments=["v", "m", "n", "h", "s", "tols"])
-    @staticmethod
-    def advance_state(
-            t, dt, spike_reset, v_reset, thr, tau_v, R_m, g_Na, g_K, g_L, v_Na, v_K, v_L, j, v, m, n, h, tols, intgFlag
-    ):
-        _j = j * R_m
-        alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = _calc_biophysical_constants(v)
+    #@transition(output_compartments=["v", "m", "n", "h", "s", "tols"])
+    #@staticmethod
+    @compilable
+    def advance_state(self, t, dt): #t, dt, spike_reset, v_reset, thr, tau_v, R_m, g_Na, g_K, g_L, v_Na, v_K, v_L, j, v, m, n, h, tols, intgFlag
+        _j = self.j.get() * self.resist_m
+        alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = _calc_biophysical_constants(self.v.get())
         ## integrate voltage / membrane potential
-        if intgFlag == 1: ## midpoint method
-            _, _v = step_rk2(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
+        if self.intgFlag == 1: ## midpoint method
+            _, _v = step_rk2(
+                0., self.v.get(), dv_dt, dt,
+                (_j, self.m.get() + 0., self.n.get() + 0., self.h.get() + 0., self.tau_v, self.g_Na, self.g_K,
+                 self.g_L, self.v_Na, self.v_K, self.v_L)
+            )
             ## next, integrate different channels
-            _, _n = step_rk2(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
-            _, _m = step_rk2(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
-            _, _h = step_rk2(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
-        elif intgFlag == 4: ## Runge-Kutta 4th order
-            _, _v = step_rk4(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
+            _, _n = step_rk2(0., self.n.get(), dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
+            _, _m = step_rk2(0., self.m.get(), dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
+            _, _h = step_rk2(0., self.h.get(), dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
+        elif self.intgFlag == 4: ## Runge-Kutta 4th order
+            _, _v = step_rk4(
+                0., self.v.get(), dv_dt, dt,
+                (_j, self.m.get() + 0., self.n.get() + 0., self.h.get() + 0., self.tau_v, self.g_Na, self.g_K,
+                 self.g_L, self.v_Na, self.v_K, self.v_L)
+            )
             ## next, integrate different channels
-            _, _n = step_rk4(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
-            _, _m = step_rk4(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
-            _, _h = step_rk4(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
+            _, _n = step_rk4(0., self.n.get(), dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
+            _, _m = step_rk4(0., self.m.get(), dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
+            _, _h = step_rk4(0., self.h.get(), dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
         else:  # integType == 0 (default -- Euler)
-            _, _v = step_euler(0., v, dv_dt, dt, (_j, m + 0., n + 0., h + 0., tau_v, g_Na, g_K, g_L, v_Na, v_K, v_L))
+            _, _v = step_euler(
+                0., self.v.get(), dv_dt, dt,
+                (_j, self.m.get() + 0., self.n.get() + 0., self.h.get() + 0., self.tau_v, self.g_Na, self.g_K,
+                 self.g_L, self.v_Na, self.v_K, self.v_L)
+            )
             ## next, integrate different channels
-            _, _n = step_euler(0., n, dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
-            _, _m = step_euler(0., m, dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
-            _, _h = step_euler(0., h, dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
+            _, _n = step_euler(0., self.n.get(), dx_dt, dt, (alpha_n_of_v, beta_n_of_v))
+            _, _m = step_euler(0., self.m.get(), dx_dt, dt, (alpha_m_of_v, beta_m_of_v))
+            _, _h = step_euler(0., self.h.get(), dx_dt, dt, (alpha_h_of_v, beta_h_of_v))
         ## obtain action potentials/spikes/pulses
-        s = (_v > thr) * 1.
-        if spike_reset:  ## if spike-reset used, variables snapped back to initial conditions
+        s = (_v > self.thr) * 1.
+        if self.spike_reset:  ## if spike-reset used, variables snapped back to initial conditions
             alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = (
-                _calc_biophysical_constants(v * 0 + v_reset))
-            _v = _v * (1. - s) + s * v_reset
+                _calc_biophysical_constants(self.v.get() * 0 + self.v_reset))
+            _v = _v * (1. - s) + s * self.v_reset
             _n = _n * (1. - s) + s * (alpha_n_of_v / (alpha_n_of_v + beta_n_of_v))
             _m = _m * (1. - s) + s * (alpha_m_of_v / (alpha_m_of_v + beta_m_of_v))
             _h = _h * (1. - s) + s * (alpha_h_of_v / (alpha_h_of_v + beta_h_of_v))
@@ -191,32 +199,40 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
         m = _m
         n = _n
         h = _h
-        tols = (1. - s) * tols + (s * t) ## update tols
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
 
-        return v, m, n, h, s, tols
+        self.v.set(v)
+        self.m.set(m)
+        self.n.set(n)
+        self.h.set(h)
+        self.s.set(s)
 
-    @transition(output_compartments=["j", "v", "m", "n", "h", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         v = restVals  # + 0
         alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = _calc_biophysical_constants(v)
-        j = restVals #+ 0
+        if not self.j.targeted:
+            self.j.set(restVals)
         n = alpha_n_of_v / (alpha_n_of_v + beta_n_of_v)
         m = alpha_m_of_v / (alpha_m_of_v + beta_m_of_v)
         h = alpha_h_of_v / (alpha_h_of_v + beta_h_of_v)
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, m, n, h, s, tols
+        self.v.set(v)
+        self.n.set(n)
+        self.m.set(m)
+        self.h.set(h)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        #jnp.savez(file_name, threshold=self.thr.value)
-
-    def load(self, directory, seeded=False, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        #self.thr.set( data['threshold'] )
+    # def save(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     #jnp.savez(file_name, threshold=self.thr.value)
+    #
+    # def load(self, directory, seeded=False, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     #self.thr.set( data['threshold'] )
 
     @classmethod
     def help(cls): ## component help function
@@ -258,7 +274,7 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:

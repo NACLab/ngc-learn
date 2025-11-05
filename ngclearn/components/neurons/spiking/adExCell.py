@@ -4,8 +4,7 @@ from functools import partial
 from ngclearn.utils import tensorstats
 from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2
 
 from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
