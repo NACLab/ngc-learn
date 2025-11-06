@@ -1,6 +1,4 @@
 from jax import random, numpy as jnp, jit
-from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
 
@@ -82,10 +80,8 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         if is_nonplastic:
             self.weights.set(self.weights.get() * 0 + 1.)
 
-    # @transition(output_compartments=["outputs", "i_syn", "g_syn"])
-    # @staticmethod
     @compilable
-    def advance_state(self, t, dt):  #dt, tau_decay, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, v
+    def advance_state(self, t, dt):
         s = self.inputs.get()
         ## advance conductance variable
         _out = jnp.matmul(s, self.weights.get()) ## sum all pre-syn spikes at t going into post-neuron)

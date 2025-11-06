@@ -6,7 +6,6 @@ np.random.seed(42)
 from ngclearn import Context, MethodProcess
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.components.synapses.exponentialSynapse import ExponentialSynapse
-from numpy.testing import assert_array_equal
 
 def test_exponentialSynapse1():
     name = "expsyn_ctx"

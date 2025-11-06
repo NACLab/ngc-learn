@@ -1,6 +1,4 @@
 from jax import random, numpy as jnp, jit
-from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
 
