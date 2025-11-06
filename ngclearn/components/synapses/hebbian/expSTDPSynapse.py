@@ -1,7 +1,8 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
+
+from ngcsimlib.logger import info
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
@@ -116,36 +117,28 @@ class ExpSTDPSynapse(DenseSynapse):
         dW = (dWpost + dWpre)
         return dW
 
-    @transition(output_compartments=["weights", "dWeights"])
-    @staticmethod
-    def evolve(
-            dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace,
-            weights, eta
-    ):
+    @compilable
+    def evolve(self, dt):
+        # Get the variables
+        preSpike = self.preSpike.get()
+        postSpike = self.postSpike.get()
+        preTrace = self.preTrace.get()
+        postTrace = self.postTrace.get()
+        weights = self.weights.get()
+        
         dW = ExpSTDPSynapse._compute_update(
-            dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus,
+            dt, self.w_bound, self.preTrace_target, self.exp_beta, self.Aplus, self.Aminus,
             preSpike, postSpike, preTrace, postTrace, weights
         )
         ## do a gradient ascent update/shift
-        _W = weights + dW * eta
+        _W = weights + dW * self.eta
         ## enforce non-negativity
         eps = 0.01
-        _W = jnp.clip(_W, eps, w_bound - eps)
-        return weights, dW
-
-    @transition(output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        preSpike = preVals
-        postSpike = postVals
-        preTrace = preVals
-        postTrace = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights
+        _W = jnp.clip(_W, eps, self.w_bound - eps)
+        
+        # Update compartments
+        self.weights.set(_W)
+        self.dWeights.set(dW)
 
     @classmethod
     def help(cls): ## component help function

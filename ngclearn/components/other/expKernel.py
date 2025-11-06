@@ -3,11 +3,10 @@ from jax import numpy as jnp, random, jit
 from functools import partial
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
-from ngcsimlib.logger import info, warn
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.logger import info, warn
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 @partial(jit, static_argnums=[5,6])
 def _apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
@@ -67,21 +66,20 @@ class ExpKernel(JaxComponent): ## exponential kernel
         ## window of spike times
         self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units)))
 
-    @transition(output_compartments=["epsp", "tf"])
-    @staticmethod
-    def advance_state(t, tau_w, win_len, inputs, tf):
+    @compilable
+    def advance_state(self, t):
+        # Get the variables
+        inputs = self.inputs.get()
+        tf = self.tf.get()
+        
         s = inputs
         ## update spike time window and corresponding window volume
-        tf, epsp = _apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,
-                                 krn_end=win_len-1) #0:win_len-1)
-        return epsp, tf
-
-    @transition(output_compartments=["inputs", "epsp", "tf"])
-    @staticmethod
-    def reset(batch_size, n_units, win_len):
-        restVals = jnp.zeros((batch_size, n_units))
-        restTensor = jnp.zeros([win_len, batch_size, n_units], jnp.float32) # tf
-        return restVals, restVals, restTensor # inputs, epsp, tf
+        tf, epsp = _apply_kernel(tf, s, t, self.tau_w, self.win_len, krn_start=0,
+                                 krn_end=self.win_len-1) #0:win_len-1)
+        
+        # Update compartments
+        self.epsp.set(epsp)
+        self.tf.set(tf)
 
     @classmethod
     def help(cls): ## component help function

@@ -1,11 +1,15 @@
+# %%
+
 import matplotlib.pyplot as plt
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils import tensorstats
-from ngcsimlib.compilers.process import transition
 from ngclearn.utils.weight_distribution import initialize_params
+
 from ngcsimlib.logger import info
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
+
 import math
 
 
@@ -66,7 +70,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             with number of inputs by number of outputs)
 
         n_sub_models: The number of submodels in each layer (Default: 1 similar functionality as DenseSynapse)
-        
+
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
 
@@ -104,7 +108,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.n_sub_models = n_sub_models
         self.sub_stride = stride_shape
 
-        tmp_key, *subkeys = random.split(self.key.value, 4)
+        tmp_key, *subkeys = random.split(self.key.get(), 4)
         if self.weight_init is None:
             info(self.name, "is using default weight initializer!")
             self.weight_init = {"dist": "fan_in_gaussian"}
@@ -137,20 +141,17 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
                                                     (1, self.shape[1]))
                                   if bias_init else 0.0)
 
-    @transition(output_compartments=["outputs"])
-    @staticmethod
-    def advance_state(Rscale, inputs, weights, biases):
-        outputs = (jnp.matmul(inputs, weights) * Rscale) + biases
-        return outputs
+    @compilable
+    def advance_state(self):
+        # Get the variables
+        inputs = self.inputs.get()
+        weights = self.weights.get()
+        biases = self.biases.get()
 
-    @transition(output_compartments=["inputs", "outputs"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        return inputs, outputs
+        outputs = (jnp.matmul(inputs, weights) * self.Rscale) + biases
+
+        # Update compartment
+        self.outputs.set(outputs)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -202,11 +203,11 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).value)
+            stats = tensorstats(getattr(self, c).get())
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)
@@ -216,21 +217,11 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         return lines
 
 
-
-
-
-
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         Wab = PatchedSynapse("Wab", (9, 30), 3)
     print(Wab)
-    plt.imshow(Wab.weights.value, cmap='gray')
+    plt.imshow(Wab.weights.get(), cmap='gray')
     plt.show()
-
-
-
-
-
-
 

@@ -1,7 +1,8 @@
 from jax import numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
+
+from ngcsimlib.logger import info
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
@@ -102,29 +103,22 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         dW = (dW * postSpike) ## gate to make sure only post-spikes trigger updates
         return dW
 
-    @transition(output_compartments=["weights", "dWeights"])
-    @staticmethod
-    def evolve(
-            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights, eta
-    ):
+    @compilable
+    def evolve(self, t):
+        # Get the variables
+        pre_tols = self.pre_tols.get()
+        postSpike = self.postSpike.get()
+        weights = self.weights.get()
+        
         dWeights = EventSTDPSynapse._compute_update(
-            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights
+            t, self.lmbda, self.presyn_win_len, self.Aminus, self.Aplus, self.w_bound, pre_tols, postSpike, weights
         )
-        weights = weights + dWeights * eta  # * (1. - w) * eta
-        weights = jnp.clip(weights, 0.01, w_bound)  ## Note: this step not in source paper
-        return weights, dWeights
-
-    @transition(output_compartments=["inputs", "outputs", "pre_tols", "postSpike", "dWeights"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        pre_tols = preVals ## pre-synaptic time-of-last-spike(s) record
-        postSpike = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, pre_tols, postSpike, dWeights
+        weights = weights + dWeights * self.eta  # * (1. - w) * eta
+        weights = jnp.clip(weights, 0.01, self.w_bound)  ## Note: this step not in source paper
+        
+        # Update compartments
+        self.weights.set(weights)
+        self.dWeights.set(dWeights)
 
     @classmethod
     def help(cls): ## component help function

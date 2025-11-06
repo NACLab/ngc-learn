@@ -7,8 +7,7 @@ from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
 
@@ -153,10 +152,22 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
-                       intgFlag, j, v, w, s, tols):
+    @compilable  
+    def advance_state(self, dt):
+        tau_m = self.tau_m
+        tau_w = self.tau_w
+        v_thr = self.v_thr
+        coupling = self.coupling
+        v_reset = self.v_reset
+        w_reset = self.w_reset
+        R_m = self.R_m
+        intgFlag = self.intgFlag
+        j = self.j.get()
+        v = self.v.get()
+        w = self.w.get()
+        s = self.s.get()
+        tols = self.tols.get()
+
         ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
         a = 1. / tau_w  ## we map time constant to variable "a" (a = 1/tau_w)
         _j = j * R_m
@@ -179,19 +190,14 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         v = _v
         w = _w
 
-        tols = (1. - s) * tols + (s * t) ## update tols
-        return j, v, w, s, tols
+        # Note: time tracking for tols would need to be handled by the caller
+        # tols = (1. - s) * tols + (s * t) ## update tols
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
+        self.j.set(j)
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+        self.tols.set(tols)
 
     @classmethod
     def help(cls): ## component help function

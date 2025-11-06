@@ -1,7 +1,8 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
+
+from ngcsimlib.logger import info
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
@@ -92,35 +93,32 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.theta = Compartment(postVals + self.theta0) ## synaptic modification thresholds
         self.dWeights = Compartment(self.weights.value * 0)
 
-    @transition(output_compartments=["weights", "theta", "dWeights", "post_term"])
-    @staticmethod
-    def evolve(t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
+    @compilable
+    def evolve(self, t, dt):
+        # Get the variables
+        pre = self.pre.get()
+        post = self.post.get()
+        theta = self.theta.get()
+        weights = self.weights.get()
+        
         eps = 1e-7
         post_term = post * (post - theta)  # post - theta
         post_term = post_term * (1. / (theta + eps))
         dWeights = jnp.matmul(pre.T, post_term)
-        if w_bound > 0.:
-            dWeights = dWeights * (w_bound - jnp.abs(weights))
+        if self.w_bound > 0.:
+            dWeights = dWeights * (self.w_bound - jnp.abs(weights))
         ## update synaptic efficacies according to a leaky ODE
-        dWeights = -weights * w_decay + dWeights
-        _W = weights + dWeights * dt / tau_w
+        dWeights = -weights * self.w_decay + dWeights
+        _W = weights + dWeights * dt / self.tau_w
         ## update synaptic modification threshold as a leaky ODE
         dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True)  ## batch avg
-        theta = theta + (-theta + dtheta) * dt / tau_theta
-        return weights, theta, dWeights, post_term
-
-    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dWeights", "post_term"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        pre = preVals
-        post = postVals
-        dWeights = jnp.zeros(shape)
-        post_term = postVals
-        return inputs, outputs, pre, post, dWeights, post_term
+        theta = theta + (-theta + dtheta) * dt / self.tau_theta
+        
+        # Update compartments
+        self.weights.set(_W)
+        self.theta.set(theta)
+        self.dWeights.set(dWeights)
+        self.post_term.set(post_term)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

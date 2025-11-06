@@ -7,7 +7,7 @@ from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-from ngcsimlib.compilers.process import transition
+from ngcsimlib.parser import compilable
 #from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 
@@ -138,41 +138,40 @@ class FitzhughNagumoCell(JaxComponent):
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def advance_state(t, dt, tau_m, R_m, tau_w, v_thr, spike_reset, v0, w0, alpha,
-                       beta, gamma, intgFlag, j, v, w, tols):
-        j_mod = j * R_m
-        if intgFlag == 1:
-            v_params = (j_mod, w, alpha, beta, gamma, tau_m)
+    @compilable
+    def advance_state(self, t, dt):
+        # Get the variables
+        j = self.j.get()
+        v = self.v.get()
+        w = self.w.get()
+        tols = self.tols.get()
+        
+        j_mod = j * self.R_m
+        if self.intgFlag == 1:
+            v_params = (j_mod, w, self.alpha, self.beta, self.gamma, self.tau_m)
             _, _v = step_rk2(0., v, _dfv, dt, v_params)  # _v = step_rk2(v, v_params, _dfv, dt)
-            w_params = (j_mod, v, alpha, beta, gamma, tau_w)
+            w_params = (j_mod, v, self.alpha, self.beta, self.gamma, self.tau_w)
             _, _w = step_rk2(0., w, _dfw, dt, w_params)  # _w = step_rk2(w, w_params, _dfw, dt)
         else:  # integType == 0 (default -- Euler)
-            v_params = (j_mod, w, alpha, beta, gamma, tau_m)
+            v_params = (j_mod, w, self.alpha, self.beta, self.gamma, self.tau_m)
             _, _v = step_euler(0., v, _dfv, dt, v_params)  # _v = step_euler(v, v_params, _dfv, dt)
-            w_params = (j_mod, v, alpha, beta, gamma, tau_w)
+            w_params = (j_mod, v, self.alpha, self.beta, self.gamma, self.tau_w)
             _, _w = step_euler(0., w, _dfw, dt, w_params)  # _w = step_euler(w, w_params, _dfw, dt)
-        s = (_v > v_thr) * 1.
+        s = (_v > self.v_thr) * 1.
         v = _v
         w = _w
 
-        if spike_reset: ## if spike-reset used, variables snapped back to initial conditions
-            v = v * (1. - s) + s * v0
-            w = w * (1. - s) + s * w0
+        if self.spike_reset: ## if spike-reset used, variables snapped back to initial conditions
+            v = v * (1. - s) + s * self.v0
+            w = w * (1. - s) + s * self.w0
         tols = (1. - s) * tols + (s * t) ## update tols
-        return j, v, w, s, tols
-
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
+        
+        # Update compartments
+        self.j.set(j)
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+        self.tols.set(tols)
 
     @classmethod
     def help(cls): ## component help function

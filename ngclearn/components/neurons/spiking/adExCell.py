@@ -6,7 +6,7 @@ from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-from ngcsimlib.compilers.process import transition
+from ngcsimlib.parser import compilable
 #from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 
@@ -136,39 +136,38 @@ class AdExCell(JaxComponent):
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
                                 units="ms") ## time-of-last-spike
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def advance_state(
-            t, dt, tau_m, R_m, tau_w, thr, a, b, sharpV, vT, v_rest, v_reset, intgFlag, j, v, w, tols
-    ):
-        if intgFlag == 1:  ## RK-2/midpoint
-            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
+    @compilable
+    def advance_state(self, t, dt):
+        # Get the variables
+        j = self.j.get()
+        v = self.v.get()
+        w = self.w.get()
+        tols = self.tols.get()
+        s = self.s.get()
+        
+        if self.intgFlag == 1:  ## RK-2/midpoint
+            v_params = (j, w, self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
             _, _v = step_rk2(0., v, _dfv, dt, v_params)
-            w_params = (j, v, a, tau_w, v_rest)
+            w_params = (j, v, self.a, self.tau_w, self.v_rest)
             _, _w = step_rk2(0., w, _dfw, dt, w_params)
         else:  # intgFlag == 0 (default -- Euler)
-            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
+            v_params = (j, w, self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
             _, _v = step_euler(0., v, _dfv, dt, v_params)
-            w_params = (j, v, a, tau_w, v_rest)
+            w_params = (j, v, self.a, self.tau_w, self.v_rest)
             _, _w = step_euler(0., w, _dfw, dt, w_params)
-        s = (_v > thr) * 1. ## emit spikes/pulses
+        s = (_v > self.thr) * 1. ## emit spikes/pulses
         ## hyperpolarize/reset/snap variables
-        v = _v * (1. - s) + s * v_reset
-        w = _w * (1. - s) + s * (_w + b)
+        v = _v * (1. - s) + s * self.v_reset
+        w = _w * (1. - s) + s * (_w + self.b)
 
         tols = (1. - s) * tols + (s * t) ## update time-of-last spike variable(s)
-        return j, v, w, s, tols
-
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
+        
+        # Update compartments
+        self.j.set(j)
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+        self.tols.set(tols)
 
     @classmethod
     def help(cls): ## component help function

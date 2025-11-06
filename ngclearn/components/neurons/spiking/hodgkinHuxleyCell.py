@@ -7,8 +7,7 @@ from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
 
@@ -151,11 +150,27 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
         self.s = Compartment(restVals, display_name="Spike pulse")
         self.tols = Compartment(restVals, display_name="Time-of-last-spike") ## time-of-last-spike
 
-    @transition(output_compartments=["v", "m", "n", "h", "s", "tols"])
-    @staticmethod
-    def advance_state(
-            t, dt, spike_reset, v_reset, thr, tau_v, R_m, g_Na, g_K, g_L, v_Na, v_K, v_L, j, v, m, n, h, tols, intgFlag
-    ):
+    @compilable
+    def advance_state(self, dt):
+        spike_reset = self.spike_reset
+        v_reset = self.v_reset
+        thr = self.thr
+        tau_v = self.tau_v
+        R_m = self.R_m
+        g_Na = self.g_Na
+        g_K = self.g_K
+        g_L = self.g_L
+        v_Na = self.v_Na
+        v_K = self.v_K
+        v_L = self.v_L
+        j = self.j.get()
+        v = self.v.get()
+        m = self.m.get()
+        n = self.n.get()
+        h = self.h.get()
+        tols = self.tols.get()
+        intgFlag = self.intgFlag
+
         _j = j * R_m
         alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = _calc_biophysical_constants(v)
         ## integrate voltage / membrane potential
@@ -191,23 +206,15 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
         m = _m
         n = _n
         h = _h
-        tols = (1. - s) * tols + (s * t) ## update tols
+        # Note: time tracking for tols would need to be handled by the caller
+        # tols = (1. - s) * tols + (s * t) ## update tols
 
-        return v, m, n, h, s, tols
-
-    @transition(output_compartments=["j", "v", "m", "n", "h", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
-        v = restVals  # + 0
-        alpha_n_of_v, beta_n_of_v, alpha_m_of_v, beta_m_of_v, alpha_h_of_v, beta_h_of_v = _calc_biophysical_constants(v)
-        j = restVals #+ 0
-        n = alpha_n_of_v / (alpha_n_of_v + beta_n_of_v)
-        m = alpha_m_of_v / (alpha_m_of_v + beta_m_of_v)
-        h = alpha_h_of_v / (alpha_h_of_v + beta_h_of_v)
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, m, n, h, s, tols
+        self.v.set(v)
+        self.m.set(m)
+        self.n.set(n)
+        self.h.set(h)
+        self.s.set(s)
+        self.tols.set(tols)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
