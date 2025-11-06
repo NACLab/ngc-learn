@@ -3,11 +3,10 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 from ngclearn.utils.model_utils import softmax
 
@@ -74,7 +73,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         ## base threshold setup
         ## according to eqn 26 of the source paper, the initial condition for the
         ## threshold should technically be between: 1/n_units < threshold0 << 0.5, e.g., 0.15
-        key, subkey = random.split(self.key.value)
+        key, subkey = random.split(self.key.get())
         self.threshold0 = thr_base + random.uniform(subkey, (1, n_units),
                                                    minval=-thr_jitter, maxval=thr_jitter,
                                                    dtype=jnp.float32)
@@ -88,42 +87,44 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.rfr = Compartment(restVals + self.refract_T)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    @transition(output_compartments=["v", "s", "thr", "rfr", "tols"])
-    @staticmethod
-    def advance_state(t, dt, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols):
-        mask = (rfr >= refract_T) * 1.  ## check refractory period
-        v = (j * R_m) * mask
+    @compilable
+    def advance_state(self, t, dt):
+        mask = (self.rfr.get() >= self.refract_T) * 1.  ## check refractory period
+        v = (self.j.get() * self.R_m) * mask
         vp = softmax(v)  # convert to Categorical (spike) probabilities
         # s = nn.one_hot(jnp.argmax(vp, axis=1), j.shape[1]) ## hard-max spike
-        s = (vp > thr) * 1. ## calculate action potential
+        s = (vp > self.thr.get()) * 1. ## calculate action potential
         q = 1.  ## Note: thr_gain ==> "rho_b"
         ## increment threshold upon spike(s) occurrence
         dthr = jnp.sum(s, axis=1, keepdims=True) - q
-        thr = jnp.maximum(thr + dthr * thr_gain, 0.025)  ## calc new threshold
-        rfr = (rfr + dt) * (1. - s) + s * dt  # set refract to dt
+        thr = jnp.maximum(self.thr.get() + dthr * self.thr_gain, 0.025)  ## calc new threshold
+        rfr = (self.rfr.get() + dt) * (1. - s) + s * dt  # set refract to dt
 
-        tols = (1. - s) * tols + (s * t) ## update tols
-        return v, s, thr, rfr, tols
+        self.tols.set((1. - s) * self.tols.get() + (s * t)) ## update times-of-last-spike(s)
 
-    @transition(output_compartments=["j", "v", "s", "rfr", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, refract_T):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals #+ 0
-        v = restVals #+ 0
-        s = restVals #+ 0
-        rfr = restVals + refract_T
-        tols = restVals #+ 0
-        return j, v, s, rfr, tols
+        self.v.set(v)
+        self.s.set(s)
+        self.thr.set(thr)
+        self.rfr.set(rfr)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, threshold=self.thr.value)
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals)
+        self.s.set(restVals)
+        self.rfr.set(restVals + self.refract_T)
+        self.tols.set(restVals)
 
-    def load(self, directory, seeded=False, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.thr.set( data['threshold'] )
+    # def save(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     jnp.savez(file_name, threshold=self.thr.get())
+    #
+    # def load(self, directory, seeded=False, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     self.thr.set( data['threshold'] )
 
     @classmethod
     def help(cls): ## component help function
@@ -159,7 +160,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:

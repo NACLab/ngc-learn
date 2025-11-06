@@ -1,14 +1,12 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit, nn
-from functools import partial
+from jax import numpy as jnp, random, nn, Array, jit
 from ngclearn.utils import tensorstats
 from ngcsimlib import deprecate_args
-from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
-# from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
-#                                          triangular_estimator,
-#                                          straight_through_estimator)
+from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
+                                         triangular_estimator,
+                                         straight_through_estimator)
 
 from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
@@ -89,7 +87,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
             the value of `v_rest` (default: True)
     """
 
-    @deprecate_args(thr_jitter=None)
+    #@deprecate_args(thr_jitter=None)
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., refract_time=0.,
             integration_type="euler", surrogate_type="straight_through", lower_clamp_voltage=True, **kwargs
@@ -135,7 +133,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
                                display_name="Refractory Time Period", units="ms")
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
                                 units="ms") ## time-of-last-spike
-        self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
+        #self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
     @compilable
     def advance_state(
@@ -179,33 +177,6 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
         self.rfr.set(restVals + self.refract_T)
         self.tols.set(restVals)
         #surrogate = restVals + 1.
-
-    def save(self, directory, **kwargs):
-        ## do a protected save of constants, depending on whether they are floats or arrays
-        tau_m = (self.tau_m if isinstance(self.tau_m, float)
-                 else jnp.asarray([[self.tau_m * 1.]]))
-        thr = (self.thr if isinstance(self.thr, float)
-               else jnp.asarray([[self.thr * 1.]]))
-        v_rest = (self.v_rest if isinstance(self.v_rest, float)
-                  else jnp.asarray([[self.v_rest * 1.]]))
-        v_reset = (self.v_reset if isinstance(self.v_reset, float)
-                   else jnp.asarray([[self.v_reset * 1.]]))
-        v_decay = (self.v_decay if isinstance(self.v_decay, float)
-                   else jnp.asarray([[self.v_decay * 1.]]))
-        resist_m = (self.resist_m if isinstance(self.resist_m, float)
-                    else jnp.asarray([[self.resist_m * 1.]]))
-        tau_theta = (self.tau_theta if isinstance(self.tau_theta, float)
-                     else jnp.asarray([[self.tau_theta * 1.]]))
-        theta_plus = (self.theta_plus if isinstance(self.theta_plus, float)
-                      else jnp.asarray([[self.theta_plus * 1.]]))
-
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  tau_m=tau_m, thr=thr, v_rest=v_rest,
-                  v_reset=v_reset, v_decay=v_decay,
-                  resist_m=resist_m, tau_theta=tau_theta,
-                  theta_plus=theta_plus,
-                  key=self.key.value)
 
     def load(self, directory, seeded=False, **kwargs):
         file_name = directory + "/" + self.name + ".npz"

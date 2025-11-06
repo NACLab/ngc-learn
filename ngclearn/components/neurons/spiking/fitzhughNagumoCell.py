@@ -2,13 +2,12 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
 
@@ -34,7 +33,7 @@ def _dfw(t, w, params): ## recovery dynamics wrapper
     dv_dt = _dfw_internal(j, v, w, a, b, g, tau_m)
     return dv_dt
 
-class FitzhughNagumoCell(JaxComponent):
+class FitzhughNagumoCell(JaxComponent): ## F-H cell
     """
     The Fitzhugh-Nagumo neuronal cell model; a two-variable simplification
     of the Hodgkin-Huxley (squid axon) model. This cell model iteratively evolves
@@ -103,10 +102,10 @@ class FitzhughNagumoCell(JaxComponent):
                 at an increase in computational cost (and simulation time)
     """
 
-    # Define Functions
-    def __init__(self, name, n_units, tau_m=1., resist_m=1., tau_w=12.5, alpha=0.7,
-                 beta=0.8, gamma=3., v0=0., w0=0., v_thr=1.07, spike_reset=False,
-                 integration_type="euler", **kwargs):
+    def __init__(
+            self, name, n_units, tau_m=1., resist_m=1., tau_w=12.5, alpha=0.7, beta=0.8, gamma=3., v0=0., w0=0.,
+            v_thr=1.07, spike_reset=False, integration_type="euler", **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -115,7 +114,7 @@ class FitzhughNagumoCell(JaxComponent):
 
         ## Cell properties
         self.tau_m = tau_m
-        self.R_m = resist_m
+        self.resist_m = resist_m ## resistance R_m
         self.tau_w = tau_w
         self.alpha = alpha
         self.beta = beta
@@ -138,41 +137,44 @@ class FitzhughNagumoCell(JaxComponent):
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def advance_state(t, dt, tau_m, R_m, tau_w, v_thr, spike_reset, v0, w0, alpha,
-                       beta, gamma, intgFlag, j, v, w, tols):
-        j_mod = j * R_m
-        if intgFlag == 1:
-            v_params = (j_mod, w, alpha, beta, gamma, tau_m)
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)  # _v = step_rk2(v, v_params, _dfv, dt)
-            w_params = (j_mod, v, alpha, beta, gamma, tau_w)
-            _, _w = step_rk2(0., w, _dfw, dt, w_params)  # _w = step_rk2(w, w_params, _dfw, dt)
+    @compilable
+    def advance_state(self, t, dt):
+        j_mod = self.j.get() * self.resist_m
+        if self.intgFlag == 1:
+            v_params = (j_mod, self.w.get(), self.alpha, self.beta, self.gamma, self.tau_m)
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)  # _v = step_rk2(v, v_params, _dfv, dt)
+            w_params = (j_mod, self.v.get(), self.alpha, self.beta, self.gamma, self.tau_w)
+            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)  # _w = step_rk2(w, w_params, _dfw, dt)
         else:  # integType == 0 (default -- Euler)
-            v_params = (j_mod, w, alpha, beta, gamma, tau_m)
-            _, _v = step_euler(0., v, _dfv, dt, v_params)  # _v = step_euler(v, v_params, _dfv, dt)
-            w_params = (j_mod, v, alpha, beta, gamma, tau_w)
-            _, _w = step_euler(0., w, _dfw, dt, w_params)  # _w = step_euler(w, w_params, _dfw, dt)
-        s = (_v > v_thr) * 1.
+            v_params = (j_mod, self.w.get(), self.alpha, self.beta, self.gamma, self.tau_m)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)  # _v = step_euler(v, v_params, _dfv, dt)
+            w_params = (j_mod, self.v.get(), self.alpha, self.beta, self.gamma, self.tau_w)
+            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)  # _w = step_euler(w, w_params, _dfw, dt)
+        s = (_v > self.v_thr) * 1.
         v = _v
         w = _w
 
-        if spike_reset: ## if spike-reset used, variables snapped back to initial conditions
-            v = v * (1. - s) + s * v0
-            w = w * (1. - s) + s * w0
-        tols = (1. - s) * tols + (s * t) ## update tols
-        return j, v, w, s, tols
+        if self.spike_reset: ## if spike-reset used, variables snapped back to initial conditions
+            v = v * (1. - s) + s * self.v0
+            w = w * (1. - s) + s * self.w0
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
+
+        # self.j.set(j) ## j is not getting modified in these dynamics
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v0)
+        self.w.set(restVals + self.w0)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -197,8 +199,7 @@ class FitzhughNagumoCell(JaxComponent):
             "resist_m": "Membrane resistance value",
             "tau_w": "Recovery variable time constant",
             "v_thr": "Base voltage threshold value",
-            "spike_reset": "Should voltage/recover be snapped to initial "
-                           "condition(s) if spike emitted?",
+            "spike_reset": "Should voltage/recover be snapped to initial condition(s) if spike emitted?",
             "alpha": "Dimensionless recovery variable shift factor `a",
             "beta": "Dimensionless recovery variable scale factor `b`",
             "gamma": "Power-term divisor constant",
@@ -214,7 +215,7 @@ class FitzhughNagumoCell(JaxComponent):
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:

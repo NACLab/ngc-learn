@@ -1,5 +1,6 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, nn
+from jax import numpy as jnp, random, nn, Array
+from ngclearn.utils import tensorstats
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
@@ -151,20 +152,15 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         # else: ## default: straight_through
         #     spike_fx, d_spike_fx = straight_through_estimator()
 
-
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.j = Compartment(restVals, display_name="Current", units="mA")
-        self.v = Compartment(restVals + self.v_rest,
-                             display_name="Voltage", units="mV")
+        self.v = Compartment(restVals + self.v_rest, display_name="Voltage", units="mV")
         self.s = Compartment(restVals, display_name="Spikes")
         self.s_raw = Compartment(restVals, display_name="Raw Spike Pulses")
-        self.rfr = Compartment(restVals + self.refract_T,
-                               display_name="Refractory Time Period", units="ms")
-        self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift",
-                                     units="mV")
-        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
-                                units="ms") ## time-of-last-spike
+        self.rfr = Compartment(restVals + self.refract_T, display_name="Refractory Time Period", units="ms")
+        self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift", units="mV")
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") ## time-of-last-spike
         # self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
     @compilable
@@ -205,7 +201,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus) #.get())
             self.thr_theta.set(thr_theta)
 
-        ## update tols
+        ## update time-of-last spike variable(s)
         self.tols.set((1. - s) * self.tols.get() + (s * t))
 
         if self.v_min is not None: ## ensures voltage never < v_rest
@@ -258,17 +254,13 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "v_reset": "Reset membrane potential value",
             "conduct_leak": "Conductance leak / voltage decay factor",
             "tau_theta": "Threshold/homoestatic increment time constant",
-            "theta_plus": "Amount to increment threshold by upon occurrence "
-                          "of spike",
+            "theta_plus": "Amount to increment threshold by upon occurrence of a spike",
             "refract_time": "Length of relative refractory period (ms)",
-            "one_spike": "Should only one spike be sampled/allowed to emit at "
-                         "any given time step?",
-            "integration_type": "Type of numerical integration to use for the "
-                                "cell dynamics",
+            "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
+            "integration_type": "Type of numerical integration to use for the cell dynamics",
             "surrgoate_type": "Type of surrogate function to use approximate "
                               "derivative of spike w.r.t. voltage/current",
-            "lower_bound_clamp": "Should voltage be lower bounded to be never "
-                                 "be below `v_rest`"
+            "v_min": "Minimum voltage allowed before voltage variables are min-clipped/clamped"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
@@ -276,6 +268,19 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
                 "hyperparameters": hyperparams}
         return info
 
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

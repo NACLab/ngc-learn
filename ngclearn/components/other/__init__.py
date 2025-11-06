@@ -1,3 +1,3 @@
-# from .varTrace import VarTrace
-# from .expKernel import ExpKernel
-#
+from .varTrace import VarTrace
+from .expKernel import ExpKernel
+
