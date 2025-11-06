@@ -1,11 +1,12 @@
 from jax import numpy as jnp, random, jit
+from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import ExponentialSynapse
 
-from ngcsimlib.compilers.process import Process
-from ngcsimlib.context import Context
+from ngclearn import Context, MethodProcess
 import ngclearn.utils.weight_distribution as dist
+from ngclearn.components.synapses.exponentialSynapse import ExponentialSynapse
+from numpy.testing import assert_array_equal
 
 def test_exponentialSynapse1():
     name = "expsyn_ctx"
@@ -23,14 +24,11 @@ def test_exponentialSynapse1():
             key=subkeys[0]
         )
 
-        advance_process = (Process("advance_proc")
+        advance_process = (MethodProcess("advance_proc")
                            >> a.advance_state)
-        # ctx.wrap_and_add_command(advance_process.pure, name="run")
-        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
-        reset_process = (Process("reset_proc")
+        reset_process = (MethodProcess("reset_proc")
                          >> a.reset)
-        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
     sp_train = jnp.array([1., 0., 1.], dtype=jnp.float32)
     post_syn_neuron_volt = jnp.ones((1, 1)) * -65. ## post-syn neuron is at rest
@@ -38,15 +36,16 @@ def test_exponentialSynapse1():
     outs_truth = jnp.array([[156.,  78., 195.]])
 
     outs = []
-    ctx.reset()
+    reset_process.run()  # ctx.reset()
     for t in range(3):
         in_pulse = jnp.expand_dims(sp_train[t], axis=0)
         a.inputs.set(in_pulse)
         a.v.set(post_syn_neuron_volt)
-        ctx.run(t=t * dt, dt=dt)
-        #print("g: ",a.g_syn.value)
-        #print("i: ", a.i_syn.value)
-        outs.append(a.outputs.value)
+        advance_process.run(t=t * 1., dt=dt)  # ctx.run(t=ts * 1., dt=dt)
+        # print("in: ", a.inputs.get())
+        # print("g: ",a.g_syn.get())
+        # print("i: ", a.i_syn.get())
+        outs.append(a.outputs.get())
     outs = jnp.concatenate(outs, axis=1)
     #print(outs)
 

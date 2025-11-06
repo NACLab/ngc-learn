@@ -1,12 +1,12 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-
+from ngclearn.components.jaxComponent import JaxComponent
+from ngclearn.utils import tensorstats
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
+
 from ngclearn.components.synapses import DenseSynapse
-from ngclearn.utils import tensorstats
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
     """
@@ -63,8 +63,8 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
 
     # Define Functions
     def __init__(
-            self, name, shape, tau_decay, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1., p_conn=1.,
-            is_nonplastic=True, **kwargs
+            self, name, shape, tau_decay, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1.,
+            p_conn=1., is_nonplastic=True, **kwargs
     ):
         super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
         ## dynamic synapse meta-parameters
@@ -80,50 +80,51 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         self.i_syn = Compartment(postVals) ## electrical current output
         self.g_syn = Compartment(postVals) ## conductance variable
         if is_nonplastic:
-            self.weights.set(self.weights.value * 0 + 1.)
+            self.weights.set(self.weights.get() * 0 + 1.)
 
-    @transition(output_compartments=["outputs", "i_syn", "g_syn"])
-    @staticmethod
-    def advance_state(
-            dt, tau_decay, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, v
-    ):
-        s = inputs
+    # @transition(output_compartments=["outputs", "i_syn", "g_syn"])
+    # @staticmethod
+    @compilable
+    def advance_state(self, t, dt):  #dt, tau_decay, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, v
+        s = self.inputs.get()
         ## advance conductance variable
-        _out = jnp.matmul(s, weights) ## sum all pre-syn spikes at t going into post-neuron)
-        dgsyn_dt = -g_syn/tau_decay + (_out * g_syn_bar) * (1./dt)
-        g_syn = g_syn + dgsyn_dt * dt ## run Euler step to move conductance
+        _out = jnp.matmul(s, self.weights.get()) ## sum all pre-syn spikes at t going into post-neuron)
+        dgsyn_dt = -self.g_syn.get()/self.tau_decay + (_out * self.g_syn_bar) * (1./dt)
+        g_syn = self.g_syn.get() + dgsyn_dt * dt ## run Euler step to move conductance
         ## compute derive electrical current variable
-        i_syn = -g_syn * Rscale
-        if syn_rest is not None:
-            i_syn =  -(g_syn * Rscale) * (v - syn_rest)
-        outputs = i_syn #jnp.matmul(inputs, Wdyn * Rscale) + biases
-        return outputs, i_syn, g_syn
+        i_syn = -g_syn * self.resist_scale
+        if self.syn_rest is not None:
+            i_syn =  -(g_syn * self.resist_scale) * (self.v.get() - self.syn_rest)
+        outputs = i_syn #jnp.matmul(inputs, Wdyn * self.resist_scale) + biases
 
-    @transition(output_compartments=["inputs", "outputs", "i_syn", "g_syn", "v"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        i_syn = postVals
-        g_syn = postVals
-        v = postVals
-        return inputs, outputs, i_syn, g_syn, v
+        self.outputs.set(outputs)
+        self.i_syn.set(i_syn)
+        self.g_syn.set(g_syn)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        if self.bias_init != None:
-            jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
-        else:
-            jnp.savez(file_name, weights=self.weights.value)
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
+        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.i_syn.set(postVals)
+        self.g_syn.set(postVals)
+        self.v.set(postVals)
 
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-        if "biases" in data.keys():
-            self.biases.set(data['biases'])
+    # def save(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     if self.bias_init != None:
+    #         jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
+    #     else:
+    #         jnp.savez(file_name, weights=self.weights.value)
+    #
+    # def load(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     self.weights.set(data['weights'])
+    #     if "biases" in data.keys():
+    #         self.biases.set(data['biases'])
 
     @classmethod
     def help(cls): ## component help function
@@ -162,17 +163,3 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
                             "dgsyn_dt = (W * inputs) * g_syn_bar - g_syn/tau_decay ",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
