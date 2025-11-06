@@ -1,7 +1,5 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
-from functools import partial
-from ngclearn.utils import tensorstats
 from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
@@ -213,20 +211,6 @@ class FitzhughNagumoCell(JaxComponent): ## F-H cell
                             "tau_w * dw/dt = v + a - b * w",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

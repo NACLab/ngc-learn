@@ -1,6 +1,5 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, nn, Array, jit
-from ngclearn.utils import tensorstats
 from ngcsimlib import deprecate_args
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
@@ -230,18 +229,4 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
                 "dynamics": "tau_m * dv/dt = (v_rest - v) + j * resist_m",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
