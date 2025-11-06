@@ -116,17 +116,19 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
                 (straight-through estimator), "triangular" (triangular estimator),
                 "arctan" (arc-tangent estimator), and "secant_lif" (the
                 LIF-specialized secant estimator)
+                
+        v_min: minimum voltage to clamp dynamics to (Default: None)
     """ ## batch_size arg?
 
-    @deprecate_args(thr_jitter=None, critical_v="critical_V")
+    #@deprecate_args(thr_jitter=None, critical_v="critical_V")
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., v_scale=-41.6, critical_v=1.,
             tau_theta=1e7, theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler",
-            surrogate_type="straight_through", lower_clamp_voltage=True, **kwargs
+            surrogate_type="straight_through", v_min=None, **kwargs
     ):
         super().__init__(
             name, n_units, tau_m, resist_m, thr, v_rest, v_reset, 1., tau_theta, theta_plus, refract_time,
-            one_spike, integration_type, surrogate_type, lower_clamp_voltage, **kwargs
+            one_spike, integration_type, surrogate_type, v_min=v_min, **kwargs
         )
 
         ## only two distinct additional constants distinguish the Quad-LIF cell
@@ -197,51 +199,6 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
         self.tols.set(restVals)
         #self.surrogate.set(restVals)
 
-    def save(self, directory, **kwargs):
-        ## do a protected save of constants, depending on whether they are floats or arrays
-        tau_m = (self.tau_m if isinstance(self.tau_m, float)
-                 else jnp.asarray([[self.tau_m * 1.]]))
-        thr = (self.thr if isinstance(self.thr, float)
-               else jnp.asarray([[self.thr * 1.]]))
-        v_rest = (self.v_rest if isinstance(self.v_rest, float)
-                  else jnp.asarray([[self.v_rest * 1.]]))
-        v_reset = (self.v_reset if isinstance(self.v_reset, float)
-                   else jnp.asarray([[self.v_reset * 1.]]))
-        v_decay = (self.v_decay if isinstance(self.v_decay, float)
-                   else jnp.asarray([[self.v_decay * 1.]]))
-        resist_m = (self.resist_m if isinstance(self.resist_m, float)
-                    else jnp.asarray([[self.resist_m * 1.]]))
-        tau_theta = (self.tau_theta if isinstance(self.tau_theta, float)
-                     else jnp.asarray([[self.tau_theta * 1.]]))
-        theta_plus = (self.theta_plus if isinstance(self.theta_plus, float)
-                      else jnp.asarray([[self.theta_plus * 1.]]))
-
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  threshold_theta=self.thr_theta.value,
-                  tau_m=tau_m, thr=thr, v_rest=v_rest,
-                  v_reset=v_reset, v_decay=v_decay,
-                  resist_m=resist_m, tau_theta=tau_theta,
-                  theta_plus=theta_plus,
-                  key=self.key.value)
-
-    def load(self, directory, seeded=False, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.thr_theta.set(data['threshold_theta'])
-        ## constants loaded in
-        self.tau_m = data['tau_m']
-        self.thr = data['thr']
-        self.v_rest = data['v_rest']
-        self.v_reset = data['v_reset']
-        self.v_decay = data['v_decay']
-        self.resist_m = data['resist_m']
-        self.tau_theta = data['tau_theta']
-        self.theta_plus = data['theta_plus']
-
-        if seeded:
-            self.key.set(data['key'])
-
     @classmethod
     def help(cls): ## component help function
         properties = {
@@ -270,17 +227,13 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
             "v_reset": "Reset membrane potential value",
             "v_decay": "Voltage leak/decay factor",
             "tau_theta": "Threshold/homoestatic increment time constant",
-            "theta_plus": "Amount to increment threshold by upon occurrence "
-                          "of spike",
+            "theta_plus": "Amount to increment threshold by upon occurrence of a spike",
             "refract_time": "Length of relative refractory period (ms)",
-            "one_spike": "Should only one spike be sampled/allowed to emit at "
-                         "any given time step?",
-            "integration_type": "Type of numerical integration to use for the "
-                                "cell dynamics",
+            "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
+            "integration_type": "Type of numerical integration to use for the cell dynamics",
             "surrgoate_type": "Type of surrogate function to use approximate "
                               "derivative of spike w.r.t. voltage/current",
-            "lower_bound_clamp": "Should voltage be lower bounded to be never "
-                                 "be below `v_rest`"
+            "v_min": "Minimum voltage allowed before voltage variables are min-clipped/clamped"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
@@ -289,7 +242,7 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:

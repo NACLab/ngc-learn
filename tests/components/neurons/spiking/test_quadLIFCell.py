@@ -13,7 +13,6 @@ def test_quadLIFCell1():
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
-    trace_increment = 0.1
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
         a = QuadLIFCell(
@@ -54,4 +53,4 @@ def test_quadLIFCell1():
     ## output should equal input
     assert_array_equal(outs, y_seq)
 
-test_quadLIFCell1()
+#test_quadLIFCell1()

@@ -99,7 +99,7 @@ class RAFCell(JaxComponent):
                 at an increase in computational cost (and simulation time)
     """
 
-    @deprecate_args(resist_m="resist_v", tau_m="tau_v", b="dampen_factor")
+    #@deprecate_args(resist_m="resist_v", tau_m="tau_v", b="dampen_factor")
     def __init__(
             self, name, n_units, tau_v=1., tau_w=1., thr=1., omega=10., dampen_factor=-1., v_reset=0., w_reset=0.,
             v0=0., w0=0., resist_v=1., integration_type="euler", batch_size=1, **kwargs
@@ -139,9 +139,7 @@ class RAFCell(JaxComponent):
         ) ## time-of-last-spike
 
     @compilable
-    def advance_state(
-            self, t, dt
-    ):
+    def advance_state(self, t, dt):
         ## continue with centered dynamics
         j_ = self.j.get() * self.resist_v
         if self.intgFlag == 1:  ## RK-2/midpoint
@@ -218,7 +216,7 @@ class RAFCell(JaxComponent):
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:

@@ -2,12 +2,11 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2
+
 from ngcsimlib.parser import compilable
-#from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
 
 @jit
@@ -32,7 +31,7 @@ def _dfw(t, w, params): ## recovery dynamics wrapper
     dv_dt = _dfw_internal(j, v, w, a, tau_m, v_rest)
     return dv_dt
 
-class AdExCell(JaxComponent):
+class AdExCell(JaxComponent): ## adaptive exponential integrate-and-fire cell
     """
     The AdEx (adaptive exponential leaky integrate-and-fire) neuronal cell
     model; a two-variable model. This cell model iteratively evolves
@@ -97,7 +96,7 @@ class AdExCell(JaxComponent):
                 at an increase in computational cost (and simulation time)
     """
 
-    @deprecate_args(v_thr="thr")
+    #@deprecate_args(v_thr="thr")
     def __init__(
             self, name, n_units, tau_m=15., resist_m=1., tau_w=400., v_sharpness=2., intrinsic_mem_thr=-55., thr=5.,
             v_rest=-72., v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0., integration_type="euler", batch_size=1, **kwargs
@@ -138,36 +137,38 @@ class AdExCell(JaxComponent):
 
     @compilable
     def advance_state(self, t, dt):
-        # Get the variables
-        j = self.j.get()
-        v = self.v.get()
-        w = self.w.get()
-        tols = self.tols.get()
-        s = self.s.get()
-        
         if self.intgFlag == 1:  ## RK-2/midpoint
-            v_params = (j, w, self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)
-            w_params = (j, v, self.a, self.tau_w, self.v_rest)
-            _, _w = step_rk2(0., w, _dfw, dt, w_params)
+            v_params = (self.j.get(), self.w.get(), self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
+            w_params = (self.j.get(), self.v.get(), self.a, self.tau_w, self.v_rest)
+            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)
         else:  # intgFlag == 0 (default -- Euler)
-            v_params = (j, w, self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
-            _, _v = step_euler(0., v, _dfv, dt, v_params)
-            w_params = (j, v, self.a, self.tau_w, self.v_rest)
-            _, _w = step_euler(0., w, _dfw, dt, w_params)
+            v_params = (self.j.get(), self.w.get(), self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
+            w_params = (self.j.get(), self.v.get(), self.a, self.tau_w, self.v_rest)
+            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)
         s = (_v > self.thr) * 1. ## emit spikes/pulses
         ## hyperpolarize/reset/snap variables
         v = _v * (1. - s) + s * self.v_reset
         w = _w * (1. - s) + s * (_w + self.b)
 
-        tols = (1. - s) * tols + (s * t) ## update time-of-last spike variable(s)
-        
-        # Update compartments
-        self.j.set(j)
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
+
+        #self.j.set(j) ## j is not getting modified in these dynamics
         self.v.set(v)
         self.w.set(w)
         self.s.set(s)
-        self.tols.set(tols)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v0)
+        self.w.set(restVals + self.w0)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -211,7 +212,7 @@ class AdExCell(JaxComponent):
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:

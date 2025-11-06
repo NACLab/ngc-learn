@@ -87,12 +87,8 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.rfr = Compartment(restVals + self.refract_T)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    # @transition(output_compartments=["v", "s", "thr", "rfr", "tols"])
-    # @staticmethod
     @compilable
-    def advance_state(
-            self, t, dt #, tau_m, R_m, thr_gain, refract_T, j, v, thr, rfr, tols
-    ):
+    def advance_state(self, t, dt):
         mask = (self.rfr.get() >= self.refract_T) * 1.  ## check refractory period
         v = (self.j.get() * self.R_m) * mask
         vp = softmax(v)  # convert to Categorical (spike) probabilities
@@ -111,8 +107,6 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.thr.set(thr)
         self.rfr.set(rfr)
 
-    # @transition(output_compartments=["j", "v", "s", "rfr", "tols"])
-    # @staticmethod
     @compilable
     def reset(self):
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -166,11 +160,11 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).get())
+            stats = tensorstats(getattr(self, c).value)
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)

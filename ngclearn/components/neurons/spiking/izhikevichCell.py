@@ -2,14 +2,12 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2
 
 from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
-
 
 @jit
 def _dfv_internal(j, v, w, b, tau_m): ## raw voltage dynamics
@@ -118,17 +116,16 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
                 at an increase in computational cost (and simulation time)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, tau_m=1., resist_m=1., v_thr=30., v_reset=-65.,
                  tau_w=50., w_reset=8., coupling_factor=0.2, v0=-65., w0=-14.,
                  integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
 
         ## Cell properties
-        self.R_m = resist_m
+        self.resist_m = resist_m ## resistance R_m
         self.tau_m = tau_m
         self.tau_w = tau_w
-        self.coupling = coupling_factor
+        self.coupling_factor = coupling_factor
         self.v_reset = v_reset
         self.w_reset = w_reset
 
@@ -152,52 +149,47 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    @compilable  
-    def advance_state(self, dt):
-        tau_m = self.tau_m
-        tau_w = self.tau_w
-        v_thr = self.v_thr
-        coupling = self.coupling
-        v_reset = self.v_reset
-        w_reset = self.w_reset
-        R_m = self.R_m
-        intgFlag = self.intgFlag
-        j = self.j.get()
-        v = self.v.get()
-        w = self.w.get()
-        s = self.s.get()
-        tols = self.tols.get()
-
+    @compilable
+    def advance_state(self, t, dt):
         ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
-        a = 1. / tau_w  ## we map time constant to variable "a" (a = 1/tau_w)
-        _j = j * R_m
+        a = 1. / self.tau_w  ## we map time constant to variable "a" (a = 1/tau_w)
+        _j = self.j.get() * self.resist_m
         # _j = jnp.maximum(-30.0, _j) ## lower-bound/clip input current
         ## check for spikes
-        s = (v > v_thr) * 1.
+        s = (self.v.get() > self.v_thr) * 1.
         ## for non-spikes, evolve according to dynamics
-        if intgFlag == 1:
-            v_params = (_j, w, coupling, tau_m)
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)  # _v = step_rk2(v, v_params, _dfv, dt)
-            w_params = (_j, v, coupling, tau_w)
-            _, _w = step_rk2(0., w, _dfw, dt, w_params)  # _w = step_rk2(w, w_params, _dfw, dt)
+        if self.intgFlag == 1:
+            v_params = (_j, self.w.get(), self.coupling_factor, self.tau_m)
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)  # _v = step_rk2(v, v_params, _dfv, dt)
+            w_params = (_j, self.v.get(), self.coupling_factor, self.tau_w)
+            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)  # _w = step_rk2(w, w_params, _dfw, dt)
         else:  # integType == 0 (default -- Euler)
-            v_params = (_j, w, coupling, tau_m)
-            _, _v = step_euler(0., v, _dfv, dt, v_params)  # _v = step_euler(v, v_params, _dfv, dt)
-            w_params = (_j, v, coupling, tau_w)
-            _, _w = step_euler(0., w, _dfw, dt, w_params)  # _w = step_euler(w, w_params, _dfw, dt)
+            v_params = (_j, self.w.get(), self.coupling_factor, self.tau_m)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)  # _v = step_euler(v, v_params, _dfv, dt)
+            w_params = (_j, self.v.get(), self.coupling_factor, self.tau_w)
+            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)  # _w = step_euler(w, w_params, _dfw, dt)
         ## for spikes, snap to particular states
-        _v, _w = _post_process(s, _v, _w, v, w, v_reset, w_reset)
+        _v, _w = _post_process(s, _v, _w, self.v.get(), self.w.get(), self.v_reset, self.w_reset)
         v = _v
         w = _w
 
-        # Note: time tracking for tols would need to be handled by the caller
-        # tols = (1. - s) * tols + (s * t) ## update tols
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
 
-        self.j.set(j)
+        # self.j.set(j) ## j is not getting modified in these dynamics
         self.v.set(v)
         self.w.set(w)
         self.s.set(s)
-        self.tols.set(tols)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v0)
+        self.w.set(restVals + self.w0)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -225,8 +217,7 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
             "v_rest": "Resting membrane potential value",
             "v_reset": "Reset membrane potential value",
             "w_reset": "Reset recover variable value",
-            "coupling_factor": "Degree to which recovery variable is sensitive to "
-                               "subthreshold voltage fluctuations",
+            "coupling_factor": "Degree to which recovery variable is sensitive to subthreshold voltage fluctuations",
             "v0": "Initial condition for membrane potential/voltage",
             "w0": "Initial condition for recovery variable",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
@@ -239,7 +230,7 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
