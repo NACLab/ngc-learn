@@ -1,10 +1,8 @@
-from jax import numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
+from jax import random, numpy as jnp, jit
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
-from ngclearn.components.synapses import DenseSynapse
-from ngclearn.utils import tensorstats
+from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
 class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     """
@@ -57,11 +55,11 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
     """
 
     # Define Functions
-    def __init__(self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1.,
-                 presyn_win_len=2., w_bound=1., weight_init=None, resist_scale=1.,
-                 p_conn=1., batch_size=1, **kwargs):
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
-                         batch_size=batch_size, **kwargs)
+    def __init__(
+            self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1., presyn_win_len=2., w_bound=1., weight_init=None,
+            resist_scale=1., p_conn=1., batch_size=1, **kwargs
+    ):
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 
         ## Synaptic hyper-parameters
         self.eta = eta ## global learning rate governing plasticity
@@ -78,53 +76,47 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         postVals = jnp.zeros((self.batch_size, shape[1]))
         self.pre_tols = Compartment(preVals)
         self.postSpike = Compartment(postVals)
-        self.dWeights = Compartment(self.weights.value * 0)
+        self.dWeights = Compartment(self.weights.get() * 0)
         self.eta = Compartment(jnp.ones((1, 1)) * eta)  ## global learning rate governing plasticity
 
-    @staticmethod
-    def _compute_update(
-            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights
-    ): ## synaptic adjustment calculation co-routine
+    def _compute_update(self, t, dt): ## synaptic adjustment calculation co-routine
         ## check if a spike occurred in window of (t - presyn_win_len, t]
-        m = (pre_tols > 0.) * 1.  ## ignore default value of tols = 0 ms
-        if presyn_win_len > 0.:
-            lbound = ((t - presyn_win_len) < pre_tols) * 1.
+        m = (self.pre_tols.get() > 0.) * 1.  ## ignore default value of tols = 0 ms
+        if self.presyn_win_len > 0.:
+            lbound = ((t - self.presyn_win_len) < self.pre_tols.get()) * 1.
             preSpike = lbound * m
         else:
-            check_spike = (pre_tols == t) * 1.
+            check_spike = (self.pre_tols.get() == t) * 1.
             preSpike = check_spike * m
         ## this implements a generalization of the rule in eqn 18 of the paper
-        pos_shift = w_bound - (weights * (1. + lmbda))
-        pos_shift = pos_shift * Aplus
-        neg_shift = -weights * (1. + lmbda)
-        neg_shift = neg_shift * Aminus
+        pos_shift = self.w_bound - (self.weights.get() * (1. + self.lmbda))
+        pos_shift = pos_shift * self.Aplus
+        neg_shift = -self.weights.get() * (1. + self.lmbda)
+        neg_shift = neg_shift * self.Aminus
         dW = jnp.where(preSpike.T, pos_shift, neg_shift) # at pre-spikes => LTP, else decay
-        dW = (dW * postSpike) ## gate to make sure only post-spikes trigger updates
+        dW = (dW * self.postSpike.get()) ## gate to make sure only post-spikes trigger updates
         return dW
 
-    @transition(output_compartments=["weights", "dWeights"])
-    @staticmethod
-    def evolve(
-            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights, eta
-    ):
-        dWeights = EventSTDPSynapse._compute_update(
-            t, lmbda, presyn_win_len, Aminus, Aplus, w_bound, pre_tols, postSpike, weights
-        )
-        weights = weights + dWeights * eta  # * (1. - w) * eta
-        weights = jnp.clip(weights, 0.01, w_bound)  ## Note: this step not in source paper
-        return weights, dWeights
+    @compilable
+    def evolve(self, t, dt):
+        dWeights = self._compute_update(t, dt)
+        weights = self.weights.get() + dWeights * self.eta  # * (1. - w) * eta
+        weights = jnp.clip(weights, 0.01, self.w_bound)  ## Note: this step not in source paper
 
-    @transition(output_compartments=["inputs", "outputs", "pre_tols", "postSpike", "dWeights"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        pre_tols = preVals ## pre-synaptic time-of-last-spike(s) record
-        postSpike = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, pre_tols, postSpike, dWeights
+        self.weights.set(weights)
+        self.dWeights.set(dWeights)
+
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
+        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
+
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.pre_tols.set(preVals)  ## pre-synaptic time-of-last-spike(s) record
+        self.postSpike.set(postVals)
+        self.dWeights.set(jnp.zeros(self.shape.get()))
 
     @classmethod
     def help(cls): ## component help function
@@ -165,20 +157,6 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
                             "dW_{ij}/dt = eta * [ (1 - W_{ij}(1 + lmbda)) * s_j - W_{ij} * (1 + lmbda) * s_j ]",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context
