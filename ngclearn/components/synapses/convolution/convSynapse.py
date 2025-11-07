@@ -99,17 +99,15 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
             dist.initialize_params(subkeys[2], bias_init, (1, shape[1])) if bias_init else 0.0
         )
 
-    # @transition(output_compartments=["outputs"])
-    # @staticmethod
     @compilable
     def advance_state(self): #Rscale, padding, stride, weights, biases, inputs):
         _x = self.inputs.get()
         ## FIXME: does resist_scale affect update rules?
-        outputs = conv2d(_x, self.weights.get(), stride_size=self.stride, padding=self.padding) * self.resist_scale + self.biases.get()
+        outputs = conv2d(
+            _x, self.weights.get(), stride_size=self.stride, padding=self.padding
+        ) * self.resist_scale + self.biases.get()
         self.outputs.set(outputs)
 
-    # @transition(output_compartments=["inputs", "outputs"])
-    # @staticmethod
     @compilable
     def reset(self): #in_shape, out_shape):
         preVals = jnp.zeros(self.in_shape)

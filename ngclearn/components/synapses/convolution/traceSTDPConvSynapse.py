@@ -146,17 +146,9 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         dWeights = (dW_ltp + dW_ltd)
         return dWeights
 
-    # @transition(output_compartments=["weights", "dWeights"])
-    # @staticmethod
     @compilable
     def evolve(self):
-        # pretrace_target, Aplus, Aminus, w_decay, w_bound, stride, pad_args, delta_shape, preSpike, preTrace,
-        # postSpike, postTrace, weights, eta
-
         dWeights = self._compute_update()
-        # dWeights = TraceSTDPConvSynapse._compute_update(
-        #     pretrace_target, Aplus, Aminus, stride, pad_args, delta_shape, preSpike, preTrace, postSpike, postTrace
-        # )
         if self.w_decay > 0.:  ## apply synaptic decay
             weights = self.weights.get() + dWeights * self.eta - self.weights.get() * self.w_decay  ## conduct decayed STDP-ascent
         else:
@@ -169,10 +161,8 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         self.weights.set(weights)
         self.dWeights.set(dWeights)
 
-    # @transition(output_compartments=["dInputs"])
-    # @staticmethod
     @compilable
-    def backtransmit(self): # x_size, shape, stride, padding, x_delta_shape, antiPad, postSpike, weights
+    def backtransmit(self):
         ## action-backpropagating routine
         ## calc dInputs - adjustment w.r.t. input signal
         k_size, k_size, n_in_chan, n_out_chan = self.shape

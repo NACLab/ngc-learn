@@ -54,14 +54,14 @@ def test_TraceSTDPConvSynapse1():
           [[1.], [0.]]]]
     )
 
-    reset_process.run() #
+    reset_process.run() # ctx.reset()
     a.inputs.set(x)
     advance_process.run(t=1., dt=dt)  # ctx.run(t=1., dt=dt)
     y = (a.outputs.get() > 0.) * 1. ## fake out post-syn spikes
     assert_array_equal(y, y_truth)
-    print(y)
-    print("y.Tr:\n", y_truth)
-    print("======")
+    # print(y)
+    # print("y.Tr:\n", y_truth)
+    # print("======")
 
     # print("NGC-Learn.shape = ", node.outputs.get().shape)
     a.preSpike.set(x)
