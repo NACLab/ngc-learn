@@ -74,12 +74,21 @@ class ExpKernel(JaxComponent): ## exponential kernel
         
         s = inputs
         ## update spike time window and corresponding window volume
-        tf, epsp = _apply_kernel(tf, s, t, self.tau_w, self.win_len, krn_start=0,
-                                 krn_end=self.win_len-1) #0:win_len-1)
+        tf, epsp = _apply_kernel(
+            tf, s, t, self.tau_w, self.win_len, krn_start=0, krn_end=self.win_len-1
+        ) #0:win_len-1)
         
         # Update compartments
         self.epsp.set(epsp)
         self.tf.set(tf)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units)) ## inputs, epsp
+        restTensor = jnp.zeros([self.win_len, self.batch_size, self.n_units], jnp.float32)  ## tf
+        self.inputs.set(restVals)
+        self.epsp.set(restVals)
+        self.tf.set(restTensor)
 
     @classmethod
     def help(cls): ## component help function

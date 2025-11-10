@@ -50,7 +50,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         thr_jitter: scale of uniform jitter to add to initialization of thresholds
     """
 
-    # Define Functions
+    #@deprecate_args(thr_base="thrBase")
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr_base=0.4, thr_gain=0.002, refract_time=0., thr_jitter=0.05,
             **kwargs

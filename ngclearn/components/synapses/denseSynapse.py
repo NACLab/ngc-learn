@@ -1,7 +1,6 @@
 from jax import random, numpy as jnp, jit
 from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
-from ngclearn.utils.weight_distribution import initialize_params
+from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
 
 from ngcsimlib.compartment import Compartment
@@ -58,10 +57,13 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
         if self.weight_init is None:
             info(self.name, "is using default weight initializer!")
-            self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
-        weights = initialize_params(subkeys[0], self.weight_init, shape)
+            # self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
+            # weights = initialize_params(subkeys[0], self.weight_init, shape)
+            self.weight_init = DistributionGenerator.uniform(0.025, 0.8)
+        #weights = initialize_params(subkeys[0], self.weight_init, shape)
+        weights = self.weight_init(shape, subkeys[0])
 
-        if 0. < p_conn < 1.: ## only non-zero and <1 probs allowed
+        if 0. < p_conn < 1.: ## Modifier/constraint: only non-zero and <1 probs allowed
             p_mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
             weights = weights * p_mask ## sparsify matrix
 
@@ -76,9 +78,10 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         if self.bias_init is None:
             info(self.name, "is using default bias value of zero (no bias "
                             "kernel provided)!")
-        self.biases = Compartment(initialize_params(subkeys[2], bias_init,
-                                                    (1, shape[1]))
-                                  if bias_init else 0.0)
+        self.biases = Compartment(self.bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0)
+        # self.biases = Compartment(initialize_params(subkeys[2], bias_init,
+        #                                             (1, shape[1]))
+        #                           if bias_init else 0.0)
 
     @compilable
     def advance_state(self):
