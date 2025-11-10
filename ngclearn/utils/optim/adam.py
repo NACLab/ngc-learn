@@ -1,8 +1,8 @@
 # %%
 
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.resolver import resolver
+# from ngcsimlib.component import Component
+# from ngcsimlib.compartment import Compartment
+# from ngcsimlib.resolver import resolver
 
 import numpy as np
 from jax import jit, numpy as jnp, random, nn, lax

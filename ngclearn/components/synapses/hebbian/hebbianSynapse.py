@@ -1,8 +1,11 @@
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
-from ngclearn import resolver, Component, Compartment
-from ngcsimlib.compilers.process import transition
+
+from ngcsimlib.logger import info
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
+
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngcsimlib.deprecators import deprecate_args
@@ -218,38 +221,35 @@ class HebbianSynapse(DenseSynapse):
             post_wght=post_wght)
         return dW, db
 
-    @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
-    @staticmethod
-    def evolve(opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
-                post_wght, bias_init, pre, post, weights, biases, opt_params):
+    @compilable
+    def evolve(self):
+        # Get the variables
+        pre = self.pre.get()
+        post = self.post.get()
+        weights = self.weights.get()
+        biases = self.biases.get()
+        opt_params = self.opt_params.get()
+        
         ## calculate synaptic update values
         dWeights, dBiases = HebbianSynapse._compute_update(
-            w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght, post_wght,
+            self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
             pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
-        if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
+        if self.bias_init != None:
+            opt_params, [weights, biases] = self.opt(opt_params, [weights, biases], [dWeights, dBiases])
         else:
             # ignore db since no biases configured
-            opt_params, [weights] = opt(opt_params, [weights], [dWeights])
+            opt_params, [weights] = self.opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = _enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
-        return opt_params, weights, biases, dWeights, dBiases
-
-    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dWeights", "dBiases"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        return (
-            preVals, # inputs
-            postVals, # outputs
-            preVals, # pre
-            postVals, # post
-            jnp.zeros(shape), # dW
-            jnp.zeros(shape[1]), # db
-        )
+        weights = _enforce_constraints(weights, self.w_bound, is_nonnegative=self.is_nonnegative)
+        
+        # Update compartments
+        self.opt_params.set(opt_params)
+        self.weights.set(weights)
+        self.biases.set(biases)
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
 
     @classmethod
     def help(cls): ## component help function

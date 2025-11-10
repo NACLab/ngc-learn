@@ -1,15 +1,16 @@
+# %%
+
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import step_euler
 from ngclearn.utils.surrogate_fx import secant_lif_estimator
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
+from ngcsimlib.logger import info
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
@@ -132,7 +133,7 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         ## create simple recurrent inhibitory pressure
         self.inh_R = resist_inh ## lateral inhibitory magnitude
-        key, subkey = random.split(self.key.value)
+        key, subkey = random.split(self.key.get())
         self.inh_weights = random.uniform(subkey, (n_units, n_units), minval=0.025, maxval=1.)
         self.inh_weights = self.inh_weights * (1. - jnp.eye(n_units))
 
@@ -162,12 +163,8 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.rfr = Compartment(restVals + self.refract_T) ## refractory variable(s)
         self.surrogate = Compartment(restVals + 1.) ## surrogate signal
 
-    @transition(output_compartments=["j", "s", "tols", "v", "thr", "rfr", "surrogate"])
-    @staticmethod
-    def advance_state(
-            t, dt, inh_weights, R_m, inh_R, d_spike_fx, tau_m, spike_fx, refract_T, thrGain, 
-            thrLeak, rho_b, sticky_spikes, v_min, j, s, v, thr, rfr, tols
-    ):
+    @compilable
+    def advance_state(self, t, dt):
         #####################################################################################
         #The following 3 lines of code modify electrical current j via application of a
         #scalar membrane resistance value and an approximate form of lateral inhibition.
@@ -180,20 +177,31 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         #| R_m: membrane resistance (to multiply/scale j by), 
         #| inh_R: inhibitory resistance to scale lateral inhibitory current by; if inh_R = 0, 
         #    NO lateral inhibitory pressure will be applied
-        j = j * R_m
-        if inh_R > 0.: ## if inh_R > 0, then lateral inhibition is applied
-            j = j - (jnp.matmul(spikes, inh_weights) * inh_R)
+
+        # First, get the relevant compartment values
+        j = self.j.get()
+        # s = self.s.get() # NOTE: This is unused
+        tols = self.tols.get()
+        v = self.v.get()
+        thr = self.thr.get()
+        rfr = self.rfr.get()
+        surrogate = self.surrogate.get()
+        ## modify electrical current j via membrane resistance and lateral inhibition
+
+        j = j * self.R_m
+        if self.inh_R > 0.: ## if inh_R > 0, then lateral inhibition is applied
+            j = j - (jnp.matmul(spikes, self.inh_weights) * self.inh_R)
         #####################################################################################
-        surrogate = d_spike_fx(j, c1=0.82, c2=0.08) ## calc surrogate deriv of spikes
+        surrogate = self.d_spike_fx(j, c1=0.82, c2=0.08) ## calc surrogate deriv of spikes
 
         ## transition to:  voltage(t+dt), spikes, threshold(t+dt), refractory_variables(t+dt)
-        v_params = (j, rfr, tau_m, refract_T)
+        v_params = (j, rfr, self.tau_m, self.refract_T)
         _, _v = step_euler(0., v, _dfv, dt, v_params)
-        spikes = spike_fx(_v, thr)
+        spikes = self.spike_fx(_v, thr)
         #_v = _hyperpolarize(_v, spikes)
         _v = (1. - spikes) * _v ## hyper-polarize cells
-        new_thr = _update_threshold(dt, thr, spikes, thrGain, thrLeak, rho_b)
-        _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, refract_T, sticky_spikes)
+        new_thr = _update_threshold(dt, thr, spikes, self.thrGain, self.thrLeak, self.rho_b)
+        _rfr, spikes = _update_refract_and_spikes(dt, rfr, spikes, self.refract_T, self.sticky_spikes)
         v = _v
         s = spikes
         thr = new_thr
@@ -201,34 +209,48 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         ## update tols
         tols = (1. - s) * tols + (s * t)
-        return j, s, tols, v, thr, rfr, surrogate
+        # return j, s, tols, v, thr, rfr, surrogate
+        self.j.set(j)
+        self.s.set(s)
+        self.tols.set(tols)
+        self.v.set(v)
+        self.thr.set(thr)
+        self.rfr.set(rfr)
+        self.surrogate.set(surrogate)
 
-    @transition(output_compartments=["j", "s", "tols", "v", "thr", "rfr", "surrogate"])
-    @staticmethod
-    def reset(refract_T, thr_persist, threshold0, batch_size, n_units, thr):
-        restVals = jnp.zeros((batch_size, n_units))
+    @compilable
+    def reset(self):
+        # refract_T, thr_persist, threshold0, batch_size, n_units, thr
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         voltage = restVals
-        refract = restVals + refract_T
+        refract = restVals + self.refract_T
         current = restVals
         surrogate = restVals + 1.
         timeOfLastSpike = restVals
         spikes = restVals
-        if not thr_persist: ## if thresh non-persistent, reset to base value
-            thr = threshold0 + 0
-        return current, spikes, timeOfLastSpike, voltage, thr, refract, surrogate
+        if not self.thr_persist: ## if thresh non-persistent, reset to base value
+            thr = self.threshold0 + 0
+        # return current, spikes, timeOfLastSpike, voltage, thr, refract, surrogate
+        self.j.set(current)
+        self.s.set(spikes)
+        self.tols.set(timeOfLastSpike)
+        self.v.set(voltage)
+        self.thr.set(thr)
+        self.rfr.set(refract)
+        self.surrogate.set(surrogate)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         if self.thr_persist == False:
             jnp.savez(file_name, threshold=self.threshold0) # save threshold0
         else:
-            jnp.savez(file_name, threshold=self.thr.value) # save the actual threshold param/compartment
+            jnp.savez(file_name, threshold=self.thr.get()) # save the actual threshold param/compartment
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         data = jnp.load(file_name)
         self.thr.set(data['threshold'])
-        self.threshold0 = self.thr.value + 0
+        self.threshold0 = self.thr.get() + 0
 
     @classmethod
     def help(cls): ## component help function
@@ -270,11 +292,11 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).value)
+            stats = tensorstats(getattr(self, c).get())
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)
