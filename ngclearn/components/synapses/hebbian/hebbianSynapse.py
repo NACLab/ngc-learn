@@ -166,7 +166,7 @@ class HebbianSynapse(DenseSynapse):
     """
 
     # Define Functions
-    @deprecate_args(_rebind=False, w_decay='prior')
+    # @deprecate_args(_rebind=False, w_decay='prior')
     def __init__(
             self, name, shape, eta=0., weight_init=None, bias_init=None, w_bound=1., is_nonnegative=False,
             prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
@@ -210,8 +210,8 @@ class HebbianSynapse(DenseSynapse):
 
         #key, subkey = random.split(self.key.value)
         self.opt_params = Compartment(get_opt_init_fn(optim_type)(
-            [self.weights.value, self.biases.value]
-            if bias_init else [self.weights.value]))
+            [self.weights.get(), self.biases.get()]
+            if bias_init else [self.weights.get()]))
 
     @staticmethod
     def _compute_update(w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
