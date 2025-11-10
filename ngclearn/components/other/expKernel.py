@@ -2,7 +2,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 
 from ngcsimlib.logger import info, warn
 from ngcsimlib.compartment import Compartment

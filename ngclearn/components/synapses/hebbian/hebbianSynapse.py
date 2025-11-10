@@ -8,7 +8,7 @@ from ngcsimlib.parser import compilable
 
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
 def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.,

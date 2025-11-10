@@ -14,8 +14,8 @@ from ngclearn.components.synapses.convolution.ngcconv import (conv2d, _calc_dX_c
 
 class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
     """
-    A synaptic convolutional cable that adjusts its filter efficacies via a
-    trace-based form of spike-timing-dependent plasticity (STDP).
+    A specialized synaptic convolutional cable that adjusts its filter efficacies via a trace-based form of
+    spike-timing-dependent plasticity (STDP).
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
@@ -131,8 +131,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
 
-    #@staticmethod
-    def _compute_update(self): #pretrace_target, Aplus, Aminus, stride, pad_args, delta_shape, preSpike, preTrace, postSpike, postTrace
+    def _compute_update(self):
         ## Compute long-term potentiation to filters
         dW_ltp = calc_dK_conv(
             self.preTrace.get() - self.pretrace_target, self.postSpike.get() * self.Aplus, delta_shape=self.delta_shape,
@@ -162,8 +161,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         self.dWeights.set(dWeights)
 
     @compilable
-    def backtransmit(self):
-        ## action-backpropagating routine
+    def backtransmit(self): ## action-backpropagating co-routine
         ## calc dInputs - adjustment w.r.t. input signal
         k_size, k_size, n_in_chan, n_out_chan = self.shape
         # antiPad = None

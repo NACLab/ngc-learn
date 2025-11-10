@@ -12,8 +12,8 @@ from ngclearn.components.synapses.convolution.ngcconv import (deconv2d, _calc_dX
 
 class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional cable
     """
-    A synaptic deconvolutional (transposed convolutional) cable that adjusts its
-    filter efficacies via a trace-based form of spike-timing-dependent plasticity (STDP).
+    A specialized synaptic deconvolutional (transposed convolutional) cable that adjusts its filter efficacies via a
+    trace-based form of spike-timing-dependent plasticity (STDP).
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
@@ -154,7 +154,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         self.dWeights.set(dWeights)
 
     @compilable
-    def backtransmit(self):  ## action-backpropagating routine
+    def backtransmit(self):  ## action-backpropagating co-routine
         ## calc dInputs
         dInputs = calc_dX_deconv(
             self.weights.get(), self.postSpike.get(), delta_shape=self.x_delta_shape, stride_size=self.stride,
