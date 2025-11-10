@@ -1,7 +1,9 @@
+# %%
+
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
+from ngcsimlib.logger import info
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 from ngclearn.utils.model_utils import clip, d_clip
 import jax
 import jax.numpy as jnp
@@ -17,11 +19,59 @@ def gaussian_logpdf(event, mean, stddev):
   quadratic = (event - mean)**2 / scale_sqrd
   return - 0.5 * (log_normalizer + quadratic)
 
+
+def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev):
+    learning_stddev_mask = jnp.asarray(scalar_stddev <= 0.0, dtype=jnp.float32)
+    # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
+    W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
+    # Forward pass
+    activation = act_fx(inputs)
+    mean = activation @ W_mu
+    fx_mean = mu_act_fx(mean)
+    logstd = activation @ W_logstd
+    clip_logstd = clip(logstd, -10.0, 2.0)
+    std = jnp.exp(clip_logstd)
+    std = learning_stddev_mask * std + (1.0 - learning_stddev_mask) * scalar_stddev # masking trick
+    # Sample using reparameterization trick
+    epsilon = jax.random.normal(seed, fx_mean.shape)
+    sample = epsilon * std + fx_mean
+    sample = jnp.clip(sample, mu_out_min, mu_out_max)
+    outputs = sample # the actual action that we take
+    # Compute log probability density of the Gaussian
+    log_prob = gaussian_logpdf(sample, fx_mean, std).sum(-1)
+    # Compute objective (negative REINFORCE objective)
+    objective = (-log_prob * rewards).mean() * 1e-2
+
+    # Backward pass
+    batch_size = inputs.shape[0] # B
+    dL_dlogp = -rewards[:, None] * 1e-2 / batch_size # (B, 1)
+
+    # Compute gradients manually based on the derivation
+    # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
+    dlog_prob_dfxmean = (sample - fx_mean) / (std ** 2)
+    dL_dmean = dL_dlogp * dlog_prob_dfxmean * dmu_act_fx(mean) # (B, A)
+    dL_dWmu = activation.T @ dL_dmean
+
+    # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
+    dlog_prob_dlogstd = - 1.0 / std + (sample - fx_mean)**2 / std**3
+    dL_dstd = dL_dlogp * dlog_prob_dlogstd
+    # Apply gradient clipping for logstd
+    dL_dlogstd = d_clip(logstd, -10.0, 2.0) * dL_dstd * std
+    dL_dWlogstd = activation.T @ dL_dlogstd # (I, B) @ (B, A) = (I, A)
+    dL_dWlogstd = dL_dWlogstd * learning_stddev_mask # there is no learning for the scalar stddev
+
+    # Update weights, negate the gradient because gradient ascent in ngc-learn
+    dW = jnp.concatenate([-dL_dWmu, -dL_dWlogstd], axis=-1)
+    # Finally, return metrics if needed
+    return dW, objective, outputs
+
+
+
 class REINFORCESynapse(DenseSynapse):
     """
     A stochastic synapse implementing the REINFORCE algorithm (policy gradient method). This synapse
     uses Gaussian distributions for generating actions and performs gradient-based updates.
-    
+
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output signals (sampled actions from Gaussian distribution)
@@ -89,7 +139,7 @@ class REINFORCESynapse(DenseSynapse):
         self.scalar_stddev = scalar_stddev
 
         ## Compartment setup
-        self.dWeights = Compartment(self.weights.value * 0)
+        self.dWeights = Compartment(self.weights.get() * 0)
         # self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate # For eligiblity traces later
         self.objective = Compartment(jnp.zeros(()))
         self.outputs = Compartment(jnp.zeros((batch_size, output_dim)))
@@ -101,72 +151,50 @@ class REINFORCESynapse(DenseSynapse):
         self.learning_mask = Compartment(jnp.zeros(()))
         self.seed = Compartment(jax.random.PRNGKey(seed if seed is not None else 42))
 
-    @staticmethod
-    def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev):
-        learning_stddev_mask = jnp.asarray(scalar_stddev <= 0.0, dtype=jnp.float32)
-        # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
-        W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
-        # Forward pass
-        activation = act_fx(inputs)
-        mean = activation @ W_mu
-        fx_mean = mu_act_fx(mean)
-        logstd = activation @ W_logstd
-        clip_logstd = clip(logstd, -10.0, 2.0)
-        std = jnp.exp(clip_logstd)
-        std = learning_stddev_mask * std + (1.0 - learning_stddev_mask) * scalar_stddev # masking trick
-        # Sample using reparameterization trick
-        epsilon = jax.random.normal(seed, fx_mean.shape)
-        sample = epsilon * std + fx_mean
-        sample = jnp.clip(sample, mu_out_min, mu_out_max)
-        outputs = sample # the actual action that we take
-        # Compute log probability density of the Gaussian
-        log_prob = gaussian_logpdf(sample, fx_mean, std).sum(-1)
-        # Compute objective (negative REINFORCE objective)
-        objective = (-log_prob * rewards).mean() * 1e-2
 
-        # Backward pass
-        batch_size = inputs.shape[0] # B
-        dL_dlogp = -rewards[:, None] * 1e-2 / batch_size # (B, 1)
+    # @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients", "step_count", "seed"])
+    # @staticmethod
+    @compilable
+    def evolve(self, dt):
 
-        # Compute gradients manually based on the derivation
-        # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
-        dlog_prob_dfxmean = (sample - fx_mean) / (std ** 2)
-        dL_dmean = dL_dlogp * dlog_prob_dfxmean * dmu_act_fx(mean) # (B, A)
-        dL_dWmu = activation.T @ dL_dmean
+        # Get compartment values
+        weights = self.weights.get()
+        dWeights = self.dWeights.get()
+        objective = self.objective.get()
+        outputs = self.outputs.get()
+        accumulated_gradients = self.accumulated_gradients.get()
+        step_count = self.step_count.get()
+        seed = self.seed.get()
+        inputs = self.inputs.get()
+        rewards = self.rewards.get()
 
-        # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
-        dlog_prob_dlogstd = - 1.0 / std + (sample - fx_mean)**2 / std**3
-        dL_dstd = dL_dlogp * dlog_prob_dlogstd
-        # Apply gradient clipping for logstd
-        dL_dlogstd = d_clip(logstd, -10.0, 2.0) * dL_dstd * std
-        dL_dWlogstd = activation.T @ dL_dlogstd # (I, B) @ (B, A) = (I, A)
-        dL_dWlogstd = dL_dWlogstd * learning_stddev_mask # there is no learning for the scalar stddev
-
-        # Update weights, negate the gradient because gradient ascent in ngc-learn
-        dW = jnp.concatenate([-dL_dWmu, -dL_dWlogstd], axis=-1)
-        # Finally, return metrics if needed
-        return dW, objective, outputs
-
-    @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients", "step_count", "seed"])
-    @staticmethod
-    def evolve(dt, w_bound, inputs, rewards, act_fx, weights, eta, learning_mask, decay, accumulated_gradients, step_count, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev):
+        # Main logic
         main_seed, sub_seed = jax.random.split(seed)
-        dWeights, objective, outputs = REINFORCESynapse._compute_update(
-            dt, inputs, rewards, act_fx, weights, sub_seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev
+        dWeights, objective, outputs = _compute_update(
+            dt, inputs, rewards, self.act_fx, weights, sub_seed, self.mu_act_fx, self.dmu_act_fx, self.mu_out_min, self.mu_out_max, self.scalar_stddev
         )
         ## do a gradient ascent update/shift
-        weights = (weights + dWeights * eta) * learning_mask + weights * (1.0 - learning_mask) # update the weights only where learning_mask is 1.0
+        weights = (weights + dWeights * self.eta) * self.learning_mask + weights * (1.0 - self.learning_mask) # update the weights only where learning_mask is 1.0
         ## enforce non-negativity
         eps = 0.0 # 0.01 # 0.001
-        weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
+        weights = jnp.clip(weights, eps, self.w_bound - eps)  # jnp.abs(w_bound))
         step_count += 1
-        accumulated_gradients = (step_count - 1) / step_count * accumulated_gradients * decay + 1.0 / step_count * dWeights # EMA update of accumulated gradients
-        step_count = step_count * (1 - learning_mask) # reset the step count to 0 when we have learned
-        return weights, dWeights, objective, outputs, accumulated_gradients, step_count, main_seed
+        accumulated_gradients = (step_count - 1) / step_count * accumulated_gradients * self.decay + 1.0 / step_count * dWeights # EMA update of accumulated gradients
+        step_count = step_count * (1 - self.learning_mask) # reset the step count to 0 when we have learned
 
-    @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights", "accumulated_gradients", "step_count", "seed"])
-    @staticmethod
-    def reset(batch_size, shape):
+        # Set updated compartment values
+        self.weights.set(weights)
+        self.dWeights.set(dWeights)
+        self.objective.set(objective)
+        self.outputs.set(outputs)
+        self.accumulated_gradients.set(accumulated_gradients)
+        self.step_count.set(step_count)
+        self.seed.set(main_seed)
+
+    # @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights", "accumulated_gradients", "step_count", "seed"])
+    # @staticmethod
+    @compilable
+    def reset(self, batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
@@ -177,7 +205,17 @@ class REINFORCESynapse(DenseSynapse):
         accumulated_gradients = jnp.zeros((shape[0], shape[1] * 2))
         step_count = jnp.zeros(())
         seed = jax.random.PRNGKey(42)
-        return inputs, outputs, objective, rewards, dWeights, accumulated_gradients, step_count, seed
+
+
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+        self.objective.set(objective)
+        self.rewards.set(rewards)
+        self.dWeights.set(dWeights)
+        self.accumulated_gradients.set(accumulated_gradients)
+        self.step_count.set(step_count)
+        self.seed.set(seed)
+
 
     @classmethod
     def help(cls): ## component help function
@@ -223,11 +261,11 @@ class REINFORCESynapse(DenseSynapse):
         return info
 
     def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).value)
+            stats = tensorstats(getattr(self, c).get())
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)
@@ -235,3 +273,15 @@ class REINFORCESynapse(DenseSynapse):
                 line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
+
+
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        syn = REINFORCESynapse(
+            name="reinforce_syn",
+            shape=(3, 2)
+        )
+        # Wab = syn.weights.get()
+    print(syn)
+
