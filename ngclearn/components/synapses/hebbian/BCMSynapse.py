@@ -1,11 +1,8 @@
 from jax import random, numpy as jnp, jit
-
-from ngcsimlib.logger import info
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.parser import compilable
 
-from ngclearn.components.synapses import DenseSynapse
-from ngclearn.utils import tensorstats
+from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
 class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
     """
@@ -72,8 +69,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
             self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0., weight_init=None, resist_scale=1.,
             p_conn=1., batch_size=1, **kwargs
     ):
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn,
-                         batch_size=batch_size, **kwargs)
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 
         ## Synapse and BCM hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
@@ -91,45 +87,51 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.post = Compartment(postVals) ## post-synaptic statistic
         self.post_term = Compartment(postVals)
         self.theta = Compartment(postVals + self.theta0) ## synaptic modification thresholds
-        self.dWeights = Compartment(self.weights.value * 0)
+        self.dWeights = Compartment(self.weights.get() * 0)
 
     @compilable
-    def evolve(self, t, dt):
-        # Get the variables
-        pre = self.pre.get()
-        post = self.post.get()
-        theta = self.theta.get()
-        weights = self.weights.get()
-        
+    def evolve(self, t, dt): #t, dt, tau_w, tau_theta, w_bound, w_decay, pre, post, theta, weights):
         eps = 1e-7
-        post_term = post * (post - theta)  # post - theta
-        post_term = post_term * (1. / (theta + eps))
-        dWeights = jnp.matmul(pre.T, post_term)
+        post_term = self.post.get() * (self.post.get() - self.theta.get())  # post - theta
+        post_term = post_term * (1. / (self.theta.get() + eps))
+        dWeights = jnp.matmul(self.pre.get().T, post_term)
         if self.w_bound > 0.:
-            dWeights = dWeights * (self.w_bound - jnp.abs(weights))
+            dWeights = dWeights * (self.w_bound - jnp.abs(self.weights.get()))
         ## update synaptic efficacies according to a leaky ODE
-        dWeights = -weights * self.w_decay + dWeights
-        _W = weights + dWeights * dt / self.tau_w
+        dWeights = -self.weights.get() * self.w_decay + dWeights
+        _W = self.weights.get() + dWeights * dt / self.tau_w
         ## update synaptic modification threshold as a leaky ODE
-        dtheta = jnp.mean(jnp.square(post), axis=0, keepdims=True)  ## batch avg
-        theta = theta + (-theta + dtheta) * dt / self.tau_theta
-        
-        # Update compartments
-        self.weights.set(_W)
+        dtheta = jnp.mean(jnp.square(self.post.get()), axis=0, keepdims=True)  ## batch avg
+        theta = self.theta.get() + (-self.theta.get() + dtheta) * dt / self.tau_theta
+
+        #self.weights.set(weights)
         self.theta.set(theta)
         self.dWeights.set(dWeights)
         self.post_term.set(post_term)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  weights=self.weights.value, theta=self.theta.value)
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
+        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
 
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-        self.theta.set(data['theta'])
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.pre.set(preVals)
+        self.post.set(postVals)
+        self.dWeights.set(jnp.zeros(self.shape.get()))
+        self.post_term.set(postVals)
+
+    # def save(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     jnp.savez(file_name,
+    #               weights=self.weights.value, theta=self.theta.value)
+    #
+    # def load(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     self.weights.set(data['weights'])
+    #     self.theta.set(data['theta'])
 
     @classmethod
     def help(cls): ## component help function
@@ -172,21 +174,6 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
                             "tau_theta d(theta_{i})/dt = (-theta_{i} + (z_i)^2)",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
-
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

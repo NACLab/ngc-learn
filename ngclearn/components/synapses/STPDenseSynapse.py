@@ -1,12 +1,10 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-
 from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
+
 from ngclearn.components.synapses import DenseSynapse
-from ngclearn.utils import tensorstats
+from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
     """
@@ -56,10 +54,10 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         resources_int: initialization kernel for synaptic resources matrix
     """
 
-    # Define Functions
-    def __init__(self, name, shape, weight_init=None, bias_init=None,
-                 resist_scale=1., p_conn=1., tau_f=750., tau_d=50.,
-                 resources_init=None, **kwargs):
+    def __init__(
+            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., tau_f=750., tau_d=50.,
+            resources_init=None, **kwargs
+    ):
         super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
         ## STP meta-parameters
         self.resources_init = resources_init
@@ -67,11 +65,11 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         self.tau_d = tau_d
 
         ## Set up short-term plasticity / dynamic synapse compartment values
-        tmp_key, *subkeys = random.split(self.key.value, 4)
+        tmp_key, *subkeys = random.split(self.key.get(), 4)
         preVals = jnp.zeros((self.batch_size, shape[0]))
         self.u = Compartment(preVals) ## release prob variables
         self.x = Compartment(preVals + 1) ## resource availability variables
-        self.Wdyn = Compartment(self.weights.value * 0) ## dynamic synapse values
+        self.Wdyn = Compartment(self.weights.get() * 0) ## dynamic synapse values
         if self.resources_init is None:
             info(self.name, "is using default resources value initializer!")
             self.resources_init = {"dist": "uniform", "amin": 0.125, "amax": 0.175} # 0.15
@@ -79,57 +77,59 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
             initialize_params(subkeys[2], self.resources_init, shape)
         ) ## matrix U - synaptic resources matrix
 
-    @transition(output_compartments=["outputs", "u", "x", "Wdyn"])
-    @staticmethod
-    def advance_state(
-            tau_f, tau_d, Rscale, inputs, weights, biases, resources, u, x, Wdyn
-    ):
-        s = inputs
+    @compilable
+    def advance_state(self, t, dt):
+        s = self.inputs.get()
         ## compute short-term facilitation
         #u = u - u * (1./tau_f) + (resources * (1. - u)) * s
-        if tau_f > 0.: ## compute short-term facilitation
-            u = u - u * (1./tau_f) + (resources * (1. - u)) * s
+        if self.tau_f > 0.: ## compute short-term facilitation
+            u = self.u.get() - self.u.get() * (1./self.tau_f) + (self.resources.get() * (1. - self.u.get())) * s
         else:
-            u = resources ## disabling STF yields fixed resource u variables
+            u = self.resources.get() ## disabling STF yields fixed resource u variables
         ## compute dynamic synaptic values/conductances
-        Wdyn = (weights * u * x) * s + Wdyn * (1. - s) ## OR: -W/tau_w + W * u * x
-        if tau_d > 0.:
-            ## compute short-term depression
-            x = x + (1. - x) * (1./tau_d) - u * x * s
-        outputs = jnp.matmul(inputs, Wdyn * Rscale) + biases
-        return outputs, u, x, Wdyn
+        Wdyn = (self.weights.get() * u * self.x.get()) * s + self.Wdyn.get() * (1. - s) ## OR: -W/tau_w + W * u * x
+        ## compute short-term depression
+        x = self.x.get()
+        if self.tau_d > 0.:
+            x = x + (1. - x) * (1./self.tau_d) - u * x * s
+        ## else, do nothing with x (keep it pointing to current x compartment)
+        outputs = jnp.matmul(self.inputs.get(), Wdyn * self.resist_scale) + self.biases.get()
 
-    @transition(output_compartments=["inputs", "outputs", "u", "x", "Wdyn"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        u = preVals
-        x = preVals + 1
-        Wdyn = jnp.zeros(shape)
-        return inputs, outputs, u, x, Wdyn
+        self.outputs.set(outputs)
+        self.u.set(u)
+        self.x.set(x)
+        self.Wdyn.set(Wdyn)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        if self.bias_init != None:
-            jnp.savez(file_name,
-                      weights=self.weights.value,
-                      biases=self.biases.value,
-                      resources=self.resources.value)
-        else:
-            jnp.savez(file_name,
-                      weights=self.weights.value,
-                      resources=self.resources.value)
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
+        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.u.set(preVals)
+        self.x.set(preVals + 1)
+        self.Wdyn.set(jnp.zeros(self.shape.get()))
 
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-        self.resources.set(data['resources'])
-        if "biases" in data.keys():
-            self.biases.set(data['biases'])
+    # def save(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     if self.bias_init != None:
+    #         jnp.savez(file_name,
+    #                   weights=self.weights.value,
+    #                   biases=self.biases.value,
+    #                   resources=self.resources.value)
+    #     else:
+    #         jnp.savez(file_name,
+    #                   weights=self.weights.value,
+    #                   resources=self.resources.value)
+    #
+    # def load(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     self.weights.set(data['weights'])
+    #     self.resources.set(data['resources'])
+    #     if "biases" in data.keys():
+    #         self.biases.set(data['biases'])
 
     @classmethod
     def help(cls): ## component help function
@@ -166,17 +166,3 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
                             "dW/dt = W_full * u * x * inputs",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines

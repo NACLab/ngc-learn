@@ -28,11 +28,11 @@ import numpy
 
 import ngcsimlib
 
-from ngcsimlib import Component, MethodProcess, JointProcess
+from ngclearn.utils import JointProcess, MethodProcess
 from ngcsimlib.context import Context, ContextObjectTypes
 from ngcsimlib.compartment import Compartment
 
-from ngclearn.utils.jaxProcess import JaxProcess
+# from ngclearn.utils.jaxProcess import JaxProcess
 from ngcsimlib import logger
 
 # if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":

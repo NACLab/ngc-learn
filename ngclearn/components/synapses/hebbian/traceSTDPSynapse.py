@@ -3,7 +3,6 @@ from ngcsimlib.compartment import Compartment
 from ngcsimlib.parser import compilable
 
 from ngclearn.components.synapses.denseSynapse import DenseSynapse
-from ngclearn.utils import tensorstats
 
 
 class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
@@ -56,12 +55,16 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             initialization to use
 
         resist_scale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+            (Default: 1.), i.e., yields: out = ((W * resistance) * in)
 
         p_conn: probability of a connection existing (default: 1); setting
             this to < 1. will result in a sparser synaptic structure
 
         w_bound: maximum value/magnitude any synaptic efficacy can be (default: 1)
+
+        tau_w: synaptic weight decay coefficient to apply to STDP update
+
+        weight_mask: synaptic binary masking matrix to apply (to enforce a constant sparse structure; default: None)
     """
 
     # Define Functions
@@ -69,8 +72,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., weight_init=None, resist_scale=1.,
             p_conn=1., w_bound=1., tau_w=0., weight_mask=None, batch_size=1, **kwargs
     ):
-        super().__init__(name, shape, weight_init, None, resist_scale,
-                         p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 
         self.tau_w = tau_w
         self.mu = mu ## controls power-scaling of STDP rule
@@ -84,7 +86,6 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             self.weight_mask = jnp.ones((1, 1))
         else:
             self.weight_mask = weight_mask
-
         self.weights.set(self.weights.get() * self.weight_mask)
 
         ## Compartment setup
@@ -184,6 +185,7 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
             "eta": "Global learning rate initial condition",
             "mu": "Power factor for STDP adjustment",
             "pretrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "weight_mask" : "Binary synaptic weight mask to apply to enforce a sparsity structure"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,

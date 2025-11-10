@@ -6,6 +6,7 @@ from jax import numpy as jnp
 from jax import random
 from ngcsimlib.compartment import Compartment
 from ngcsimlib import Component
+from ngclearn.utils import tensorstats
 
 
 class JaxComponent(Component):
@@ -57,3 +58,16 @@ class JaxComponent(Component):
             if d is not None:
                 comp.set(d)
 
+    def __repr__(self):
+        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
+        maxlen = max(len(c) for c in comps) + 5
+        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
+        for c in comps:
+            stats = tensorstats(getattr(self, c).value)
+            if stats is not None:
+                line = [f"{k}: {v}" for k, v in stats.items()]
+                line = ", ".join(line)
+            else:
+                line = "None"
+            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
+        return lines

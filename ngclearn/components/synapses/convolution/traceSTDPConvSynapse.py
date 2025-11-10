@@ -1,13 +1,11 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
 from ngcsimlib.compartment import Compartment
-
-from .convSynapse import ConvSynapse
+from ngcsimlib.parser import compilable
 from ngclearn.utils.weight_distribution import initialize_params
-from ngcsimlib.logger import info
-from ngclearn.utils import tensorstats
 import ngclearn.utils.weight_distribution as dist
+
+from ngclearn.components.synapses.convolution.convSynapse import ConvSynapse
+
 from ngclearn.components.synapses.convolution.ngcconv import (_conv_same_transpose_padding,
                                                               _conv_valid_transpose_padding)
 from ngclearn.components.synapses.convolution.ngcconv import (conv2d, _calc_dX_conv,
@@ -93,7 +91,7 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
 
         ######################### set up compartments ##########################
         ## Compartment setup and shape computation
-        self.dWeights = Compartment(self.weights.value * 0)
+        self.dWeights = Compartment(self.weights.get() * 0)
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
         self.preSpike = Compartment(jnp.zeros(self.in_shape))
         self.preTrace = Compartment(jnp.zeros(self.in_shape))
@@ -108,72 +106,66 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         k_size, k_size, n_in_chan, n_out_chan = self.shape
         if padding == "SAME":
             self.antiPad = _conv_same_transpose_padding(
-                self.postSpike.value.shape[1],
+                self.postSpike.get().shape[1],
                 self.x_size, k_size, stride)
         elif padding == "VALID":
             self.antiPad = _conv_valid_transpose_padding(
-                self.postSpike.value.shape[1],
+                self.postSpike.get().shape[1],
                 self.x_size, k_size, stride)
         ########################################################################
 
     def _init(self, batch_size, x_size, shape, stride, padding, pad_args, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
-        _d = conv2d(_x, weights.value, stride_size=stride, padding=padding) * 0
+        _d = conv2d(_x, weights.get(), stride_size=stride, padding=padding) * 0
         _dK = _calc_dK_conv(_x, _d, stride_size=stride, padding=pad_args)
         ## get filter update correction
-        dx = _dK.shape[0] - weights.value.shape[0]
-        dy = _dK.shape[1] - weights.value.shape[1]
+        dx = _dK.shape[0] - weights.get().shape[0]
+        dy = _dK.shape[1] - weights.get().shape[1]
         #self.delta_shape = (dx, dy)
         self.delta_shape = (max(dx, 0), max(dy, 0))
         ## get input update correction
-        _dx = _calc_dX_conv(weights.value, _d, stride_size=stride,
+        _dx = _calc_dX_conv(weights.get(), _d, stride_size=stride,
                             anti_padding=pad_args)
         dx = (_dx.shape[1] - _x.shape[1])
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
 
-    @staticmethod
-    def _compute_update(
-            pretrace_target, Aplus, Aminus, stride, pad_args, delta_shape, preSpike, preTrace, postSpike, postTrace
-    ):
+    #@staticmethod
+    def _compute_update(self): #pretrace_target, Aplus, Aminus, stride, pad_args, delta_shape, preSpike, preTrace, postSpike, postTrace
         ## Compute long-term potentiation to filters
         dW_ltp = calc_dK_conv(
-            preTrace - pretrace_target, postSpike * Aplus, delta_shape=delta_shape, stride_size=stride, padding=pad_args
+            self.preTrace.get() - self.pretrace_target, self.postSpike.get() * self.Aplus, delta_shape=self.delta_shape,
+            stride_size=self.stride, padding=self.pad_args
         )
         ## Compute long-term depression to filters
         dW_ltd = -calc_dK_conv(
-            preSpike, postTrace * Aminus, delta_shape=delta_shape, stride_size=stride, padding=pad_args
+            self.preSpike.get(), self.postTrace.get() * self.Aminus, delta_shape=self.delta_shape,
+            stride_size=self.stride, padding=self.pad_args
         )
         dWeights = (dW_ltp + dW_ltd)
         return dWeights
 
-    @transition(output_compartments=["weights", "dWeights"])
-    @staticmethod
-    def evolve(
-            pretrace_target, Aplus, Aminus, w_decay, w_bound, stride, pad_args, delta_shape, preSpike, preTrace,
-            postSpike, postTrace, weights, eta
-    ):
-        dWeights = TraceSTDPConvSynapse._compute_update(
-            pretrace_target, Aplus, Aminus, stride, pad_args, delta_shape, preSpike, preTrace, postSpike, postTrace
-        )
-        if w_decay > 0.:  ## apply synaptic decay
-            weights = weights + dWeights * eta - weights * w_decay  ## conduct decayed STDP-ascent
+    @compilable
+    def evolve(self):
+        dWeights = self._compute_update()
+        if self.w_decay > 0.:  ## apply synaptic decay
+            weights = self.weights.get() + dWeights * self.eta - self.weights.get() * self.w_decay  ## conduct decayed STDP-ascent
         else:
-            weights = weights + dWeights * eta  ## conduct STDP-ascent
+            weights = self.weights.get() + dWeights * self.eta  ## conduct STDP-ascent
         ## Apply any enforced filter constraints
-        if w_bound > 0.: ## enforce non-negativity
+        if self.w_bound > 0.: ## enforce non-negativity
             eps = 0.01  # 0.001
-            weights = jnp.clip(weights, eps, w_bound - eps)
-        return weights, dWeights
+            weights = jnp.clip(weights, eps, self.w_bound - eps)
 
-    @transition(output_compartments=["dInputs"])
-    @staticmethod
-    def backtransmit(
-            x_size, shape, stride, padding, x_delta_shape, antiPad, postSpike, weights
-    ): ## action-backpropagating routine
+        self.weights.set(weights)
+        self.dWeights.set(dWeights)
+
+    @compilable
+    def backtransmit(self):
+        ## action-backpropagating routine
         ## calc dInputs - adjustment w.r.t. input signal
-        k_size, k_size, n_in_chan, n_out_chan = shape
+        k_size, k_size, n_in_chan, n_out_chan = self.shape
         # antiPad = None
         # if padding == "SAME":
         #     antiPad = _conv_same_transpose_padding(postSpike.shape[1], x_size,
@@ -181,21 +173,22 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         # elif padding == "VALID":
         #     antiPad = _conv_valid_transpose_padding(postSpike.shape[1], x_size,
         #                                             k_size, stride)
-        dInputs = calc_dX_conv(weights, postSpike, delta_shape=x_delta_shape, stride_size=stride, anti_padding=antiPad)
-        return dInputs
+        dInputs = calc_dX_conv(
+            self.weights.get(), self.postSpike.get(), delta_shape=self.x_delta_shape, stride_size=self.stride,
+            anti_padding=self.antiPad
+        )
+        self.dInputs.set(dInputs)
 
-    @transition(output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace"])
-    @staticmethod
-    def reset(in_shape, out_shape):
-        preVals = jnp.zeros(in_shape)
-        postVals = jnp.zeros(out_shape)
-        inputs = preVals
-        outputs = postVals
-        preSpike = preVals
-        postSpike = postVals
-        preTrace = preVals
-        postTrace = postVals
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace
+    @compilable
+    def reset(self):  # in_shape, out_shape):
+        preVals = jnp.zeros(self.in_shape.get())
+        postVals = jnp.zeros(self.out_shape.get())
+        self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.preSpike.set(preVals)
+        self.postSpike.set(postVals)
+        self.preTrace.set(preVals)
+        self.postTrace.set(postVals)
 
     @classmethod
     def help(cls): ## component help function
