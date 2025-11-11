@@ -1,16 +1,11 @@
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import HebbianConvSynapse
-import ngclearn.utils.weight_distribution as dist
-from ngcsimlib.compilers import compile_command, wrap_command
-from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
+from ngclearn import Context, MethodProcess
+import ngclearn.utils.weight_distribution as dist
+from ngclearn.components.synapses.convolution.hebbianConvSynapse import HebbianConvSynapse
+from numpy.testing import assert_array_equal
 
 def test_HebbianConvSynapse1():
     name = "hebb_conv_ctx"
@@ -36,41 +31,24 @@ def test_HebbianConvSynapse1():
             stride=stride, padding=padding_style, batch_size=batch_size, key=subkeys[0]
         )
 
-        #"""
-        evolve_process = (Process("evolve_proc")
+        evolve_process = (MethodProcess("evolve_process")
                           >> a.evolve)
-        ctx.wrap_and_add_command(jit(evolve_process.pure), name="adapt")
 
-        backtransmit_process = (Process("btransmit_proc")
-                                >> a.backtransmit)
-        ctx.wrap_and_add_command(jit(backtransmit_process.pure), name="backtransmit")
+        backtransmit_process = (MethodProcess("backtransmit_process")
+                           >> a.backtransmit)
 
-        advance_process = (Process("advance_proc")
+        advance_process = (MethodProcess("advance_proc")
                            >> a.advance_state)
-        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
-        reset_process = (Process("reset_proc")
+        reset_process = (MethodProcess("reset_proc")
                          >> a.reset)
-        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-        #"""
-
-        """
-        reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-        ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
-        advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-        ctx.add_command(wrap_command(jit(ctx.advance_state)), name="run")
-        evolve_cmd, evolve_args = ctx.compile_by_key(a, compile_key="evolve")
-        ctx.add_command(wrap_command(jit(ctx.evolve)), name="adapt")
-        backpass_cmd, backpass_args = ctx.compile_by_key(a, compile_key="backtransmit")
-        ctx.add_command(wrap_command(jit(ctx.backtransmit)), name="backtransmit")
-        """
 
     x = jnp.ones(x_shape)
 
-    ctx.reset()
+    reset_process.run() # ctx.reset()
     a.inputs.set(x)
-    ctx.run(t=1., dt=dt)
-    y = a.outputs.value
+    advance_process.run(t=1., dt=dt)  # ctx.run(t=1., dt=dt)
+    y = a.outputs.get()
 
     y_truth = jnp.array(
         [[[[4.],[2.]],
@@ -79,17 +57,16 @@ def test_HebbianConvSynapse1():
 
     assert_array_equal(y, y_truth)
     # print(y)
+    # print("y.Tr:\n", y_truth)
     # print("======")
 
-    # print("NGC-Learn.shape = ", node.outputs.value.shape)
+    # print("NGC-Learn.shape = ", node.outputs.get().shape)
     a.pre.set(x)
     a.post.set(y)
-    ctx.adapt(t=1., dt=dt)
-    dK = a.dWeights.value
-    #print(dK)
-    ctx.backtransmit(t=1., dt=dt)
-    dx = a.dInputs.value
-    #print(dx)
+    evolve_process.run(t=1., dt=dt)  # ctx.adapt(t=1., dt=dt)
+    dK = a.dWeights.get()
+    backtransmit_process.run(t=1., dt=dt)  # ctx.backtransmit(t=1., dt=dt)
+    dx = a.dInputs.get()
     dK_truth = jnp.array(
         [[[[9.]],
           [[6.]]],
@@ -102,6 +79,10 @@ def test_HebbianConvSynapse1():
           [[6.],
             [9.]]]]
     )
+    # print(dK)
+    # print("dK.Tr:\n", dK_truth)
+    # print(dx)
+    # print("dx.Tr:\n", dx_truth)
     assert_array_equal(dK, dK_truth)
     assert_array_equal(dx, dx_truth)
 

@@ -1,5 +1,5 @@
 ## point to standard spiking cell component types
-from .sLIFCell import SLIFCell
+# from .sLIFCell import SLIFCell
 from .LIFCell import LIFCell
 from .IFCell import IFCell
 from .WTASCell import WTASCell
@@ -9,3 +9,4 @@ from .fitzhughNagumoCell import FitzhughNagumoCell
 from .izhikevichCell import IzhikevichCell
 from .RAFCell import RAFCell
 from .hodgkinHuxleyCell import HodgkinHuxleyCell
+
