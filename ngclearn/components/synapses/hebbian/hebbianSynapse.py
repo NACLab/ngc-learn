@@ -253,6 +253,17 @@ class HebbianSynapse(DenseSynapse):
         self.dWeights.set(dWeights)
         self.dBiases.set(dBiases)
 
+    @compilable
+    def reset(self, batch_size, shape):
+        preVals = jnp.zeros((batch_size, shape[0]))
+        postVals = jnp.zeros((batch_size, shape[1]))
+        self.inputs.set(preVals) # inputs
+        self.outputs.set(postVals) # outputs
+        self.pre.set(preVals) # pre
+        self.post.set(postVals) # post
+        self.dWeights.set(jnp.zeros(shape)) # dW
+        self.dBiases.set(jnp.zeros(shape[1])) # db
+
     @classmethod
     def help(cls): ## component help function
         properties = {
