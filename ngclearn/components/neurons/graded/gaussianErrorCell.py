@@ -108,6 +108,32 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.L.set(jnp.squeeze(L))
         self.mask.set(mask)
 
+    # @transition(output_compartments=["dmu", "dtarget", "dSigma", "target", "mu", "modulator", "L", "mask"])
+    # @staticmethod
+    @compilable
+    def reset(self, batch_size, shape, sigma_shape): ## reset core components/statistics
+        _shape = (batch_size, shape[0])
+        if len(shape) > 1:
+            _shape = (batch_size, shape[0], shape[1], shape[2])
+        restVals = jnp.zeros(_shape)
+        dmu = restVals
+        dtarget = restVals
+        dSigma = jnp.zeros(sigma_shape)
+        target = restVals
+        mu = restVals
+        modulator = mu + 1.
+        L = 0. #jnp.zeros((1, 1))
+        mask = jnp.ones(_shape)
+
+        self.dmu.set(dmu)
+        self.dtarget.set(dtarget)
+        self.dSigma.set(dSigma)
+        self.target.set(target)
+        self.mu.set(mu)
+        self.modulator.set(modulator)
+        self.L.set(L)
+        self.mask.set(mask)
+
     @classmethod
     def help(cls): ## component help function
         properties = {

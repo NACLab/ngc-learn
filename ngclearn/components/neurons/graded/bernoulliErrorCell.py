@@ -12,7 +12,7 @@ from ngcsimlib.parser import compilable
 class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
     A simple (non-spiking) Bernoulli error cell - this is a fixed-point solution
-    of a mismatch signal. Specifically, this cell operates as a factorized multivariate 
+    of a mismatch signal. Specifically, this cell operates as a factorized multivariate
     Bernoulli distribution.
 
     | --- Cell Input Compartments: ---

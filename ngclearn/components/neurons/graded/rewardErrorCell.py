@@ -91,6 +91,18 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         # Update compartment
         self.mu.set(mu)
 
+    @compilable
+    def reset(self, batch_size, n_units):
+        restVals = jnp.zeros((batch_size, n_units))
+        mu = restVals
+        rpe = restVals
+        accum_reward = restVals
+        n_ep_steps = jnp.zeros((batch_size, 1))
+        self.mu.set(mu)
+        self.rpe.set(rpe)
+        self.accum_reward.set(accum_reward)
+        self.n_ep_steps.set(n_ep_steps)
+
     @classmethod
     def help(cls): ## component help function
         properties = {

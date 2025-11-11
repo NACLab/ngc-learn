@@ -103,6 +103,26 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.L.set(jnp.squeeze(L))
         self.mask.set(mask)
 
+    def reset(self, batch_size, n_units, scale_shape):
+        restVals = jnp.zeros((batch_size, n_units))
+        dshift = restVals
+        dtarget = restVals
+        dScale = jnp.zeros(scale_shape)
+        target = restVals
+        shift = restVals
+        modulator = shift + 1.
+        L = 0.
+        mask = jnp.ones((batch_size, n_units))
+
+        self.dshift.set(dshift)
+        self.dtarget.set(dtarget)
+        self.dScale.set(dScale)
+        self.target.set(target)
+        self.shift.set(shift)
+        self.modulator.set(modulator)
+        self.L.set(L)
+        self.mask.set(mask)
+
     @classmethod
     def help(cls): ## component help function
         properties = {

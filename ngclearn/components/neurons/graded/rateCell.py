@@ -251,6 +251,18 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.z.set(z)
         self.zF.set(zF)
 
+    @compilable
+    def reset(self, batch_size, shape): #n_units
+        _shape = (batch_size, shape[0])
+        if len(shape) > 1:
+            _shape = (batch_size, shape[0], shape[1], shape[2])
+        restVals = jnp.zeros(_shape)
+        self.j.set(restVals)
+        self.j_td.set(restVals)
+        self.z.set(restVals)
+        self.zF.set(restVals)
+
+
     def save(self, directory, **kwargs):
         ## do a protected save of constants, depending on whether they are floats or arrays
         tau_m = (self.tau_m if isinstance(self.tau_m, float)
