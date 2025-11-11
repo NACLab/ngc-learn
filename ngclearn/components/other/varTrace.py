@@ -1,3 +1,5 @@
+# %%
+
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
@@ -124,7 +126,7 @@ class VarTrace(JaxComponent): ## low-pass filter
     @compilable
     def reset(self):
         restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.inputs.set(restVals)
+        not self.inputs.targeted and self.inputs.set(restVals)
         self.outputs.set(restVals)
         self.trace.set(restVals)
 

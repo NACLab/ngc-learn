@@ -63,7 +63,7 @@ class JaxComponent(Component):
         maxlen = max(len(c) for c in comps) + 5
         lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
         for c in comps:
-            stats = tensorstats(getattr(self, c).value)
+            stats = tensorstats(getattr(self, c).get())
             if stats is not None:
                 line = [f"{k}: {v}" for k, v in stats.items()]
                 line = ", ".join(line)

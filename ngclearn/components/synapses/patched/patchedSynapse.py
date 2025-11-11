@@ -159,7 +159,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         postVals = jnp.zeros((batch_size, shape[1]))
         inputs = preVals
         outputs = postVals
-        self.inputs.set(inputs)
+        not self.inputs.targeted and self.inputs.set(inputs)
         self.outputs.set(outputs)
 
     def save(self, directory, **kwargs):

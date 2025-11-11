@@ -207,7 +207,7 @@ class REINFORCESynapse(DenseSynapse):
         seed = jax.random.PRNGKey(42)
 
 
-        self.inputs.set(inputs)
+        not self.inputs.targeted and self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.objective.set(objective)
         self.rewards.set(rewards)

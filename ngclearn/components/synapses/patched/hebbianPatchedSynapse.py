@@ -280,7 +280,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
     def reset(self, batch_size, shape):
         preVals = jnp.zeros((batch_size, shape[0]))
         postVals = jnp.zeros((batch_size, shape[1]))
-        self.inputs.set(preVals) # inputs
+        not self.inputs.targeted and self.inputs.set(preVals) # inputs
         self.outputs.set(postVals) # outputs
         self.pre.set(preVals) # pre
         self.post.set(postVals) # post

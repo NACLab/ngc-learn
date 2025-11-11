@@ -86,7 +86,7 @@ class ExpKernel(JaxComponent): ## exponential kernel
     def reset(self):
         restVals = jnp.zeros((self.batch_size, self.n_units)) ## inputs, epsp
         restTensor = jnp.zeros([self.win_len, self.batch_size, self.n_units], jnp.float32)  ## tf
-        self.inputs.set(restVals)
+        not self.inputs.targeted and self.inputs.set(restVals)
         self.epsp.set(restVals)
         self.tf.set(restTensor)
 

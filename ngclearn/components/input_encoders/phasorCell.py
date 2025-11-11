@@ -88,7 +88,7 @@ class PhasorCell(JaxComponent):
     @compilable
     def reset(self):
         restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
-        self.inputs.set(restVals)
+        not self.inputs.targeted and self.inputs.set(restVals)
         self.outputs.set(restVals)
         self.tols.set(restVals)
         self.angles.set(restVals)
