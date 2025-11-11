@@ -2,7 +2,7 @@ numpy>=1.22.0
 scikit-learn>=1.6.1
 scipy>=1.7.0
 matplotlib>=3.8.0
-patchify
+# patchify # patchify has issues with pip installation
 jax>=0.4.28
 jaxlib>=0.4.28
 ngcsimlib>=1.0.0
