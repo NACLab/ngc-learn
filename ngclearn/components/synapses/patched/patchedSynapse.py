@@ -153,6 +153,15 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         # Update compartment
         self.outputs.set(outputs)
 
+    @compilable
+    def reset(self, batch_size, shape):
+        preVals = jnp.zeros((batch_size, shape[0]))
+        postVals = jnp.zeros((batch_size, shape[1]))
+        inputs = preVals
+        outputs = postVals
+        self.inputs.set(inputs)
+        self.outputs.set(outputs)
+
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         if self.bias_init != None:
