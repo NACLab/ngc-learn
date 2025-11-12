@@ -224,7 +224,6 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.rfr.set(restVals + self.refract_T)
         self.tols.set(restVals)
 
-
     @classmethod
     def help(cls): ## component help function
         properties = {
