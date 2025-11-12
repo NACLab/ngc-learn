@@ -252,40 +252,39 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF.set(zF)
 
     @compilable
-    def reset(self, batch_size, shape): #n_units
-        _shape = (batch_size, shape[0])
-        if len(shape) > 1:
-            _shape = (batch_size, shape[0], shape[1], shape[2])
+    def reset(self): #, batch_size, shape): #n_units
+        _shape = (self.batch_size, self.shape[0])
+        if len(self.shape) > 1:
+            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
         self.j.set(restVals)
         self.j_td.set(restVals)
         self.z.set(restVals)
         self.zF.set(restVals)
 
-
-    def save(self, directory, **kwargs):
-        ## do a protected save of constants, depending on whether they are floats or arrays
-        tau_m = (self.tau_m if isinstance(self.tau_m, float)
-                 else jnp.ones([[self.tau_m]]))
-        priorLeakRate = (self.priorLeakRate if isinstance(self.priorLeakRate, float)
-                         else jnp.ones([[self.priorLeakRate]]))
-        resist_scale = (self.resist_scale if isinstance(self.resist_scale, float)
-                        else jnp.ones([[self.resist_scale]]))
-
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  tau_m=tau_m, priorLeakRate=priorLeakRate,
-                  resist_scale=resist_scale) #, key=self.key.value)
-
-    def load(self, directory, seeded=False, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        ## constants loaded in
-        self.tau_m = data['tau_m']
-        self.priorLeakRate = data['priorLeakRate']
-        self.resist_scale = data['resist_scale']
-        #if seeded:
-        #    self.key.set(data['key'])
+    # def save(self, directory, **kwargs):
+    #     ## do a protected save of constants, depending on whether they are floats or arrays
+    #     tau_m = (self.tau_m if isinstance(self.tau_m, float)
+    #              else jnp.ones([[self.tau_m]]))
+    #     priorLeakRate = (self.priorLeakRate if isinstance(self.priorLeakRate, float)
+    #                      else jnp.ones([[self.priorLeakRate]]))
+    #     resist_scale = (self.resist_scale if isinstance(self.resist_scale, float)
+    #                     else jnp.ones([[self.resist_scale]]))
+    #
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     jnp.savez(file_name,
+    #               tau_m=tau_m, priorLeakRate=priorLeakRate,
+    #               resist_scale=resist_scale) #, key=self.key.value)
+    #
+    # def load(self, directory, seeded=False, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     ## constants loaded in
+    #     self.tau_m = data['tau_m']
+    #     self.priorLeakRate = data['priorLeakRate']
+    #     self.resist_scale = data['resist_scale']
+    #     #if seeded:
+    #     #    self.key.set(data['key'])
 
     @classmethod
     def help(cls): ## component help function

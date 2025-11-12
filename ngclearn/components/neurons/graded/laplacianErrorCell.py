@@ -103,16 +103,16 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.L.set(jnp.squeeze(L))
         self.mask.set(mask)
 
-    def reset(self, batch_size, n_units, scale_shape):
-        restVals = jnp.zeros((batch_size, n_units))
+    def reset(self): ## reset core components/statistics
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         dshift = restVals
         dtarget = restVals
-        dScale = jnp.zeros(scale_shape)
+        dScale = jnp.zeros(self.scale_shape)
         target = restVals
         shift = restVals
         modulator = shift + 1.
         L = 0.
-        mask = jnp.ones((batch_size, n_units))
+        mask = jnp.ones((self.batch_size, self.n_units))
 
         self.dshift.set(dshift)
         self.dtarget.set(dtarget)
@@ -151,20 +151,6 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
                 "dynamics": "Laplacian(x=target; shift, scale)",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

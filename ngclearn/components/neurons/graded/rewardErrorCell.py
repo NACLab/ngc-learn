@@ -92,12 +92,12 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         self.mu.set(mu)
 
     @compilable
-    def reset(self, batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
+    def reset(self): ## reset core components/statistics
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         mu = restVals
         rpe = restVals
         accum_reward = restVals
-        n_ep_steps = jnp.zeros((batch_size, 1))
+        n_ep_steps = jnp.zeros((self.batch_size, 1))
         self.mu.set(mu)
         self.rpe.set(rpe)
         self.accum_reward.set(accum_reward)

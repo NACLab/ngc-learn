@@ -111,14 +111,14 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     # @transition(output_compartments=["dmu", "dtarget", "dSigma", "target", "mu", "modulator", "L", "mask"])
     # @staticmethod
     @compilable
-    def reset(self, batch_size, shape, sigma_shape): ## reset core components/statistics
-        _shape = (batch_size, shape[0])
-        if len(shape) > 1:
-            _shape = (batch_size, shape[0], shape[1], shape[2])
+    def reset(self): ## reset core components/statistics
+        _shape = (self.batch_size, self.shape[0])
+        if len(self.shape) > 1:
+            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
         dmu = restVals
         dtarget = restVals
-        dSigma = jnp.zeros(sigma_shape)
+        dSigma = jnp.zeros(self.sigma_shape)
         target = restVals
         mu = restVals
         modulator = mu + 1.
@@ -163,20 +163,6 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
                 "dynamics": "Gaussian(x=target; mu, sigma)",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

@@ -110,10 +110,10 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
 
     # @transition(output_compartments=["dp", "dtarget", "target", "p", "modulator", "L", "mask"])
     @compilable
-    def reset(self, batch_size): ## reset core components/statistics
-        _shape = (batch_size, self.shape[0])
+    def reset(self): ## reset core components/statistics
+        _shape = (self.batch_size, self.shape[0])
         if len(self.shape) > 1:
-            _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
+            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape) ## "rest"/reset values
         dp = restVals
         dtarget = restVals
@@ -160,20 +160,6 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
                 "dynamics": "Bernoulli(x=target; p) where target is binary variable",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context
