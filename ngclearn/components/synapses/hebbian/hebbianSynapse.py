@@ -172,8 +172,7 @@ class HebbianSynapse(DenseSynapse):
             prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
             resist_scale=1., batch_size=1, **kwargs
     ):
-        super().__init__(name, shape, weight_init, bias_init, resist_scale,
-                         p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 
         if w_decay > 0.:
             prior = ('l2', w_decay)
@@ -209,13 +208,14 @@ class HebbianSynapse(DenseSynapse):
         self.dBiases = Compartment(jnp.zeros(shape[1]))
 
         #key, subkey = random.split(self.key.value)
-        self.opt_params = Compartment(get_opt_init_fn(optim_type)(
-            [self.weights.get(), self.biases.get()]
-            if bias_init else [self.weights.get()]))
+        self.opt_params = Compartment(
+            get_opt_init_fn(optim_type)([self.weights.get(), self.biases.get()] if bias_init else [self.weights.get()])
+        )
 
     @staticmethod
-    def _compute_update(w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
-                        post_wght, pre, post, weights):
+    def _compute_update(
+            w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght, post_wght, pre, post, weights
+    ):
         ## calculate synaptic update values
         dW, db = _calc_update(
             pre, post, weights, w_bound, is_nonnegative=is_nonnegative,
@@ -257,8 +257,8 @@ class HebbianSynapse(DenseSynapse):
     def reset(self): #, batch_size, shape):
         preVals = jnp.zeros((self.batch_size, self.shape[0]))
         postVals = jnp.zeros((self.batch_size, self.shape[1]))
-        #not self.inputs.targeted and self.inputs.set(preVals) # inputs
-        self.inputs.set(preVals)
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
         self.outputs.set(postVals) # outputs
         self.pre.set(preVals) # pre
         self.post.set(postVals) # post
@@ -309,20 +309,6 @@ class HebbianSynapse(DenseSynapse):
                             "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - g(W_{ij}) * prior_lmbda",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

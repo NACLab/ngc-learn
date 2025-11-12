@@ -115,9 +115,8 @@ class HebbianDeconvSynapse(DeconvSynapse): ## Hebbian-evolved deconvolutional ca
         ########################################################################
 
         ## set up outer optimization compartments
-        self.opt_params = Compartment(get_opt_init_fn(optim_type)(
-            [self.weights.get(), self.biases.get()]
-            if bias_init else [self.weights.get()])
+        self.opt_params = Compartment(
+            get_opt_init_fn(optim_type)([self.weights.get(), self.biases.get()] if bias_init else [self.weights.get()])
         )
 
     def _init(self, batch_size, x_size, shape, stride, padding, pad_args, weights):
