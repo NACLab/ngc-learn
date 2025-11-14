@@ -58,13 +58,13 @@ def test_rewardErrorCell():
       reward_t = jnp.array([[reward_seq[0, ts]]])  ## get reward at time t
       clamp_reward(reward_t)
       advance_process.run(t=ts * 1., dt=dt)
-      mu_outs.append(a.mu.value)
-      rpe_outs.append(a.rpe.value)
-      accum_reward_outs.append(a.accum_reward.value)
+      mu_outs.append(a.mu.get())
+      rpe_outs.append(a.rpe.get())
+      accum_reward_outs.append(a.accum_reward.get())
 
   # Test evolve function
   evolve_process.run(t=10 * 1., dt=dt)
-  final_mu = a.mu.value
+  final_mu = a.mu.get()
   # print(f"final_mu: {final_mu}")
 
   mu_outs = jnp.concatenate(mu_outs, axis=1)
@@ -85,4 +85,4 @@ def test_rewardErrorCell():
   expected_final_mu = (1 - 1/10) * mu_outs[0, -1] + (1/10) * (accum_reward_outs[0, -1] / 10)
   np.testing.assert_allclose(final_mu, expected_final_mu, atol=1e-5)
 
-# test_rewardErrorCell()
+#test_rewardErrorCell()
