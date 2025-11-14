@@ -3,9 +3,9 @@ from jax import numpy as jnp, random
 import jax
 from typing import Union
 
+from ngcsimlib.logger import info, warn
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.parser import compilable
-
 
 class PhasorCell(JaxComponent):
     """
@@ -33,25 +33,19 @@ class PhasorCell(JaxComponent):
 
     # Define Functions
     def __init__(
-            self, name: str, n_units: int, target_freq: float = 63.75,
-            batch_size: int = 1, key: Union[jax.Array, None] = None):
-        super().__init__(name=name, key=key)
-
-        _key, subkey = random.split(self.key.get(), 2)
-        self.key.set(_key)
+            self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs):
+        super().__init__(name, **kwargs)
 
         ## Phasor meta-parameters
-        self.target_freq = Compartment(target_freq, fixed=True)  ## maximum frequency (in Hertz/Hz)
-        self.base_scale = Compartment(random.poisson(subkey[0], lam=target_freq, shape=(batch_size, n_units)) / target_freq, fixed=True)
+        self.target_freq = target_freq  ## maximum frequency (in Hertz/Hz)
 
         ## Layer Size Setup
-        self.batch_size = Compartment(batch_size, fixed=True)
-        self.n_units = Compartment(n_units, fixed=True)
-
-
-
+        self.batch_size = batch_size
+        self.n_units = n_units
+        _key, *subkey = random.split(self.key.get(), 3)
+        self.key.set(_key)
         ## Compartment setup
-        restVals = jnp.zeros((batch_size, n_units))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         self.inputs = Compartment(restVals,
                                   display_name="Input Stimulus")  # input
         # compartment
@@ -60,43 +54,99 @@ class PhasorCell(JaxComponent):
         self.tols = Compartment(initial_value=restVals,
                                 display_name="Time-of-Last-Spike", units="ms")  # time of last spike
         self.angles = Compartment(restVals, display_name="Angles", units="deg")
+        # self.base_scale = random.uniform(subkey, self.angles.value.shape,
+        #                                  minval=0.75, maxval=1.25)
+        # self.base_scale = ((random.normal(subkey, self.angles.value.shape) * 0.15) + 1)
+        # alpha = ((random.normal(subkey, self.angles.value.shape) * (jnp.sqrt(target_freq) / target_freq)) + 1)
+        # beta = random.poisson(subkey, lam=target_freq, shape=self.angles.value.shape) / target_freq
 
+        self.base_scale = random.poisson(subkey[0], lam=target_freq, shape=self.angles.get().shape) / target_freq
+        self.disable_phasor = disable_phasor
+
+    def validate(self, dt=None, **validation_kwargs):
+        valid = super().validate(**validation_kwargs)
+        if dt is None:
+            warn(f"{self.name} requires a validation kwarg of `dt`")
+            return False
+        ## check for unstable combinations of dt and target-frequency
+        # meta-params
+        events_per_timestep = (dt / 1000.) * self.target_freq  ##
+        # compute scaled probability
+        if events_per_timestep > 1.:
+            valid = False
+            warn(
+                f"{self.name} will be unable to make as many temporal events "
+                f"as "
+                f"requested! ({events_per_timestep} events/timestep) Unstable "
+                f"combination of dt = {dt} and target_freq = "
+                f"{self.target_freq} "
+                f"being used!"
+            )
+        return valid
+
+    # @transition(output_compartments=["outputs", "tols", "key", "angles"])
+    # @staticmethod
     @compilable
-    def advance_state(self, t, dt):
+    def advance_state(self, t, dt, ):
+
+        inputs = self.inputs.get()
+        angles = self.angles.get()
+        tols = self.tols.get()
+
         ms_per_second = 1000  # ms/s
-        events_per_ms = self.target_freq.get() / ms_per_second  # e/s s/ms -> e/ms
+        events_per_ms = self.target_freq / ms_per_second  # e/s s/ms -> e/ms
         ms_per_event = 1 / events_per_ms  # ms/e
         time_step_per_event = ms_per_event / dt  # ms/e * ts/ms -> ts / e
         angle_per_event = 2 * jnp.pi  # rad / e
         angle_per_timestep = angle_per_event / time_step_per_event  # rad / e
         # * e/ts -> rad / ts
         key, *subkey = random.split(self.key.get(), 3)
+        # scatter = random.uniform(subkey, angles.shape, minval=0.5,
+        #                          maxval=1.5) * base_scale
 
-        scatter = ((random.normal(subkey[0], self.angles.get().shape) * 0.2) + 1) * self.base_scale.get()
+        scatter = ((random.normal(subkey[0], angles.shape) * 0.2) + 1) * self.base_scale
         scattered_update = angle_per_timestep * scatter
-        scaled_scattered_update = scattered_update * self.inputs.get()
+        scaled_scattered_update = scattered_update * inputs
 
-        updated_angles = self.angles.get() + scaled_scattered_update
-        self.outputs.set(jnp.where(updated_angles > angle_per_event, 1., 0.))
-
-        self.angles.set(jnp.where(updated_angles > angle_per_event,
+        updated_angles = angles + scaled_scattered_update
+        outputs = jnp.where(updated_angles > angle_per_event, 1., 0.)
+        updated_angles = jnp.where(updated_angles > angle_per_event,
                                    updated_angles - angle_per_event,
-                                   updated_angles))
+                                   updated_angles)
+        if self.disable_phasor:
+            outputs = inputs + 0
+        tols = tols * (1. - outputs) + t * outputs
 
-        self.tols.set(self.tols.get() * (1. - self.outputs.get()) + t * self.outputs.get())
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+        self.key.set(key)
+        self.angles.set(updated_angles)
 
+
+    # @transition(output_compartments=["inputs", "outputs", "tols", "angles", "key"])
+    # @staticmethod
     @compilable
     def reset(self):
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        key, *subkey = random.split(self.key.get(), 3)
+
         # BUG: the self.inputs here does not have the targeted field
         # NOTE: Quick workaround is to check if targeted is in the input or not
         hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
         self.outputs.set(restVals)
         self.tols.set(restVals)
         self.angles.set(restVals)
-        key, _ = random.split(self.key.get(), 2)
         self.key.set(key)
 
+
+    def save(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        jnp.savez(file_name, key=self.key.value)
+
+    def load(self, directory, **kwargs):
+        file_name = directory + "/" + self.name + ".npz"
+        data = jnp.load(file_name)
+        self.key.set(data['key'])
 
     @classmethod
     def help(cls):  ## component help function
