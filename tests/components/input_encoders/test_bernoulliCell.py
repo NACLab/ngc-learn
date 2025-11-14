@@ -40,11 +40,11 @@ def test_bernoulliCell1():
         x_t = jnp.array([[x_seq[0,ts]]]) ## get data at time t
         clamp(x_t)
         advance_process.run(t=ts*1., dt=dt)
-        outs.append(a.outputs.value)
+        outs.append(a.outputs.get())
     outs = jnp.concatenate(outs, axis=1)
 
     ## output should equal input
     assert_array_equal(outs, x_seq)
     #print(outs)
 
-#test_bernoulliCell1()
+test_bernoulliCell1()

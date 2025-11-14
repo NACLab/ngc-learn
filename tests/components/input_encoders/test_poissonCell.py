@@ -43,4 +43,4 @@ def test_poissonCell1():
     ## output should equal input
     assert_array_equal(outs, x_seq)
 
-#test_poissonCell1()
+test_poissonCell1()
