@@ -1,19 +1,10 @@
 # %%
 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import LaplacianErrorCell
-from ngcsimlib.compilers import compile_command, wrap_command
-from numpy.testing import assert_array_equal
-
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
-
+from ngclearn import MethodProcess, Context
 
 def test_laplacianErrorCell():
   np.random.seed(42)
@@ -25,25 +16,15 @@ def test_laplacianErrorCell():
     a = LaplacianErrorCell(
       name="a", n_units=1, batch_size=1, scale=1.0, shape=None
     )
-    advance_process = (Process("advance_proc") >> a.advance_state)
-    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-    reset_process = (Process("reset_proc") >> a.reset)
-    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
+    advance_process = (MethodProcess("advance_proc") >> a.advance_state)
+    reset_process = (MethodProcess("reset_proc") >> a.reset)
 
-    # reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-    # ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
-    # advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-    # ctx.add_command(wrap_command(jit(ctx.advance_state)), name="run")
-
-    @Context.dynamicCommand
     def clamp_modulator(x):
       a.modulator.set(x)
 
-    @Context.dynamicCommand
     def clamp_shift(x):
       a.shift.set(x)
 
-    @Context.dynamicCommand
     def clamp_target(x):
       a.target.set(x)
 
@@ -59,15 +40,15 @@ def test_laplacianErrorCell():
 
   dshift_outs = []
   L_outs = []
-  ctx.reset()
+  reset_process.run()
   for ts in range(shift_seq.shape[1]):
     shift_t = jnp.array([[shift_seq[0, ts]]])  ## get data at time t
-    ctx.clamp_shift(shift_t)
+    clamp_shift(shift_t)
     modulator_t = jnp.array([[modulator_seq[0, ts]]])
-    ctx.clamp_modulator(modulator_t)
+    clamp_modulator(modulator_t)
     target_t = jnp.array([[target_seq[0, ts]]])
-    ctx.clamp_target(target_t)
-    ctx.run(t=ts * 1., dt=dt)
+    clamp_target(target_t)
+    advance_process.run(t=ts * 1., dt=dt)
     dshift_outs.append(a.dshift.value)
     # print(f"a.L.value: {a.L.value}")
     # print(f"a.shift.value: {a.shift.value}")

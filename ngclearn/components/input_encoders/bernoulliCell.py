@@ -48,7 +48,9 @@ class BernoulliCell(JaxComponent):
     @compilable
     def reset(self):
         restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
-        not self.inputs.targeted and self.inputs.set(restVals)
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
         self.outputs.set(restVals)
         self.tols.set(restVals)
 

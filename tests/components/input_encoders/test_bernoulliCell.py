@@ -1,15 +1,13 @@
+# %%
+
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import BernoulliCell
 #from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngclearn.utils import JaxProcess
-from ngcsimlib.context import Context
-#from ngcsimlib.utils.compartment import Get_Compartment_Batch
+from ngclearn import MethodProcess, Context
 
 
 def test_bernoulliCell1():
@@ -23,16 +21,13 @@ def test_bernoulliCell1():
     with Context(name) as ctx:
         a = BernoulliCell(name="a", n_units=1, key=subkeys[0])
 
-        advance_process = (JaxProcess("advance_proc")
+        advance_process = (MethodProcess("advance_proc")
                            >> a.advance_state)
-        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
-        reset_process = (Process("reset_proc")
+        reset_process = (MethodProcess("reset_proc")
                          >> a.reset)
-        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
         ## set up non-compiled utility commands
-        @Context.dynamicCommand
         def clamp(x):
             a.inputs.set(x)
 
@@ -40,11 +35,11 @@ def test_bernoulliCell1():
     x_seq = jnp.asarray([[1., 1., 0., 0., 1.]], dtype=jnp.float32)
 
     outs = []
-    ctx.reset()
+    reset_process.run()
     for ts in range(x_seq.shape[1]):
         x_t = jnp.array([[x_seq[0,ts]]]) ## get data at time t
-        ctx.clamp(x_t)
-        ctx.run(t=ts*1., dt=dt)
+        clamp(x_t)
+        advance_process.run(t=ts*1., dt=dt)
         outs.append(a.outputs.value)
     outs = jnp.concatenate(outs, axis=1)
 
