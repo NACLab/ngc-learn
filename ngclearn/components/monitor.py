@@ -1,5 +1,5 @@
 from ngclearn.components.base_monitor import Base_Monitor
-from ngclearn import transition
+#from ngclearn import transition
 
 class Monitor(Base_Monitor):
     """

@@ -1,8 +1,8 @@
 import json
 
-from ngclearn import Component, Compartment, transition
+from ngclearn import Component, Compartment #, transition
 from ngclearn import numpy as np
-from ngcsimlib.utils import get_current_path
+#from ngcsimlib.utils import get_current_path
 from ngcsimlib.logger import warn, critical
 
 import matplotlib.pyplot as plt
@@ -68,7 +68,7 @@ class Base_Monitor(Component):
             "monitor found in ngclearn.components or "
             "ngclearn.components.lava (If using lava)")
 
-    @transition(None, True)
+    #@transition(None, True)
     @staticmethod
     def reset(component):
         """
@@ -95,7 +95,7 @@ class Base_Monitor(Component):
         # pure func, output compartments, args, params, input compartments
         return _reset, output_compartments, [], [], output_compartments
 
-    @transition(None, True)
+    #@transition(None, True)
     @staticmethod
     def record(component):
         output_compartments = []
@@ -265,8 +265,9 @@ class Base_Monitor(Component):
 
             for comp_path, shape in vals["stores"].items():
                 compartment_path = comp_path.split("/")[-1]
-                new_path = get_current_path() + "/" + "/".join(
-                    compartment_path.split("*")[-3:-1])
+                new_path = ""
+                # new_path = get_current_path() + "/" + "/".join(
+                #     compartment_path.split("*")[-3:-1])
 
                 cs, end = self._add_path(new_path)
 

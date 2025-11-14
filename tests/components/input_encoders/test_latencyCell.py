@@ -60,4 +60,4 @@ def test_latencyCell1():
     ## output should equal input
     assert_array_equal(outs, targets)
 
-test_latencyCell1()
+#test_latencyCell1()

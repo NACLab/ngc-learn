@@ -47,4 +47,4 @@ def test_bernoulliCell1():
     assert_array_equal(outs, x_seq)
     #print(outs)
 
-test_bernoulliCell1()
+#test_bernoulliCell1()

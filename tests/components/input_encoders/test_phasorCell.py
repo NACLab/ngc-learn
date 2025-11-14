@@ -44,4 +44,4 @@ def test_phasorCell1():
     ## output should equal input
     assert_array_equal(outs, x_seq)
 
-test_phasorCell1()
+#test_phasorCell1()
