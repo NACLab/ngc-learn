@@ -1,18 +1,12 @@
 # %%
 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import PatchedSynapse
-from ngcsimlib.compilers import compile_command, wrap_command
-from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
+from ngclearn import MethodProcess, Context
+
 
 
 def test_patchedSynapse():
@@ -39,31 +33,25 @@ def test_patchedSynapse():
       bias_init={"dist": "constant", "value": 0.0}
     )
 
-    advance_process = (Process("advance_proc") >> a.advance_state)
-    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-    reset_process = (Process("reset_proc") >> a.reset)
-    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
+    advance_process = (MethodProcess("advance_proc") >> a.advance_state)
+    reset_process = (MethodProcess("reset_proc") >> a.reset)
 
-    # Compile and add commands
-    # reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-    # ctx.add_command(wrap_command(jit(reset_cmd)), name="reset")
-    # advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-    # ctx.add_command(wrap_command(jit(advance_cmd)), name="run")
-
-    @Context.dynamicCommand
     def clamp_inputs(x):
       a.inputs.set(x)
 
   inputs_seq = jnp.asarray(np.random.randn(1, 12))
-  weights = a.weights.value
-  biases = a.biases.value
+  weights = a.weights.get()
+  biases = a.biases.get()
   expected_outputs = (jnp.matmul(inputs_seq, weights) * resist_scale) + biases
   outputs_outs = []
-  ctx.reset()
-  ctx.clamp_inputs(inputs_seq)
-  ctx.run(t=0., dt=dt)
-  outputs_outs.append(a.outputs.value)
+  reset_process.run()
+  clamp_inputs(inputs_seq)
+  advance_process.run(t=0., dt=dt)
+  outputs_outs.append(a.outputs.get())
   outputs_outs = jnp.concatenate(outputs_outs, axis=1)
   # Verify outputs match expected values
   np.testing.assert_allclose(outputs_outs, expected_outputs, atol=1e-5)
+
+
+test_patchedSynapse()
 

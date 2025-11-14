@@ -1,19 +1,12 @@
 # %%
 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import HebbianPatchedSynapse
-from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
-
+from ngclearn import MethodProcess, Context
 
 def test_hebbianPatchedSynapse():
   np.random.seed(42)
@@ -31,58 +24,45 @@ def test_hebbianPatchedSynapse():
 
   with Context(name) as ctx:
     a = HebbianPatchedSynapse(
-      name="a", 
-      shape=shape, 
-      n_sub_models=n_sub_models, 
+      name="a",
+      shape=shape,
+      n_sub_models=n_sub_models,
       stride_shape=stride_shape,
       resist_scale=resist_scale,
       batch_size=batch_size
     )
 
-    advance_process = (Process("advance_proc") >> a.advance_state)
-    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-    reset_process = (Process("reset_proc") >> a.reset)
-    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-    evolve_process = (Process("evolve_proc") >> a.evolve)
-    ctx.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
+    advance_process = (MethodProcess("advance_proc") >> a.advance_state)
+    reset_process = (MethodProcess("reset_proc") >> a.reset)
+    evolve_process = (MethodProcess("evolve_proc") >> a.evolve)
 
-    # Compile and add commands
-    # reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-    # ctx.add_command(wrap_command(jit(reset_cmd)), name="reset")
-    # advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-    # ctx.add_command(wrap_command(jit(advance_cmd)), name="run")
-    # evolve_cmd, evolve_args = ctx.compile_by_key(a, compile_key="evolve")
-    # ctx.add_command(wrap_command(jit(evolve_cmd)), name="evolve")
-
-    @Context.dynamicCommand
     def clamp_inputs(x):
       a.inputs.set(x)
 
-    @Context.dynamicCommand
     def clamp_pre(x):
       a.pre.set(x)
 
-    @Context.dynamicCommand
     def clamp_post(x):
       a.post.set(x)
 
-  a.weights.set(jnp.ones((12, 12)) * 0.5) 
+  a.weights.set(jnp.ones((12, 12)) * 0.5)
 
   in_pre = jnp.ones((10, 12)) * 1.0
   in_post = jnp.ones((10, 12)) * 0.75
 
-  ctx.reset()
+  reset_process.run()
   clamp_pre(in_pre)
   clamp_post(in_post)
-  ctx.run(t=1. * dt, dt=dt)
-  ctx.evolve(t=1. * dt, dt=dt)
+  advance_process.run(t=1. * dt, dt=dt)
+  evolve_process.run(t=1. * dt, dt=dt)
 
-  print(a.weights.value)
+  print(a.weights.get())
 
   # Basic assertions to check learning dynamics
-  assert a.weights.value.shape == (12, 12), ""
-  assert a.weights.value[0, 0] == 0.5, ""
+  assert a.weights.get().shape == (12, 12), ""
+  assert a.weights.get()[0, 0] == 0.5, ""
 
 
+test_hebbianPatchedSynapse()
 
-# test_hebbianPatchedSynapse()
+

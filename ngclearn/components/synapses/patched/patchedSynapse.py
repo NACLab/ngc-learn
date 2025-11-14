@@ -154,21 +154,23 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.outputs.set(outputs)
 
     @compilable
-    def reset(self, batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
         inputs = preVals
         outputs = postVals
-        not self.inputs.targeted and self.inputs.set(inputs)
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(inputs)
         self.outputs.set(outputs)
 
     def save(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
         if self.bias_init != None:
-            jnp.savez(file_name, weights=self.weights.value,
-                      biases=self.biases.value)
+            jnp.savez(file_name, weights=self.weights.get(),
+                      biases=self.biases.get())
         else:
-            jnp.savez(file_name, weights=self.weights.value)
+            jnp.savez(file_name, weights=self.weights.get())
 
     def load(self, directory, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
