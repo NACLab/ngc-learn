@@ -46,4 +46,4 @@ def test_sLIFCell1():
     ## output should equal input
     assert_array_equal(outs, y_seq)
 
-test_sLIFCell1()
+#test_sLIFCell1()

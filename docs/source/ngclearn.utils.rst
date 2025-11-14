@@ -16,6 +16,14 @@ Subpackages
 Submodules
 ----------
 
+ngclearn.utils.JaxProcessesMixin module
+---------------------------------------
+
+.. automodule:: ngclearn.utils.JaxProcessesMixin
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.data\_loader module
 ----------------------------------
 
@@ -24,18 +32,18 @@ ngclearn.utils.data\_loader module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.utils.io\_utils module
--------------------------------
+ngclearn.utils.distribution\_generator module
+---------------------------------------------
 
-.. automodule:: ngclearn.utils.io_utils
+.. automodule:: ngclearn.utils.distribution_generator
    :members:
    :undoc-members:
    :show-inheritance:
 
-ngclearn.utils.jaxProcess module
---------------------------------
+ngclearn.utils.io\_utils module
+-------------------------------
 
-.. automodule:: ngclearn.utils.jaxProcess
+.. automodule:: ngclearn.utils.io_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -52,6 +60,14 @@ ngclearn.utils.model\_utils module
 ----------------------------------
 
 .. automodule:: ngclearn.utils.model_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.utils.patch module
+---------------------------
+
+.. automodule:: ngclearn.utils.patch
    :members:
    :undoc-members:
    :show-inheritance:

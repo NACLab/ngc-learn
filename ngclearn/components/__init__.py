@@ -8,7 +8,7 @@ from .neurons.graded.bernoulliErrorCell import BernoulliErrorCell
 from .neurons.graded.rewardErrorCell import RewardErrorCell
 
 ## point to standard spiking cell component types
-#from .neurons.spiking.sLIFCell import SLIFCell
+from .neurons.spiking.sLIFCell import SLIFCell
 from .neurons.spiking.IFCell import IFCell
 from .neurons.spiking.LIFCell import LIFCell
 from .neurons.spiking.WTASCell import WTASCell
@@ -53,13 +53,13 @@ from .synapses.convolution.hebbianDeconvSynapse import HebbianDeconvSynapse
 from .synapses.convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 ## point to modulated component types
 from .synapses.modulated.MSTDPETSynapse import MSTDPETSynapse
-#from .synapses.modulated.REINFORCESynapse import REINFORCESynapse
+from .synapses.modulated.REINFORCESynapse import REINFORCESynapse
 
 ## point to monitors
 from .monitor import Monitor
 
 ## point to patched component types
-# from .synapses.patched.patchedSynapse import PatchedSynapse
-# from .synapses.patched.staticPatchedSynapse import StaticPatchedSynapse
-# from .synapses.patched.hebbianPatchedSynapse import HebbianPatchedSynapse
+from .synapses.patched.patchedSynapse import PatchedSynapse
+from .synapses.patched.staticPatchedSynapse import StaticPatchedSynapse
+from .synapses.patched.hebbianPatchedSynapse import HebbianPatchedSynapse
 

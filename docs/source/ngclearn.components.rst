@@ -8,7 +8,6 @@ Subpackages
    :maxdepth: 4
 
    ngclearn.components.input_encoders
-   ngclearn.components.lava
    ngclearn.components.neurons
    ngclearn.components.other
    ngclearn.components.synapses

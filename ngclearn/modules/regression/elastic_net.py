@@ -1,13 +1,12 @@
-from jax import random, jit
 import numpy as np
 from ngclearn.utils import weight_distribution as dist
-from ngclearn import Context, numpy as jnp
-from ngclearn.components import (RateCell,
-                                 HebbianSynapse,
-                                 GaussianErrorCell,
-                                 StaticSynapse)
-from ngclearn.utils.model_utils import scanner
+from ngclearn import numpy as jnp
 
+from jax import numpy as jnp, random, jit
+from ngclearn import Context, MethodProcess
+from ngclearn.components.synapses.hebbian.hebbianSynapse import HebbianSynapse
+from ngclearn.components.neurons.graded.gaussianErrorCell import GaussianErrorCell
+from ngcsimlib.global_state import stateManager
 
 class Iterative_ElasticNet():
     """
@@ -87,43 +86,66 @@ class Iterative_ElasticNet():
             self.W.batch_size = batch_size
             self.err.batch_size = batch_size
             # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            self.err.mu << self.W.outputs
-            self.W.post << self.err.dmu
+            self.W.outputs >> self.err.mu
+            self.err.dmu >> self.W.post
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            advance_cmd, advance_args =self.circuit.compile_by_key(self.W,  ## execute prediction synapses
-                                                               self.err,  ## finally, execute error neurons
-                                                               compile_key="advance_state")
-            evolve_cmd, evolve_args =self.circuit.compile_by_key(self.W, compile_key="evolve")
-            reset_cmd, reset_args =self.circuit.compile_by_key(self.err, self.W, compile_key="reset")
-            # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            self.dynamic()
 
-    def dynamic(self):  ## create dynamic commands forself.circuit
-        W, err = self.circuit.get_components("W", "err")
-        self.self = W
-        self.err = err
+            advance = (MethodProcess(name="advance_state")
+                               >> self.W.advance_state
+                               >> self.err.advance_state)
+            self.advance = advance
 
-        @Context.dynamicCommand
-        def batch_set(batch_size):
-            self.W.batch_size = batch_size
-            self.err.batch_size = batch_size
+            evolve = (MethodProcess(name="evolve")
+                      >> self.W.evolve)
+            self.evolve = evolve
 
-        @Context.dynamicCommand
-        def clamps(y_scaled, X):
-            self.W.inputs.set(X)
-            self.W.pre.set(X)
-            self.err.target.set(y_scaled)
+            reset = (MethodProcess(name="reset")
+                     >> self.err.reset
+                     >> self.W.reset)
+            self.reset = reset
 
-        self.circuit.wrap_and_add_command(jit(self.circuit.evolve), name="evolve")
-        self.circuit.wrap_and_add_command(jit(self.circuit.advance_state), name="advance")
-        self.circuit.wrap_and_add_command(jit(self.circuit.reset), name="reset")
+            # advance_cmd, advance_args =self.circuit.compile_by_key(self.W,  ## execute prediction synapses
+            #                                                    self.err,  ## finally, execute error neurons
+            #                                                    compile_key="advance_state")
+            # evolve_cmd, evolve_args =self.circuit.compile_by_key(self.W, compile_key="evolve")
+            # reset_cmd, reset_args =self.circuit.compile_by_key(self.err, self.W, compile_key="reset")
+            # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            # self.dynamic()
 
+    def batch_set(self, batch_size):
+        self.W.batch_size = batch_size
+        self.err.batch_size = batch_size
 
-        @scanner
-        def _process(compartment_values, args):
-            _t, _dt = args
-            compartment_values = self.circuit.advance_state(compartment_values, t=_t, dt=_dt)
-            return compartment_values, compartment_values[self.W.weights.path]
+    def clamp(self, y_scaled, X):
+        self.W.inputs.set(X)
+        self.W.pre.set(X)
+        self.err.target.set(y_scaled)
+
+    # def dynamic(self):  ## create dynamic commands forself.circuit
+    #     W, err = self.circuit.get_components("W", "err")
+    #     self.self = W
+    #     self.err = err
+    #
+    #     @Context.dynamicCommand
+    #     def batch_set(batch_size):
+    #         self.W.batch_size = batch_size
+    #         self.err.batch_size = batch_size
+    #
+    #     @Context.dynamicCommand
+    #     def clamps(y_scaled, X):
+    #         self.W.inputs.set(X)
+    #         self.W.pre.set(X)
+    #         self.err.target.set(y_scaled)
+    #
+    #     self.circuit.wrap_and_add_command(jit(self.circuit.evolve), name="evolve")
+    #     self.circuit.wrap_and_add_command(jit(self.circuit.advance_state), name="advance")
+    #     self.circuit.wrap_and_add_command(jit(self.circuit.reset), name="reset")
+    #
+    #     @scanner
+    #     def _process(compartment_values, args):
+    #         _t, _dt = args
+    #         compartment_values = self.circuit.advance_state(compartment_values, t=_t, dt=_dt)
+    #         return compartment_values, compartment_values[self.W.weights.path]
 
 
     def thresholding(self, scale=1.):
@@ -138,16 +160,28 @@ class Iterative_ElasticNet():
 
     def fit(self, y, X):
 
-        self.circuit.reset()
-        self.circuit.clamps(y_scaled=y, X=X)
+        self.reset.run()
+        self.clamp(y_scaled=y, X=X)
 
         for i in range(self.epochs):
-            self.circuit._process(jnp.array([[self.dt * i, self.dt] for i in range(self.T)]))
-            self.circuit.evolve(t=self.T, dt=self.dt)
+            inputs = jnp.array(self.advance.pack_rows(self.T, t=lambda x: x, dt=self.dt))
+            stateManager.state, outputs = self.advance.scan(inputs)
+            self.evolve.run(t=self.T, dt=self.dt)
 
-        self.coef_ = np.array(self.W.weights.value)
+        self.coef_ = np.array(self.W.weights.get())
 
-        return self.coef_, self.err.mu.value, self.err.L.value
+        return self.coef_, self.err.mu.get(), self.err.L.get()
+
+        # self.circuit.reset()
+        # self.circuit.clamps(y_scaled=y, X=X)
+        #
+        # for i in range(self.epochs):
+        #     self.circuit._process(jnp.array([[self.dt * i, self.dt] for i in range(self.T)]))
+        #     self.circuit.evolve(t=self.T, dt=self.dt)
+        #
+        # self.coef_ = np.array(self.W.weights.value)
+        #
+        # return self.coef_, self.err.mu.value, self.err.L.value
 
 
 

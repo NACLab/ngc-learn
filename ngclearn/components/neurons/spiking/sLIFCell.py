@@ -190,7 +190,7 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         j = j * self.R_m
         if self.inh_R > 0.: ## if inh_R > 0, then lateral inhibition is applied
-            j = j - (jnp.matmul(spikes, self.inh_weights) * self.inh_R)
+            j = j - (jnp.matmul(self.s.get(), self.inh_weights) * self.inh_R)
         #####################################################################################
         surrogate = self.d_spike_fx(j, c1=0.82, c2=0.08) ## calc surrogate deriv of spikes
 
@@ -230,12 +230,12 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         spikes = restVals
         if not self.thr_persist: ## if thresh non-persistent, reset to base value
             thr = self.threshold0 + 0
+            self.thr.set(thr)
         # return current, spikes, timeOfLastSpike, voltage, thr, refract, surrogate
         self.j.set(current)
         self.s.set(spikes)
         self.tols.set(timeOfLastSpike)
         self.v.set(voltage)
-        self.thr.set(thr)
         self.rfr.set(refract)
         self.surrogate.set(surrogate)
 
@@ -290,20 +290,6 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
                 "dynamics": "tau_m * dv/dt = -v + j * resist_m",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context
