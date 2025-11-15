@@ -37,7 +37,6 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
             to a constant/fixed `scale`
     """
 
-    # Define Functions
     def __init__(self, name, n_units, batch_size=1, scale=1., shape=None, **kwargs):
         super().__init__(name, **kwargs)
 

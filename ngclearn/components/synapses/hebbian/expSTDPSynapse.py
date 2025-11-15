@@ -65,7 +65,6 @@ class ExpSTDPSynapse(DenseSynapse):
         weight_mask: synaptic binary masking matrix to apply (to enforce a constant sparse structure; default: None)
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, A_plus, A_minus, exp_beta, eta=1., pretrace_target=0., weight_init=None, resist_scale=1.,
             p_conn=1., w_bound=1., tau_w=0., weight_mask=None, batch_size=1, **kwargs

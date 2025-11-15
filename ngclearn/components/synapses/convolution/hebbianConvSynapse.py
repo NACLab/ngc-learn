@@ -84,7 +84,6 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         batch_size: batch size dimension of this component
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None, stride=1, padding=None,
             resist_scale=1., w_bound=0., is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",

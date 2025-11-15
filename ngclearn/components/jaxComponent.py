@@ -71,3 +71,4 @@ class JaxComponent(Component):
                 line = "None"
             lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
         return lines
+

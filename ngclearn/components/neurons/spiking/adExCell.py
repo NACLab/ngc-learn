@@ -94,7 +94,7 @@ class AdExCell(JaxComponent): ## adaptive exponential integrate-and-fire cell
                 at an increase in computational cost (and simulation time)
     """
 
-    #@deprecate_args(v_thr="thr")
+    @deprecate_args(v_thr="thr")
     def __init__(
             self, name, n_units, tau_m=15., resist_m=1., tau_w=400., v_sharpness=2., intrinsic_mem_thr=-55., thr=5.,
             v_rest=-72., v_reset=-75., a=0.1, b=0.75, v0=-70., w0=0., integration_type="euler", batch_size=1, **kwargs

@@ -60,7 +60,6 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
 
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, tau_decay, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1.,
             p_conn=1., is_nonplastic=True, **kwargs

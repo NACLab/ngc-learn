@@ -54,10 +54,9 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
             this to < 1. will result in a sparser synaptic structure
     """
 
-    # Define Functions
     def __init__(
-            self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1., presyn_win_len=2., w_bound=1., weight_init=None,
-            resist_scale=1., p_conn=1., batch_size=1, **kwargs
+            self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1., presyn_win_len=2., w_bound=1., 
+            weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs
     ):
         super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 

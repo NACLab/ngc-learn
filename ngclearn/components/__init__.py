@@ -55,9 +55,6 @@ from .synapses.convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 from .synapses.modulated.MSTDPETSynapse import MSTDPETSynapse
 from .synapses.modulated.REINFORCESynapse import REINFORCESynapse
 
-## point to monitors
-from .monitor import Monitor
-
 ## point to patched component types
 from .synapses.patched.patchedSynapse import PatchedSynapse
 from .synapses.patched.staticPatchedSynapse import StaticPatchedSynapse

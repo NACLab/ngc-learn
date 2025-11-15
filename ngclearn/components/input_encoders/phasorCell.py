@@ -31,7 +31,6 @@ class PhasorCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(
             self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs):
         super().__init__(name, **kwargs)

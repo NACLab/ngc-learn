@@ -160,7 +160,6 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         resist_scale: a scaling factor applied to incoming pressure `j` (default: 1)
     """
 
-    # Define Functions
     def __init__(
             self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity", output_scale=1., threshold=("none", 0.),
             integration_type="euler", batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):

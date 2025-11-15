@@ -38,7 +38,6 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             (lower values yield sparse structure)
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs
     ):

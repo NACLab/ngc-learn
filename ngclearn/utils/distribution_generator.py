@@ -9,22 +9,18 @@ from ngcsimlib.logger import error
 
 class DistributionParams(TypedDict, total=False):
     """
-    Extra parameters to be used when generating distributions.
+    Extra parameters to be used when generating distributions. (Attributes listed below)
 
-    Attributes:
-         amin: sets the lower bound of the distribution
-         amax: sets the upper bound of the distribution
-         lower_triangle: keeps the lower triangle, sets the rest to zero
-         upper_triangle: keeps the upper triangle, sets the rest to zero
-         hollow: produces a hollow distribution (zeros along the diagonal)
-         eye: produces an eye distribution (zeros the off-diagonal)
-         col_mask:
-            single value, keeps n random columns
-            list values, keeps the provided column indices
-         row_mask:
-            single value, keeps n random rows
-            list values, keeps the provided row indices
-         use_numpy: use default numpy
+    Args:
+        amin: sets the lower bound of the distribution
+        amax: sets the upper bound of the distribution
+        lower_triangle: keeps the lower triangle, sets the rest to zero
+        upper_triangle: keeps the upper triangle, sets the rest to zero
+        hollow: produces a hollow distribution (zeros along the diagonal)
+        eye: produces an eye distribution (zeros the off-diagonal)
+        col_mask: single value, keeps n random columns; list values, keeps the provided column indices
+        row_mask: single value, keeps n random rows; list values, keeps the provided row indices
+        use_numpy: use default numpy
     """
     amin: float
     amax: float
@@ -54,7 +50,8 @@ class DistributionGenerator(object):
             value: the constant value to fill the array with
             **params: the extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_np = params.get("use_numpy", False)
         if using_np:
@@ -87,7 +84,8 @@ class DistributionGenerator(object):
             high: upper bound of the uniform distribution (exclusive)
             **params: the extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_np = params.get("use_numpy", False)
 
@@ -133,7 +131,8 @@ class DistributionGenerator(object):
             std: the standard deviation of the normal distribution
             **params: the extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_numpy = params.get("use_numpy", False)
 
@@ -177,7 +176,8 @@ class DistributionGenerator(object):
         Args:
             **params: extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_numpy = params.get("use_numpy", False)
 
@@ -236,7 +236,8 @@ class DistributionGenerator(object):
         Args:
             **params: extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_numpy = params.get("use_numpy", False)
 

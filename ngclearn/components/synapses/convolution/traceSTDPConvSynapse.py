@@ -71,7 +71,6 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         batch_size: batch size dimension of this component
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, x_shape, A_plus, A_minus, eta=0., pretrace_target=0., filter_init=None, stride=1,
             padding=None, resist_scale=1., w_bound=0., w_decay=0., batch_size=1, **kwargs

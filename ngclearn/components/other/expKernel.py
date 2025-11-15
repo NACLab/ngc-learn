@@ -48,7 +48,6 @@ class ExpKernel(JaxComponent): ## exponential kernel
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, dt, tau_w=500., nu=4., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 

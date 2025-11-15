@@ -32,7 +32,7 @@ from .modulated.MSTDPETSynapse import MSTDPETSynapse
 # from .modulated.REINFORCESynapse import REINFORCESynapse
 
 ## patched synaptic components
-# from .patched.patchedSynapse import PatchedSynapse
-# from .patched.staticPatchedSynapse import StaticPatchedSynapse
-# from .patched.hebbianPatchedSynapse import HebbianPatchedSynapse
+from .patched.patchedSynapse import PatchedSynapse
+from .patched.staticPatchedSynapse import StaticPatchedSynapse
+from .patched.hebbianPatchedSynapse import HebbianPatchedSynapse
 

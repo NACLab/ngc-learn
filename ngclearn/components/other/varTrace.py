@@ -77,7 +77,6 @@ class VarTrace(JaxComponent): ## low-pass filter
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, tau_tr, a_delta, P_scale=1., gamma_tr=1, decay_type="exp",
                  n_nearest_spikes=0, batch_size=1, key=None):
         super().__init__(name, key)

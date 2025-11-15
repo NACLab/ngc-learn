@@ -62,7 +62,6 @@ class DoupleExpSynapse(DenseSynapse): ## dynamic double-exponential synapse cabl
 
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, tau_decay, tau_rise, g_syn_bar, syn_rest, weight_init=None, bias_init=None,
             resist_scale=1., p_conn=1., is_nonplastic=True, **kwargs

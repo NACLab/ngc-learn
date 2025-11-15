@@ -86,7 +86,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
             the value of `v_rest` (default: True)
     """
 
-    #@deprecate_args(thr_jitter=None)
+    @deprecate_args(thr_jitter=None)
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., refract_time=0.,
             integration_type="euler", surrogate_type="straight_through", lower_clamp_voltage=True, **kwargs

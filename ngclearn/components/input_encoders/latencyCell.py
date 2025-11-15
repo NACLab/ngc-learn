@@ -143,7 +143,6 @@ class LatencyCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(
         self, name: str, n_units: int, tau: float = 1., threshold: float = 0.01,
         first_spike_time: float = 0., linearize: bool = False,

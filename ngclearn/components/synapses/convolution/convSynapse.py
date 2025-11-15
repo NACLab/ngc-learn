@@ -45,7 +45,6 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
         batch_size: batch size dimension of this component
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, x_shape, filter_init=None, bias_init=None, stride=1, padding=None, resist_scale=1.,
             batch_size=1, **kwargs
