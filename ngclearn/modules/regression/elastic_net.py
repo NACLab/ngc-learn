@@ -11,7 +11,7 @@ from ngcsimlib.global_state import stateManager
 class Iterative_ElasticNet():
     """
         A neural circuit implementation of the iterative Elastic Net (L1 and L2) algorithm
-        using Hebbian learning update rule.
+        using a Hebbian learning update rule.
 
         The circuit implements sparse regression through Hebbian synapses with Elastic Net regularization.
 
@@ -20,8 +20,6 @@ class Iterative_ElasticNet():
         
         | dW_reg = (jnp.sign(W) * l1_ratio) + (W * (1-l1_ratio)/2)
         | dW/dt = dW + lmbda * dW_reg
-
-
 
         | --- Circuit Components: ---
         | W - HebbianSynapse for learning regularized dictionary weights
@@ -104,14 +102,6 @@ class Iterative_ElasticNet():
                      >> self.W.reset)
             self.reset = reset
 
-            # advance_cmd, advance_args =self.circuit.compile_by_key(self.W,  ## execute prediction synapses
-            #                                                    self.err,  ## finally, execute error neurons
-            #                                                    compile_key="advance_state")
-            # evolve_cmd, evolve_args =self.circuit.compile_by_key(self.W, compile_key="evolve")
-            # reset_cmd, reset_args =self.circuit.compile_by_key(self.err, self.W, compile_key="reset")
-            # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            # self.dynamic()
-
     def batch_set(self, batch_size):
         self.W.batch_size = batch_size
         self.err.batch_size = batch_size
@@ -120,33 +110,6 @@ class Iterative_ElasticNet():
         self.W.inputs.set(X)
         self.W.pre.set(X)
         self.err.target.set(y_scaled)
-
-    # def dynamic(self):  ## create dynamic commands forself.circuit
-    #     W, err = self.circuit.get_components("W", "err")
-    #     self.self = W
-    #     self.err = err
-    #
-    #     @Context.dynamicCommand
-    #     def batch_set(batch_size):
-    #         self.W.batch_size = batch_size
-    #         self.err.batch_size = batch_size
-    #
-    #     @Context.dynamicCommand
-    #     def clamps(y_scaled, X):
-    #         self.W.inputs.set(X)
-    #         self.W.pre.set(X)
-    #         self.err.target.set(y_scaled)
-    #
-    #     self.circuit.wrap_and_add_command(jit(self.circuit.evolve), name="evolve")
-    #     self.circuit.wrap_and_add_command(jit(self.circuit.advance_state), name="advance")
-    #     self.circuit.wrap_and_add_command(jit(self.circuit.reset), name="reset")
-    #
-    #     @scanner
-    #     def _process(compartment_values, args):
-    #         _t, _dt = args
-    #         compartment_values = self.circuit.advance_state(compartment_values, t=_t, dt=_dt)
-    #         return compartment_values, compartment_values[self.W.weights.path]
-
 
     def thresholding(self, scale=1.):
         coef_old = self.coef_
@@ -171,19 +134,4 @@ class Iterative_ElasticNet():
         self.coef_ = np.array(self.W.weights.get())
 
         return self.coef_, self.err.mu.get(), self.err.L.get()
-
-        # self.circuit.reset()
-        # self.circuit.clamps(y_scaled=y, X=X)
-        #
-        # for i in range(self.epochs):
-        #     self.circuit._process(jnp.array([[self.dt * i, self.dt] for i in range(self.T)]))
-        #     self.circuit.evolve(t=self.T, dt=self.dt)
-        #
-        # self.coef_ = np.array(self.W.weights.value)
-        #
-        # return self.coef_, self.err.mu.value, self.err.L.value
-
-
-
-
 
