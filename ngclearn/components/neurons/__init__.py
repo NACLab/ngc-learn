@@ -15,3 +15,4 @@ from .spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .spiking.izhikevichCell import IzhikevichCell
 from .spiking.hodgkinHuxleyCell import HodgkinHuxleyCell
 from .spiking.RAFCell import RAFCell
+
