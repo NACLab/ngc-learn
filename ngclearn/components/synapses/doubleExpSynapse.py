@@ -6,7 +6,7 @@ from ngclearn.components.synapses import DenseSynapse
 from ngcsimlib.compartment import Compartment
 from ngcsimlib.parser import compilable
 
-class DoupleExpSynapse(DenseSynapse): ## dynamic double-exponential synapse cable
+class DoubleExpSynapse(DenseSynapse): ## dynamic double-exponential synapse cable
     """
     A dynamic double-exponential synaptic cable; this synapse evolves according to difference of two exponentials
     synaptic conductance dynamics.

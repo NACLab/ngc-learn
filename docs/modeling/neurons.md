@@ -86,6 +86,22 @@ and `dmu` is the first derivative with respect to the mean parameter.
     :noindex:
 ```
 
+#### Bernoulli Error Cell
+
+This cell is (currently) fixed to be a (factorized) multivariate Bernoulli cell. 
+Concretely, this cell implements compartments/mechanics to facilitate Bernoulli 
+log likelihood error calculations. 
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.BernoulliErrorCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ## Spiking Neurons
 
 These neuronal cells exhibit dynamics that involve emission of discrete action
@@ -117,10 +133,42 @@ negative pressure on the membrane potential values at `t`).
     :noindex:
 ```
 
+### The IF (Integrate-and-Fire) Cell
+
+This cell (the simple "integrator") models dynamics over the voltage `v`. Note that `thr` is used as the membrane potential threshold and no adaptive threshold mechanics are implemented for this cell model. 
+(This cell is primarily a faster, convenience formulation that omits the leak element of the LIF.)
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.IFCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### The Winner-Take-All (WTAS) Cell
+
+This cell models dynamics over the voltage `v` as a simple instantaneous 
+softmax function of the electrical current input, where only a single 
+spike, which wins the competition across the group of neuronal units 
+within this component, emits a pulse/spike.  
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.WTASCell
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
 ### The LIF (Leaky Integrate-and-Fire) Cell
 
 This cell (the "leaky integrator") models dynamics over the voltage `v`
-and threshold shift `thrTheta` (a homeostatic variable). Note that `thr`
+and threshold shift `thr_theta` (a homeostatic variable). Note that `thr`
 is used as a baseline level for the membrane potential threshold while
 `thrTheta`  is treated as a form of short-term plasticity (full
 threshold is: `thr + thrTheta(t)`).
