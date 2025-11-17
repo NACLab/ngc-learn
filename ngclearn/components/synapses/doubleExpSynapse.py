@@ -1,6 +1,4 @@
 from jax import random, numpy as jnp, jit
-from ngclearn.utils.weight_distribution import initialize_params
-from ngcsimlib.logger import info
 
 from ngclearn.components.synapses import DenseSynapse
 from ngcsimlib.compartment import Compartment
@@ -85,7 +83,7 @@ class DoubleExpSynapse(DenseSynapse): ## dynamic double-exponential synapse cabl
             self.weights.set(self.weights.get() * 0 + 1.)
 
     @compilable
-    def advance_state(self, t, dt): #dt, tau_decay, tau_rise, g_syn_bar, syn_rest, Rscale, inputs, weights, i_syn, g_syn, h_syn, v
+    def advance_state(self, t, dt):
         s = self.inputs.get()
         #A = tau_decay/(tau_decay - tau_rise) * jnp.power((tau_rise/tau_decay), tau_rise/(tau_rise - tau_decay))
         A = 1. ## FIXME: scale factor to use?
@@ -120,20 +118,6 @@ class DoubleExpSynapse(DenseSynapse): ## dynamic double-exponential synapse cabl
         self.g_syn.set(postVals)
         self.h_syn.set(postVals)
         self.v.set(postVals)
-
-    # def save(self, directory, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     if self.bias_init != None:
-    #         jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
-    #     else:
-    #         jnp.savez(file_name, weights=self.weights.value)
-    #
-    # def load(self, directory, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     data = jnp.load(file_name)
-    #     self.weights.set(data['weights'])
-    #     if "biases" in data.keys():
-    #         self.biases.set(data['biases'])
 
     @classmethod
     def help(cls): ## component help function

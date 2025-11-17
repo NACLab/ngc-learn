@@ -3,7 +3,7 @@
 In this lesson, we will study dynamic synapses, or synaptic cable components in 
 ngc-learn that evolve on fast time-scales in response to their pre-synaptic inputs. 
 These types of chemical synapse components are useful for modeling time-varying 
-conductance which ultimately drives eletrical current input into neuronal units 
+conductance which ultimately drives electrical current input into neuronal units 
 (such as spiking cells).  Here, we will learn how to build three important types of dynamic synapses in 
 ngc-learn -- the exponential, the alpha, and the double-exponential synapse -- and visualize 
 the time-course of their resulting conductances. In addition, we will then 
@@ -24,17 +24,14 @@ value matrices we might initially employ (as in synapse components such as the
 Building a dynamic synapse can be done by importing the [exponential synapse](ngclearn.components.synapses.exponentialSynapse), 
 the [double-exponential synapse](ngclearn.components.synapses.doubleExpSynapse), or the [alpha synapse](ngclearn.components.synapses.alphaSynapse) from ngc-learn's in-built components and setting them up within a model context for easy analysis. Go ahead and create a Python script named `probe_synapses.py` to place 
 the code you will write within. 
-For the first part of this lesson, we will import all three dynamic synpapse models and compare their behavior.
+For the first part of this lesson, we will import all three dynamic synapse models and compare their behavior.
 This can be done as follows (using the meta-parameters we provide in the code block below to ensure reasonable dynamics):
 
 ```python
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
-from ngclearn.components import ExponentialSynapse, AlphaSynapse, DoupleExpSynapse
-
-from ngcsimlib.compilers.process import Process
-from ngcsimlib.context import Context
-import ngclearn.utils.weight_distribution as dist
+from ngclearn import Context, MethodProcess
+from ngclearn.components import ExponentialSynapse, AlphaSynapse, DoubleExpSynapse
+from ngclearn.utils.distribution_generator import DistributionGenerator
 
 
 dkey = random.PRNGKey(1234) ## creating seeding keys for synapses
@@ -46,29 +43,27 @@ T = 8. # ms ## total duration time
 with Context("dual_syn_system") as ctx:
     Wexp = ExponentialSynapse( ## exponential dynamic synapse
         name="Wexp", shape=(1, 1), tau_decay=3., g_syn_bar=1., syn_rest=0., resist_scale=1.,
-        weight_init=dist.constant(value=1.), key=subkeys[0]
+        weight_init=DistributionGenerator.constant(value=1.), key=subkeys[0]
     )
     Walpha = AlphaSynapse( ## alpha dynamic synapse
         name="Walpha", shape=(1, 1), tau_decay=1., g_syn_bar=1., syn_rest=0., resist_scale=1.,
-        weight_init=dist.constant(value=1.), key=subkeys[0]
+        weight_init=DistributionGenerator.constant(value=1.), key=subkeys[0]
     )
-    Wexp2 = DoupleExpSynapse(
+    Wexp2 = DoubleExpSynapse(
         name="Wexp2", shape=(1, 1), tau_rise=1., tau_decay=3., g_syn_bar=1., syn_rest=0., resist_scale=1.,
-        weight_init=dist.constant(value=1.), key=subkeys[0]
+        weight_init=DistributionGenerator.constant(value=1.), key=subkeys[0]
     )
 
     ## set up basic simulation process calls
-    advance_process = (Process("advance_proc")
+    advance_process = (MethodProcess("advance_proc")
                        >> Wexp.advance_state
                        >> Walpha.advance_state
                        >> Wexp2.advance_state)
-    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
-    reset_process = (Process("reset_proc")
+    reset_process = (MethodProcess("reset_proc")
                      >> Wexp.reset
                      >> Walpha.reset
                      >> Wexp2.reset)
-    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 ```
 
 where we notice in the above we have instantiated three different kinds of chemical synapse components 
@@ -90,7 +85,7 @@ $$
 $$
 
 where the conductance (for a post-synaptic unit) output of this synapse is driven by a sum over all of its incoming 
-pre-synaptic spikes; this ODE means that pre-synaptic spikes are filtered via an expoential kernel (i.e., a low-pass filter). 
+pre-synaptic spikes; this ODE means that pre-synaptic spikes are filtered via an exponential kernel (i.e., a low-pass filter). 
 On the other hand, for the alpha synapse, the dynamics adhere to the following coupled set of ODEs:
 
 $$
@@ -100,7 +95,7 @@ $$
 
 where $h_{\text{syn}}(t)$ is an intermediate variable that operates in service of driving the conductance variable $g_{\text{syn}}(t)$ itself. 
 The double-exponential (or difference of exponentials) synapse model looks similar to the alpha synapse except that the 
-rise and fall/decay of its condutance dynamics are set separately using two different time constants, i.e., $\tau_{\text{rise}}$ and $\tau_{\text{decay}}$, 
+rise and fall/decay of its conductance dynamics are set separately using two different time constants, i.e., $\tau_{\text{rise}}$ and $\tau_{\text{decay}}$, 
 as follows:
 
 $$
@@ -128,7 +123,7 @@ time_span = []
 g = []
 ga = []
 gexp2 = []
-ctx.reset()
+reset_process.run()
 Tsteps = int(T/dt) + 1
 for t in range(Tsteps):
     s_t = jnp.zeros((1, 1))
@@ -136,21 +131,23 @@ for t in range(Tsteps):
         s_t = jnp.ones((1, 1))
     Wexp.inputs.set(s_t)
     Walpha.inputs.set(s_t)
-    Wexp.v.set(Wexp.v.value * 0)
+    Wexp.v.set(Wexp.v.get() * 0)
     Wexp2.inputs.set(s_t)
-    Walpha.v.set(Walpha.v.value * 0)
-    Wexp2.v.set(Wexp2.v.value * 0)
-    ctx.run(t=t * dt, dt=dt)
+    Walpha.v.set(Walpha.v.get() * 0)
+    Wexp2.v.set(Wexp2.v.get() * 0)
+    advance_process.run(t=t * dt, dt=dt)
 
-    print(f"\r g = {Wexp.g_syn.value}  ga = {Walpha.g_syn.value}  gexp2 = {Wexp2.g_syn.value}", end="")
-    g.append(Wexp.g_syn.value)
-    ga.append(Walpha.g_syn.value)
+    print(f"\r g = {Wexp.g_syn.get()}  ga = {Walpha.g_syn.get()}  gexp2 = {Wexp2.g_syn.get()}", end="")
+    g.append(Wexp.g_syn.get())
+    ga.append(Walpha.g_syn.get())
+    gexp2.append(Wexp2.g_syn.get())
     time_span.append(t) #* dt)
 print()
 g = jnp.squeeze(jnp.concatenate(g, axis=1))
 g = g/jnp.amax(g)
 ga = jnp.squeeze(jnp.concatenate(ga, axis=1))
 ga = ga/jnp.amax(ga)
+gexp2 = jnp.squeeze(jnp.concatenate(gexp2, axis=1))
 gexp2 = gexp2/jnp.amax(gexp2)
 ```
 
@@ -195,6 +192,9 @@ ax.grid(which="major")
 fig.savefig("alpha_syn.jpg")
 plt.close()
 
+## ---- plot the double-exponential synapse conductance time-course ----
+fig, ax = plt.subplots()
+
 gvals = ax.plot(time_span, gexp2, '-', color='tab:blue')
 #plt.xticks(time_span, time_labs)
 ax.set_xticks(time_ticks, time_labs)
@@ -207,7 +207,7 @@ plt.close()
 ```
 
 which should produce and save three plots to disk. You can then compare and contrast the plots of the 
-expoential, alpha synapse, and double-exponential conductance trajectories:
+exponential, alpha synapse, and double-exponential conductance trajectories:
 
 ```{eval-rst}
 .. table::
@@ -222,7 +222,7 @@ expoential, alpha synapse, and double-exponential conductance trajectories:
 
 Note that the alpha synapse (right figure) would produce a more realistic fit to recorded synaptic currents (as it attempts to model 
 the rise and fall of current in a less simplified manner) at the cost of extra compute, given it uses two ODEs to 
-emulate condutance, as opposed to the faster yet less-biophysically-realistic exponential synapse (left figure). 
+emulate conductance, as opposed to the faster yet less-biophysically-realistic exponential synapse (left figure). 
 
 ## Excitatory-Inhibitory Driven Dynamics
 
@@ -243,13 +243,10 @@ We will specifically model the excitatory and inhibitory conductance changes usi
 
 ```python 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
+from ngclearn import Context, MethodProcess
+from ngclearn.operations import Summation
 from ngclearn.components import ExponentialSynapse, PoissonCell, LIFCell
-from ngclearn.operations import summation
-
-from ngcsimlib.compilers.process import Process
-from ngcsimlib.context import Context
-import ngclearn.utils.weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator
 
 ## create seeding keys
 dkey = random.PRNGKey(1234)
@@ -287,39 +284,36 @@ with Context("ei_snn") as ctx:
     pre_inh = PoissonCell("pre_inh", n_units=n_inh, target_freq=inh_freq, key=subkeys[1]) ## pre-syn inhibitory group
     Wexc = ExponentialSynapse( ## dynamic synapse between excitatory group and LIF
         name="Wexc", shape=(n_exc,1), tau_decay=tau_syn_exc, g_syn_bar=g_e_bar, syn_rest=E_rest_exc, resist_scale=1./g_L,
-        weight_init=dist.constant(value=1.), key=subkeys[2]
+        weight_init=DistributionGenerator.constant(value=1.), key=subkeys[2]
     )
     Winh = ExponentialSynapse( ## dynamic synapse between inhibitory group and LIF
         name="Winh", shape=(n_inh, 1), tau_decay=tau_syn_inh, g_syn_bar=g_i_bar, syn_rest=E_rest_inh, resist_scale=1./g_L,
-        weight_init=dist.constant(value=1.), key=subkeys[2]
+        weight_init=DistributionGenerator.constant(value=1.), key=subkeys[2]
     )
     post_exc = LIFCell( ## post-syn LIF cell
         "post_exc", n_units=1, tau_m=tau_m, resist_m=1., thr=v_thr, v_rest=v_rest, conduct_leak=1., v_reset=-75.,
         tau_theta=0., theta_plus=0., refract_time=2., key=subkeys[3]
     )
 
-    Wexc.inputs << pre_exc.outputs 
-    Winh.inputs << pre_inh.outputs
-    Wexc.v << post_exc.v ## couple voltage to exc synapse
-    Winh.v << post_exc.v ## couple voltage to inh synapse
-    post_exc.j << summation(Wexc.i_syn, Winh.i_syn) ## sum together excitatory & inhibitory pressures
+    pre_exc.outputs >> Wexc.inputs 
+    pre_inh.outputs >> Winh.inputs
+    post_exc.v >> Wexc.v ## couple voltage to exc synapse
+    post_exc.v >> Winh.v ## couple voltage to inh synapse
+    Summation(Wexc.i_syn, Winh.i_syn) >> post_exc.j ## sum together excitatory & inhibitory pressures
 
-    advance_process = (Process("advance_proc")
+    advance_process = (MethodProcess("advance_proc")
                        >> pre_exc.advance_state
                        >> pre_inh.advance_state
                        >> Wexc.advance_state
                        >> Winh.advance_state
                        >> post_exc.advance_state)
-    # ctx.wrap_and_add_command(advance_process.pure, name="run")
-    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
-    reset_process = (Process("reset_proc")
+    reset_process = (MethodProcess("reset_proc")
                      >> pre_exc.reset
                      >> pre_inh.reset
                      >> Wexc.reset
                      >> Winh.reset
                      >> post_exc.reset)
-    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
 ```
 
 ### Examining the Simple Spiking Circuit's Behavior
@@ -331,18 +325,18 @@ volts = []
 time_span = []
 spikes = []
 
-ctx.reset()
+reset_process.run()
 pre_exc.inputs.set(jnp.ones((1, n_exc))) 
 pre_inh.inputs.set(jnp.ones((1, n_inh)))
-post_exc.v.set(post_exc.v.value * 0 - 65.) ## initial condition for LIF is -65 mV
-volts.append(post_exc.v.value)
+post_exc.v.set(post_exc.v.get() * 0 - 65.) ## initial condition for LIF is -65 mV
+volts.append(post_exc.v.get())
 time_span.append(0.)
 Tsteps = int(T/dt) + 1
 for t in range(1, Tsteps):
-    ctx.run(t=t * dt, dt=dt)
-    print(f"\r v {post_exc.v.value}", end="")
-    volts.append(post_exc.v.value)
-    spikes.append(post_exc.s.value)
+    advance_process.run(t=t * dt, dt=dt)
+    print(f"\r v {post_exc.v.get()}", end="")
+    volts.append(post_exc.v.get())
+    spikes.append(post_exc.s.get())
     time_span.append(t) #* dt)
 print()
 volts = jnp.squeeze(jnp.concatenate(volts, axis=1))
@@ -384,9 +378,7 @@ ax.grid()
 fig.savefig("ei_circuit_dynamics.jpg")
 ```
 
-which should produce a figure depicting dynamics similar to the one below. Black tick 
-marks indicate post-synaptic pulses whereas the horizontal dashed blue shows the LIF unit's 
-voltage threshold.
+which should produce a figure depicting dynamics similar to the one below. Black tick marks indicate post-synaptic pulses whereas the horizontal dashed blue shows the LIF unit's voltage threshold.
 
 
 ```{eval-rst}

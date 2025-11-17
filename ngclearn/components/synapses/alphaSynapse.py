@@ -1,6 +1,4 @@
 from jax import random, numpy as jnp, jit
-from ngclearn.utils.weight_distribution import initialize_params
-from ngcsimlib.logger import info
 
 from ngclearn.components.synapses import DenseSynapse
 from ngcsimlib.compartment import Compartment
@@ -114,20 +112,6 @@ class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
         self.g_syn.set(postVals)
         self.h_syn.set(postVals)
         self.v.set(postVals)
-
-    # def save(self, directory, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     if self.bias_init != None:
-    #         jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
-    #     else:
-    #         jnp.savez(file_name, weights=self.weights.value)
-    #
-    # def load(self, directory, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     data = jnp.load(file_name)
-    #     self.weights.set(data['weights'])
-    #     if "biases" in data.keys():
-    #         self.biases.set(data['biases'])
 
     @classmethod
     def help(cls): ## component help function
