@@ -108,7 +108,7 @@ for ts in range(T):
     x_t = data
     ## pass in t and dt and run step forward of simulation
     clamp(x_t)
-    advance_process.run(t=t, dt=dt)  #
+    advance_process.run(t=t, dt=dt) # run one step of dynamics
     t = t + dt
 
     ## naively extract simple statistics at time ts and print them to I/O
@@ -143,26 +143,27 @@ recov_rec = np.squeeze(np.asarray(recov_rec))
 spk_rec = np.squeeze(np.asarray(spk_rec))
 
 # Plot the AdEx cell trajectory
-cell_tag = "RS"
 n_plots = 1
 fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 ax_ptr = ax
-ax_ptr.set(xlabel='Time', ylabel='Voltage (v)',
-           title="AdEx ({}) Voltage Dynamics".format(cell_tag))
+ax_ptr.set(
+    xlabel='Time', ylabel='Voltage (v)', title="AdEx Voltage Dynamics"
+)
 
 v = ax_ptr.plot(time_span, mem_rec, color='C0')
 ax_ptr.legend([v[0]],['v'])
 plt.tight_layout()
-plt.savefig("{0}".format("adex_v_plot.jpg".format(cell_tag.lower())))
+plt.savefig("{0}".format("adex_v_plot.jpg"))
 
 fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 ax_ptr = ax
-ax_ptr.set(xlabel='Time', ylabel='Recovery (w)',
-           title="AdEx ({}) Recovery Dynamics".format(cell_tag))
+ax_ptr.set(
+    xlabel='Time', ylabel='Recovery (w)', title="AdEx Recovery Dynamics"
+)
 w = ax_ptr.plot(time_span, recov_rec, color='C1', alpha=.5)
 ax_ptr.legend([w[0]],['w'])
 plt.tight_layout()
-plt.savefig("{0}".format("adex_w_plot.jpg".format(cell_tag.lower())))
+plt.savefig("{0}".format("adex_w_plot.jpg"))
 plt.close()
 ```
 
@@ -187,27 +188,6 @@ however, one could configure it to use the midpoint method for integration
 by setting its argument `integration_type = rk2` in cases where more
 accuracy in the dynamics is needed (at the cost of additional computational time).
 
-## Optional: Setting Up The Components with a JSON Configuration
-
-While you are not required to create a JSON configuration file for ngc-learn,
-to get rid of the warning that ngc-learn will throw at the start of your
-program's execution (indicating that you do not have a configuration set up yet),
-all you need to do is create a sub-directory for your JSON configuration
-inside of your project code's directory, i.e., `json_files/modules.json`.
-Inside the JSON file, you would write the following:
-
-```json
-[
-    {"absolute_path": "ngclearn.components",
-        "attributes": [
-            {"name": "AdExCell"}]
-    },
-    {"absolute_path": "ngcsimlib.operations",
-        "attributes": [
-            {"name": "overwrite"}]
-    }
-]
-```
 
 ## References
 
