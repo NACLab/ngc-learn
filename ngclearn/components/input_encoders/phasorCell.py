@@ -137,16 +137,6 @@ class PhasorCell(JaxComponent):
         self.angles.set(restVals)
         self.key.set(key)
 
-
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.key.set(data['key'])
-
     @classmethod
     def help(cls):  ## component help function
         properties = {

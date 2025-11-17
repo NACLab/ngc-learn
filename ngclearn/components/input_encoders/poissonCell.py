@@ -3,6 +3,7 @@ from jax import numpy as jnp, random
 import jax
 from typing import Union
 
+from ngcsimlib import deprecate_args
 from ngcsimlib.parser import compilable
 from ngcsimlib.compartment import Compartment
 
@@ -29,8 +30,11 @@ class PoissonCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    def __init__(self, name: str, n_units: int, target_freq: float = 63.75, batch_size: int = 1,
-                 key: Union[jax.Array, None] = None):
+    @deprecate_args(max_freq="target_freq")
+    def __init__(
+            self, name: str, n_units: int, target_freq: float = 63.75, batch_size: int = 1,
+            key: Union[jax.Array, None] = None, **kwargs
+    ):
         super().__init__(name=name, key=key)
 
         ## Constrained Bernoulli meta-parameters

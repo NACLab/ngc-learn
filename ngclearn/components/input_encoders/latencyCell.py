@@ -144,11 +144,9 @@ class LatencyCell(JaxComponent):
     """
 
     def __init__(
-        self, name: str, n_units: int, tau: float = 1., threshold: float = 0.01,
-        first_spike_time: float = 0., linearize: bool = False,
-        normalize: bool = False, clip_spikes: bool = False,
-        num_steps: float = 1., batch_size: int = 1,
-        key: Union[jax.Array, None] = None
+            self, name: str, n_units: int, tau: float = 1., threshold: float = 0.01, first_spike_time: float = 0.,
+            linearize: bool = False, normalize: bool = False, clip_spikes: bool = False, num_steps: float = 1.,
+            batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs
     ):
         super().__init__(name=name, key=key)
 
