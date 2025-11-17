@@ -22,7 +22,7 @@ value matrices we might initially employ (as in synapse components such as the
 [DenseSynapse](ngclearn.components.synapses.denseSynapse)). 
 
 Building a dynamic synapse can be done by importing the [exponential synapse](ngclearn.components.synapses.exponentialSynapse), 
-the [double-exponential synapse](ngclearn.components.synapses.doubleExpSynapse), or the [alpha synapse](ngclearn.components.synapses.alphaSynapse) from ngc-learn's in-built components and setting them up within a model context for easy analysis. Go ahead and create a Python script named `probe_synapses.py` to place 
+the [double-exponential synapse](ngclearn.components.synapses.doubleExpSynapse), or the [alpha synapse](ngclearn.components.synapses.alphaSynapse) from ngc-learn's in-built components and setting them up within a model context for easy analysis. Go ahead and create a Python script named `probe_dynamic_synapses.py` to place 
 the code you will write within. 
 For the first part of this lesson, we will import all three dynamic synapse models and compare their behavior.
 This can be done as follows (using the meta-parameters we provide in the code block below to ensure reasonable dynamics):

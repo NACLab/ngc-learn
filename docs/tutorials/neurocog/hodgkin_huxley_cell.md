@@ -1,16 +1,12 @@
 # Lecture 2E: The Hodgkin-Huxley Cell
 
-In this tutorial, we will study/setup one of the most important biophysical 
-neuronal models in computational neuroscience -- the Hodgkin-Huxley (H-H) spiking 
-cell model.
+In this tutorial, we will study/setup one of the most important and sophisticated biophysical neuronal models in computational neuroscience -- the Hodgkin-Huxley (H-H) spiking cell model.
 
 ## Using and Probing the H-H Cell
 
-Go ahead and make a new folder for this study and create a Python script,
-i.e., `run_hhcell.py`, to write your code for this part of the tutorial.
+Go ahead and make a new folder for this study and create a Python script, i.e., `run_hhcell.py`, to write your code for this part of the tutorial.
 
-Now let's set up the controller for this lesson's simulation and construct a
-single component system made up of an H-H cell.
+Now let's set up the controller for this lesson's simulation and construct a single component system made up of an H-H cell.
 
 
 ### Instantiating the H-H Neuronal Cell
@@ -22,9 +18,7 @@ H-H cell amounts to the following:
 from jax import numpy as jnp, random, jit
 import numpy as np
 
-from ngclearn.utils.model_utils import scanner
-from ngcsimlib.context import Context
-from ngclearn.utils import JaxProcess
+from ngclearn import Context, MethodProcess
 ## import model-specific mechanisms
 from ngclearn.components.neurons.spiking.hodgkinHuxleyCell import HodgkinHuxleyCell
 
@@ -52,18 +46,15 @@ with Context("Model") as model:
     )
 
     ## create and compile core simulation commands
-    advance_process = (JaxProcess()
+    advance_process = (MethodProcess("advance")
                        >> cell.advance_state)
-    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (JaxProcess()
+    reset_process = (MethodProcess("reset")
                      >> cell.reset)
-    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
-    ## set up non-compiled utility commands
-    @Context.dynamicCommand
-    def clamp(x):
-        cell.j.set(x)
+## set up non-compiled utility commands
+def clamp(x):
+    cell.j.set(x)
 ```
 
 Notably, the H-H model is a four-dimensional differential equation system, invented in 1952 
@@ -88,15 +79,12 @@ $$
 \frac{\partial \mathbf{h}_t}{\partial t} &= \alpha_h(\mathbf{v}_t) * (1 - \mathbf{h}_t) - \beta_h(\mathbf{v}_t) * \mathbf{h}_t
 $$
 
-where we observe that the above four-dimensional set of dynamics is composed of nonlinear ODEs. Notice that, in each gate or channel probability ODE, there are two generator functions (each of which is a function of the membrane potential $\mathbf{v}_t$) that produces the necessary dynamic coefficients at time $t$; $\alpha_x(\mathbf{v}_t)$ and $\beta_x(\mathbf{v}_t)$ produce different biopphysical weighting values depending on which channel $x = \{n, m, h\}$ they are related to. 
+where we observe that the above four-dimensional set of dynamics is composed of nonlinear ODEs. Notice that, in each gate or channel probability ODE, there are two generator functions (each of which is a function of the membrane potential $\mathbf{v}_t$) that produces the necessary dynamic coefficients at time $t$; $\alpha_x(\mathbf{v}_t)$ and $\beta_x(\mathbf{v}_t)$ produce different biophysical weighting values depending on which channel $x = \{n, m, h\}$ they are related to. 
 Note that, in ngc-learn's implementation of the H-H cell model, most of the core coefficients have been generally set according to Hodgkin and Huxley's 1952 work but can be configured by the experimenter to obtain different kinds of behavior/dynamics.
 
 ### Simulating the H-H Neuronal Cell
 
-To see how the H-H cell works, we next write some code for visualizing how
-the node's membrane potential and core related gates/channels evolve with time
-(over a period of about `200` milliseconds). We will inject a square input pulse current 
-into our H-H cell (specifically into its `j` compartment) and observe how the cell behaves in response. 
+To see how the H-H cell works, we next write some code for visualizing how the node's membrane potential and core related gates/channels evolve with time (over a period of about `200` milliseconds). We will inject a square input pulse current into our H-H cell (specifically into its `j` compartment) and observe how the cell behaves in response. 
 Specifically, we simulate the injection of this kind of current via the code below:
 
 ```python
@@ -112,17 +100,17 @@ v = []
 n = []
 m = []
 h = []
-model.reset()
+reset_process.run()
 for ts in range(x_seq.shape[1]):
     x_t = jnp.array([[x_seq[0, ts]]]) ## get data at time t
-    model.clamp(x_t)
-    model.run(t=ts * dt, dt=dt)
-    outs.append(a.s.value)
-    n.append(cell.n.value[0, 0])
-    m.append(cell.m.value[0, 0])
-    h.append(cell.h.value[0, 0])
-    v.append(cell.v.value[0, 0])
-    print(f"\r {ts} v = {cell.v.value}", end="")
+    clamp(x_t)
+    advance_process.run(t=ts * dt, dt=dt)
+    outs.append(cell.s.get())
+    n.append(cell.n.get()[0, 0])
+    m.append(cell.m.get()[0, 0])
+    h.append(cell.h.get()[0, 0])
+    v.append(cell.v.get()[0, 0])
+    print(f"\r {ts} v = {cell.v.get()}", end="")
     time_span.append(ts*dt)
 outs = jnp.concatenate(outs, axis=1)
 v = jnp.array(v)
@@ -130,8 +118,7 @@ time_span = jnp.array(time_span)
 outs = jnp.squeeze(outs)
 ```
 
-and we can plot the dynamics of the  neuron's voltage `v` and its three gate/channel 
-variables, `h`, `m`, and `n`, with the following:
+and we can plot the dynamics of the  neuron's voltage `v` and its three gate/channel variables, `h`, `m`, and `n`, with the following:
 
 ```python
 import matplotlib.pyplot as plt
@@ -161,9 +148,7 @@ plt.savefig("{0}".format("hh_plot.jpg"))
 plt.close()
 ```
 
-You should get a compound plot that depict the evolution of the H-H cell's voltage
-and channel/gate variables, i.e., saved as `hh_plot.jpg` locally to
-disk, like the one below:
+You should get a compound plot that depict the evolution of the H-H cell's voltage and channel/gate variables, i.e., saved as `hh_plot.jpg` locally to disk, like the one below:
 
 ```{eval-rst}
 .. table::
@@ -176,38 +161,11 @@ disk, like the one below:
    +--------------------------------------------------------+
 ```
 
-A useful note is that the H-H cell above used Euler integration to step through its
-dynamics (this is the default/base routine for all cell components in ngc-learn). 
-However, one could configure the cell to use the midpoint method for integration
-by setting its argument `integration_type = rk2` or the Runge-Kutta fourth-order 
-routine via `integration_type=rk4` for cases where, at the cost of increased 
-compute time, more accurate dynamics are possible.
+A useful note is that the H-H cell above used Euler integration to step through its dynamics (this is the default/base routine for all cell components in ngc-learn). 
+However, one could configure the cell to use the midpoint method for integration by setting its argument `integration_type = rk2` or the Runge-Kutta fourth-order routine via `integration_type=rk4` for cases where, at the cost of increased compute time, more accurate dynamics are possible.
 
-## Optional: Setting Up The Components with a JSON Configuration
-
-While you are not required to create a JSON configuration file for ngc-learn,
-to get rid of the warning that ngc-learn will throw at the start of your
-program's execution (indicating that you do not have a configuration set up yet),
-all you need to do is create a sub-directory for your JSON configuration
-inside of your project code's directory, i.e., `json_files/modules.json`.
-Inside the JSON file, you would write the following:
-
-```json
-[
-    {"absolute_path": "ngclearn.components",
-        "attributes": [
-            {"name": "HodgkinHuxleyCell"}]
-    },
-    {"absolute_path": "ngcsimlib.operations",
-        "attributes": [
-            {"name": "overwrite"}]
-    }
-]
-```
 
 ## References
 
-<b>[1]</b> Hodgkin, Alan L., and Andrew F. Huxley. "A quantitative description 
-of membrane current and its application to conduction and excitation in nerve." 
-The Journal of physiology 117.4 (1952): 500.
+<b>[1]</b> Hodgkin, Alan L., and Andrew F. Huxley. "A quantitative description of membrane current and its application to conduction and excitation in nerve." The Journal of physiology 117.4 (1952): 500.
 

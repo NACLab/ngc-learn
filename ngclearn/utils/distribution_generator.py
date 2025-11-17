@@ -173,6 +173,10 @@ class DistributionGenerator(object):
         The values are sampled from a uniform distribution in the range [-limit, limit],
         where limit = sqrt(1 / fan_in), and fan_in is inferred from the shape.
 
+        | Glorot, Xavier, and Yoshua Bengio. "Understanding the difficulty of training deep feedforward neural
+        | networks." Proceedings of the thirteenth international conference on artificial intelligence and statistics.
+        | JMLR Workshop and Conference Proceedings, 2010.
+
         Args:
             **params: extra distribution parameters
 
@@ -232,6 +236,9 @@ class DistributionGenerator(object):
         Produces a distribution initializer using a fan-in Gaussian (normal) strategy.
         The values are sampled from a normal distribution with mean 0 and stddev = sqrt(1 / fan_in),
         where fan_in is inferred from the shape.
+
+        | He, Kaiming, et al. "Delving deep into rectifiers: Surpassing human-level performance on imagenet
+        | classification." Proceedings of the IEEE international conference on computer vision. 2015.
 
         Args:
             **params: extra distribution parameters
