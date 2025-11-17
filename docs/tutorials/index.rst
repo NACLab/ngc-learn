@@ -29,14 +29,3 @@ to configuration).
   foundations/commands
   foundations/operations
   foundations/monitors
-
-.. toctree::
-  :maxdepth: 1
-  :caption: III. NGC-Lava: Support for Loihi 2 Transfer
-
-  lava/introduction
-  lava/setup
-  lava/lava_components
-  lava/lava_context
-  lava/hebbian_learning
-  lava/monitors
