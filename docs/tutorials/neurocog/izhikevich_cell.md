@@ -38,9 +38,10 @@ coupling_factor = 0.2
 
 ## create simple system with only one Izh Cell
 with Context("Model") as model:
-    cell = IzhikevichCell("z0", n_units=1, tau_w=tau_w, v_reset=v_reset,
-                          w_reset=w_reset, coupling_factor=coupling_factor,
-                          integration_type="euler", v0=v0, w0=w0, key=subkeys[0])
+    cell = IzhikevichCell(
+        "z0", n_units=1, tau_w=tau_w, v_reset=v_reset, w_reset=w_reset, coupling_factor=coupling_factor, 
+        integration_type="euler", v0=v0, w0=w0, key=subkeys[0]
+    )
 
     ## create and compile core simulation commands
     advance_process = (MethodProcess("advance")
@@ -123,8 +124,9 @@ n_plots = 1
 fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 
 ax_ptr = ax
-ax_ptr.set(xlabel='Time', ylabel='Voltage (v), Recovery (w)',
-           title="Izhikevich (RS) Voltage/Recovery Dynamics")
+ax_ptr.set(
+    xlabel='Time', ylabel='Voltage (v), Recovery (w)', title=f"Izhikevich ({cell_tag}) Voltage/Recovery Dynamics"
+)
 
 v = ax_ptr.plot(time_span, mem_rec, color='C0')
 w = ax_ptr.plot(time_span, recov_rec, color='C1', alpha=.5)

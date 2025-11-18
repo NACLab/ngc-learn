@@ -35,8 +35,9 @@ w0 = -0.16983366  ## initial recovery value (for reset condition)
 
 ## create simple system with only one F-N cell
 with Context("Model") as model:
-    cell = FitzhughNagumoCell("z0", n_units=1, tau_w=tau_w, alpha=alpha, beta=beta,
-                              gamma=gamma, v0=v0, w0=w0, integration_type="euler")
+    cell = FitzhughNagumoCell(
+        "z0", n_units=1, tau_w=tau_w, alpha=alpha, beta=beta, gamma=gamma, v0=v0, w0=w0, integration_type="euler"
+    )
 
     ## create and compile core simulation commands
     advance_process = (MethodProcess("advance")
