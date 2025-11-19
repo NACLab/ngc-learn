@@ -18,7 +18,7 @@ Writing the above three parallel single synapse systems, including meta-paramete
 
 ```python 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
+
 from ngclearn import Context, MethodProcess
 ## import model-specific mechanisms
 from ngclearn.components import (TraceSTDPSynapse, MSTDPETSynapse, RewardErrorCell, VarTrace)
