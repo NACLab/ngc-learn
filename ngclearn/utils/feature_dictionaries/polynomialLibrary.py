@@ -1,19 +1,16 @@
-import jax.numpy as jnp
-from jax import jit, random
-import jax.numpy as jnp
+from jax import jit, random, numpy as jnp
 from typing import List, Tuple, Union
 from dataclasses import dataclass
-
-
 
 @dataclass
 class PolynomialLibrary:
     """
     A class for creating polynomial feature libraries in 1D, 2D, or 3D.
 
-    Attributes:
-        poly_order (int): Maximum order of polynomial terms
-        include_bias (bool): Whether to include the bias term in the output
+    Args:
+        poly_order (int): Maximum order of polynomial terms (Attribute)
+
+        include_bias (bool): Whether to include the bias term in the output (Attribute)
     """
 
     poly_order: int = None

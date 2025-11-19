@@ -10,6 +10,8 @@ Subpackages
    ngclearn.utils.analysis
    ngclearn.utils.density
    ngclearn.utils.diffeq
+   ngclearn.utils.feature_dictionaries
+   ngclearn.utils.masks
    ngclearn.utils.optim
    ngclearn.utils.viz
 
