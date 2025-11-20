@@ -1,16 +1,11 @@
 # %%
 
-# from ngcsimlib.component import Component
-# from ngcsimlib.compartment import Compartment
-# from ngcsimlib.resolver import resolver
-
 import numpy as np
 from jax import jit, numpy as jnp, random, nn, lax
 from functools import partial
-import time
 
 
-def step_update(param, update, g1, g2, lr, beta1, beta2, time, eps):
+def step_update(param, update, g1, g2, lr, beta1, beta2, time_step, eps):
     """
     Runs one step of Adam over a set of parameters given updates.
     The dynamics for any set of parameters is as follows:
@@ -39,17 +34,17 @@ def step_update(param, update, g1, g2, lr, beta1, beta2, time, eps):
 
         beta2: 2nd moment control factor
 
-        time: current time t or iteration step/call to this Adam update
+        time_step: current time t or iteration step/call to this Adam update
 
         eps: numberical stability coefficient (for calculating final update)
 
     Returns:
-        adjusted parameter tensor (same shape as "param")
+        adjusted parameter tensor (same shape as "param"), adjusted g1, adjusted g2
     """
     _g1 = beta1 * g1 + (1. - beta1) * update
     _g2 = beta2 * g2 + (1. - beta2) * jnp.square(update)
-    g1_unb = _g1 / (1. - jnp.power(beta1, time))
-    g2_unb = _g2 / (1. - jnp.power(beta2, time))
+    g1_unb = _g1 / (1. - jnp.power(beta1, time_step))
+    g2_unb = _g2 / (1. - jnp.power(beta2, time_step))
     _param = param - lr * g1_unb/(jnp.sqrt(g2_unb) + eps)
     return _param, _g1, _g2
 
@@ -83,9 +78,7 @@ def adam_step(opt_params, theta, updates, eta=0.001, beta1=0.9, beta2=0.999, eps
     new_g1 = []
     new_g2 = []
     for i in range(len(theta)):
-        px_i, g1_i, g2_i = step_update(theta[i], updates[i], g1[i],
-                                        g2[i], eta, beta1,
-                                        beta2, time_step, eps)
+        px_i, g1_i, g2_i = step_update(theta[i], updates[i], g1[i], g2[i], eta, beta1, beta2, time_step, eps)
         new_theta.append(px_i)
         new_g1.append(g1_i)
         new_g2.append(g2_i)

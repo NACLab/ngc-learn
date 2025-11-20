@@ -15,7 +15,8 @@ def step_update(param, update, lr):
 
 @jit
 def sgd_step(opt_params, theta, updates, eta=0.001): ## apply adjustment to theta
-    """Return a params update
+    """
+    Returns updated parameters in accordance to a stochastic gradient descent (SGD) recipe
 
     Args:
         opt_params: (ArrayLike) parameters of the optimization algorithm
@@ -41,7 +42,6 @@ def sgd_step(opt_params, theta, updates, eta=0.001): ## apply adjustment to thet
 @jit
 def sgd_init(theta):
     return jnp.asarray(0.0)
-
 
 if __name__ == '__main__':
     opt_params, theta = sgd_step((2.0), [1.0, 1.0], [3.0, 4.0], 3e-2)
