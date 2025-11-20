@@ -1,7 +1,6 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
-from ngclearn.utils.weight_distribution import initialize_params
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngcsimlib.logger import info
 import ngclearn.utils.weight_distribution as dist
 from ngclearn.components.synapses.convolution.ngcconv import deconv2d

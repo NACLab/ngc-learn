@@ -2,9 +2,9 @@ from jax import random, numpy as jnp, jit
 from ngcsimlib.logger import info
 
 from ngclearn.utils.distribution_generator import DistributionGenerator
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
 
 class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
     """

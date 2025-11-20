@@ -6,8 +6,8 @@ from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
 
-from ngcsimlib.parser import compilable
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 def _dfv(t, v, params): ## voltage dynamics wrapper
     j, rfr, tau_m, refract_T, v_rest, g_L = params
@@ -186,8 +186,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
             m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: not batch-able
             rS = s * random.uniform(skey, s.shape)
-            rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
-                            dtype=jnp.float32)
+            rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1], dtype=jnp.float32)
             s = s * (1. - m_switch) + rS * m_switch
             self.key.set(key)
 

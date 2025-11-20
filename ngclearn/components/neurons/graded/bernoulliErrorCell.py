@@ -2,12 +2,10 @@
 
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
-from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import sigmoid, d_sigmoid
 
-from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """

@@ -3,8 +3,8 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
 
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class DenseSynapse(JaxComponent): ## base dense synaptic cable
     """

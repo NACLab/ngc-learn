@@ -32,6 +32,7 @@ from ngclearn.utils import JointProcess, MethodProcess
 from ngcsimlib.context import Context, ContextObjectTypes
 from ngcsimlib import Component
 from ngcsimlib.compartment import Compartment
+from ngcsimlib.parser import compilable
 
 from ngcsimlib import logger
 

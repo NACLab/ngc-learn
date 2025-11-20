@@ -5,9 +5,8 @@ from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-from ngcsimlib.parser import compilable
-from ngcsimlib.compartment import Compartment
-
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @jit
 def _dfv_internal(j, v, w, a, b, g, tau_m): ## raw voltage dynamics

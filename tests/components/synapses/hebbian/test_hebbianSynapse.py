@@ -4,7 +4,7 @@ from jax import numpy as jnp, random, jit
 
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import HebbianSynapse
+from ngclearn.components.synapses.hebbian.hebbianSynapse import HebbianSynapse
 
 from numpy.testing import assert_array_equal
 from ngclearn import Context, MethodProcess
@@ -57,12 +57,11 @@ def test_hebbianSynapse():
   advance_process.run(t=1. * dt, dt=dt)
   evolve_process.run(t=1. * dt, dt=dt)
 
-  print(a.weights.get())
+  #print(a.weights.get())
 
   # Basic assertions to check learning dynamics
   assert a.weights.get().shape == (10, 5), ""
   assert a.weights.get()[0, 0] == 0.5, ""
 
-test_hebbianSynapse()
-
+#test_hebbianSynapse()
 

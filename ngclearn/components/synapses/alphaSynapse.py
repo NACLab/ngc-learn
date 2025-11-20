@@ -1,8 +1,8 @@
 from jax import random, numpy as jnp, jit
 
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
 
 class AlphaSynapse(DenseSynapse): ## dynamic alpha synapse cable
     """

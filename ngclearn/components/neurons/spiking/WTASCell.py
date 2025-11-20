@@ -2,10 +2,8 @@ from jax import numpy as jnp, random, jit, nn
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from ngcsimlib import deprecate_args
-from ngcsimlib.logger import info, warn
-
-from ngcsimlib.parser import compilable
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.utils.model_utils import softmax
 
 

@@ -7,11 +7,8 @@ from ngclearn.utils import tensorstats
 from ngclearn.utils.weight_distribution import initialize_params
 
 from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
-
-import math
-
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 def create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_init):
     sub_shape = (shape[0] // n_sub_models, shape[1] // n_sub_models)

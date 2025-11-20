@@ -2,6 +2,7 @@ from .jaxComponent import JaxComponent
 
 ## point to rate-coded cell component types
 from .neurons.graded.rateCell import RateCell
+from .neurons.graded.leakyNoiseCell import LeakyNoiseCell
 from .neurons.graded.gaussianErrorCell import GaussianErrorCell
 from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
 from .neurons.graded.bernoulliErrorCell import BernoulliErrorCell

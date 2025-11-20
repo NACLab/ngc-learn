@@ -3,11 +3,8 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.parser import compilable
-from ngcsimlib.logger import info, warn
-
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[4])
 def _run_varfilter(dt, x, x_tr, decayFactor, gamma_tr, a_delta=0.):

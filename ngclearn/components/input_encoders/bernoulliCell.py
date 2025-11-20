@@ -1,7 +1,7 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 import jax
 from typing import Union
 

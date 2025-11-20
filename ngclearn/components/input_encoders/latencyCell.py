@@ -6,8 +6,8 @@ from typing import Union
 
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[5])
 def _calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,

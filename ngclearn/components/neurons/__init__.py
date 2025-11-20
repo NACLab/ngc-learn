@@ -1,5 +1,6 @@
 ## point to rate-coded cell componet types
 from .graded.rateCell import RateCell
+from .graded.leakyNoiseCell import LeakyNoiseCell
 from .graded.gaussianErrorCell import GaussianErrorCell
 from .graded.laplacianErrorCell import LaplacianErrorCell
 from .graded.bernoulliErrorCell import BernoulliErrorCell

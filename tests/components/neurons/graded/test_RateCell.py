@@ -3,7 +3,7 @@
 from jax import numpy as jnp, random, jit
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import RateCell
+from ngclearn.components.neurons.graded.rateCell import RateCell
 from numpy.testing import assert_array_equal
 
 from ngclearn import Context, MethodProcess
@@ -23,8 +23,8 @@ def test_RateCell1():
     advance_process = (MethodProcess("advance_proc") >> a.advance_state)
     reset_process = (MethodProcess("reset_proc") >> a.reset)
 
-    def clamp(x):
-      a.j.set(x)
+  def clamp(x):
+    a.j.set(x)
 
   ## input spike train
   x_seq = jnp.ones((1, 10))
@@ -35,12 +35,13 @@ def test_RateCell1():
   reset_process.run()
   for ts in range(x_seq.shape[1]):
       x_t = jnp.array([[x_seq[0, ts]]])  ## get data at time t
-      ctx.clamp(x_t)
+      clamp(x_t)
       advance_process.run(t=ts * 1., dt=dt)
-      outs.append(a.z.value)
+      outs.append(a.z.get())
   outs = jnp.concatenate(outs, axis=1)
   # print(outs)
   ## output should equal input
   # assert_array_equal(outs, y_seq, tol=1e-3)
   np.testing.assert_allclose(outs, y_seq, atol=1e-3)
 
+#test_RateCell1()
