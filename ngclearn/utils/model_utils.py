@@ -298,8 +298,14 @@ def d_relu(x):
 @jit
 def telu(x):
     """
-    Proposed by Fernandez and Mali 24, https://arxiv.org/abs/2412.20269 and https://arxiv.org/abs/2402.02790
-    TeLU activation: f(x) = x * tanh(e^x)
+    The hyperbolic tangent exponential linear (TeLU) function:
+
+    | f(x) = x * tanh(e^x)
+
+    This was proposed by Fernandez and Mali 24 in:
+
+    | https://arxiv.org/abs/2412.20269 and in,
+    | https://arxiv.org/abs/2402.02790
 
     Args:
         x: input (tensor) value
@@ -312,8 +318,10 @@ def telu(x):
 @jit
 def d_telu(x):
     """
-    
-    Derivative of TeLU: f'(x) = tanh(e^x) + x * e^x * (1 - tanh^2(e^x))
+    Derivative of the hyperbolic tangent exponential linear (TeLU) function.
+    Effectively, this is formally:
+
+    | f'(x) = tanh(e^x) + x * e^x * (1 - tanh^2(e^x))
 
     Args:
         x: input (tensor) value
