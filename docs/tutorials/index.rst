@@ -5,11 +5,7 @@
 Tutorial Contents
 =================
 
-Lessons/tutorials go through the very basics of constructing a dynamical system in
-ngc-learn, core elements and tools of neurocognitive modeling using ngc-learn's 
-in-built components and simulation tools, and finally providing foundational insights 
-into how ngc-learn and its backend, ngc-sim-lib, work (particularly with respect 
-to configuration). 
+Lessons/tutorials go through the very basics of constructing a dynamical system in NGC-Learn, core elements and tools of neurocognitive modeling using NGC-Learn's in-built components and simulation tools, and finally providing foundational insights into how NGC-Learn and its backend, NGC-Sim-Lib, work (particularly with respect to configuration).
 
 .. toctree::
   :maxdepth: 1
