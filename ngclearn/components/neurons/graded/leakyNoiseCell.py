@@ -6,9 +6,13 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2, step_rk4
 
-def _dfz_fn(z, j_input, j_recurrent, eps, tau_x, sigma_rec): ## raw dynamics ODE
-    dz_dt = -z + (j_recurrent + j_input) + jnp.sqrt(2. * tau_x * (sigma_rec) ^ 2) * eps
+def _dfz_fn(z, j_input, j_recurrent, eps, tau_x, sigma_rec, leak_scale): ## raw dynamics ODE
+    dz_dt = -(z * leak_scale) + (j_recurrent + j_input) + jnp.sqrt(2. * tau_x * jnp.square(sigma_rec)) * eps
     return dz_dt * (1. / tau_x)
+
+def _dfz(t, z, params): ## raw dynamics ODE wrapper
+    j_input, j_recurrent, eps, tau_x, sigma_rec, leak_scale = params
+    return _dfz_fn(z, j_input, j_recurrent, eps, tau_x, sigma_rec, leak_scale)
 
 class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
     """
@@ -55,13 +59,14 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
     # Define Functions
     def __init__(
             self, name, n_units, tau_x, act_fx="relu", integration_type="euler", batch_size=1, sigma_rec=1.,
-            shape=None, **kwargs
+            leak_scale=1., shape=None, **kwargs
     ):
         super().__init__(name, **kwargs)
 
 
         self.tau_x = tau_x
         self.sigma_rec = sigma_rec ## a "resistance" scaling factor
+        self.leak_scale = leak_scale ## the leak scaling factor (most appropriate default is 1)
 
         ## integration properties
         self.integrationType = integration_type
@@ -87,22 +92,23 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
         self.r = Compartment(restVals, display_name="Rectified Rate Activity") # rectified output
 
     @compilable
-    def advance_state(self, t, dt): #dt, fx, tau_x, sigma_rec, intgFlag, key, j_input, j_recurrent, x):
-        key, skey = random.split(self.key.get(), 2)
+    def advance_state(self, t, dt):
         ### run a step of integration over neuronal dynamics
-        eps = random.normal(skey[0], shape=self.x.get().shape) ## sample of unit distributional noise
-        #x = _run_cell(dt, self.j_input.get(), self.j_recurrent.get(), self.x.get(), eps, self.tau_x, self.sigma_rec, integType=self.intgFlag)
+        key, skey = random.split(self.key.get(), 2)
+        eps = random.normal(skey, shape=self.x.get().shape) ## sample of unit distributional noise
 
+        #x = _run_cell(dt, self.j_input.get(), self.j_recurrent.get(), self.x.get(), eps, self.tau_x, self.sigma_rec, integType=self.intgFlag)
         _step_fns = {
             0: step_euler,
             1: step_rk2,
             2: step_rk4,
         }
-        _step_fn = _step_fns.get(self.intgFlag, step_euler)
-        params = (self.j_input.get(), self.j_recurrent.get(), eps, self.tau_x, self.sigma_rec)
-        _, x = _step_fn(0., self.x.get(), _dfz_fn, dt, params) ## update state activation dynamics
+        _step_fn = _step_fns[self.intgFlag] #_step_fns.get(self.intgFlag, step_euler)
+        params = (self.j_input.get(), self.j_recurrent.get(), eps, self.tau_x, self.sigma_rec, self.leak_scale)
+        _, x = _step_fn(0., self.x.get(), _dfz, dt, params) ## update state activation dynamics
         r = self.fx(x)  ## calculate rectified / post-activation function value(s)
 
+        ## set compartments to next state values in accordance with dynamics
         self.key.set(key)
         self.x.set(x)
         self.r.set(r)
