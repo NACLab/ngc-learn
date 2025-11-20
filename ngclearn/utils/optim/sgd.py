@@ -1,16 +1,16 @@
 from jax import jit, numpy as jnp
 
-def step_update(param, update, lr):
+def step_update(param, update, eta):
     """
     Runs one step of SGD over a set of parameters given updates.
 
     Args:
-        lr: global step size to apply when adjusting parameters
+        eta: global step size to apply when adjusting parameters
 
     Returns:
         adjusted parameter tensor (same shape as "param")
     """
-    _param = param - lr * update
+    _param = param - update * eta
     return _param
 
 @jit

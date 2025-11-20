@@ -6,7 +6,7 @@ from functools import partial
 import time
 
 
-def step_update(param, update, phi_old, lr, mu, time_step):
+def step_update(param, update, phi_old, eta, mu, time_step):
     """
     Runs one step of Nesterov's accelerated gradient (NAG) over a set of parameters given updates.
     The dynamics for any set of parameters is as follows:
@@ -22,7 +22,7 @@ def step_update(param, update, phi_old, lr, mu, time_step):
 
         phi_old: previous friction/momentum parameter
 
-        lr: global step size value to be applied to updates to parameters
+        eta: global step size value to be applied to updates to parameters
 
         mu: friction/momentum control factor
 
@@ -31,7 +31,7 @@ def step_update(param, update, phi_old, lr, mu, time_step):
     Returns:
         adjusted parameter tensor (same shape as "param"), adjusted momentum/friction variable
     """
-    phi = param - update * lr ## do a phantom gradient adjustment step
+    phi = param - update * eta ## do a phantom gradient adjustment step
     _param = phi + (phi - phi_old) * (mu * (time_step > 1.)) ## NAG-step
     _phi_old = phi
     return _param, _phi_old

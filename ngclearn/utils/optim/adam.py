@@ -5,7 +5,7 @@ from jax import jit, numpy as jnp, random, nn, lax
 from functools import partial
 
 
-def step_update(param, update, g1, g2, lr, beta1, beta2, time_step, eps):
+def step_update(param, update, g1, g2, eta, beta1, beta2, time_step, eps):
     """
     Runs one step of Adam over a set of parameters given updates.
     The dynamics for any set of parameters is as follows:
@@ -28,7 +28,7 @@ def step_update(param, update, g1, g2, lr, beta1, beta2, time_step, eps):
         g2: second moment factor/correction factor to use in parameter update
             (must be same shape as "update")
 
-        lr: global step size value to be applied to updates to parameters
+        eta: global step size value to be applied to updates to parameters
 
         beta1: 1st moment control factor
 
@@ -45,7 +45,7 @@ def step_update(param, update, g1, g2, lr, beta1, beta2, time_step, eps):
     _g2 = beta2 * g2 + (1. - beta2) * jnp.square(update)
     g1_unb = _g1 / (1. - jnp.power(beta1, time_step))
     g2_unb = _g2 / (1. - jnp.power(beta2, time_step))
-    _param = param - lr * g1_unb/(jnp.sqrt(g2_unb) + eps)
+    _param = param - eta * g1_unb/(jnp.sqrt(g2_unb) + eps)
     return _param, _g1, _g2
 
 @jit
