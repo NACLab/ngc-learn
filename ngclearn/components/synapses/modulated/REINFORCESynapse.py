@@ -1,9 +1,8 @@
 # %%
 
 from jax import random, numpy as jnp, jit
-from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable, Compartment
+
 from ngclearn.utils.model_utils import clip, d_clip
 import jax
 import jax.numpy as jnp
@@ -194,20 +193,19 @@ class REINFORCESynapse(DenseSynapse):
     # @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights", "accumulated_gradients", "step_count", "seed"])
     # @staticmethod
     @compilable
-    def reset(self, batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
         inputs = preVals
         outputs = postVals
         objective = jnp.zeros(())
-        rewards = jnp.zeros((batch_size,))
-        dWeights = jnp.zeros(shape)
-        accumulated_gradients = jnp.zeros((shape[0], shape[1] * 2))
+        rewards = jnp.zeros((self.batch_size,))
+        dWeights = jnp.zeros(self.shape)
+        accumulated_gradients = jnp.zeros((self.shape[0], self.shape[1] * 2))
         step_count = jnp.zeros(())
         seed = jax.random.PRNGKey(42)
 
-
-        not self.inputs.targeted and self.inputs.set(inputs)
+        hasattr(self.inputs, 'targeted') and not self.inputs.targeted and self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.objective.set(objective)
         self.rewards.set(rewards)
@@ -259,20 +257,6 @@ class REINFORCESynapse(DenseSynapse):
                             "Check compute_update() for more details."
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 
 if __name__ == '__main__':
