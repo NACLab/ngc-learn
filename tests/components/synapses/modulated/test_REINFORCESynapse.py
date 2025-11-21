@@ -126,7 +126,7 @@ def test_REINFORCESynapse1():
     )
 
 
-test_REINFORCESynapse1()
+# test_REINFORCESynapse1()
 
 
 def test_REINFORCESynapse2():
@@ -244,5 +244,5 @@ def test_REINFORCESynapse2():
         atol=1e-9
     )
 
-test_REINFORCESynapse2()
+# test_REINFORCESynapse2()
 
