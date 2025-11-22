@@ -39,7 +39,7 @@ def test_bernoulliErrorCell():
       target_xt = jnp.array([[target_seq[0, ts]]])
       clamp_target(target_xt)
       advance_process.run(t=ts * 1., dt=dt)
-      outs.append(a.dp.value)
+      outs.append(a.dp.get())
   outs = jnp.concatenate(outs, axis=1)
   # print(outs)
   ## output should equal input

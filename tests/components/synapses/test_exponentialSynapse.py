@@ -4,7 +4,7 @@ import numpy as np
 np.random.seed(42)
 
 from ngclearn import Context, MethodProcess
-import ngclearn.utils.weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngclearn.components.synapses.exponentialSynapse import ExponentialSynapse
 
 def test_exponentialSynapse1():
@@ -19,8 +19,8 @@ def test_exponentialSynapse1():
     # ---- build a single exp-synapse system ----
     with Context(name) as ctx:
         a = ExponentialSynapse(
-            name="a", shape=(1,1), tau_decay=tau_syn, g_syn_bar=2.4, syn_rest=E_rest, weight_init=dist.constant(value=1.),
-            key=subkeys[0]
+            name="a", shape=(1,1), tau_decay=tau_syn, g_syn_bar=2.4, syn_rest=E_rest, 
+            weight_init=DistributionGenerator.constant(value=1.), key=subkeys[0]
         )
 
         advance_process = (MethodProcess("advance_proc")

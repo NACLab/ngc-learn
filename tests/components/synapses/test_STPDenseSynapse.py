@@ -4,7 +4,7 @@ import numpy as np
 np.random.seed(42)
 
 from ngclearn import Context, MethodProcess
-import ngclearn.utils.weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngclearn.components.synapses.STPDenseSynapse import STPDenseSynapse
 
 def test_STPDenseSynapse1():
@@ -16,7 +16,7 @@ def test_STPDenseSynapse1():
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
         a = STPDenseSynapse(
-            name="a", shape=(1,1), resources_init=dist.constant(value=1.),key=subkeys[0]
+            name="a", shape=(1,1), resources_init=DistributionGenerator.constant(value=1.),key=subkeys[0]
         )
 
         advance_process = (MethodProcess("advance_proc")
