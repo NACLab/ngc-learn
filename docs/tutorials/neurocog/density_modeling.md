@@ -1,12 +1,13 @@
 # Density Modeling and Analysis 
 
-NGC-Learn offers some support for density modeling/estimation, which can be particularly useful in analyzing how internal properties of neuronal models organize (e.g., how the distributed representations of a model might cluster into distinct groups/categories) or to draw samples from the underlying generative model implied by a particular neuronal structure (e.g., sampling a predictive coding generative model). Particularly, within `ngclearn.utils.density`, one can find implementations of mixture models, e.g., a Gaussian mixture model (GMM), that might be implied to carry out such tasks. In this small lesson, we will demonstrate how to set up a GMM, fit it to some synthetic latent code data, and plot out the distribution it learns overlaid over the data samples as well as examine the kinds of patterns one may sample from the learnt GMM.
+NGC-Learn offers some support for density modeling/estimation, which can be particularly useful in analyzing how internal properties of neuronal models' self-organized cell populations (e.g., how the distributed representations of a model might cluster into distinct groups/categories) or to draw samples from the underlying generative model implied by a particular neuronal structure (e.g., sampling a trained predictive coding generative model). 
+Particularly, within `ngclearn.utils.density`, one can find implementations of mixture models -- such as a mixture-of-Bernoulli or a mixture-of-Gaussians -- which might be employed to carry out such tasks. In this small lesson, we will demonstrate how to set up a Gaussian mixture model (GMM), fit it to some synthetic latent code data, and plot out the distribution it learns overlaid over the data samples as well as examine the kinds of patterns one may sample from the learnt GMM.
 
 ## Setting Up a Gaussian Mixture Model
 
-Let's say you have a two-dimensional dataset of neural code vectors collected from another model you have simulated -- here, we will artificially synthesize this kind of data in this lesson from an "unobserved" trio of multivariate Gaussians (as was done in the t-SNE tutorial) -- and that, furthermore, you wanted to fit a GMM to these codes to later on sample from their underlying multi-modal distribution.
+Let's say you have a two-dimensional dataset of neural code vectors collected from another model you have simulated -- here, we will artificially synthesize this kind of data in this lesson from an "unobserved" trio of multivariate Gaussians (as was done in the t-SNE tutorial) and pretend that this is a set of collected vector measurements. Furthermore, you decide that, after consideration that your data might follow a multi-modal distribution (and reasonably asssuming that multivariate Gaussians might capture most of the inherent structure/shape), you want to fit a GMM to these codes to later on sample from their underlying multi-modal distribution.
 
-The following Python code will employ a GMM density estimator for you (including setting up the data generator):
+The following Python code will employ an NGC-Learn-in-built GMM density estimator for you (including setting up the data generator):
 
 ```python
 from jax import numpy as jnp, random
@@ -24,27 +25,33 @@ def gen_data(dkey, n_samp_per_mode): ## data generator (or proxy stochastic data
 
     dkey, *subkeys = random.split(dkey, 7)
     samp1 = random.multivariate_normal(subkeys[0], mu1, cov1, shape=(n_samp_per_mode,))
-    samp2 = random.multivariate_normal(subkeys[0], mu2, cov2, shape=(n_samp_per_mode,))
-    samp3 = random.multivariate_normal(subkeys[0], mu3, cov3, shape=(n_samp_per_mode,))
+    samp2 = random.multivariate_normal(subkeys[1], mu2, cov2, shape=(n_samp_per_mode,))
+    samp3 = random.multivariate_normal(subkeys[2], mu3, cov3, shape=(n_samp_per_mode,))
     X = jnp.concatenate((samp1, samp2, samp3), axis=0)
     y1 = jnp.ones((n_samp_per_mode, 3)) * jnp.asarray([[1., 0., 0.]])
     y2 = jnp.ones((n_samp_per_mode, 3)) * jnp.asarray([[0., 1., 0.]])
     y3 = jnp.ones((n_samp_per_mode, 3)) * jnp.asarray([[0., 0., 1.]])
     lab = jnp.concatenate((y1, y2, y3), axis=0) ## one-hot codes
+
+    ## shuffle the data 
+    ptrs = random.permutation(subkeys[3], X.shape[0])
+    X = X[ptrs, :]
+    lab = lab[ptrs, :]
+
     return X, lab, params
 
 ## set up the GMM density estimator
 key = random.PRNGKey(69)
-dkey, _ = random.split(key, 2)
-X, y, params = gen_data(key, n_samp_per_mode=200) #400)
+dkey, *skey = random.split(key, 3)
+X, y, params = gen_data(key, n_samp_per_mode=200) ## X is your "vector dataset"
 
-n_iter = 30 
-n_components = 3
-model = GMM(K=n_components, max_iter=n_iter, key=dkey)
+n_iter = 100 ## maximum number of iterations to fit GMM to data
+n_components = 3 ## number of mixture components w/in GMM
+model = GMM(K=n_components, max_iter=n_iter, key=skey[0])
 model.init(X) ## initailize the GMM to dataset X
 ```
 
-The above will construct a GMM with three components (or latent variables of its own) and be configured to use a maximum of `30` iterations to fit itself to data. Note that the call to `init()` will "shape" the GMM according to the dimensionality of the data and pre-initialize its parameters (i.e., choosing random data vectors to initialize its means). 
+The above will construct a GMM with three components (or latent variables of its own) and be configured to use a maximum of `100` iterations to fit itself to data. Note that the call to `init()` will "shape" the GMM according to the dimensionality of the data and pre-initialize its parameters (i.e., choosing random data vectors to initialize its means). 
 
 To fit the GMM itself to your dataset `X`, you will then write the following: 
 
@@ -56,28 +63,48 @@ model.fit(X, tol=1e-3, verbose=True) ## set verbose to `False` to silence the fi
 which should print to I/O something akin to: 
 
 ```console
-0: Mean-diff = 0.8029823303222656
-1: Mean-diff = 0.1899024397134781
-2: Mean-diff = 0.18127720057964325
-3: Mean-diff = 0.15023663640022278
-4: Mean-diff = 0.13917091488838196
-5: Mean-diff = 0.10519692301750183
-6: Mean-diff = 0.05732756853103638
-7: Mean-diff = 0.03420640528202057
-8: Mean-diff = 0.01907791942358017
-9: Mean-diff = 0.009763183072209358
-10: Mean-diff = 0.004887263756245375
-11: Mean-diff = 0.0024237236939370632
-12: Mean-diff = 0.0011952449567615986
-13: Mean-diff = 0.0005875130300410092
-Converged after 14 iterations.
+0: Mean-diff = 1.4143142700195312
+1: Mean-diff = 0.15272194147109985
+2: Mean-diff = 0.1888418346643448
+3: Mean-diff = 0.18062230944633484
+4: Mean-diff = 0.15196363627910614
+5: Mean-diff = 0.1135818138718605
+6: Mean-diff = 0.06951556354761124
+7: Mean-diff = 0.03664496913552284
+8: Mean-diff = 0.026161763817071915
+9: Mean-diff = 0.022674376145005226
+10: Mean-diff = 0.021674498915672302
+11: Mean-diff = 0.02205687016248703
+12: Mean-diff = 0.023379826918244362
+13: Mean-diff = 0.02553001046180725
+14: Mean-diff = 0.028586825355887413
+...
+<shortened for brevity>
+...
+32: Mean-diff = 0.06849467754364014
+33: Mean-diff = 0.06256962567567825
+34: Mean-diff = 0.05789890140295029
+35: Mean-diff = 0.05557262524962425
+36: Mean-diff = 0.05545869469642639
+37: Mean-diff = 0.056351397186517715
+38: Mean-diff = 0.057266443967819214
+39: Mean-diff = 0.05742649361491203
+40: Mean-diff = 0.05546746402978897
+41: Mean-diff = 0.04826011508703232
+42: Mean-diff = 0.03320707008242607
+43: Mean-diff = 0.016994504258036613
+44: Mean-diff = 0.007737572770565748
+45: Mean-diff = 0.0035514419432729483
+46: Mean-diff = 0.0016557337949052453
+47: Mean-diff = 0.0007792692049406469
+Converged after 48 iterations.
 ```
 
-In the above instance, notice that our GMM converged early, reaching a good log likelihood in `14` iterations. We can further calculate our model's log likelihood over the dataset `X` with the following in-built function:
+In the above instance, notice that our GMM converged early, reaching a good log likelihood in `48` iterations. We can further calculate our final model's log likelihood over the dataset `X` with the following in-built function:
 
 ```python
 # Calculate the GMM log likelihood 
-_, logPX = model.calc_log_likelihood(X) ## 1st output is log-lieklihood per data pattern
+_, logPX = model.calc_log_likelihood(X) ## 1st output is log-likelihood per data pattern
 print(f"log[p(X)] = {logPX} nats")
 ```
 
@@ -87,6 +114,7 @@ which will print out the following:
 log[p(X)] = -423.30889892578125 nats
 ```
 
+(If you add a log-likelihood measurement before you call `.fit()`, you will see that your original log-likelihood is around `-1046.91 nats`.) 
 Now, to visualize if our GMM actually capture the underlying multi-modal distribution of our dataset, we may visualize the final GMM with the following plotting code: 
 
 ```python

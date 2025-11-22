@@ -4,6 +4,14 @@ ngclearn.utils.density package
 Submodules
 ----------
 
+ngclearn.utils.density.bmm module
+---------------------------------
+
+.. automodule:: ngclearn.utils.density.bmm
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.density.gmm module
 ---------------------------------
 
