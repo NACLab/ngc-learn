@@ -73,3 +73,4 @@ work towards more advanced concepts.
   plotting
   metrics
   integration
+  density_modeling

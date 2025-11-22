@@ -101,7 +101,7 @@ def _sample_component(dkey, n_samples, mu, Sigma, assume_diag_cov=False): ## sam
 
 class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
     """
-    Implements a Gaussian mixture model (GMM) -- or mixture of Gaussians, MoG.
+    Implements a Gaussian mixture model (GMM) -- or mixture of Gaussians (MoG).
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)
     learning algorithm and leverages full covariance matrices in the component
     multivariate Gaussians.
@@ -197,7 +197,7 @@ class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
             self.Sigma[j] = sigma_j ## store new covariance(j) parameter
         return means, r
 
-    def fit(self, X, tol=1e-3):
+    def fit(self, X, tol=1e-3, verbose=False):
         """
         Run full fitting process of this GMM.
 
@@ -206,13 +206,18 @@ class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
 
             tol: the tolerance value for detecting convergence (via difference-of-means); will engage in early-stopping
                 if tol >= 0. (Default: 1e-3)
+
+            verbose: if True, this function will print out per-iteration measurements to I/O
         """
         means_prev = jnp.concat(self.mu, axis=0)
         for i in range(self.max_iter):
             self.update(X) ## carry out one E-step followed by an M-step
             means = jnp.concat(self.mu, axis=0)
+            dom = jnp.linalg.norm(means - means_prev) ## norm of difference-of-means
+            if verbose:
+                print(f"{i}: Mean-diff = {dom}")
             #print(jnp.linalg.norm(means - means_prev))
-            if tol >= 0. and jnp.linalg.norm(means - means_prev) < tol:
+            if tol >= 0. and dom < tol:
                 print(f"Converged after {i + 1} iterations.")
                 break
             means_prev = means
@@ -255,7 +260,6 @@ class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
             Xs = []
             for j in range(self.K):
                 freq_j = int(jnp.sum((lats == j)))  ## compute frequency over mode
-                print(freq_j)
                 ## draw unit Gaussian noise
                 self.key, *skey = random.split(self.key, 3)
                 x_s = _sample_component(
