@@ -106,9 +106,6 @@ class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
     learning algorithm and leverages full covariance matrices in the component
     multivariate Gaussians.
 
-    Note this is a (JAX) wrapper model that houses the sklearn implementation for learning.
-    The sampling process has been rewritten to utilize GPU matrix computation.
-
     Args:
         K: the number of components/latent variables within this GMM
 

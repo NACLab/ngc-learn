@@ -65,9 +65,6 @@ class BMM: ## Bernoulli mixture model (mixture-of-Bernoullis)
     learning algorithm and leverages full covariance matrices in the component
     multivariate Bernoulli distributions.
 
-    Note this is a (JAX) wrapper model that houses the sklearn implementation for learning.
-    The sampling process has been rewritten to utilize GPU matrix computation.
-
     Args:
         K: the number of components/latent variables within this BMM
 
