@@ -7,7 +7,7 @@ import numpy as np
 ## internal routines for mixture model
 ########################################################################################################################
 
-@partial(jit, static_argnums=[3])
+@jit
 def _log_bernoulli_pdf(X, p):
     """
     Calculates the multivariate Bernoulli log likelihood of a design matrix/dataset `X`, under a given parameter 
@@ -21,7 +21,7 @@ def _log_bernoulli_pdf(X, p):
     Returns:
         the log likelihood (scalar) of this design matrix X
     """
-    D = mu.shape[1] * 1. ## get dimensionality
+    #D = X.shape[1] * 1. ## get dimensionality
     ## x log(mu_k) + (1-x) log(1 - mu_k)
     vec_ll = X * jnp.log(p) + (1. - X) * jnp.log(1. - p) ## binary cross-entropy (log Bernoulli)
     log_ll = jnp.sum(vec_ll, axis=1, keepdims=True) ## get per-datapoint LL
@@ -99,8 +99,10 @@ class BMM: ## Bernoulli mixture model (mixture-of-Bernoullis)
         ptrs = random.permutation(skey[0], X.shape[0])
         for j in range(self.K):
             ptr = ptrs[j]
-            #self.key, *skey = random.split(self.key, 3)
-            self.mu.append(X[ptr:ptr+1,:] * 0 + (1./(dim * 1.)))
+            self.key, *skey = random.split(self.key, 3)
+            #self.mu.append(X[ptr:ptr+1,:] * 0 + (1./(dim * 1.)))
+            eps = random.uniform(skey[0], minval=0., maxval=0.9, shape=(1, dim)) ## jitter initial prob params
+            self.mu.append(eps)
 
     def calc_log_likelihood(self, X):
         """
