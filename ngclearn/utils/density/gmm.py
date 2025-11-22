@@ -104,7 +104,8 @@ class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
     Implements a Gaussian mixture model (GMM) -- or mixture of Gaussians (MoG).
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)
     learning algorithm and leverages full covariance matrices in the component
-    multivariate Gaussians.
+    multivariate Gaussians. (A Categorical distribution is assumed over the 
+    latent variables).
 
     Args:
         K: the number of components/latent variables within this GMM

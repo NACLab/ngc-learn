@@ -62,8 +62,9 @@ class BMM: ## Bernoulli mixture model (mixture-of-Bernoullis)
     """
     Implements a Bernoulli mixture model (BMM) -- or mixture of Bernoullis (MoB).
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)
-    learning algorithm and leverages full covariance matrices in the component
-    multivariate Bernoulli distributions.
+    learning algorithm. Note that this Bernoulli mixture assumes that each component 
+    is a factorizable mutlivariate Bernoulli distribution. (A Categorical distribution 
+    is assumed over the latent variables).
 
     Args:
         K: the number of components/latent variables within this BMM
