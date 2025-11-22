@@ -99,6 +99,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.L.set(jnp.squeeze(L))
         self.mask.set(mask)
 
+    @compilable
     def reset(self): ## reset core components/statistics
         restVals = jnp.zeros((self.batch_size, self.n_units))
         dshift = restVals
