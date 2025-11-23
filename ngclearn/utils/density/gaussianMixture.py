@@ -101,7 +101,7 @@ def _sample_component(dkey, n_samples, mu, Sigma, assume_diag_cov=False): ## sam
 
 ########################################################################################################################
 
-class GMM(Mixture): ## Gaussian mixture model (mixture-of-Gaussians)
+class GaussianMixture(Mixture): ## Gaussian mixture model (mixture-of-Gaussians)
     """
     Implements a Gaussian mixture model (GMM) -- or mixture of Gaussians (MoG).
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)

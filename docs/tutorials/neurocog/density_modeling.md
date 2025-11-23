@@ -11,7 +11,7 @@ The following Python code will employ an NGC-Learn-in-built GMM density estimato
 
 ```python
 from jax import numpy as jnp, random
-from ngclearn.utils.density.gmm import GMM ## pull out the mixture model density estimator
+from ngclearn.utils.density.gaussianMixture import GaussianMixture as GMM ## pull out density estimator
 
 def gen_data(dkey, n_samp_per_mode): ## data generator (or proxy stochastic data generating process)
     scale = 0.3

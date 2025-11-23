@@ -4,18 +4,18 @@ ngclearn.utils.density package
 Submodules
 ----------
 
-ngclearn.utils.density.bmm module
----------------------------------
+ngclearn.utils.density.bernoulliMixture module
+----------------------------------------------
 
-.. automodule:: ngclearn.utils.density.bmm
+.. automodule:: ngclearn.utils.density.bernoulliMixture
    :members:
    :undoc-members:
    :show-inheritance:
 
-ngclearn.utils.density.gmm module
----------------------------------
+ngclearn.utils.density.gaussianMixture module
+---------------------------------------------
 
-.. automodule:: ngclearn.utils.density.gmm
+.. automodule:: ngclearn.utils.density.gaussianMixture
    :members:
    :undoc-members:
    :show-inheritance:

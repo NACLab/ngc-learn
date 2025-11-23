@@ -60,7 +60,7 @@ def _sample_component(dkey, n_samples, mu): ## samples a component (of mixture)
 
 ########################################################################################################################
 
-class BMM(Mixture): ## Bernoulli mixture model (mixture-of-Bernoullis)
+class BernoulliMixture(Mixture): ## Bernoulli mixture model (mixture-of-Bernoullis)
     """
     Implements a Bernoulli mixture model (BMM) -- or mixture of Bernoullis (MoB).
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)
