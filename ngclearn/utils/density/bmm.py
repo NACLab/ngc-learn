@@ -3,6 +3,8 @@ from functools import partial
 import time, sys
 import numpy as np
 
+from ngclearn.utils.density.mixture import Mixture
+
 ########################################################################################################################
 ## internal routines for mixture model
 ########################################################################################################################
@@ -58,7 +60,7 @@ def _sample_component(dkey, n_samples, mu): ## samples a component (of mixture)
 
 ########################################################################################################################
 
-class BMM: ## Bernoulli mixture model (mixture-of-Bernoullis)
+class BMM(Mixture): ## Bernoulli mixture model (mixture-of-Bernoullis)
     """
     Implements a Bernoulli mixture model (BMM) -- or mixture of Bernoullis (MoB).
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)
@@ -74,7 +76,8 @@ class BMM: ## Bernoulli mixture model (mixture-of-Bernoullis)
         init_kmeans: <Unsupported>
     """
 
-    def __init__(self, K, max_iter=50, init_kmeans=False, key=None):
+    def __init__(self, K, max_iter=50, init_kmeans=False, key=None, **kwargs):
+        super().__init__(K, max_iter, **kwargs)
         self.K = K
         self.max_iter = int(max_iter)
         self.init_kmeans = init_kmeans ## Unsupported currently
@@ -204,3 +207,4 @@ class BMM: ## Bernoulli mixture model (mixture-of-Bernoullis)
                 Xs.append(x_s)
             Xs = jnp.concat(Xs, axis=0)
         return Xs
+

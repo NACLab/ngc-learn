@@ -20,6 +20,14 @@ ngclearn.utils.density.gmm module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.density.mixture module
+-------------------------------------
+
+.. automodule:: ngclearn.utils.density.mixture
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

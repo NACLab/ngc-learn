@@ -3,6 +3,8 @@ from functools import partial
 import time, sys
 import numpy as np
 
+from ngclearn.utils.density.mixture import Mixture
+
 ########################################################################################################################
 ## internal routines for mixture model
 ########################################################################################################################
@@ -99,7 +101,7 @@ def _sample_component(dkey, n_samples, mu, Sigma, assume_diag_cov=False): ## sam
 
 ########################################################################################################################
 
-class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
+class GMM(Mixture): ## Gaussian mixture model (mixture-of-Gaussians)
     """
     Implements a Gaussian mixture model (GMM) -- or mixture of Gaussians (MoG).
     Adaptation of parameters is conducted via the Expectation-Maximization (EM)
@@ -119,7 +121,8 @@ class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
     # init_kmeans: if True, first learn use the K-Means algorithm to initialize
     #              the component Gaussians of this GMM (Default = False)
 
-    def __init__(self, K, max_iter=50, assume_diag_cov=False, init_kmeans=False, key=None):
+    def __init__(self, K, max_iter=50, assume_diag_cov=False, init_kmeans=False, key=None, **kwargs):
+        super().__init__(K, max_iter, **kwargs) 
         self.K = K
         self.max_iter = int(max_iter)
         self.assume_diag_cov = assume_diag_cov
@@ -265,3 +268,4 @@ class GMM: ## Gaussian mixture model (mixture-of-Gaussians)
                 Xs.append(x_s)
             Xs = jnp.concat(Xs, axis=0)
         return Xs
+
