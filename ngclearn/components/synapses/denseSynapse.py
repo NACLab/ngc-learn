@@ -75,8 +75,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.weights = Compartment(weights)
         ## Set up (optional) bias values
         if self.bias_init is None:
-            info(self.name, "is using default bias value of zero (no bias "
-                            "kernel provided)!")
+            info(self.name, "is using default bias value of zero (no bias kernel provided)!")
         self.biases = Compartment(self.bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0)
         # self.biases = Compartment(initialize_params(subkeys[2], bias_init,
         #                                             (1, shape[1]))

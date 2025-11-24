@@ -2,7 +2,7 @@ from jax import random, numpy as jnp, jit
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngcsimlib.logger import info
-import ngclearn.utils.weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngclearn.components.synapses.convolution.ngcconv import conv2d
 
 from ngclearn.components.jaxComponent import JaxComponent
@@ -80,7 +80,12 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
 
         ######################### set up compartments ##########################
         tmp_key, *subkeys = random.split(self.key.get(), 4)
-        weights = dist.initialize_params(subkeys[0], filter_init, shape) ## filter tensor
+        #weights = dist.initialize_params(subkeys[0], filter_init, shape)
+        if self.filter_init is None:
+            info(self.name, "is using default weight initializer!")
+            self.filter_init = DistributionGenerator.uniform(0.025, 0.8)
+        weights = self.filter_init(shape, subkeys[0]) ## filter tensor
+
         self.batch_size = batch_size # 1
         ## Compartment setup and shape computation
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
@@ -91,10 +96,10 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
         self.outputs = Compartment(jnp.zeros(self.out_shape))
         self.weights = Compartment(weights)
         if self.bias_init is None:
-            info(self.name, "is using default bias value of zero (no bias "
-                            "kernel provided)!")
+            info(self.name, "is using default bias value of zero (no bias kernel provided)!")
         self.biases = Compartment(
-            dist.initialize_params(subkeys[2], bias_init, (1, shape[1])) if bias_init else 0.0
+            #dist.initialize_params(subkeys[2], bias_init, (1, shape[1])) if bias_init else 0.0
+            self.bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0
         )
 
     @compilable

@@ -1,5 +1,5 @@
 import numpy as np
-from ngclearn.utils import weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator as dist
 from ngclearn import numpy as jnp
 
 from jax import numpy as jnp, random, jit
@@ -74,10 +74,11 @@ class Iterative_ElasticNet():
         feature_dim = dict_dim
 
         with Context(self.name) as self.circuit:
-            self.W = HebbianSynapse("W", shape=(feature_dim, sys_dim), eta=self.lr,
-                                   sign_value=-1, weight_init=dist.constant(weight_fill),
-                                   prior=('elastic_net', (lmbda, l1_ratio)), w_bound=0.,
-                                   optim_type=optim_type, key=subkeys[0])
+            self.W = HebbianSynapse(
+                "W", shape=(feature_dim, sys_dim), eta=self.lr, sign_value=-1,
+                weight_init=dist.constant(value=weight_fill), prior=('elastic_net', (lmbda, l1_ratio)), w_bound=0.,
+                optim_type=optim_type, key=subkeys[0]
+            )
             self.err = GaussianErrorCell("err", n_units=sys_dim)
 
             # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

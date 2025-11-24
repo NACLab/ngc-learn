@@ -1,9 +1,9 @@
 # Density Modeling and Analysis 
 
 NGC-Learn offers some support for density modeling/estimation, which can be particularly useful in analyzing how internal properties of neuronal models' self-organized cell populations (e.g., how the distributed representations of a model might cluster into distinct groups/categories) or to draw samples from the underlying generative model implied by a particular neuronal structure (e.g., sampling a trained predictive coding generative model). 
-Particularly, within `ngclearn.utils.density`, one can find implementations of mixture models -- such as a mixture-of-Bernoulli or a mixture-of-Gaussians -- which might be employed to carry out such tasks. In this small lesson, we will demonstrate how to set up a Gaussian mixture model (GMM), fit it to some synthetic latent code data, and plot out the distribution it learns overlaid over the data samples as well as examine the kinds of patterns one may sample from the learnt GMM.
+Particularly, within `ngclearn.utils.density`, one can find implementations of mixture models -- such as mixtures of Bernoullis, Gaussians, and exponentials -- which might be employed to carry out such tasks. In this small lesson, we will demonstrate how to set up a Gaussian mixture model (GMM), fit it to some synthetic latent code data, and plot out the distribution it learns overlaid over the data samples as well as examine the kinds of patterns one may sample from the learnt GMM.
 
-## Setting Up a Gaussian Mixture Model
+## Setting Up a Gaussian Mixture Model (GMM)
 
 Let's say you have a two-dimensional dataset of neural code vectors collected from another model you have simulated -- here, we will artificially synthesize this kind of data in this lesson from an "unobserved" trio of multivariate Gaussians (as was done in the t-SNE tutorial) and pretend that this is a set of collected vector measurements. Furthermore, you decide that, after consideration that your data might follow a multi-modal distribution (and reasonably asssuming that multivariate Gaussians might capture most of the inherent structure/shape), you want to fit a GMM to these codes to later on sample from their underlying multi-modal distribution.
 
@@ -63,44 +63,30 @@ model.fit(X, tol=1e-3, verbose=True) ## set verbose to `False` to silence the fi
 which should print to I/O something akin to: 
 
 ```console
-0: Mean-diff = 1.4143142700195312
-1: Mean-diff = 0.15272194147109985
-2: Mean-diff = 0.1888418346643448
-3: Mean-diff = 0.18062230944633484
-4: Mean-diff = 0.15196363627910614
-5: Mean-diff = 0.1135818138718605
-6: Mean-diff = 0.06951556354761124
-7: Mean-diff = 0.03664496913552284
-8: Mean-diff = 0.026161763817071915
-9: Mean-diff = 0.022674376145005226
-10: Mean-diff = 0.021674498915672302
-11: Mean-diff = 0.02205687016248703
-12: Mean-diff = 0.023379826918244362
-13: Mean-diff = 0.02553001046180725
-14: Mean-diff = 0.028586825355887413
+0: Mean-diff = 1.4147894382476807  log(p(X)) = -1706.0753173828125 nats
+1: Mean-diff = 0.14663299918174744  log(p(X)) = -1386.569091796875 nats
+2: Mean-diff = 0.18331432342529297  log(p(X)) = -1359.6962890625 nats
+3: Mean-diff = 0.17693905532360077  log(p(X)) = -1309.736083984375 nats
+4: Mean-diff = 0.1494818776845932  log(p(X)) = -1250.130615234375 nats
+5: Mean-diff = 0.11344392597675323  log(p(X)) = -1221.0008544921875 nats
+6: Mean-diff = 0.07362686842679977  log(p(X)) = -1204.680419921875 nats
+7: Mean-diff = 0.03828870505094528  log(p(X)) = -1192.706298828125 nats
+8: Mean-diff = 0.025705577805638313  log(p(X)) = -1188.51123046875 nats
+9: Mean-diff = 0.021316207945346832  log(p(X)) = -1187.055908203125 nats
+10: Mean-diff = 0.019372563809156418  log(p(X)) = -1186.157470703125 nats
+11: Mean-diff = 0.018868334591388702  log(p(X)) = -1185.443115234375 nats
 ...
 <shortened for brevity>
 ...
-32: Mean-diff = 0.06849467754364014
-33: Mean-diff = 0.06256962567567825
-34: Mean-diff = 0.05789890140295029
-35: Mean-diff = 0.05557262524962425
-36: Mean-diff = 0.05545869469642639
-37: Mean-diff = 0.056351397186517715
-38: Mean-diff = 0.057266443967819214
-39: Mean-diff = 0.05742649361491203
-40: Mean-diff = 0.05546746402978897
-41: Mean-diff = 0.04826011508703232
-42: Mean-diff = 0.03320707008242607
-43: Mean-diff = 0.016994504258036613
-44: Mean-diff = 0.007737572770565748
-45: Mean-diff = 0.0035514419432729483
-46: Mean-diff = 0.0016557337949052453
-47: Mean-diff = 0.0007792692049406469
-Converged after 48 iterations.
+46: Mean-diff = 0.017377303913235664  log(p(X)) = -1062.2596435546875 nats
+47: Mean-diff = 0.007906327955424786  log(p(X)) = -1060.440185546875 nats
+48: Mean-diff = 0.003615213558077812  log(p(X)) = -1060.09130859375 nats
+49: Mean-diff = 0.0016773870447650552  log(p(X)) = -1060.0233154296875 nats
+50: Mean-diff = 0.0007852672133594751  log(p(X)) = -1060.0093994140625 nats
+Converged after 51 iterations.
 ```
 
-In the above instance, notice that our GMM converged early, reaching a good log likelihood in `48` iterations. We can further calculate our final model's log likelihood over the dataset `X` with the following in-built function:
+In the above instance, notice that our GMM converged early, reaching a good, stable log likelihood in `51` iterations. We can further calculate our final model's log likelihood over the dataset `X` with the following in-built function:
 
 ```python
 # Calculate the GMM log likelihood 
@@ -111,10 +97,10 @@ print(f"log[p(X)] = {logPX} nats")
 which will print out the following:
 
 ```console
-log[p(X)] = -423.30889892578125 nats
+log[p(X)] = -1060.006591796875 nats
 ```
 
-(If you add a log-likelihood measurement before you call `.fit()`, you will see that your original log-likelihood is around `-1046.91 nats`.) 
+(If you add a log-likelihood measurement before you call `.fit()`, you will see that your original log-likelihood is around `-1060.01 nats`.) 
 Now, to visualize if our GMM actually capture the underlying multi-modal distribution of our dataset, we may visualize the final GMM with the following plotting code: 
 
 ```python

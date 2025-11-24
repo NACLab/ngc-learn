@@ -1,8 +1,8 @@
 """
 File and OS input/output (reading/writing) utilities.
 """
-import jax
-from jax import numpy as jnp, grad, jit, vmap, random, lax
+# import jax
+# from jax import numpy as jnp, grad, jit, vmap, random, lax
 import os, sys, pickle
 
 def serialize(fname, object): ## object "saving" routine
