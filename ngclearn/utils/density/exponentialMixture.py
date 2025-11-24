@@ -36,7 +36,7 @@ def _calc_exponential_pdf_vals(X, p):
     ll = jnp.exp(log_ll) ## likelihood
     return log_ll, ll
 
-@jit
+#@jit
 def _calc_priors_and_rates(X, weights, pi): ## M-step co-routine
     ## calc new rates, responsibilities, and priors given current stats
     N = X.shape[0]  ## get number of samples
@@ -45,10 +45,20 @@ def _calc_priors_and_rates(X, weights, pi): ## M-step co-routine
     r = r / jnp.sum(r, axis=1, keepdims=True) ## responsibilities
     _pi = jnp.sum(r, axis=0, keepdims=True) / N ## calc new priors
     ## calc weighted rates (weighted by responsibilities)
+
+    Znum = jnp.sum(r, axis=0, keepdims=True)
+    #print(Znum.shape)
+    Zden = jnp.matmul(r.T, X)
+    rates = Znum.T/Zden
+    #print(Zden.shape)
+    #exit()
+    """
     Z = jnp.sum(r, axis=0, keepdims=True) ## calc partition function
-    M = (Z > 0.) * 1.
-    Z = Z * M + (1. - M) ## we mask out any zero partition function values
-    rates = jnp.matmul(r.T, X) / Z.T
+    Ndata = jnp.matmul(r.T, X)
+    M = (Ndata > 0.) * 1.
+    Ndata = Ndata * M + (1. - M) ## we mask out division-by-0 cases
+    rates = Z.T / Ndata
+    """
     return rates, _pi, r
 
 @partial(jit, static_argnums=[1])
@@ -107,7 +117,7 @@ class ExponentialMixture(Mixture): ## Exponential mixture model (mixture-of-expo
         for j in range(self.K):
             ptr = ptrs[j]
             self.key, *skey = random.split(self.key, 3)
-            eps = random.uniform(skey[0], minval=0., maxval=0.5, shape=(1, dim)) ## jitter initial rate params
+            eps = random.uniform(skey[0], minval=0.99, maxval=1.01, shape=(1, dim)) ## jitter initial rate params
             self.rate.append(eps)
 
     def calc_log_likelihood(self, X):
