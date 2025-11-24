@@ -18,13 +18,13 @@ def _log_bernoulli_pdf(X, p):
     Args:
         X: a design matrix (dataset) to compute the log likelihood of
 
-        mu: a parameter mean vector
+        p: a parameter mean vector (positive case probability)
 
     Returns:
         the log likelihood (scalar) of this design matrix X
     """
     #D = X.shape[1] * 1. ## get dimensionality
-    ## x log(mu_k) + (1-x) log(1 - mu_k)
+    ## general format:  x log(mu_k) + (1-x) log(1 - mu_k)
     vec_ll = X * jnp.log(p) + (1. - X) * jnp.log(1. - p) ## binary cross-entropy (log Bernoulli)
     log_ll = jnp.sum(vec_ll, axis=1, keepdims=True) ## get per-datapoint LL
     return log_ll
@@ -36,19 +36,26 @@ def _calc_bernoulli_pdf_vals(X, p):
     return log_ll, ll
 
 @jit
+def _calc_bernoulli_mixture_stats(raw_likeli, pi):
+    likeli = raw_likeli * pi
+    gamma = likeli / jnp.sum(likeli, axis=1, keepdims=True)  ## responsibilities
+    likeli = jnp.sum(likeli, axis=1, keepdims=True)  ## Sum_j[ pi_j * pdf_gauss(x_n; mu_j, Sigma_j) ]
+    log_likeli = jnp.log(likeli)  ## vector of individual log p(x_n) values
+    complete_log_likeli = jnp.sum(log_likeli)  ## complete log-likelihood for design matrix X, i.e., log p(X)
+    return log_likeli, complete_log_likeli, gamma
+
+@jit
 def _calc_priors_and_means(X, weights, pi): ## M-step co-routine
     ## calc new means, responsibilities, and priors given current stats
     N = X.shape[0]  ## get number of samples
     ## calc responsibilities
-    r = (pi * weights)
-    r = r / jnp.sum(r, axis=1, keepdims=True) ## responsibilities
-    _pi = jnp.sum(r, axis=0, keepdims=True) / N ## calc new priors
+    _pi = jnp.sum(weights, axis=0, keepdims=True) / N ## calc new priors
     ## calc weighted means (weighted by responsibilities)
-    Z = jnp.sum(r, axis=0, keepdims=True) ## partition function
+    Z = jnp.sum(weights, axis=0, keepdims=True) ## partition function
     M = (Z > 0.) * 1.
     Z = Z * M + (1. + M) ## removes div-by-0 cases
-    means = jnp.matmul(r.T, X) / Z.T
-    return means, _pi, r
+    means = jnp.matmul(weights.T, X) / Z.T
+    return _pi, means
 
 @partial(jit, static_argnums=[1])
 def _sample_prior_weights(dkey, n_samples, pi): ## samples prior weighting parameters (of mixture)
@@ -58,7 +65,7 @@ def _sample_prior_weights(dkey, n_samples, pi): ## samples prior weighting param
 
 @partial(jit, static_argnums=[1])
 def _sample_component(dkey, n_samples, mu): ## samples a component (of mixture)
-    eps = random.bernoulli(dkey, p=mu, shape=(n_samples, mu.shape[1])) ## draw Bernoulli samples
+    x_s = random.bernoulli(dkey, p=mu, shape=(n_samples, mu.shape[1])) ## draw Bernoulli samples
     return x_s
 
 ########################################################################################################################
@@ -119,31 +126,32 @@ class BernoulliMixture(Mixture): ## Bernoulli mixture model (mixture-of-Bernoull
         Returns:
             (column) vector of individual log likelihoods, scalar for the complete log likelihood p(X)
         """
-        ll = 0.
+        likeli = []
         for j in range(self.K):
-            log_ll_j, ll_j = _calc_bernoulli_pdf_vals(X, self.mu[j])
-            ll = ll_j + ll
-        log_ll = jnp.log(ll) ## vector of individual log p(x_n) values
-        complete_ll = jnp.sum(log_ll) ## complete log-likelihood for design matrix X, i.e., log p(X)
-        return log_ll, complete_ll
+            _, likeli_j = _calc_bernoulli_pdf_vals(X, self.mu[j])
+            likeli.append(likeli_j)
+        likeli = jnp.concat(likeli, axis=1)
+        log_likeli_vec, complete_log_likeli, gamma = _calc_bernoulli_mixture_stats(likeli, self.pi)
+        return log_likeli_vec, complete_log_likeli
 
     def _E_step(self, X): ## Expectation (E) step, co-routine
-        weights = []
+        likeli = []
         for j in range(self.K):
-            log_ll_j, ll_j = _calc_bernoulli_pdf_vals(X, self.mu[j])
-            weights.append( ll_j )
-        weights = jnp.concat(weights, axis=1)
-        return weights ## data-dependent weights (intermediate responsibilities)
+            _, likeli_j = _calc_bernoulli_pdf_vals(X, self.mu[j])
+            likeli.append(likeli_j)
+        likeli = jnp.concat(likeli, axis=1)
+        log_likeli_vec, complete_log_likeli, gamma = _calc_bernoulli_mixture_stats(likeli, self.pi)
+        ## gamma => ## data-dependent weights (responsibilities)
+        return gamma, log_likeli_vec, complete_log_likeli
 
     def _M_step(self, X, weights): ## Maximization (M) step, co-routine
-        means, pi, r = _calc_priors_and_means(X, weights, self.pi)
-        self.pi = pi ## store new prior parameters
-        # calc weighted covariances
+        pi, means = _calc_priors_and_means(X, weights, self.pi)
+        self.pi = pi  ## store new prior parameters
         for j in range(self.K):
-            #r_j = r[:, j:j + 1]
+            #r_j = weights[:, j:j + 1]  ## get j-th responsibility slice
             mu_j = means[j:j + 1, :]
-            self.mu[j] = mu_j ## store new mean(j) parameter
-        return means, r
+            self.mu[j] = mu_j  ## store new mean(j) parameter
+        return pi, means
 
     def fit(self, X, tol=1e-3, verbose=False):
         """
@@ -159,11 +167,11 @@ class BernoulliMixture(Mixture): ## Bernoulli mixture model (mixture-of-Bernoull
         """
         means_prev = jnp.concat(self.mu, axis=0)
         for i in range(self.max_iter):
-            self.update(X) ## carry out one E-step followed by an M-step
-            means = jnp.concat(self.mu, axis=0)
+            gamma, pi, means, complete_loglikeli = self.update(X) ## carry out one E-step followed by an M-step
+            #means = jnp.concat(self.mu, axis=0)
             dom = jnp.linalg.norm(means - means_prev) ## norm of difference-of-means
             if verbose:
-                print(f"{i}: Mean-diff = {dom}")
+                print(f"{i}: Mean-diff = {dom}  log(p(X)) = {complete_loglikeli} nats")
             #print(jnp.linalg.norm(means - means_prev))
             if tol >= 0. and dom < tol:
                 print(f"Converged after {i + 1} iterations.")
@@ -177,8 +185,9 @@ class BernoulliMixture(Mixture): ## Bernoulli mixture model (mixture-of-Bernoull
         Args:
             X: the dataset / design matrix to fit this BMM to
         """
-        r_w = self._E_step(X)  ## carry out E-step
-        means, respon = self._M_step(X, r_w) ## carry out M-step
+        gamma, _, complete_likeli = self._E_step(X)  ## carry out E-step
+        pi, means = self._M_step(X, gamma) ## carry out M-step
+        return gamma, pi, means, complete_likeli
 
     def sample(self, n_samples, mode_j=-1):
         """
@@ -193,15 +202,14 @@ class BernoulliMixture(Mixture): ## Bernoulli mixture model (mixture-of-Bernoull
         Returns:
             Design matrix of samples drawn under the distribution defined by this BMM
         """
-        ## sample prior
         self.key, *skey = random.split(self.key, 3)
-        if mode_j >= 0: ## sample from a particular mode / component
-            mu_j = self.mu[mode_j]
+        if mode_j >= 0: ## sample from a particular mode
+            mu_j = self.mu[mode_j] ## directly select a specific component
             Xs = _sample_component(skey[0], n_samples=n_samples, mu=mu_j)
         else: ## sample from full mixture distribution
-            ## sample components/latents
+            ## sample (prior) components/latents
             lats = _sample_prior_weights(skey[0], n_samples=n_samples, pi=self.pi)
-            ## then sample chosen component Bernoulli
+            ## then sample chosen component Bernoulli(s)
             Xs = []
             for j in range(self.K):
                 freq_j = int(jnp.sum((lats == j)))  ## compute frequency over mode

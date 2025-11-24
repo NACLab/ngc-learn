@@ -40,9 +40,18 @@ def _log_gaussian_pdf(X, mu, Sigma, use_chol_prec=True):
 
 @partial(jit, static_argnums=[3])
 def _calc_gaussian_pdf_vals(X, mu, Sigma, use_chol_prec=True):
-    log_ll = _log_gaussian_pdf(X, mu, Sigma, use_chol_prec)
-    ll = jnp.exp(log_ll)
-    return log_ll, ll
+    log_likeli = _log_gaussian_pdf(X, mu, Sigma, use_chol_prec)
+    likeli = jnp.exp(log_likeli)
+    return log_likeli, likeli
+
+@jit
+def _calc_gaussian_mixture_stats(raw_likeli, pi):
+    likeli = raw_likeli * pi
+    gamma = likeli / jnp.sum(likeli, axis=1, keepdims=True)  ## responsibilities
+    likeli = jnp.sum(likeli, axis=1, keepdims=True)  ## Sum_j[ pi_j * pdf_gauss(x_n; mu_j, Sigma_j) ]
+    log_likeli = jnp.log(likeli)  ## vector of individual log p(x_n) values
+    complete_log_likeli = jnp.sum(log_likeli)  ## complete log-likelihood for design matrix X, i.e., log p(X)
+    return log_likeli, complete_log_likeli, gamma
 
 @partial(jit, static_argnums=[3])
 def _calc_weighted_cov(X, mu, weights, assume_diag_cov=False): ## M-step co-routine
@@ -58,15 +67,13 @@ def _calc_priors_and_means(X, weights, pi): ## M-step co-routine
     ## calc new means, responsibilities, and priors given current stats
     N = X.shape[0]  ## get number of samples
     ## calc responsibilities
-    r = (pi * weights)
-    r = r / jnp.sum(r, axis=1, keepdims=True) ## responsibilities
-    _pi = jnp.sum(r, axis=0, keepdims=True) / N ## calc new priors
+    _pi = jnp.sum(weights, axis=0, keepdims=True) / N ## calc new priors
     ## calc weighted means (weighted by responsibilities)
-    Z = jnp.sum(r, axis=0, keepdims=True) ## partition function
+    Z = jnp.sum(weights, axis=0, keepdims=True) ## partition function
     M = (Z > 0.) * 1.
     Z = Z * M + (1. + M) ## removes div-by-0 cases
-    means = jnp.matmul(r.T, X) / Z.T
-    return means, _pi, r
+    means = jnp.matmul(weights.T, X) / Z.T
+    return _pi, means
 
 @partial(jit, static_argnums=[1])
 def _sample_prior_weights(dkey, n_samples, pi): ## samples prior weighting parameters (of mixture)
@@ -167,39 +174,35 @@ class GaussianMixture(Mixture): ## Gaussian mixture model (mixture-of-Gaussians)
         Returns:
             (column) vector of individual log likelihoods, scalar for the complete log likelihood p(X)
         """
-        ll = 0.
+        likeli = []
         for j in range(self.K):
-            #log_ll_j = log_gaussian_pdf(X, self.mu[j], self.Sigma[j])
-            #ll_j = jnp.exp(log_ll_j) * self.pi[:,j]
-            log_ll_j, ll_j = _calc_gaussian_pdf_vals(X, self.mu[j], self.Sigma[j])
-            ll = ll_j + ll
-        log_ll = jnp.log(ll) ## vector of individual log p(x_n) values
-        complete_ll = jnp.sum(log_ll) ## complete log-likelihood for design matrix X, i.e., log p(X)
-        return log_ll, complete_ll
+            _, likeli_j = _calc_gaussian_pdf_vals(X, self.mu[j], self.Sigma[j])
+            likeli.append(likeli_j)
+        likeli = jnp.concat(likeli, axis=1)
+        log_likeli_vec, complete_log_likeli, gamma = _calc_gaussian_mixture_stats(likeli, self.pi)
+        return log_likeli_vec, complete_log_likeli
 
     def _E_step(self, X): ## Expectation (E) step, co-routine
-        weights = []
+        likeli = []
         for j in range(self.K):
-            #jax.scipy.stats.multivariate_normal.logpdf(x, mean, cov)
-            #log_ll_j = log_gaussian_pdf(X, self.mu[j], self.Sigma[j])
-            log_ll_j, ll_j = _calc_gaussian_pdf_vals(X, self.mu[j], self.Sigma[j])
-            # log_ll_j = scipy.stats.multivariate_normal.logpdf(X, self.mu[j], self.Sigma[j])
-            # log_ll_j = jnp.expand_dims(log_ll_j, axis=1)
-            weights.append( ll_j )
-        weights = jnp.concat(weights, axis=1)
-        return weights ## data-dependent weights (intermediate responsibilities)
+            _, likeli_j = _calc_gaussian_pdf_vals(X, self.mu[j], self.Sigma[j])
+            likeli.append(likeli_j)
+        likeli = jnp.concat(likeli, axis=1)
+        log_likeli_vec, complete_log_likeli, gamma = _calc_gaussian_mixture_stats(likeli, self.pi)
+        ## gamma => ## data-dependent weights (responsibilities)
+        return gamma, log_likeli_vec, complete_log_likeli
 
     def _M_step(self, X, weights): ## Maximization (M) step, co-routine
-        means, pi, r = _calc_priors_and_means(X, weights, self.pi)
+        pi, means = _calc_priors_and_means(X, weights, self.pi)
         self.pi = pi ## store new prior parameters
         # calc weighted covariances
         for j in range(self.K):
-            r_j = r[:, j:j + 1]
+            r_j = weights[:, j:j + 1] ## get j-th responsibility slice
             mu_j = means[j:j + 1, :]
             sigma_j = _calc_weighted_cov(X, mu_j, r_j, assume_diag_cov=self.assume_diag_cov)
             self.mu[j] = mu_j ## store new mean(j) parameter
             self.Sigma[j] = sigma_j ## store new covariance(j) parameter
-        return means, r
+        return pi, means
 
     def fit(self, X, tol=1e-3, verbose=False):
         """
@@ -215,11 +218,11 @@ class GaussianMixture(Mixture): ## Gaussian mixture model (mixture-of-Gaussians)
         """
         means_prev = jnp.concat(self.mu, axis=0)
         for i in range(self.max_iter):
-            self.update(X) ## carry out one E-step followed by an M-step
-            means = jnp.concat(self.mu, axis=0)
+            gamma, pi, means, complete_loglikeli = self.update(X) ## carry out one E-step followed by an M-step
+            #means = jnp.concat(self.mu, axis=0)
             dom = jnp.linalg.norm(means - means_prev) ## norm of difference-of-means
             if verbose:
-                print(f"{i}: Mean-diff = {dom}")
+                print(f"{i}: Mean-diff = {dom}  log(p(X)) = {complete_loglikeli} nats")
             #print(jnp.linalg.norm(means - means_prev))
             if tol >= 0. and dom < tol:
                 print(f"Converged after {i + 1} iterations.")
@@ -233,8 +236,9 @@ class GaussianMixture(Mixture): ## Gaussian mixture model (mixture-of-Gaussians)
         Args:
             X: the dataset / design matrix to fit this GMM to
         """
-        r_w = self._E_step(X)  ## carry out E-step
-        means, respon = self._M_step(X, r_w) ## carry out M-step
+        gamma, _, complete_likeli = self._E_step(X)  ## carry out E-step
+        pi, means = self._M_step(X, gamma) ## carry out M-step
+        return gamma, pi, means, complete_likeli
 
     def sample(self, n_samples, mode_j=-1):
         """
@@ -249,18 +253,17 @@ class GaussianMixture(Mixture): ## Gaussian mixture model (mixture-of-Gaussians)
         Returns:
             Design matrix of samples drawn under the distribution defined by this GMM
         """
-        ## sample prior
         self.key, *skey = random.split(self.key, 3)
-        if mode_j >= 0: ## sample from a particular mode / component
-            mu_j = self.mu[mode_j]
+        if mode_j >= 0: ## sample from a particular mode
+            mu_j = self.mu[mode_j]  ## directly select a specific component
             Sigma_j = self.Sigma[mode_j]
             Xs = _sample_component(
                 skey[0], n_samples=n_samples, mu=mu_j, Sigma=Sigma_j, assume_diag_cov=self.assume_diag_cov
             )
         else: ## sample from full mixture distribution
-            ## sample components/latents
+            ## sample (prior) components/latents
             lats = _sample_prior_weights(skey[0], n_samples=n_samples, pi=self.pi)
-            ## then sample chosen component Gaussians
+            ## then sample chosen component Gaussian(s)
             Xs = []
             for j in range(self.K):
                 freq_j = int(jnp.sum((lats == j)))  ## compute frequency over mode
