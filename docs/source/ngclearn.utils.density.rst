@@ -12,6 +12,14 @@ ngclearn.utils.density.bernoulliMixture module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.density.exponentialMixture module
+------------------------------------------------
+
+.. automodule:: ngclearn.utils.density.exponentialMixture
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.density.gaussianMixture module
 ---------------------------------------------
 

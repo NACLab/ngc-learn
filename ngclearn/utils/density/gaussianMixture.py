@@ -62,7 +62,10 @@ def _calc_priors_and_means(X, weights, pi): ## M-step co-routine
     r = r / jnp.sum(r, axis=1, keepdims=True) ## responsibilities
     _pi = jnp.sum(r, axis=0, keepdims=True) / N ## calc new priors
     ## calc weighted means (weighted by responsibilities)
-    means = jnp.matmul(r.T, X) / jnp.sum(r, axis=0, keepdims=True).T
+    Z = jnp.sum(r, axis=0, keepdims=True) ## partition function
+    M = (Z > 0.) * 1.
+    Z = Z * M + (1. + M) ## removes div-by-0 cases
+    means = jnp.matmul(r.T, X) / Z.T
     return means, _pi, r
 
 @partial(jit, static_argnums=[1])
