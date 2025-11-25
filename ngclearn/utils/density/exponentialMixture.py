@@ -61,10 +61,15 @@ def _sample_component(dkey, n_samples, rate): ## samples a component (of mixture
 
 class ExponentialMixture(Mixture): ## Exponential mixture model (mixture-of-exponentials)
     """
-    Implements a exponential mixture model (EMM) -- or mixture of exponentials (MoExp). Adaptation of parameters is
+    Implements an exponential mixture model (EMM) -- or mixture of exponentials (MoExp). Adaptation of parameters is
     conducted via the Expectation-Maximization (EM) learning algorithm. Note that this exponential mixture assumes that
     each component is a factorizable mutlivariate exponential distribution. (A Categorical distribution is assumed over
     the latent variables).
+
+    The exponential distribution of each component (dimension `d`) is assumed to be: 
+
+    | pdf(x_d; lmbda_d) = lmbda_d * exp(-lmbda_d x_d) for x >= 0, else 0 for x < 0; 
+    | where lbmda is the rate parameter vector
 
     Args:
         K: the number of components/latent variables within this EMM
