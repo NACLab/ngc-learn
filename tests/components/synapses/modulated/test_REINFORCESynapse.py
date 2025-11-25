@@ -4,7 +4,7 @@ import jax
 from jax import numpy as jnp, random, jit
 import numpy as np
 np.random.seed(42)
-from ngclearn.components.synapses.modulated.REINFORCESynapse import REINFORCESynapse, gaussian_logpdf
+from ngclearn.components.synapses.modulated.REINFORCESynapse import REINFORCESynapse, _gaussian_logpdf
 from numpy.testing import assert_array_equal
 
 from ngclearn import Context, MethodProcess
@@ -58,7 +58,7 @@ def test_REINFORCESynapse1():
         std = jnp.exp(logstd.clip(-10.0, 2.0))
         sample = jax.random.normal(seed, mean.shape) * std + mean
         sample = jnp.clip(sample, mu_out_min, mu_out_max)
-        logp = gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
+        logp = _gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
         return (-logp * outputs).mean() * 1e-2
     grad_fn = jax.value_and_grad(fn)
 
@@ -177,7 +177,7 @@ def test_REINFORCESynapse2():
         std = scalar_stddev
         sample = jax.random.normal(seed, mean.shape) * std + mean
         sample = jnp.clip(sample, mu_out_min, mu_out_max)
-        logp = gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
+        logp = _gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
         return (-logp * outputs).mean() * 1e-2
     grad_fn = jax.value_and_grad(fn)
 

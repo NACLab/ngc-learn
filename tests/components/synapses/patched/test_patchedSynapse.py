@@ -3,6 +3,7 @@
 from jax import numpy as jnp, random, jit
 import numpy as np
 np.random.seed(42)
+from ngclearn.utils.distribution_generator import DistributionGenerator as dist
 from ngclearn.components import PatchedSynapse
 
 from ngclearn import MethodProcess, Context
@@ -29,8 +30,8 @@ def test_patchedSynapse():
       stride_shape=stride_shape,
       resist_scale=resist_scale,
       batch_size=batch_size,
-      weight_init={"dist": "gaussian", "std": 0.1},
-      bias_init={"dist": "constant", "value": 0.0}
+      weight_init=dist.gaussian(std=0.1), #{"dist": "gaussian", "std": 0.1},
+      bias_init=dist.constant(value=0.) #{"dist": "constant", "value": 0.0}
     )
 
     advance_process = (MethodProcess("advance_proc") >> a.advance_state)

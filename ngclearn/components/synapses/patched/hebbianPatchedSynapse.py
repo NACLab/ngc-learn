@@ -70,7 +70,7 @@ def _calc_update(
 
     dW = dW + prior_lmbda * dW_reg
 
-    if mask!=None:
+    if mask != None:
         dW = dW * mask
 
     return dW * signVal, db * signVal
@@ -95,12 +95,12 @@ def _enforce_constraints(W, block_mask, w_bound, is_nonnegative=True):
     """
     _W = W
     if w_bound > 0.:
-        if is_nonnegative == True:
+        if is_nonnegative:
             _W = jnp.clip(_W, 0., w_bound)
         else:
             _W = jnp.clip(_W, -w_bound, w_bound)
 
-    if block_mask!=None:
+    if block_mask != None:
         _W = _W * block_mask
 
     return _W

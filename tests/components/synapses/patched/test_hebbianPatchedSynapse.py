@@ -3,6 +3,7 @@
 from jax import numpy as jnp, random, jit
 import numpy as np
 np.random.seed(42)
+from ngclearn.utils.distribution_generator import DistributionGenerator as dist
 from ngclearn.components import HebbianPatchedSynapse
 from numpy.testing import assert_array_equal
 

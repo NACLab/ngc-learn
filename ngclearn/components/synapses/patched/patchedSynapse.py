@@ -27,16 +27,16 @@ def _create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_in
 
         shape_ = (end_i - start_i, end_j - start_j) # (di + 2 * si, dj + 2 * sj)
 
-        weights[start_i: end_i,
-                start_j: end_j] = weight_init(shape_, key[2])
+        ## FIXME: this line below might be wonky...
+        weights.at[start_i: end_i, start_j: end_j].set( weight_init(shape_, key[2]) )
         # weights[start_i : end_i,
         #         start_j : end_j] = initialize_params(key[2], init_kernel=weight_init, shape=shape_, use_numpy=True)
-    if si!=0:
-        weights[:si,:] = 0.
-        weights[-si:,:] = 0.
-    if sj!=0:
-        weights[:,:sj] = 0.
-        weights[:, -sj:] = 0.
+    if si != 0:
+        weights.at[:si,:].set(0.) ## FIXME: this setter line might be wonky...
+        weights.at[-si:,:].set(0.) ## FIXME: this setter line might be wonky...
+    if sj != 0:
+        weights.at[:,:sj].set(0.) ## FIXME: this setter line might be wonky...
+        weights.at[:, -sj:].set(0.) ## FIXME: this setter line might be wonky...
 
     return weights
 
@@ -109,7 +109,8 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         tmp_key, *subkeys = random.split(self.key.get(), 4)
         if self.weight_init is None:
             info(self.name, "is using default weight initializer!")
-            self.weight_init = {"dist": "fan_in_gaussian"}
+            #self.weight_init = {"dist": "fan_in_gaussian"}
+            self.weight_init = DistributionGenerator.fan_in_gaussian()
 
         weights = _create_multi_patch_synapses(
             key=subkeys, shape=shape, n_sub_models=self.n_sub_models, sub_stride=self.sub_stride,
