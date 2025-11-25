@@ -167,6 +167,39 @@ def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
     acc = jnp.sum( jnp.equal(guess, lab) )/(y.shape[0] * 1.)
     return acc
 
+@partial(jit, static_argnums=[3])
+def measure_BIC(X, n_model_params, max_model_score, is_log=True):
+    """
+    Measures the Bayesian information criterion (BIC) with respect to the final 
+    score obtained by the model on a given dataset.
+
+    | BIC = -2 ln(L) + K * ln(N); 
+    | where N is number of data-points/rows of design matrix X, 
+    | K is total number parameters of the model of interest, and 
+    | L is the max/best-found value of a likelihood-like score L of the model
+
+    Args:
+        X: dataset/design matrix that a model was fit to (max-likelihood optimized) 
+
+        n_model_params: total number of model parameters (int)
+
+        max_model_score: max likelihood-like score obtained by model on X 
+
+        is_log: is supplied `max_model_score` a log-likelihood? if this is False, 
+            this metric will apply a natural logarithm of the score (Default: True)
+
+    Returns: 
+        scalar for the Bayesian information criterion score
+    """
+    ## BIC = K * ln(N) - 2 ln(L)
+    L_hat = max_model_score ## model's likelihood-like score (at max point)
+    K = n_model_params ## number of model params
+    N = X.shape[0] ## number of data-points
+    if not is_log:
+        L_hat = jnp.log(L_hat) ## get log likelihood
+    bic = -L_hat * 2. + jnp.log(N * 1.) * K
+    return bic
+
 @partial(jit, static_argnums=[2])
 def measure_KLD(p_xHat, p_x, preserve_batch=False):
     """
