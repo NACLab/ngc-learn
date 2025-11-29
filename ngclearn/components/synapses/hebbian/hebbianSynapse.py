@@ -222,6 +222,24 @@ class HebbianSynapse(DenseSynapse):
         return dW, db
 
     @compilable
+    def calc_update(self):
+       # Get the variables
+        pre = self.pre.get()
+        post = self.post.get()
+        weights = self.weights.get()
+        biases = self.biases.get()
+        opt_params = self.opt_params.get()
+
+        ## calculate synaptic update values
+        dWeights, dBiases = HebbianSynapse._compute_update(
+            self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
+            pre, post, weights
+        )
+
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
+
+    @compilable
     def evolve(self):
         # Get the variables
         pre = self.pre.get()
