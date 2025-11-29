@@ -161,7 +161,9 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
     def __init__(
             self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity", output_scale=1., threshold=("none", 0.),
             integration_type="euler", batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):
-        super().__init__(name, **kwargs)
+        jax_comp_kwargs = {k: v for k, v in kwargs.items() if k not in ('omega_0',)}
+        this_class_kwargs = {k: v for k, v in kwargs.items() if k in ('omega_0',)}
+        super().__init__(name, **jax_comp_kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.output_scale = output_scale
@@ -200,7 +202,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         omega_0 = None
         if act_fx == "sine":
-            omega_0 = kwargs["omega_0"]
+            omega_0 = this_class_kwargs["omega_0"]
         self.fx, self.dfx = create_function(fun_name=act_fx, args=omega_0)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
