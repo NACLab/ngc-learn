@@ -8,6 +8,39 @@ from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+# from ngclearn.utils.weight_distribution import initialize_params
+
+
+# def _create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_init):
+#     sub_shape = (shape[0] // n_sub_models, shape[1] // n_sub_models)
+#     di, dj = sub_shape
+#     si, sj = sub_stride
+
+#     weight_shape = ((n_sub_models * di) + 2 * si, (n_sub_models * dj) + 2 * sj)
+#     #weights = initialize_params(key[2], {"dist": "constant", "value": 0.}, weight_shape, use_numpy=True)
+#     large_weight_init = DistributionGenerator.constant(value=0.)
+#     weights = large_weight_init(weight_shape, key[2])
+
+#     for i in range(n_sub_models):
+#         start_i = i * di
+#         end_i = (i + 1) * di + 2 * si
+#         start_j = i * dj
+#         end_j = (i + 1) * dj + 2 * sj
+
+#         shape_ = (end_i - start_i, end_j - start_j) # (di + 2 * si, dj + 2 * sj)
+
+#         ## FIXME: this line below might be wonky...
+#         weights.at[start_i: end_i, start_j: end_j].set( weight_init(shape_, key[2]) )
+#         # weights[start_i : end_i,
+#         #         start_j : end_j] = initialize_params(key[2], init_kernel=weight_init, shape=shape_, use_numpy=True)
+#     if si != 0:
+#         weights.at[:si,:].set(0.) ## FIXME: this setter line might be wonky...
+#         weights.at[-si:,:].set(0.) ## FIXME: this setter line might be wonky...
+#     if sj != 0:
+#         weights.at[:,:sj].set(0.) ## FIXME: this setter line might be wonky...
+#         weights.at[:, -sj:].set(0.) ## FIXME: this setter line might be wonky...
+
+#     return weights
 
 def _create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_init):
     sub_shape = (shape[0] // n_sub_models, shape[1] // n_sub_models)
@@ -15,9 +48,8 @@ def _create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_in
     si, sj = sub_stride
 
     weight_shape = ((n_sub_models * di) + 2 * si, (n_sub_models * dj) + 2 * sj)
-    #weights = initialize_params(key[2], {"dist": "constant", "value": 0.}, weight_shape, use_numpy=True)
-    large_weight_init = DistributionGenerator.constant(value=0.)
-    weights = large_weight_init(weight_shape, key[2])
+    # weights = initialize_params(key[2], {"dist": "constant", "value": 0.}, weight_shape, use_numpy=True)
+    weights = DistributionGenerator.constant(value=0.)(weight_shape, key[2])
 
     for i in range(n_sub_models):
         start_i = i * di
@@ -27,16 +59,19 @@ def _create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_in
 
         shape_ = (end_i - start_i, end_j - start_j) # (di + 2 * si, dj + 2 * sj)
 
-        ## FIXME: this line below might be wonky...
-        weights.at[start_i: end_i, start_j: end_j].set( weight_init(shape_, key[2]) )
         # weights[start_i : end_i,
-        #         start_j : end_j] = initialize_params(key[2], init_kernel=weight_init, shape=shape_, use_numpy=True)
-    if si != 0:
-        weights.at[:si,:].set(0.) ## FIXME: this setter line might be wonky...
-        weights.at[-si:,:].set(0.) ## FIXME: this setter line might be wonky...
-    if sj != 0:
-        weights.at[:,:sj].set(0.) ## FIXME: this setter line might be wonky...
-        weights.at[:, -sj:].set(0.) ## FIXME: this setter line might be wonky...
+        #         start_j : end_j] = initialize_params(key[2],
+        #                                              init_kernel=weight_init,
+        #                                              shape=shape_,
+        #                                              use_numpy=True)
+        weights = weights.at[start_i : end_i,
+                start_j : end_j].set(weight_init(shape_, key[2]))
+    if si!=0:
+        weights = weights.at[:si,:].set(0.)
+        weights = weights.at[-si:,:].set(0.)
+    if sj!=0:
+        weights = weights.at[:,:sj].set(0.)
+        weights = weights.at[:, -sj:].set(0.)
 
     return weights
 
