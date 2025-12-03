@@ -32,24 +32,9 @@ from ngclearn.utils import JointProcess, MethodProcess
 from ngcsimlib.context import Context, ContextObjectTypes
 from ngcsimlib import Component
 from ngcsimlib.compartment import Compartment
-
-from ngcsimlib import logger
+from ngcsimlib import logger, configure
 
 if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
     if "readthedocs" not in argv[0]:  ## prevent readthedocs execution of preload
-        # configure()
-        # logger.init_logging()
-        # from ngcsimlib.configManager import get_config
-        # pkg_config = get_config("packages")
-        # if pkg_config is not None:
-        #     use_base_numpy = pkg_config.get("use_base_numpy", False)
-        #     if use_base_numpy:
-        #         import numpy as numpy
-        #     else:
-        #         from jax import numpy
-        # else:
-        #     from jax import numpy
-        #
-        #
-        # preload_modules()
-        a = 2
+        configure()
+        logger.init_logging()
