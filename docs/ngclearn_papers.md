@@ -1,6 +1,6 @@
-# List of Papers/Publications
+# List of Papers and Publications
 
-The following is a list of current papers that use ngc-learn (this list will be actively updated as we discover others that use ngc-learn):
+The following is a list of current papers that use NGC-Learn (this list will be actively updated as we discover others that use NGC-Learn):
 
 1. Ororbia, A., and Kifer, D. The neural coding framework for learning generative models. Nature Communications 13, 2064 (2022).
 
@@ -16,4 +16,4 @@ The following is a list of current papers that use ngc-learn (this list will be 
 
 7. Ororbia, A., Friston, K., Rao, Rajesh P. N. "Meta-representational predictive coding: Biomimetic self-supervised learning." arXiv preprint arXiv:2503.21796 (2025).  
 
-<b>Note:</b> Please let us know if your work uses ngc-learn so we can update this page to accurately track ngc-learn's use and include your work in the accumulating body of work in predictive processing and/or brain-inspired computational modeling.
+<b>Note:</b> Please let us know if your work uses NGC-Learn so we can update this page to accurately track NGC-Learn's use and include your work in the space of computational neuroscience, NeuroAI, and/or brain-inspired computational modeling.

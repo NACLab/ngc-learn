@@ -49,9 +49,10 @@ Welcome to ngc-learn's documentation!
 
 .. toctree::
   :maxdepth: 1
-  :caption: Papers that use NGC-Learn
+  :caption: NGC-Learn Papers & Media
 
   ngclearn_papers
+  ngclearn_talks
 
 Indices and tables
 ==================
