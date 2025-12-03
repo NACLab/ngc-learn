@@ -2,7 +2,7 @@
 
 **ngc-learn** officially supports Linux on Python 3. It can be run with or without a GPU.
 
-<i>Setup:</i> <a href="https://github.com/NACLab/ngc-learn">NGC-Learn</a>, in its entirety (including its supporting utilities), requires that you ensure that you have installed the following base dependencies in your system. Note that this library was developed and tested on Ubuntu 22.04 (with much earlier versions on Ubuntu 18.04/20.04). 
+<i>Setup:</i> <a href="https://github.com/NACLab/ngc-learn">NGC-Learn</a>, in its entirety (including its supporting utility sub-packages), requires that you ensure that you have installed the following base dependencies in your system. Note that this library was developed and tested on Ubuntu 22.04 (with much earlier versions on Ubuntu 18.04/20.04). 
 Specifically, NGC-Learn requires:
 * Python (>=3.10)
 * ngcsimlib (>=2.0.0), (<a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)

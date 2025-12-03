@@ -151,18 +151,18 @@ class LatencyCell(JaxComponent):
         super().__init__(name=name, key=key)
 
         ## latency meta-parameters
-        self.first_spike_time = Compartment(first_spike_time, fixed=True)
-        self.tau = Compartment(tau, fixed=True)
-        self.threshold = Compartment(threshold, fixed=True)
-        self.linearize = Compartment(linearize, fixed=True)
-        self.clip_spikes = Compartment(clip_spikes, fixed=True)
+        self.first_spike_time = Compartment(first_spike_time)
+        self.tau = Compartment(tau)
+        self.threshold = Compartment(threshold)
+        self.linearize = Compartment(linearize)
+        self.clip_spikes = Compartment(clip_spikes)
         ## normalize latency code s.t. final spike(s) occur w/in num_steps
-        self.normalize = Compartment(normalize, fixed=True)
-        self.num_steps = Compartment(num_steps, fixed=True)
+        self.normalize = Compartment(normalize)
+        self.num_steps = Compartment(num_steps)
 
         ## Layer Size Setup
-        self.batch_size = Compartment(batch_size, fixed=True)
-        self.n_units = Compartment(n_units, fixed=True)
+        self.batch_size = Compartment(batch_size)
+        self.n_units = Compartment(n_units)
 
         ## Compartment setup
         restVals = jnp.zeros((batch_size, n_units))

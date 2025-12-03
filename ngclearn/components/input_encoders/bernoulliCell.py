@@ -30,8 +30,8 @@ class BernoulliCell(JaxComponent):
         super().__init__(name=name, key=key)
 
         ## Layer Size Setup
-        self.batch_size = Compartment(batch_size, fixed=True)
-        self.n_units = Compartment(n_units, fixed=True)
+        self.batch_size = Compartment(batch_size)
+        self.n_units = Compartment(n_units)
 
         restVals = jnp.zeros((batch_size, n_units))
         self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
