@@ -5,18 +5,22 @@
 Model Exhibits
 ==============
 
-Models are presented in ngc-learn's model museum in the form of "exhibits",
-which are effectively model-specific walkthroughs and analyses, based on the
-relevant, referenced publicly available ngc-learn simulation code.
+Models are presented in ngc-learn's model museum in the form of "exhibits", which are effectively model-specific walkthroughs and analyses, based on the relevant, referenced publicly available ngc-learn simulation code.
 
 .. toctree::
   :maxdepth: 1
-  :caption: Neuromimetic Models
+  :caption: Neuroscience Models
+
+  sparse_coding
+  pc_rao_ballard1999
+  snn_dc
+  rl_snn
+
+.. toctree::
+  :maxdepth: 1
+  :caption: NeuroAI / Neuro-mimetic Models
 
   pcn_discrim
-  sparse_coding
-  snn_dc
   snn_bfa
   harmonium
   sindy
-  rl_snn
