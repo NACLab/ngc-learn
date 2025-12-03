@@ -313,24 +313,8 @@ neuroscience 9 (2015): 99.
 
 <!-- Footnotes -->
 [^1]: Note that the `LIFCell` is not the same as ngc-learn's
-[sLIFCell](ngclearn.components.neurons.spiking.sLIFCell), which is a particular
-cell that simplifies the spiking dynamics greatly and is not meant to operate
-in the negative milliVolt range like the `LIFCell` does.
-[^2]: While both forms of modeling electrical current are easily doable in
- ngc-learn, the `DC_SNN` exhibit model opts for the second approach for simplicity
- and additional simulation speed.
-[^3]: Trace components have also been used in the `DC_SNN` exhibit model, specifically
-those built with the [variable trace](ngclearn.components.other.varTrace) component.
-Note that the variable trace effectively applies a low-pass filter iteratively
-to the spikes produced by a spike train.
-[^4]: In the <a href="https://www.cs.rit.edu/~ago/nac_lab.html">NAC group</a>'s
-experience, observing the mean and Frobenius norm of synaptic values can be a
-useful starting point for determining unhealthy behavior or some degenerate cases
-in the context of spiking neural network credit assignment.
-[^5]: To load in the exact synaptic efficacies we obtained to get the images
-above, you can unzip the folder `dcsnn_syn.zip`, which contains all of the
-model's numpy array values, and simply copy all of the compressed numpy arrays
-into your `exp/snn_stdp/custom/` folder, which is where ngc-learn/ngc-sim-lib
-look for pre-trained value arrays when loading in a previously constructed model.
-Once you do this, running `analyze_dcsnn.py` with the same arguments as above
-should produce plots/images much like those in this walkthrough.
+[sLIFCell](ngclearn.components.neurons.spiking.sLIFCell), which is a particular cell that simplifies the spiking dynamics greatly and is not meant to operate in the negative milliVolt range like the `LIFCell` does. 
+[^2]: While both forms of modeling electrical current are easily doable in NGC-Learn, the `DC_SNN` exhibit model opts for the second approach for simplicity and additional simulation speed. 
+[^3]: Trace components have also been used in the `DC_SNN` exhibit model, specifically those built with the [variable trace](ngclearn.components.other.varTrace) component. Note that the variable trace effectively applies a low-pass filter iteratively to the spikes produced by a spike train.
+[^4]: In the <a href="https://www.cs.rit.edu/~ago/nac_lab.html">NAC group</a>'s experience, observing the mean and Frobenius norm of synaptic values can be a useful starting point for determining unhealthy behavior or some degenerate cases in the context of spiking neural network credit assignment. 
+[^5]: To load in the exact synaptic efficacies we obtained to get the images above, you can unzip the folder `dcsnn_syn.zip`, which contains all of the model's numpy array values, and simply copy all of the compressed numpy arrays into your `exp/snn_stdp/custom/` folder, which is where ngc-learn/ngc-sim-lib look for pre-trained value arrays when loading in a previously constructed model. Once you do this, running `analyze_dcsnn.py` with the same arguments as above should produce plots/images much like those in this walkthrough.
