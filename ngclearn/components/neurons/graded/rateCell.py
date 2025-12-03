@@ -1,18 +1,16 @@
 # %%
 
 from jax import numpy as jnp, random, jit
-from functools import partial
-from ngclearn.utils import tensorstats
-# from ngclearn import resolver, Component, Compartment
-from ngcsimlib.compartment import Compartment
+
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
-
 from ngcsimlib.logger import info
-from ngcsimlib.parser import compilable
+
 
 def _dfz_internal_laplace(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
     z_leak = jnp.sign(z) ## d/dx of Laplace is signum
@@ -160,11 +158,12 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         resist_scale: a scaling factor applied to incoming pressure `j` (default: 1)
     """
 
-    # Define Functions
     def __init__(
             self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity", output_scale=1., threshold=("none", 0.),
             integration_type="euler", batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):
-        super().__init__(name, **kwargs)
+        jax_comp_kwargs = {k: v for k, v in kwargs.items() if k not in ('omega_0',)}
+        this_class_kwargs = {k: v for k, v in kwargs.items() if k in ('omega_0',)}
+        super().__init__(name, **jax_comp_kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.output_scale = output_scale
@@ -203,7 +202,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         omega_0 = None
         if act_fx == "sine":
-            omega_0 = kwargs["omega_0"]
+            omega_0 = this_class_kwargs["omega_0"]
         self.fx, self.dfx = create_function(fun_name=act_fx, args=omega_0)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
@@ -229,9 +228,10 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             dfx_val = self.dfx(z)
             j = _modulate(j, dfx_val)
             j = j * self.resist_scale
-            tmp_z = _run_cell(dt, j, j_td, z,
-                              self.tau_m, leak_gamma=self.priorLeakRate,
-                              integType=self.intgFlag, priorType=self.priorType)
+            tmp_z = _run_cell(
+                dt, j, j_td, z, self.tau_m, leak_gamma=self.priorLeakRate, integType=self.intgFlag,
+                priorType=self.priorType
+            )
             ## apply optional thresholding sub-dynamics
             if self.thresholdType == "soft_threshold":
                 tmp_z = threshold_soft(tmp_z, self.thr_lmbda)

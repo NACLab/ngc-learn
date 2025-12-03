@@ -4,7 +4,7 @@ import numpy as np
 np.random.seed(42)
 
 from ngclearn import Context, MethodProcess
-import ngclearn.utils.weight_distribution as dist
+#from ngclearn.utils.distribution_generator import DistributionGenerator as dist
 from ngclearn.components.synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from numpy.testing import assert_array_equal
 

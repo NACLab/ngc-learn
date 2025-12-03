@@ -93,9 +93,9 @@ class PatchGenerator(object):
         plt.show()
 
 
-
-gen = PatchGenerator(patch_width=5, patch_height=5, horizontal_alignment='center', horizontal_stride=1)
-
-test_img = jnp.zeros((32, 32))
-
-gen.target(test_img)
+## testing code
+# gen = PatchGenerator(patch_width=5, patch_height=5, horizontal_alignment='center', horizontal_stride=1)
+#
+# test_img = jnp.zeros((32, 32))
+#
+# gen.target(test_img)

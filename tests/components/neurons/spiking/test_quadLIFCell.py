@@ -13,10 +13,11 @@ def test_quadLIFCell1():
     dkey = random.PRNGKey(1234)
     dkey, *subkeys = random.split(dkey, 6)
     dt = 1.  # ms
+    critical_V = 1.
     # ---- build a simple Poisson cell system ----
     with Context(name) as ctx:
         a = QuadLIFCell(
-            name="a", n_units=1, tau_m=30., resist_m=1., key=subkeys[0]
+            name="a", n_units=1, tau_m=30., resist_m=1., critical_V=critical_V, key=subkeys[0]
         )
 
         # """

@@ -6,8 +6,8 @@ from typing import Union
 
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[5])
 def _calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
@@ -143,13 +143,10 @@ class LatencyCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(
-        self, name: str, n_units: int, tau: float = 1., threshold: float = 0.01,
-        first_spike_time: float = 0., linearize: bool = False,
-        normalize: bool = False, clip_spikes: bool = False,
-        num_steps: float = 1., batch_size: int = 1,
-        key: Union[jax.Array, None] = None
+            self, name: str, n_units: int, tau: float = 1., threshold: float = 0.01, first_spike_time: float = 0.,
+            linearize: bool = False, normalize: bool = False, clip_spikes: bool = False, num_steps: float = 1.,
+            batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs
     ):
         super().__init__(name=name, key=key)
 

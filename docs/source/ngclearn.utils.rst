@@ -10,6 +10,8 @@ Subpackages
    ngclearn.utils.analysis
    ngclearn.utils.density
    ngclearn.utils.diffeq
+   ngclearn.utils.feature_dictionaries
+   ngclearn.utils.masks
    ngclearn.utils.optim
    ngclearn.utils.viz
 
@@ -84,14 +86,6 @@ ngclearn.utils.surrogate\_fx module
 -----------------------------------
 
 .. automodule:: ngclearn.utils.surrogate_fx
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.utils.weight\_distribution module
-------------------------------------------
-
-.. automodule:: ngclearn.utils.weight_distribution
    :members:
    :undoc-members:
    :show-inheritance:

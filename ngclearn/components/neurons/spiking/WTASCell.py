@@ -2,10 +2,8 @@ from jax import numpy as jnp, random, jit, nn
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
 from ngcsimlib import deprecate_args
-from ngcsimlib.logger import info, warn
-
-from ngcsimlib.parser import compilable
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.utils.model_utils import softmax
 
 
@@ -50,7 +48,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         thr_jitter: scale of uniform jitter to add to initialization of thresholds
     """
 
-    #@deprecate_args(thr_base="thrBase")
+    @deprecate_args(thrBase="thr_base")
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr_base=0.4, thr_gain=0.002, refract_time=0., thr_jitter=0.05,
             **kwargs

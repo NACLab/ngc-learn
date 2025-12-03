@@ -1,6 +1,6 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
@@ -64,7 +64,6 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
             this to < 1. will result in a sparser synaptic structure
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0., weight_init=None, resist_scale=1.,
             p_conn=1., batch_size=1, **kwargs

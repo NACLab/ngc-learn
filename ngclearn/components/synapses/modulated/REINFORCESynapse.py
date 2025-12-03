@@ -1,26 +1,26 @@
 # %%
 
 from jax import random, numpy as jnp, jit
-from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable, Compartment
+
 from ngclearn.utils.model_utils import clip, d_clip
 import jax
-import jax.numpy as jnp
-import numpy as np
+#import numpy as np
 
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import create_function
 
-def gaussian_logpdf(event, mean, stddev):
+def _gaussian_logpdf(event, mean, stddev):
   scale_sqrd = stddev ** 2
   log_normalizer = jnp.log(2 * jnp.pi * scale_sqrd)
   quadratic = (event - mean)**2 / scale_sqrd
   return - 0.5 * (log_normalizer + quadratic)
 
 
-def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev):
+def _compute_update(
+        dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev
+):
     learning_stddev_mask = jnp.asarray(scalar_stddev <= 0.0, dtype=jnp.float32)
     # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
     W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
@@ -38,7 +38,7 @@ def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_a
     sample = jnp.clip(sample, mu_out_min, mu_out_max)
     outputs = sample # the actual action that we take
     # Compute log probability density of the Gaussian
-    log_prob = gaussian_logpdf(sample, fx_mean, std).sum(-1)
+    log_prob = _gaussian_logpdf(sample, fx_mean, std).sum(-1)
     # Compute objective (negative REINFORCE objective)
     objective = (-log_prob * rewards).mean() * 1e-2
 
@@ -64,7 +64,6 @@ def _compute_update(dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_a
     dW = jnp.concatenate([-dL_dWmu, -dL_dWlogstd], axis=-1)
     # Finally, return metrics if needed
     return dW, objective, outputs
-
 
 
 class REINFORCESynapse(DenseSynapse):
@@ -123,8 +122,10 @@ class REINFORCESynapse(DenseSynapse):
     ) -> None:
         # This is because we have weights mu and weight log sigma
         input_dim, output_dim = shape
-        super().__init__(name, (input_dim, output_dim * 2), weight_init, None, resist_scale,
-                         p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(
+            name, (input_dim, output_dim * 2), weight_init, None, resist_scale, p_conn,
+            batch_size=batch_size, **kwargs
+        )
 
         ## Synaptic hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
@@ -151,12 +152,8 @@ class REINFORCESynapse(DenseSynapse):
         self.learning_mask = Compartment(jnp.zeros(()))
         self.seed = Compartment(jax.random.PRNGKey(seed if seed is not None else 42))
 
-
-    # @transition(output_compartments=["weights", "dWeights", "objective", "outputs", "accumulated_gradients", "step_count", "seed"])
-    # @staticmethod
     @compilable
     def evolve(self, dt):
-
         # Get compartment values
         weights = self.weights.get()
         dWeights = self.dWeights.get()
@@ -174,13 +171,13 @@ class REINFORCESynapse(DenseSynapse):
             dt, inputs, rewards, self.act_fx, weights, sub_seed, self.mu_act_fx, self.dmu_act_fx, self.mu_out_min, self.mu_out_max, self.scalar_stddev
         )
         ## do a gradient ascent update/shift
-        weights = (weights + dWeights * self.eta) * self.learning_mask + weights * (1.0 - self.learning_mask) # update the weights only where learning_mask is 1.0
+        weights = (weights + dWeights * self.eta) * self.learning_mask + weights * (1.0 - self.learning_mask.get()) # update the weights only where learning_mask is 1.0
         ## enforce non-negativity
         eps = 0.0 # 0.01 # 0.001
         weights = jnp.clip(weights, eps, self.w_bound - eps)  # jnp.abs(w_bound))
         step_count += 1
         accumulated_gradients = (step_count - 1) / step_count * accumulated_gradients * self.decay + 1.0 / step_count * dWeights # EMA update of accumulated gradients
-        step_count = step_count * (1 - self.learning_mask) # reset the step count to 0 when we have learned
+        step_count = step_count * (1 - self.learning_mask.get()) # reset the step count to 0 when we have learned
 
         # Set updated compartment values
         self.weights.set(weights)
@@ -191,23 +188,20 @@ class REINFORCESynapse(DenseSynapse):
         self.step_count.set(step_count)
         self.seed.set(main_seed)
 
-    # @transition(output_compartments=["inputs", "outputs", "objective", "rewards", "dWeights", "accumulated_gradients", "step_count", "seed"])
-    # @staticmethod
     @compilable
-    def reset(self, batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
         inputs = preVals
         outputs = postVals
         objective = jnp.zeros(())
-        rewards = jnp.zeros((batch_size,))
-        dWeights = jnp.zeros(shape)
-        accumulated_gradients = jnp.zeros((shape[0], shape[1] * 2))
+        rewards = jnp.zeros((self.batch_size,))
+        dWeights = jnp.zeros(self.shape)
+        accumulated_gradients = jnp.zeros((self.shape[0], self.shape[1] * 2))
         step_count = jnp.zeros(())
         seed = jax.random.PRNGKey(42)
 
-
-        not self.inputs.targeted and self.inputs.set(inputs)
+        hasattr(self.inputs, 'targeted') and not self.inputs.targeted and self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.objective.set(objective)
         self.rewards.set(rewards)
@@ -215,7 +209,6 @@ class REINFORCESynapse(DenseSynapse):
         self.accumulated_gradients.set(accumulated_gradients)
         self.step_count.set(step_count)
         self.seed.set(seed)
-
 
     @classmethod
     def help(cls): ## component help function
@@ -259,20 +252,6 @@ class REINFORCESynapse(DenseSynapse):
                             "Check compute_update() for more details."
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 
 if __name__ == '__main__':

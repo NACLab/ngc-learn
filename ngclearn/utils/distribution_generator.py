@@ -9,22 +9,27 @@ from ngcsimlib.logger import error
 
 class DistributionParams(TypedDict, total=False):
     """
-    Extra parameters to be used when generating distributions.
+    Extra parameters to be used when generating distributions. (Attributes listed below)
 
-    Attributes:
-         amin: sets the lower bound of the distribution
-         amax: sets the upper bound of the distribution
-         lower_triangle: keeps the lower triangle, sets the rest to zero
-         upper_triangle: keeps the upper triangle, sets the rest to zero
-         hollow: produces a hollow distribution (zeros along the diagonal)
-         eye: produces an eye distribution (zeros the off-diagonal)
-         col_mask:
-            single value, keeps n random columns
-            list values, keeps the provided column indices
-         row_mask:
-            single value, keeps n random rows
-            list values, keeps the provided row indices
-         use_numpy: use default numpy
+    Args:
+        amin: sets the lower bound of the distribution
+
+        amax: sets the upper bound of the distribution
+
+        lower_triangle: keeps the lower triangle, sets the rest to zero
+
+        upper_triangle: keeps the upper triangle, sets the rest to zero
+
+        hollow: produces a hollow distribution (zeros along the diagonal)
+
+        eye: produces an eye distribution (zeros the off-diagonal)
+
+        col_mask: single value, keeps n random columns; list values, keeps the provided column indices
+
+        row_mask: single value, keeps n random rows; list values, keeps the provided row indices
+
+        use_numpy: use default numpy
+
     """
     amin: float
     amax: float
@@ -39,46 +44,37 @@ class DistributionParams(TypedDict, total=False):
 
 
 class DistributionInitializer(Protocol):
-    def __call__(self, shape: Sequence[int],
-                 dkey: jax.dtypes.prng_key | int | None = None) -> jax.Array: ...
-
+    def __call__(self, shape: Sequence[int], dkey: jax.dtypes.prng_key | int | None = None) -> jax.Array: ...
 
 
 class DistributionGenerator(object):
     @staticmethod
-    def constant(value: float, **params: Unpack[
-        DistributionParams]) -> DistributionInitializer:
+    def constant(value: float, **params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer for a constant distribution.
+
         Args:
             value: the constant value to fill the array with
             **params: the extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_np = params.get("use_numpy", False)
         if using_np:
-            def constant_generator(shape: Sequence[int],
-                                   seed: int | None = None) -> numpy.ndarray:
-                matrix = numpy.ones(shape,
-                                    params.get("dtype", numpy.float32)) * value
-                matrix = DistributionGenerator._process_params_numpy(matrix,
-                                                                     params,
-                                                                     seed)
+            def constant_generator(shape: Sequence[int], seed: int | None = None) -> numpy.ndarray:
+                matrix = numpy.ones(shape, params.get("dtype", numpy.float32)) * value
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
                 return matrix
         else:
-            def constant_generator(shape: Sequence[int],
-                                   dKey: jax.dtypes.prng_key | None = None) -> jax.Array:
-                matrix = jax.numpy.ones(shape, params.get("dtype",
-                                                          jax.numpy.float32)) * value
-                matrix = DistributionGenerator._process_params_jax(matrix,
-                                                                   params, dKey)
+            def constant_generator(shape: Sequence[int], dKey: jax.dtypes.prng_key | None = None) -> jax.Array:
+                matrix = jax.numpy.ones(shape, params.get("dtype", jax.numpy.float32)) * value
+                matrix = DistributionGenerator._process_params_jax(matrix, params, dKey)
                 return matrix
         return constant_generator
 
     @staticmethod
-    def uniform(low: float = 0.0, high: float = 1.0, **params: Unpack[
-        DistributionParams]) -> DistributionInitializer:
+    def uniform(low: float = 0.0, high: float = 1.0, **params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer for a uniform distribution.
 
@@ -87,23 +83,20 @@ class DistributionGenerator(object):
             high: upper bound of the uniform distribution (exclusive)
             **params: the extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_np = params.get("use_numpy", False)
 
         if using_np:
-            def uniform_generator(shape: Sequence[int],
-                                  seed: int | None = None) -> numpy.ndarray:
+            def uniform_generator(shape: Sequence[int], seed: int | None = None) -> numpy.ndarray:
                 rng = numpy.random.default_rng(seed)
                 matrix = rng.uniform(low=low, high=high, size=shape).astype(
                     params.get("dtype", numpy.float32))
-                matrix = DistributionGenerator._process_params_numpy(matrix,
-                                                                     params,
-                                                                     seed)
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
                 return matrix
         else:
-            def uniform_generator(shape: Sequence[int],
-                                  dKey: jax.Array | None = None) -> jax.Array:
+            def uniform_generator(shape: Sequence[int], dKey: jax.Array | None = None) -> jax.Array:
                 if dKey is None:
                     dKey = jax.random.PRNGKey(time.time_ns())
                 dKey, subKey = jax.random.split(dKey, 2)
@@ -115,16 +108,13 @@ class DistributionGenerator(object):
                     maxval=high,
                     dtype=params.get("dtype", jax.numpy.float32)
                 )
-                matrix = DistributionGenerator._process_params_jax(matrix,
-                                                                   params,
-                                                                   subKey)
+                matrix = DistributionGenerator._process_params_jax(matrix, params, subKey)
                 return matrix
 
         return uniform_generator
 
     @staticmethod
-    def gaussian(mean: float = 0.0, std: float = 1.0, **params: Unpack[
-        DistributionParams]) -> DistributionInitializer:
+    def gaussian(mean: float = 0.0, std: float = 1.0, **params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer for a Gaussian (normal) distribution.
 
@@ -133,23 +123,20 @@ class DistributionGenerator(object):
             std: the standard deviation of the normal distribution
             **params: the extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_numpy = params.get("use_numpy", False)
 
         if using_numpy:
-            def gaussian_generator(shape: Sequence[int],
-                                   seed: int | None = None) -> numpy.ndarray:
+            def gaussian_generator(shape: Sequence[int], seed: int | None = None) -> numpy.ndarray:
                 rng = numpy.random.default_rng(seed)
                 matrix = rng.normal(loc=mean, scale=std, size=shape).astype(
                     params.get("dtype", numpy.float32))
-                matrix = DistributionGenerator._process_params_numpy(matrix,
-                                                                     params,
-                                                                     seed)
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
                 return matrix
         else:
-            def gaussian_generator(shape: Sequence[int],
-                                   dKey: jax.Array | None = None) -> jax.Array:
+            def gaussian_generator(shape: Sequence[int], dKey: jax.Array | None = None) -> jax.Array:
                 if dKey is None:
                     dKey = jax.random.PRNGKey(time.time_ns())
                 dKey, subKey = jax.random.split(dKey, 2)
@@ -159,25 +146,27 @@ class DistributionGenerator(object):
                     dtype=params.get("dtype", jax.numpy.float32)
                 )
                 matrix = mean + std * matrix
-                matrix = DistributionGenerator._process_params_jax(matrix,
-                                                                   params,
-                                                                   subKey)
+                matrix = DistributionGenerator._process_params_jax(matrix, params, subKey)
                 return matrix
 
         return gaussian_generator
 
     @staticmethod
-    def fan_in_uniform(
-        **params: Unpack[DistributionParams]) -> DistributionInitializer:
+    def fan_in_uniform(**params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer using a fan-in uniform strategy.
         The values are sampled from a uniform distribution in the range [-limit, limit],
         where limit = sqrt(1 / fan_in), and fan_in is inferred from the shape.
 
+        | Glorot, Xavier, and Yoshua Bengio. "Understanding the difficulty of training deep feedforward neural
+        | networks." Proceedings of the thirteenth international conference on artificial intelligence and statistics.
+        | JMLR Workshop and Conference Proceedings, 2010.
+
         Args:
             **params: extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_numpy = params.get("use_numpy", False)
 
@@ -185,8 +174,7 @@ class DistributionGenerator(object):
             return float(numpy.sqrt(1.0 / fan_in))
 
         if using_numpy:
-            def fan_in_uniform_generator(shape: Sequence[int],
-                                         seed: int | None = None) -> numpy.ndarray:
+            def fan_in_uniform_generator(shape: Sequence[int], seed: int | None = None) -> numpy.ndarray:
                 if len(shape) < 2:
                     error("fan_in_uniform requires shape with at least 2 dimensions")
                 fan_in = shape[1]
@@ -195,13 +183,10 @@ class DistributionGenerator(object):
                 rng = numpy.random.default_rng(seed)
                 matrix = rng.uniform(low=-limit, high=limit, size=shape).astype(
                     params.get("dtype", numpy.float32))
-                matrix = DistributionGenerator._process_params_numpy(matrix,
-                                                                     params,
-                                                                     seed)
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
                 return matrix
         else:
-            def fan_in_uniform_generator(shape: Sequence[int],
-                                         dKey: jax.Array | None = None) -> jax.Array:
+            def fan_in_uniform_generator(shape: Sequence[int], dKey: jax.Array | None = None) -> jax.Array:
                 if len(shape) < 2:
                     error("fan_in_uniform requires shape with at least 2 dimensions")
                 fan_in = shape[1]
@@ -218,25 +203,26 @@ class DistributionGenerator(object):
                     maxval=limit,
                     dtype=params.get("dtype", jax.numpy.float32)
                 )
-                matrix = DistributionGenerator._process_params_jax(matrix,
-                                                                   params,
-                                                                   subKey)
+                matrix = DistributionGenerator._process_params_jax(matrix, params, subKey)
                 return matrix
 
         return fan_in_uniform_generator
 
     @staticmethod
-    def fan_in_gaussian(
-        **params: Unpack[DistributionParams]) -> DistributionInitializer:
+    def fan_in_gaussian(**params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer using a fan-in Gaussian (normal) strategy.
         The values are sampled from a normal distribution with mean 0 and stddev = sqrt(1 / fan_in),
         where fan_in is inferred from the shape.
 
+        | He, Kaiming, et al. "Delving deep into rectifiers: Surpassing human-level performance on imagenet
+        | classification." Proceedings of the IEEE international conference on computer vision. 2015.
+
         Args:
             **params: extra distribution parameters
 
-        Returns: a distribution initializer
+        Returns:
+            a distribution initializer
         """
         using_numpy = params.get("use_numpy", False)
 
@@ -244,8 +230,7 @@ class DistributionGenerator(object):
             return float(numpy.sqrt(1.0 / fan_in))
 
         if using_numpy:
-            def fan_in_gaussian_generator(shape: Sequence[int],
-                                          seed: int | None) -> numpy.ndarray:
+            def fan_in_gaussian_generator(shape: Sequence[int], seed: int | None) -> numpy.ndarray:
                 if len(shape) < 2:
                     error("fan_in_gaussian requires shape with at least 2 dimensions")
                 fan_in = shape[0]
@@ -254,13 +239,10 @@ class DistributionGenerator(object):
                 rng = numpy.random.default_rng(seed)
                 matrix = rng.normal(loc=0.0, scale=std, size=shape).astype(
                     params.get("dtype", numpy.float32))
-                matrix = DistributionGenerator._process_params_numpy(matrix,
-                                                                     params,
-                                                                     seed)
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
                 return matrix
         else:
-            def fan_in_gaussian_generator(shape: Sequence[int],
-                                          dKey: jax.Array | None) -> jax.Array:
+            def fan_in_gaussian_generator(shape: Sequence[int], dKey: jax.Array | None) -> jax.Array:
                 if len(shape) < 2:
                     error("fan_in_gaussian requires shape with at least 2 dimensions")
                 fan_in = shape[0]
@@ -276,15 +258,13 @@ class DistributionGenerator(object):
                     dtype=params.get("dtype", jax.numpy.float32)
                 )
                 matrix = matrix * std
-                matrix = DistributionGenerator._process_params_jax(matrix,
-                                                                   params, subKey)
+                matrix = DistributionGenerator._process_params_jax(matrix, params, subKey)
                 return matrix
 
         return fan_in_gaussian_generator
 
     @staticmethod
-    def _process_params_jax(ary: jax.Array, params: DistributionParams,
-                            dKey: jax.dtypes.prng_key | None) -> jax.Array:
+    def _process_params_jax(ary: jax.Array, params: DistributionParams, dKey: jax.dtypes.prng_key | None) -> jax.Array:
         if dKey is None:
             dKey = jax.random.PRNGKey(time.time_ns())
 
@@ -299,8 +279,7 @@ class DistributionGenerator(object):
         lower_triangle = params.get("lower_triangle", False)
         upper_triangle = params.get("upper_triangle", False)
         if lower_triangle and upper_triangle:
-            error(
-                "lower_triangle and upper_triangle are mutually exclusive when initializing a distribution")
+            error("lower_triangle and upper_triangle are mutually exclusive when initializing a distribution")
 
         if lower_triangle:
             ary = jax.numpy.tril(ary)
@@ -317,9 +296,7 @@ class DistributionGenerator(object):
         if col_mask is not None:
             if isinstance(col_mask, int):
                 dKey, subKey = jax.random.split(dKey, 2)
-                keep_indices = jax.random.choice(subKey, ary.shape[1],
-                                                 shape=(col_mask,),
-                                                 replace=False)
+                keep_indices = jax.random.choice(subKey, ary.shape[1], shape=(col_mask,), replace=False)
                 mask = jax.numpy.zeros(ary.shape[1], dtype=bool).at[
                     keep_indices].set(True)
                 mask = jax.numpy.broadcast_to(mask, ary.shape)
@@ -334,9 +311,7 @@ class DistributionGenerator(object):
         if row_mask is not None:
             if isinstance(row_mask, int):
                 dKey, subKey = jax.random.split(dKey, 2)
-                keep_indices = jax.random.choice(subKey, ary.shape[0],
-                                                 shape=(row_mask,),
-                                                 replace=False)
+                keep_indices = jax.random.choice(subKey, ary.shape[0], shape=(row_mask,), replace=False)
                 mask = jax.numpy.zeros(ary.shape[0], dtype=bool).at[
                     keep_indices].set(True)
                 mask = jax.numpy.broadcast_to(mask, ary.shape)
@@ -350,8 +325,7 @@ class DistributionGenerator(object):
         return ary.astype(params.get("dtype", jax.numpy.float32))
 
     @staticmethod
-    def _process_params_numpy(ary: numpy.ndarray, params: DistributionParams,
-                              seed: int | None) -> numpy.ndarray:
+    def _process_params_numpy(ary: numpy.ndarray, params: DistributionParams, seed: int | None) -> numpy.ndarray:
         amin = params.get("amin", None)
         if amin is not None:
             ary = numpy.maximum(ary, amin)
@@ -363,8 +337,7 @@ class DistributionGenerator(object):
         lower_triangle = params.get("lower_triangle", False)
         upper_triangle = params.get("upper_triangle", False)
         if lower_triangle and upper_triangle:
-            error(
-                "lower_triangle and upper_triangle are mutually exclusive when initializing a distribution")
+            error("lower_triangle and upper_triangle are mutually exclusive when initializing a distribution")
 
         if lower_triangle:
             ary = numpy.tril(ary)
@@ -381,8 +354,7 @@ class DistributionGenerator(object):
         if col_mask is not None:
             if isinstance(col_mask, int):
                 rng = numpy.random.default_rng(seed)
-                keep_indices = rng.choice(ary.shape[1], size=col_mask,
-                                          replace=False)
+                keep_indices = rng.choice(ary.shape[1], size=col_mask, replace=False)
                 mask = numpy.zeros(ary.shape[1], dtype=bool)
                 mask[keep_indices] = True
                 mask = numpy.broadcast_to(mask, ary.shape)
@@ -397,8 +369,7 @@ class DistributionGenerator(object):
         if row_mask is not None:
             if isinstance(row_mask, int):
                 rng = numpy.random.default_rng(seed)
-                keep_indices = rng.choice(ary.shape[0], size=row_mask,
-                                          replace=False)
+                keep_indices = rng.choice(ary.shape[0], size=row_mask, replace=False)
                 mask = numpy.zeros(ary.shape[0], dtype=bool)
                 mask[keep_indices] = True
                 mask = numpy.broadcast_to(mask, ary.shape)
@@ -410,4 +381,3 @@ class DistributionGenerator(object):
                 ary = numpy.where(mask, ary, 0)
 
         return ary
-

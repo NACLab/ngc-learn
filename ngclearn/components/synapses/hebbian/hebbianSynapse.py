@@ -4,18 +4,17 @@ from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 
-from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
-
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngcsimlib import deprecate_args
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
-def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.,
-                 prior_type=None, prior_lmbda=0.,
-                 pre_wght=1., post_wght=1.):
+def _calc_update(
+        pre, post, W, w_bound, is_nonnegative=True, signVal=1., prior_type=None, prior_lmbda=0., pre_wght=1.,
+        post_wght=1.
+):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
 
@@ -165,12 +164,11 @@ class HebbianSynapse(DenseSynapse):
             this to < 1. will result in a sparser synaptic structure
     """
 
-    # Define Functions
-    # @deprecate_args(_rebind=False, w_decay='prior')
+    @deprecate_args(_rebind=False, w_decay='prior')
     def __init__(
             self, name, shape, eta=0., weight_init=None, bias_init=None, w_bound=1., is_nonnegative=False,
-            prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
-            resist_scale=1., batch_size=1, **kwargs
+            prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., 
+            p_conn=1., resist_scale=1., batch_size=1, **kwargs
     ):
         super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 
@@ -222,6 +220,24 @@ class HebbianSynapse(DenseSynapse):
             signVal=sign_value, prior_type=prior_type, prior_lmbda=prior_lmbda, pre_wght=pre_wght,
             post_wght=post_wght)
         return dW, db
+
+    @compilable
+    def calc_update(self):
+       # Get the variables
+        pre = self.pre.get()
+        post = self.post.get()
+        weights = self.weights.get()
+        biases = self.biases.get()
+        opt_params = self.opt_params.get()
+
+        ## calculate synaptic update values
+        dWeights, dBiases = HebbianSynapse._compute_update(
+            self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
+            pre, post, weights
+        )
+
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
 
     @compilable
     def evolve(self):

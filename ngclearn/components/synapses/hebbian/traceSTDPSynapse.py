@@ -1,7 +1,6 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
-
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
 
@@ -67,7 +66,6 @@ class TraceSTDPSynapse(DenseSynapse): # power-law / trace-based STDP
         weight_mask: synaptic binary masking matrix to apply (to enforce a constant sparse structure; default: None)
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., weight_init=None, resist_scale=1.,
             p_conn=1., w_bound=1., tau_w=0., weight_mask=None, batch_size=1, **kwargs

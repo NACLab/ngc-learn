@@ -4,8 +4,8 @@ import jax
 from typing import Union
 
 from ngcsimlib.logger import info, warn
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class PhasorCell(JaxComponent):
     """
@@ -31,9 +31,9 @@ class PhasorCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(
-            self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs):
+            self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## Phasor meta-parameters
@@ -137,16 +137,6 @@ class PhasorCell(JaxComponent):
         self.tols.set(restVals)
         self.angles.set(restVals)
         self.key.set(key)
-
-
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.key.set(data['key'])
 
     @classmethod
     def help(cls):  ## component help function

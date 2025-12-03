@@ -6,16 +6,17 @@ from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 
 from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 from ngclearn.components.synapses.patched import PatchedSynapse
 from ngclearn.utils import tensorstats
 
 # @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
-def _calc_update(pre, post, W, mask, w_bound, is_nonnegative=True, signVal=1.,
-                 prior_type=None, prior_lmbda=0.,
-                 pre_wght=1., post_wght=1.):
+def _calc_update(
+        pre, post, W, mask, w_bound, is_nonnegative=True, signVal=1., prior_type=None, prior_lmbda=0., pre_wght=1.,
+        post_wght=1.
+):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
 
@@ -69,7 +70,7 @@ def _calc_update(pre, post, W, mask, w_bound, is_nonnegative=True, signVal=1.,
 
     dW = dW + prior_lmbda * dW_reg
 
-    if mask!=None:
+    if mask != None:
         dW = dW * mask
 
     return dW * signVal, db * signVal
@@ -94,12 +95,12 @@ def _enforce_constraints(W, block_mask, w_bound, is_nonnegative=True):
     """
     _W = W
     if w_bound > 0.:
-        if is_nonnegative == True:
+        if is_nonnegative:
             _W = jnp.clip(_W, 0., w_bound)
         else:
             _W = jnp.clip(_W, -w_bound, w_bound)
 
-    if block_mask!=None:
+    if block_mask != None:
         _W = _W * block_mask
 
     return _W
@@ -190,12 +191,15 @@ class HebbianPatchedSynapse(PatchedSynapse):
         batch_size: the size of each mini batch
     """
 
-    def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
-                 block_mask=None, w_bound=1., is_nonnegative=False, prior=(None, 0.), sign_value=1.,
-                 optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
-                 resist_scale=1., batch_size=1, **kwargs):
-        super().__init__(name, shape, n_sub_models, stride_shape, block_mask, weight_init, bias_init, resist_scale,
-                         p_conn, batch_size=batch_size, **kwargs)
+    def __init__(
+            self, name, shape, n_sub_models=1, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
+            block_mask=None, w_bound=1., is_nonnegative=False, prior=(None, 0.), sign_value=1., optim_type="sgd",
+            pre_wght=1., post_wght=1., p_conn=1., resist_scale=1., batch_size=1, **kwargs
+    ):
+        super().__init__(
+            name, shape, n_sub_models, stride_shape, block_mask, weight_init, bias_init, resist_scale, p_conn,
+            batch_size=batch_size, **kwargs
+        )
 
         prior_type, prior_lmbda = prior
         self.prior_type = prior_type
@@ -337,23 +341,6 @@ class HebbianPatchedSynapse(PatchedSynapse):
                             "dW_{ij}/dt = eta * [(z_j * q_pre) * (z_i * q_post)] - g(W_{ij}) * prior_lmbda",
                 "hyperparameters": hyperparams}
         return info
-
-
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if isinstance(getattr(self, varname), Compartment)]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).get())
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
-
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

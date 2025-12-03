@@ -1,3 +1,16 @@
+"""
+In-built dynamical systems built on differential equations. Note that these systems are designed such that they
+directly operzte with ngc-learn's ODE integration backend.
+
+| Currently in-built dynamical systems include:
+| 0) A continuous linear 2D system;
+| 1) A continuous cubic 2D system;
+| 2) A Lorenz attractor system;
+| 3) A continuous linear 3D system;
+| 4) A continuous oscillator system.
+
+"""
+
 import jax.numpy as jnp
 
 def linear_2D(t, x, params):

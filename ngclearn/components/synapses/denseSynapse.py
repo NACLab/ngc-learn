@@ -3,8 +3,8 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
 
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class DenseSynapse(JaxComponent): ## base dense synaptic cable
     """
@@ -38,7 +38,6 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             (lower values yield sparse structure)
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs
     ):
@@ -76,8 +75,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.weights = Compartment(weights)
         ## Set up (optional) bias values
         if self.bias_init is None:
-            info(self.name, "is using default bias value of zero (no bias "
-                            "kernel provided)!")
+            info(self.name, "is using default bias value of zero (no bias kernel provided)!")
         self.biases = Compartment(self.bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0)
         # self.biases = Compartment(initialize_params(subkeys[2], bias_init,
         #                                             (1, shape[1]))

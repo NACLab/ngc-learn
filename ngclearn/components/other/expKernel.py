@@ -2,11 +2,8 @@ from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
 from ngclearn.utils import tensorstats
-from ngcsimlib import deprecate_args
-
-from ngcsimlib.logger import info, warn
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[5,6])
 def _apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
@@ -48,7 +45,6 @@ class ExpKernel(JaxComponent): ## exponential kernel
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, dt, tau_w=500., nu=4., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 

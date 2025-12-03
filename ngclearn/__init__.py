@@ -33,6 +33,8 @@ from ngcsimlib.context import Context, ContextObjectTypes
 from ngcsimlib import Component
 from ngcsimlib.compartment import Compartment
 from ngcsimlib import logger, configure
+from ngcsimlib.parser import compilable
+
 
 if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
     if "readthedocs" not in argv[0]:  ## prevent readthedocs execution of preload

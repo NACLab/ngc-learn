@@ -1,7 +1,7 @@
 from jax import numpy as jnp, random, jit
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import PoissonCell
+from ngclearn.components.input_encoders.poissonCell import PoissonCell
 from numpy.testing import assert_array_equal
 
 from ngclearn import MethodProcess, Context

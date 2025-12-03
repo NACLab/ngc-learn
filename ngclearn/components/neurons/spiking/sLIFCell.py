@@ -3,14 +3,11 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import step_euler
 from ngclearn.utils.surrogate_fx import secant_lif_estimator
 
-from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @jit
 def _dfv_internal(j, v, rfr, tau_m, refract_T): ## raw voltage dynamics
@@ -102,7 +99,9 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         refract_time: relative refractory period time (ms; Default: 1 ms)
 
-        rho_b: threshold sparsity factor (Default: 0)
+        rho_b: threshold sparsity factor (Default: 0); note that setting rho_b > 0 will 
+            force the adaptive threshold to follow dynamics that ignore `thr_grain` and 
+            `thr_leak`
 
         sticky_spikes: if True, spike variables will be pinned to action potential
             value (i.e, 1) throughout duration of the refractory period; this recovers
@@ -113,7 +112,6 @@ class SLIFCell(JaxComponent): ## leaky integrate-and-fire cell
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(
             self, name, n_units, tau_m, resist_m, thr, resist_inh=0., thr_persist=False, thr_gain=0.0, thr_leak=0.0,
             rho_b=0., refract_time=0., sticky_spikes=False, thr_jitter=0.05, batch_size=1, **kwargs

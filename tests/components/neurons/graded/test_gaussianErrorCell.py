@@ -44,8 +44,8 @@ def test_gaussianErrorCell():
       target_t = jnp.array([[target_seq[0, ts]]])
       clamp_target(target_t)
       advance_process.run(t=ts * 1., dt=dt)
-      dmu_outs.append(a.dmu.value)
-      L_outs.append(a.L.value)
+      dmu_outs.append(a.dmu.get())
+      L_outs.append(a.L.get())
 
   dmu_outs = jnp.concatenate(dmu_outs, axis=1)
   L_outs = jnp.array(L_outs)[None] # (1, 10)

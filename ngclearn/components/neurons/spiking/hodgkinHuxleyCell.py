@@ -4,8 +4,8 @@ from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2, step_rk4
 
-from ngcsimlib.parser import compilable
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 
 def _calc_biophysical_constants(v): ## computes H-H biophysical constants (which are functions of voltage v)

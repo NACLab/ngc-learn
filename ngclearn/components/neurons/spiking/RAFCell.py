@@ -5,8 +5,8 @@ from ngcsimlib.logger import info, warn
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 
-from ngcsimlib.parser import compilable
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 ########################################################################################################################
 ## RAF dynamics (multi-dimensional ODEs)
@@ -97,7 +97,7 @@ class RAFCell(JaxComponent):
                 at an increase in computational cost (and simulation time)
     """
 
-    #@deprecate_args(resist_m="resist_v", tau_m="tau_v", b="dampen_factor")
+    @deprecate_args(resist_m="resist_v", tau_m="tau_v", b="dampen_factor")
     def __init__(
             self, name, n_units, tau_v=1., tau_w=1., thr=1., omega=10., dampen_factor=-1., v_reset=0., w_reset=0.,
             v0=0., w0=0., resist_v=1., integration_type="euler", batch_size=1, **kwargs

@@ -1,10 +1,8 @@
 from jax import random, numpy as jnp, jit
-from ngclearn.utils.weight_distribution import initialize_params
-from ngcsimlib.logger import info
 
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
 
 class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
     """
@@ -59,7 +57,6 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
 
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, tau_decay, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1.,
             p_conn=1., is_nonplastic=True, **kwargs
@@ -107,20 +104,6 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         self.i_syn.set(postVals)
         self.g_syn.set(postVals)
         self.v.set(postVals)
-
-    # def save(self, directory, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     if self.bias_init != None:
-    #         jnp.savez(file_name, weights=self.weights.value, biases=self.biases.value)
-    #     else:
-    #         jnp.savez(file_name, weights=self.weights.value)
-    #
-    # def load(self, directory, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     data = jnp.load(file_name)
-    #     self.weights.set(data['weights'])
-    #     if "biases" in data.keys():
-    #         self.biases.set(data['biases'])
 
     @classmethod
     def help(cls): ## component help function

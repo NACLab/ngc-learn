@@ -6,7 +6,7 @@ np.random.seed(42)
 from ngclearn.components import LaplacianErrorCell
 from ngclearn import MethodProcess, Context
 
-def test_laplacianErrorCell():
+def test_laplacianErrorCell1():
   np.random.seed(42)
   name = "laplacian_error_ctx"
   dkey = random.PRNGKey(42)
@@ -16,17 +16,18 @@ def test_laplacianErrorCell():
     a = LaplacianErrorCell(
       name="a", n_units=1, batch_size=1, scale=1.0, shape=None
     )
+    
     advance_process = (MethodProcess("advance_proc") >> a.advance_state)
     reset_process = (MethodProcess("reset_proc") >> a.reset)
 
-    def clamp_modulator(x):
-      a.modulator.set(x)
+  def clamp_modulator(x):
+    a.modulator.set(x)
 
-    def clamp_shift(x):
-      a.shift.set(x)
+  def clamp_shift(x):
+    a.shift.set(x)
 
-    def clamp_target(x):
-      a.target.set(x)
+  def clamp_target(x):
+    a.target.set(x)
 
   ## input sequence
   modulator_seq = jnp.ones((1, 10))
@@ -49,13 +50,13 @@ def test_laplacianErrorCell():
     target_t = jnp.array([[target_seq[0, ts]]])
     clamp_target(target_t)
     advance_process.run(t=ts * 1., dt=dt)
-    dshift_outs.append(a.dshift.value)
+    dshift_outs.append(a.dshift.get())
     # print(f"a.L.value: {a.L.value}")
     # print(f"a.shift.value: {a.shift.value}")
     # print(f"a.target.value: {a.target.value}")
     # print(f"a.Scale.value: {a.Scale.value}")
     # print(f"a.mask.value: {a.mask.value}")
-    L_outs.append(a.L.value)
+    L_outs.append(a.L.get())
 
   dshift_outs = jnp.concatenate(dshift_outs, axis=1)
   L_outs = jnp.array(L_outs)[None] # (1, 10)
@@ -68,3 +69,4 @@ def test_laplacianErrorCell():
   np.testing.assert_allclose(dshift_outs, expected_dshift, atol=1e-5)
   np.testing.assert_allclose(L_outs, expected_L, atol=1e-5)
 
+#test_laplacianErrorCell1()

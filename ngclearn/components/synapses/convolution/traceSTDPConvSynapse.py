@@ -1,9 +1,6 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
-from ngclearn.utils.weight_distribution import initialize_params
-import ngclearn.utils.weight_distribution as dist
-
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses.convolution.convSynapse import ConvSynapse
 
 from ngclearn.components.synapses.convolution.ngcconv import (_conv_same_transpose_padding,
@@ -71,7 +68,6 @@ class TraceSTDPConvSynapse(ConvSynapse): ## trace-based STDP convolutional cable
         batch_size: batch size dimension of this component
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, x_shape, A_plus, A_minus, eta=0., pretrace_target=0., filter_init=None, stride=1,
             padding=None, resist_scale=1., w_bound=0., w_decay=0., batch_size=1, **kwargs

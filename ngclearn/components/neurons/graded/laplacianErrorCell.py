@@ -2,11 +2,8 @@
 
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
-from ngclearn.utils import tensorstats
-
-from ngcsimlib.logger import info
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -37,7 +34,6 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
             to a constant/fixed `scale`
     """
 
-    # Define Functions
     def __init__(self, name, n_units, batch_size=1, scale=1., shape=None, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -103,6 +99,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.L.set(jnp.squeeze(L))
         self.mask.set(mask)
 
+    @compilable
     def reset(self): ## reset core components/statistics
         restVals = jnp.zeros((self.batch_size, self.n_units))
         dshift = restVals

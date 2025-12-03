@@ -1,7 +1,7 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 import jax
 from typing import Union
 
@@ -26,7 +26,7 @@ class BernoulliCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    def __init__(self, name: str, n_units: int, batch_size: int = 1, key: Union[jax.Array, None] = None):
+    def __init__(self, name: str, n_units: int, batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs):
         super().__init__(name=name, key=key)
 
         ## Layer Size Setup
@@ -79,20 +79,6 @@ class BernoulliCell(JaxComponent):
                 "dynamics": "~ Bernoulli(x)",
                 "hyperparameters": hyperparams}
         return info
-
-    # def __repr__(self):
-    #     comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-    #     maxlen = max(len(c) for c in comps) + 5
-    #     lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-    #     for c in comps:
-    #         stats = tensorstats(getattr(self, c).value)
-    #         if stats is not None:
-    #             line = [f"{k}: {v}" for k, v in stats.items()]
-    #             line = ", ".join(line)
-    #         else:
-    #             line = "None"
-    #         lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-    #     return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

@@ -1,10 +1,10 @@
 from jax import random, numpy as jnp, jit
-from ngclearn.utils.weight_distribution import initialize_params
 from ngcsimlib.logger import info
 
+from ngclearn.utils.distribution_generator import DistributionGenerator
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.parser import compilable
 
 class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
     """
@@ -72,9 +72,10 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         self.Wdyn = Compartment(self.weights.get() * 0) ## dynamic synapse values
         if self.resources_init is None:
             info(self.name, "is using default resources value initializer!")
-            self.resources_init = {"dist": "uniform", "amin": 0.125, "amax": 0.175} # 0.15
+            #self.resources_init = {"dist": "uniform", "amin": 0.125, "amax": 0.175} # 0.15
+            self.resources_init = DistributionGenerator.uniform(low=0.125, high=0.175)
         self.resources = Compartment(
-            initialize_params(subkeys[2], self.resources_init, shape)
+            self.resources_init(shape, subkeys[2]) #initialize_params(subkeys[2], self.resources_init, shape)
         ) ## matrix U - synaptic resources matrix
 
     @compilable

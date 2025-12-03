@@ -7,8 +7,8 @@ from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
 
-from ngcsimlib.parser import compilable
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 
 @jit
@@ -86,7 +86,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
             the value of `v_rest` (default: True)
     """
 
-    #@deprecate_args(thr_jitter=None)
+    @deprecate_args(thr_jitter=None)
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., refract_time=0.,
             integration_type="euler", surrogate_type="straight_through", lower_clamp_voltage=True, **kwargs

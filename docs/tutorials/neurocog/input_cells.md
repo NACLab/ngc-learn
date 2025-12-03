@@ -39,8 +39,7 @@ spike train over $100$ steps in time as follows:
 
 ```python
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
-from ngclearn.utils import JaxProcess
+from ngclearn import Context, MethodProcess
 
 from ngclearn.utils.viz.raster import create_raster_plot
 ## import model-specific mechanisms
@@ -56,27 +55,24 @@ T = 100  ## number time steps to simulate
 with Context("Model") as model:
     cell = BernoulliCell("z0", n_units=10, key=subkeys[0])
 
-    advance_process = (JaxProcess()
+    advance_process = (MethodProcess("advance_proc")
                        >> cell.advance_state)
-    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (JaxProcess()
+    reset_process = (MethodProcess("reset_proc")
                      >> cell.reset)
-    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
-
-    @Context.dynamicCommand
-    def clamp(x):
-        cell.inputs.set(x)
+def clamp(x):
+    cell.inputs.set(x)
+    
 
 probs = jnp.asarray([[0.8, 0.2, 0., 0.55, 0.9, 0, 0.15, 0., 0.6, 0.77]], dtype=jnp.float32)
 spikes = []
-model.reset()
+reset_process.run() 
 for ts in range(T):
-    model.clamp(probs)
-    model.advance(t=ts * 1., dt=dt)
+    clamp(probs)
+    advance_process.run(t=ts * 1., dt=dt)
 
-    s_t = cell.outputs.value
+    s_t = cell.outputs.get()
     spikes.append(s_t)
 spikes = jnp.concatenate(spikes, axis=0)
 create_raster_plot(spikes, plot_fname="input_cell_raster.jpg")
@@ -121,7 +117,7 @@ and by replacing the line that has the `BernoulliCell` call with the
 following line instead:
 
 ```python
-cell = PoissonCell("z0", n_units=10, max_freq=63.75, key=subkeys[0])
+cell = PoissonCell("z0", n_units=10, target_freq=63.75, key=subkeys[0])
 ```
 
 Running the code with the two above small modifications will
@@ -149,12 +145,12 @@ mu = 0.
 probs = jnp.asarray([[1.]],dtype=jnp.float32)
 for _ in range(n_trials):
     spikes = []
-    model.reset()
+    reset_process.run() 
     for ts in range(T):
-        model.clamp(probs)
-        model.advance(t=ts*1., dt=dt)
+        clamp(probs)
+        advance_process.run(t=ts * 1., dt=dt)
 
-        s_t = cell.outputs.value
+        s_t = cell.outputs.get()
         spikes.append(s_t)
     count = jnp.sum(jnp.concatenate(spikes, axis=0))
     mu += count
