@@ -1,5 +1,7 @@
 # %%
 
+import jax
+import pickle
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
@@ -206,9 +208,25 @@ class HebbianSynapse(DenseSynapse):
         self.dBiases = Compartment(jnp.zeros(shape[1]))
 
         #key, subkey = random.split(self.key.value)
+        # NOTE: we don't save this compartment directly because it is a tuple can cannot be saved directly by numpy
         self.opt_params = Compartment(
-            get_opt_init_fn(optim_type)([self.weights.get(), self.biases.get()] if bias_init else [self.weights.get()])
+            get_opt_init_fn(optim_type)([self.weights.get(), self.biases.get()] if bias_init else [self.weights.get()]),
+            auto_save=False
         )
+
+    def save(self, directory: str):
+        super().save(directory)
+        # Also save the optimizer parameters
+        file_name = directory + "/" + self.name + "_opt_params" + ".pkl"
+        with open(file_name, 'wb') as f:
+            pickle.dump(self.opt_params.get(), f)
+
+    def load(self, directory: str):
+        super().load(directory)
+        file_name = directory + "/" + self.name + "_opt_params" + ".pkl"
+        with open(file_name, 'rb') as f:
+            data = pickle.load(f)
+        self.opt_params.set(data)
 
     @staticmethod
     def _compute_update(
@@ -332,3 +350,4 @@ if __name__ == '__main__':
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
                              sign_value=-1.0, prior=("l1l2", 0.001))
     print(Wab)
+    print(Wab.opt_params.get())
