@@ -37,7 +37,7 @@ class JaxComponent(Component):
         file_name = directory + "/" + self.name + ".npz"
         data = {}
         for comp_name, comp in self.compartments:
-            if not comp.targeted:
+            if not comp.targeted and comp.auto_save:
                 data[comp_name] = comp.get()
         jnp.savez(file_name, **data)
 
