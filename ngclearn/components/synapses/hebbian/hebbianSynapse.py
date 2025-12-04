@@ -11,6 +11,7 @@ from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngcsimlib import deprecate_args
+from ngclearn.utils.io_utils import save_pkl, load_pkl
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
 def _calc_update(
@@ -217,16 +218,12 @@ class HebbianSynapse(DenseSynapse):
     def save(self, directory: str):
         super().save(directory)
         # Also save the optimizer parameters
-        file_name = directory + "/" + self.name + "_opt_params" + ".pkl"
-        with open(file_name, 'wb') as f:
-            pickle.dump(self.opt_params.get(), f)
+        save_pkl(directory, self.name + "_opt_params", self.opt_params.get())
 
     def load(self, directory: str):
         super().load(directory)
-        file_name = directory + "/" + self.name + "_opt_params" + ".pkl"
-        with open(file_name, 'rb') as f:
-            data = pickle.load(f)
-        self.opt_params.set(data)
+        # load the optimizer parameters in a custom way
+        self.opt_params.set(load_pkl(directory, self.name + "_opt_params"))
 
     @staticmethod
     def _compute_update(
