@@ -20,6 +20,7 @@ Welcome to ngc-learn's documentation!
 
   tutorials/intro
   tutorials/theory
+  tutorials/configuration/index
   tutorials/index
   tutorials/neurocog/index
 

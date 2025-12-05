@@ -5,7 +5,10 @@
 Model Exhibits
 ==============
 
-Models are presented in ngc-learn's model museum in the form of "exhibits", which are effectively model-specific walkthroughs and analyses, based on the relevant, referenced publicly available ngc-learn simulation code.
+Models are presented in ngc-learn's model museum in the form of "exhibits", which are effectively model-specific
+walkthroughs and analyses, based on the relevant, referenced publicly available ngc-learn simulation code. (Note that
+there are more model exhibits in the actual `museum repository <https://github.com/NACLab/ngc-museum>`_ than the number
+of detailed walkthroughs presented in the table of contents below.)
 
 .. toctree::
   :maxdepth: 1
