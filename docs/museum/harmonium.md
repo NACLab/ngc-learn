@@ -60,7 +60,7 @@ where $Z$ is the normalizing constant (or, in statistical mechanics, the <i>part
 When one works through the derivation of the gradient of the log probability $\log p(\mathbf{x})$ with respect to the synapses such as $\mathbf{W}$, they get a (contrastive) Hebbian-like update rule as follows: 
 
 $$
-\Delta \mathbf{W} = <\mathbf{z}^0_i \mathbf{z}^1_j>_{data} - <\mathbf{z}^0_i \mathbf{z}^1_j>_{model}
+\Delta \mathbf{W}_{ij} = <\mathbf{z}^0_i \mathbf{z}^1_j>_{data} - <\mathbf{z}^0_i \mathbf{z}^1_j>_{model}
 $$
 
 where the angle brackets $< >$ tell us that we need to take the expectation of the values within the brackets under a certain distribution (such as the data distribution denoted by the subscript $data$). The above rule can also be considered to be a stochastic form of a general recipe known as contrastive Hebbian learning (CHL) [4]. 
@@ -170,31 +170,31 @@ which will fit/adapt your harmonium to MNIST. This should produce per-training i
 W1:  min -0.0494 ;  max 0.0445  mu -0.0000 ;  norm 4.4734
 b1:  min -4.0000 ;  max -4.0000  mu -4.0000 ;  norm 64.0000
 c0:  min -11.6114 ;  max 0.0635  mu -3.8398 ;  norm 135.2238
--1| Test: E(X) = 99.8526  err(X) = 54.3889
-0| Test: E(X) = 116.6596  err(X) = 46.8236; Train: E(X) = 112.0452  err(X) = 52.7418
-1| Test: E(X) = 89.5413  err(X) = 36.8690; Train: E(X) = 102.4642  err(X) = 41.3630
-2| Test: E(X) = 75.7558  err(X) = 31.8582; Train: E(X) = 82.9692  err(X) = 34.5511
-3| Test: E(X) = 66.6632  err(X) = 28.6253; Train: E(X) = 72.1229  err(X) = 30.4615
-4| Test: E(X) = 60.8256  err(X) = 26.2317; Train: E(X) = 64.3613  err(X) = 27.6882
-5| Test: E(X) = 55.5070  err(X) = 24.3207; Train: E(X) = 58.9254  err(X) = 25.5485
-6| Test: E(X) = 51.7455  err(X) = 22.8012; Train: E(X) = 54.4092  err(X) = 23.8361
-7| Test: E(X) = 49.4866  err(X) = 21.6163; Train: E(X) = 51.1574  err(X) = 22.4523
-8| Test: E(X) = 46.2826  err(X) = 20.5934; Train: E(X) = 48.2617  err(X) = 21.3355
-9| Test: E(X) = 43.8611  err(X) = 19.7679; Train: E(X) = 46.0239  err(X) = 20.4297
-10| Test: E(X) = 42.2886  err(X) = 19.0672; Train: E(X) = 44.3544  err(X) = 19.6835
-11| Test: E(X) = 41.7468  err(X) = 18.4881; Train: E(X) = 42.9321  err(X) = 19.0372
+-1| Test:  err(X) = 54.3889
+0| Test:  |d.E(X)| = 16.8070  err(X) = 46.8236; Train: err(X) = 52.7418
+1| Test:  |d.E(X)| = 27.1183  err(X) = 36.8690; Train: err(X) = 41.3630
+2| Test:  |d.E(X)| = 13.7855  err(X) = 31.8582; Train: err(X) = 34.5511
+3| Test:  |d.E(X)| = 9.0927  err(X) = 28.6253; Train: err(X) = 30.4615
+4| Test:  |d.E(X)| = 5.8375  err(X) = 26.2317; Train: err(X) = 27.6882
+5| Test:  |d.E(X)| = 5.3187  err(X) = 24.3207; Train: err(X) = 25.5485
+6| Test:  |d.E(X)| = 3.7614  err(X) = 22.8012; Train: err(X) = 23.8361
+7| Test:  |d.E(X)| = 2.2589  err(X) = 21.6163; Train: err(X) = 22.4523
+8| Test:  |d.E(X)| = 3.2040  err(X) = 20.5934; Train: err(X) = 21.3355
+9| Test:  |d.E(X)| = 2.4215  err(X) = 19.7679; Train: err(X) = 20.4297
+10| Test:  |d.E(X)| = 1.5725  err(X) = 19.0672; Train: err(X) = 19.6835
+11| Test:  |d.E(X)| = 0.5418  err(X) = 18.4881; Train: err(X) = 19.0372
 ...
 <shortened for brevity>
 ...
-91| Test: E(X) = 65.5179  err(X) = 11.0443; Train: E(X) = 65.0850  err(X) = 10.9832
-92| Test: E(X) = 65.4790  err(X) = 11.0118; Train: E(X) = 64.8345  err(X) = 10.9820
-93| Test: E(X) = 65.9917  err(X) = 11.0013; Train: E(X) = 64.4392  err(X) = 10.9586
-94| Test: E(X) = 64.0737  err(X) = 10.9874; Train: E(X) = 64.2096  err(X) = 10.9312
-95| Test: E(X) = 64.0479  err(X) = 10.9906; Train: E(X) = 63.8461  err(X) = 10.9274
-96| Test: E(X) = 63.5719  err(X) = 10.9712; Train: E(X) = 63.3354  err(X) = 10.8940
-97| Test: E(X) = 64.1757  err(X) = 10.9589; Train: E(X) = 62.8447  err(X) = 10.8960
-98| Test: E(X) = 63.8886  err(X) = 10.9563; Train: E(X) = 62.6391  err(X) = 10.8727
-99| Test: E(X) = 62.2265  err(X) = 10.9347; Train: E(X) = 62.3147  err(X) = 10.8671
+91| Test:  |d.E(X)| = 0.4870  err(X) = 11.0443; Train: err(X) = 10.9832
+92| Test:  |d.E(X)| = 0.0390  err(X) = 11.0118; Train: err(X) = 10.9820
+93| Test:  |d.E(X)| = 0.5127  err(X) = 11.0013; Train: err(X) = 10.9586
+94| Test:  |d.E(X)| = 1.9180  err(X) = 10.9874; Train: err(X) = 10.9312
+95| Test:  |d.E(X)| = 0.0258  err(X) = 10.9906; Train: err(X) = 10.9274
+96| Test:  |d.E(X)| = 0.4760  err(X) = 10.9712; Train: err(X) = 10.8940
+97| Test:  |d.E(X)| = 0.6038  err(X) = 10.9589; Train: err(X) = 10.8960
+98| Test:  |d.E(X)| = 0.2870  err(X) = 10.9563; Train: err(X) = 10.8727
+99| Test:  |d.E(X)| = 1.6622  err(X) = 10.9347; Train: err(X) = 10.8671
 --- Final RBM Synaptic Stats ---
 W1:  min -1.8648 ;  max 1.3757  mu -0.0012 ;  norm 70.6230
 b1:  min -7.5815 ;  max 0.2337  mu -2.3395 ;  norm 53.3993

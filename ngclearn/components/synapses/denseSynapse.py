@@ -44,8 +44,6 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         super().__init__(name, **kwargs)
 
         self.batch_size = batch_size
-        self.weight_init = weight_init
-        self.bias_init = bias_init
 
         ## Synapse meta-parameters
         self.shape = shape
@@ -54,13 +52,11 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         ## Set up synaptic weight values
         tmp_key, *subkeys = random.split(self.key.get(), 4)
 
-        if self.weight_init is None:
+        if weight_init is None:
             info(self.name, "is using default weight initializer!")
             # self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
-            # weights = initialize_params(subkeys[0], self.weight_init, shape)
-            self.weight_init = DistributionGenerator.uniform(0.025, 0.8)
-        #weights = initialize_params(subkeys[0], self.weight_init, shape)
-        weights = self.weight_init(shape, subkeys[0])
+            weight_init = DistributionGenerator.uniform(0.025, 0.8)
+        weights = weight_init(shape, subkeys[0])
 
         if 0. < p_conn < 1.: ## Modifier/constraint: only non-zero and <1 probs allowed
             p_mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
@@ -74,12 +70,12 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.outputs = Compartment(postVals)
         self.weights = Compartment(weights)
         ## Set up (optional) bias values
-        if self.bias_init is None:
+        if bias_init is None:
             info(self.name, "is using default bias value of zero (no bias kernel provided)!")
-        self.biases = Compartment(self.bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0)
-        # self.biases = Compartment(initialize_params(subkeys[2], bias_init,
-        #                                             (1, shape[1]))
-        #                           if bias_init else 0.0)
+        self.biases = Compartment(bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0)
+        ## pin weight/bias initializers to component
+        self.weight_init = weight_init
+        self.bias_init = bias_init
 
     @compilable
     def advance_state(self):
