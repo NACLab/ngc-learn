@@ -1,4 +1,4 @@
-# Sparse Coding and Iterative Thresholding
+# Sparse Coding and Iterative Thresholding (Olshausen &amp; Field; 1996)
 
 In this exhibit, we create, simulate, and visualize the internally acquired filters/atoms of variants of a sparse coding system based on the classical model proposed by (Olshausen &amp; Field, 1996) [1]. 
 After going through this demonstration, you will:

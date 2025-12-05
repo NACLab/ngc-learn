@@ -1,4 +1,4 @@
-# The Diehl and Cook Spiking Neuronal Network
+# The Diehl and Cook Spiking Neuronal Network (Diehl &amp; Cook; 2015)
 
 In this exhibit, we will see how a spiking neural network model that adapts
 its synaptic efficacies via spike-timing-dependent plasticity can be created.
