@@ -42,8 +42,10 @@ must be wired to the input compartment of `b`. In code, this is done as follows:
 ```
 
 Finally, to make our dynamical system do something for each step of simulated
-time, we must append a few basic commands
-(see [Understanding Commands](../foundations/commands.md) to the context.
+time, we must append a few basic processes <!--commands
+(see [Understanding Commands](../foundations/commands.md) -->
+(see [Understanding Processes](../foundations/processes.md))
+to the context.
 The commands we will want, as implied by our JSON configuration that we put
 together at the start of this tutorial, include a `reset` (which will
 initialize the compartments within each node to their resting values,

@@ -21,7 +21,9 @@ Lessons/tutorials go through the very basics of constructing a dynamical system 
   :caption: II. NGC-Learn/Sim-Lib Foundations
 
   foundations
-  foundations/contexts
-  foundations/commands
-  foundations/operations
-  foundations/monitors
+  foundations/global_state
+  foundations/components
+  foundations/compartments
+  foundations/context
+  foundations/processes
+  foundations/compiling
