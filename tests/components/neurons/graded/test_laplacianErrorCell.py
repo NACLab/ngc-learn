@@ -1,21 +1,12 @@
 # %%
 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import LaplacianErrorCell
-from ngcsimlib.compilers import compile_command, wrap_command
-from numpy.testing import assert_array_equal
+from ngclearn import MethodProcess, Context
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
-
-
-def test_laplacianErrorCell():
+def test_laplacianErrorCell1():
   np.random.seed(42)
   name = "laplacian_error_ctx"
   dkey = random.PRNGKey(42)
@@ -25,27 +16,18 @@ def test_laplacianErrorCell():
     a = LaplacianErrorCell(
       name="a", n_units=1, batch_size=1, scale=1.0, shape=None
     )
-    advance_process = (Process("advance_proc") >> a.advance_state)
-    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-    reset_process = (Process("reset_proc") >> a.reset)
-    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
+    
+    advance_process = (MethodProcess("advance_proc") >> a.advance_state)
+    reset_process = (MethodProcess("reset_proc") >> a.reset)
 
-    # reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-    # ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
-    # advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-    # ctx.add_command(wrap_command(jit(ctx.advance_state)), name="run")
+  def clamp_modulator(x):
+    a.modulator.set(x)
 
-    @Context.dynamicCommand
-    def clamp_modulator(x):
-      a.modulator.set(x)
+  def clamp_shift(x):
+    a.shift.set(x)
 
-    @Context.dynamicCommand
-    def clamp_shift(x):
-      a.shift.set(x)
-
-    @Context.dynamicCommand
-    def clamp_target(x):
-      a.target.set(x)
+  def clamp_target(x):
+    a.target.set(x)
 
   ## input sequence
   modulator_seq = jnp.ones((1, 10))
@@ -59,22 +41,22 @@ def test_laplacianErrorCell():
 
   dshift_outs = []
   L_outs = []
-  ctx.reset()
+  reset_process.run()
   for ts in range(shift_seq.shape[1]):
     shift_t = jnp.array([[shift_seq[0, ts]]])  ## get data at time t
-    ctx.clamp_shift(shift_t)
+    clamp_shift(shift_t)
     modulator_t = jnp.array([[modulator_seq[0, ts]]])
-    ctx.clamp_modulator(modulator_t)
+    clamp_modulator(modulator_t)
     target_t = jnp.array([[target_seq[0, ts]]])
-    ctx.clamp_target(target_t)
-    ctx.run(t=ts * 1., dt=dt)
-    dshift_outs.append(a.dshift.value)
+    clamp_target(target_t)
+    advance_process.run(t=ts * 1., dt=dt)
+    dshift_outs.append(a.dshift.get())
     # print(f"a.L.value: {a.L.value}")
     # print(f"a.shift.value: {a.shift.value}")
     # print(f"a.target.value: {a.target.value}")
     # print(f"a.Scale.value: {a.Scale.value}")
     # print(f"a.mask.value: {a.mask.value}")
-    L_outs.append(a.L.value)
+    L_outs.append(a.L.get())
 
   dshift_outs = jnp.concatenate(dshift_outs, axis=1)
   L_outs = jnp.array(L_outs)[None] # (1, 10)
@@ -87,3 +69,4 @@ def test_laplacianErrorCell():
   np.testing.assert_allclose(dshift_outs, expected_dshift, atol=1e-5)
   np.testing.assert_allclose(L_outs, expected_L, atol=1e-5)
 
+#test_laplacianErrorCell1()

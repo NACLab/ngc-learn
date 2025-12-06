@@ -1,14 +1,4 @@
-<!--
-Make a working code
-Results section jumps to complex examples without first showing a simple case
-No clear connection between the code section and the theoretical explanation
-Missing explanation of hyperparameter selection (threshold, max_iter, etc.)
-Some diagrams (like P1.png and P2.png) are too small to read clearly
-Flow diagrams lack clear directional indicators
-Inconsistent color schemes across visualizations
--->
-
-# Sparse Identification of Non-linear Dynamical Systems (SINDy) 
+# Sparse Identification of Non-linear Dynamical Systems (SINDy; Brunton et al.; 2016) 
 
 In this section, we will study, create, simulate, and visualize a model known as the sparse identification of non-linear dynamical systems (SINDy) [1], implementing it in NGC-Learn and JAX. After going through this demonstration, you will:
 

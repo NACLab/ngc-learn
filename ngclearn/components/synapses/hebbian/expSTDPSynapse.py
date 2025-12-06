@@ -1,10 +1,7 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-
-from ngclearn.components.synapses import DenseSynapse
-from ngclearn.utils import tensorstats
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
 class ExpSTDPSynapse(DenseSynapse):
     """
@@ -61,16 +58,19 @@ class ExpSTDPSynapse(DenseSynapse):
             this to < 1. will result in a sparser synaptic structure
 
         w_bound: maximum value/magnitude any synaptic efficacy can be (default: 1)
+
+        tau_w: synaptic weight decay coefficient to apply to STDP update
+
+        weight_mask: synaptic binary masking matrix to apply (to enforce a constant sparse structure; default: None)
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, A_plus, A_minus, exp_beta, eta=1., pretrace_target=0., weight_init=None, resist_scale=1.,
-            p_conn=1., w_bound=1., batch_size=1, **kwargs
+            p_conn=1., w_bound=1., tau_w=0., weight_mask=None, batch_size=1, **kwargs
     ):
-        super().__init__(name, shape, weight_init, None, resist_scale,
-                         p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 
+        self.tau_w = tau_w
         ## Exp-STDP meta-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
         self.eta = eta ## global learning rate governing plasticity
@@ -81,6 +81,12 @@ class ExpSTDPSynapse(DenseSynapse):
         self.Rscale = resist_scale ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
 
+        if weight_mask is None:
+            self.weight_mask = jnp.ones((1, 1))
+        else:
+            self.weight_mask = weight_mask
+        self.weights.set(self.weights.get() * self.weight_mask)
+
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
@@ -88,64 +94,61 @@ class ExpSTDPSynapse(DenseSynapse):
         self.postSpike = Compartment(postVals)
         self.preTrace = Compartment(preVals)
         self.postTrace = Compartment(postVals)
-        self.dWeights = Compartment(self.weights.value * 0)
+        self.dWeights = Compartment(self.weights.get() * 0)
         self.eta = Compartment(jnp.ones((1, 1)) * eta) ## global learning rate governing plasticity
 
-    @staticmethod
-    def _compute_update(
-            dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
-    ):
-        pre = preSpike
-        x_pre = preTrace
-        post = postSpike
-        x_post = postTrace
-        W = weights
-        x_tar = preTrace_target
+    def _compute_update(self): # dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
+        pre = self.preSpike.get()
+        x_pre = self.preTrace.get()
+        post = self.postSpike.get()
+        x_post = self.postTrace.get()
+        W = self.weights.get()
+        x_tar = self.preTrace_target
         ## equations 4 from Diehl and Cook - full exponential weight-dependent STDP
         ## calculate post-synaptic term
-        post_term1 = jnp.exp(-exp_beta * W) * jnp.matmul(x_pre.T, post)
+        post_term1 = jnp.exp(-self.exp_beta * W) * jnp.matmul(x_pre.T, post)
         x_tar_vec = x_pre * 0 + x_tar  # need to broadcast scalar x_tar to mat/vec form
-        post_term2 = jnp.exp(-exp_beta * (w_bound - W)) * jnp.matmul(x_tar_vec.T,
-                                                                     post)
-        dWpost = (post_term1 - post_term2) * Aplus
+        post_term2 = jnp.exp(-self.exp_beta * (self.w_bound - W)) * jnp.matmul(x_tar_vec.T, post)
+        dWpost = (post_term1 - post_term2) * self.Aplus
         ## calculate pre-synaptic term
         dWpre = 0.
-        if Aminus > 0.:
-            dWpre = -jnp.exp(-exp_beta * W) * jnp.matmul(pre.T, x_post) * Aminus
+        if self.Aminus > 0.:
+            dWpre = -jnp.exp(-self.exp_beta * W) * jnp.matmul(pre.T, x_post) * self.Aminus
         ## calc final weighted adjustment
         dW = (dWpost + dWpre)
         return dW
 
-    @transition(output_compartments=["weights", "dWeights"])
-    @staticmethod
-    def evolve(
-            dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace,
-            weights, eta
-    ):
-        dW = ExpSTDPSynapse._compute_update(
-            dt, w_bound, preTrace_target, exp_beta, Aplus, Aminus,
-            preSpike, postSpike, preTrace, postTrace, weights
-        )
+    @compilable
+    def evolve(self):
+        dWeights = self._compute_update()
+        if self.tau_w > 0.:
+            decayTerm = self.weights.get() / self.tau_w
+        else:
+            decayTerm = 0.
+
         ## do a gradient ascent update/shift
-        _W = weights + dW * eta
+        _W = self.weights.get() + (dWeights * self.eta)  #- decayTerm
         ## enforce non-negativity
         eps = 0.01
-        _W = jnp.clip(_W, eps, w_bound - eps)
-        return weights, dW
+        _W = jnp.clip(_W, eps, self.w_bound - eps)
+        _W = jnp.where(self.weight_mask != 0., _W, 0.)
 
-    @transition(output_compartments=["inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        preSpike = preVals
-        postSpike = postVals
-        preTrace = preVals
-        postTrace = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights
+        self.weights.set(_W)
+        self.dWeights.set(dWeights)
+
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
+        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
+
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.preSpike.set(preVals)
+        self.postSpike.set(postVals)
+        self.preTrace.set(preVals)
+        self.postTrace.set(postVals)
+        self.dWeights.set(jnp.zeros(self.shape.get()))
 
     @classmethod
     def help(cls): ## component help function
@@ -183,6 +186,7 @@ class ExpSTDPSynapse(DenseSynapse):
             "exp_beta": "Controls effect of exponential Hebbian shift / dependency (B)",
             "eta": "Global learning rate initial condition",
             "pretrace_target": "Pre-synaptic disconnecting/decay factor (x_tar)",
+            "weight_mask" : "Binary synaptic weight mask to apply to enforce a sparsity structure"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
@@ -191,20 +195,6 @@ class ExpSTDPSynapse(DenseSynapse):
                             "A_minus * s_j * [z_i * exp(-B w)]",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

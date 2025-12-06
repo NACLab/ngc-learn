@@ -1,12 +1,13 @@
 """
 Routines and co-routines for ngc-learn's differential equation integration backend.
 
-Currently supported back-end forms of integration in ngc-learn include:
-0) Euler integration (RK-1);
-1) Midpoint method (RK-2);
-2) Heun's method (error-corrector RK-2);
-3) Ralston's method (error-corrector RK-2);
-4) 4th-order Runge-Kutta method (RK-4);
+| Currently supported back-end forms of integration in ngc-learn include:
+| 0) Euler integration (RK-1);
+| 1) Midpoint method (RK-2);
+| 2) Heun's method (error-corrector RK-2);
+| 3) Ralston's method (error-corrector RK-2);
+| 4) 4th-order Runge-Kutta method (RK-4);
+
 """
 
 from jax import numpy as jnp, random, jit #, nn

@@ -2,17 +2,12 @@
 
 import jax
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components.synapses.modulated.REINFORCESynapse import REINFORCESynapse, gaussian_logpdf
-from ngcsimlib.compilers import compile_command, wrap_command
+from ngclearn.components.synapses.modulated.REINFORCESynapse import REINFORCESynapse, _gaussian_logpdf
 from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
+from ngclearn import Context, MethodProcess
 
 import jax
 import jax.numpy as jnp
@@ -39,22 +34,16 @@ def test_REINFORCESynapse1():
             scalar_stddev=-1.0
         )
 
-        evolve_process = (Process("evolve_proc") >> a.evolve)
-        ctx.wrap_and_add_command(jit(evolve_process.pure), name="adapt")
+        evolve_process = (MethodProcess("evolve_proc") >> a.evolve)
+        reset_process = (MethodProcess("reset_proc") >> a.reset)
 
-        reset_process = (Process("reset_proc") >> a.reset)
-        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-
-        @Context.dynamicCommand
         def clamp_inputs(x):
             a.inputs.set(x)
 
-        @Context.dynamicCommand
         def clamp_rewards(x):
             assert x.ndim == 1, "Rewards must be a 1D array"
             a.rewards.set(x)
 
-        @Context.dynamicCommand
         def clamp_weights(x):
             a.weights.set(x)
 
@@ -69,7 +58,7 @@ def test_REINFORCESynapse1():
         std = jnp.exp(logstd.clip(-10.0, 2.0))
         sample = jax.random.normal(seed, mean.shape) * std + mean
         sample = jnp.clip(sample, mu_out_min, mu_out_max)
-        logp = gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
+        logp = _gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
         return (-logp * outputs).mean() * 1e-2
     grad_fn = jax.value_and_grad(fn)
 
@@ -80,7 +69,7 @@ def test_REINFORCESynapse1():
     expected_weights = jnp.concatenate([expected_weights_mu, expected_weights_logstd], axis=-1)
     initial_ngclearn_weights = jnp.concatenate([expected_weights_mu, expected_weights_logstd], axis=-1)[None]
     expected_gradient_list = []
-    ctx.reset()
+    reset_process.run()
 
     # Loop through 3 steps
     for step in range(10):
@@ -94,12 +83,12 @@ def test_REINFORCESynapse1():
         clamp_weights(initial_ngclearn_weights)
         clamp_rewards(outputs)
         clamp_inputs(inputs)
-        ctx.adapt(t=1., dt=dt)
-        print(f"[ngclearn] objective: {a.objective.value}")
-        print(f"[ngclearn] weights: {a.weights.value}")
-        print(f"[ngclearn] dWeights: {a.dWeights.value}")
-        print(f"[ngclearn] step_count: {a.step_count.value}")
-        print(f"[ngclearn] accumulated_gradients: {a.accumulated_gradients.value}")
+        evolve_process.run(t=1., dt=dt)
+        print(f"[ngclearn] objective: {a.objective.get()}")
+        print(f"[ngclearn] weights: {a.weights.get()}")
+        print(f"[ngclearn] dWeights: {a.dWeights.get()}")
+        print(f"[ngclearn] step_count: {a.step_count.get()}")
+        print(f"[ngclearn] accumulated_gradients: {a.accumulated_gradients.get()}")
         # -------- Expectation ---------
         print("--------------")
         expected_objective, expected_grads = grad_fn(
@@ -116,12 +105,12 @@ def test_REINFORCESynapse1():
         print(f"[Expectation] dWeights: {expected_grads}")
         print(f"[Expectation] objective: {expected_objective}")
         np.testing.assert_allclose(
-            a.dWeights.value[0],
+            a.dWeights.get()[0],
             expected_grads,
             atol=1e-8
         )
         np.testing.assert_allclose(
-            a.objective.value,
+            a.objective.get(),
             expected_objective,
             atol=1e-8
         )
@@ -131,7 +120,7 @@ def test_REINFORCESynapse1():
     decay_list = jnp.asarray([decay**i for i in range(len(expected_gradient_list))])[::-1]
     expected_accumulated_gradients = jnp.mean(jnp.stack(expected_gradient_list, 0) * decay_list[:, None, None], axis=0)
     np.testing.assert_allclose(
-        a.accumulated_gradients.value[0],
+        a.accumulated_gradients.get()[0],
         expected_accumulated_gradients,
         atol=1e-9
     )
@@ -163,22 +152,16 @@ def test_REINFORCESynapse2():
             scalar_stddev=scalar_stddev
         )
 
-        evolve_process = (Process("evolve_proc") >> a.evolve)
-        ctx.wrap_and_add_command(jit(evolve_process.pure), name="adapt")
+        evolve_process = (MethodProcess("evolve_proc") >> a.evolve)
+        reset_process = (MethodProcess("reset_proc") >> a.reset)
 
-        reset_process = (Process("reset_proc") >> a.reset)
-        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-
-        @Context.dynamicCommand
         def clamp_inputs(x):
             a.inputs.set(x)
 
-        @Context.dynamicCommand
         def clamp_rewards(x):
             assert x.ndim == 1, "Rewards must be a 1D array"
             a.rewards.set(x)
 
-        @Context.dynamicCommand
         def clamp_weights(x):
             a.weights.set(x)
 
@@ -194,7 +177,7 @@ def test_REINFORCESynapse2():
         std = scalar_stddev
         sample = jax.random.normal(seed, mean.shape) * std + mean
         sample = jnp.clip(sample, mu_out_min, mu_out_max)
-        logp = gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
+        logp = _gaussian_logpdf(jax.lax.stop_gradient(sample), mean, std).sum(-1)
         return (-logp * outputs).mean() * 1e-2
     grad_fn = jax.value_and_grad(fn)
 
@@ -205,7 +188,7 @@ def test_REINFORCESynapse2():
     expected_weights = jnp.concatenate([expected_weights_mu, expected_weights_logstd], axis=-1)
     initial_ngclearn_weights = jnp.concatenate([expected_weights_mu, expected_weights_logstd], axis=-1)[None]
     expected_gradient_list = []
-    ctx.reset()
+    reset_process.run()
 
     # Loop through 3 steps
     for step in range(10):
@@ -219,12 +202,12 @@ def test_REINFORCESynapse2():
         clamp_weights(initial_ngclearn_weights)
         clamp_rewards(outputs)
         clamp_inputs(inputs)
-        ctx.adapt(t=1., dt=dt)
-        print(f"[ngclearn] objective: {a.objective.value}")
-        print(f"[ngclearn] weights: {a.weights.value}")
-        print(f"[ngclearn] dWeights: {a.dWeights.value}")
-        print(f"[ngclearn] step_count: {a.step_count.value}")
-        print(f"[ngclearn] accumulated_gradients: {a.accumulated_gradients.value}")
+        evolve_process.run(t=1., dt=dt)
+        print(f"[ngclearn] objective: {a.objective.get()}")
+        print(f"[ngclearn] weights: {a.weights.get()}")
+        print(f"[ngclearn] dWeights: {a.dWeights.get()}")
+        print(f"[ngclearn] step_count: {a.step_count.get()}")
+        print(f"[ngclearn] accumulated_gradients: {a.accumulated_gradients.get()}")
         # -------- Expectation ---------
         print("--------------")
         expected_objective, expected_grads = grad_fn(
@@ -241,12 +224,12 @@ def test_REINFORCESynapse2():
         print(f"[Expectation] dWeights: {expected_grads}")
         print(f"[Expectation] objective: {expected_objective}")
         np.testing.assert_allclose(
-            a.dWeights.value[0],
+            a.dWeights.get()[0],
             expected_grads,
             atol=1e-8
         )
         np.testing.assert_allclose(
-            a.objective.value,
+            a.objective.get(),
             expected_objective,
             atol=1e-8
         )
@@ -256,7 +239,7 @@ def test_REINFORCESynapse2():
     decay_list = jnp.asarray([decay**i for i in range(len(expected_gradient_list))])[::-1]
     expected_accumulated_gradients = jnp.mean(jnp.stack(expected_gradient_list, 0) * decay_list[:, None, None], axis=0)
     np.testing.assert_allclose(
-        a.accumulated_gradients.value[0],
+        a.accumulated_gradients.get()[0],
         expected_accumulated_gradients,
         atol=1e-9
     )

@@ -1,8 +1,9 @@
-from ngclearn import resolver, Component, Compartment
+# %%
+
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
-from ngclearn.utils import tensorstats
-from ngcsimlib.compilers.process import transition
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -33,7 +34,6 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
             to a constant/fixed `scale`
     """
 
-    # Define Functions
     def __init__(self, name, n_units, batch_size=1, scale=1., shape=None, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -44,7 +44,7 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         else:
             _shape = (batch_size, shape[0], shape[1], shape[2])  ## shape is 4D tensor
         scale_shape = (1, 1)
-        if not isinstance(scale, float) and not isinstance(sigma, int):
+        if not isinstance(scale, float) and not isinstance(scale, int):
             scale_shape = jnp.array(scale).shape
         self.scale_shape = scale_shape
         ## Layer Size setup
@@ -67,9 +67,15 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator = Compartment(restVals + 1.0) ## to be set/consumed
         self.mask = Compartment(restVals + 1.0)
 
-    @transition(output_compartments=["dshift", "dtarget", "dScale", "L", "mask"])
-    @staticmethod
-    def advance_state(dt, shift, target, Scale, modulator, mask): ## compute Laplacian error cell output
+    @compilable
+    def advance_state(self, dt): ## compute Laplacian error cell output
+        # Get the variables
+        shift = self.shift.get()
+        target = self.target.get()
+        Scale = self.Scale.get()
+        modulator = self.modulator.get()
+        mask = self.mask.get()
+
         # Moves Laplacian cell dynamics one step forward. Specifically, this routine emulates the error unit
         # behavior of the local cost functional:
         # FIXME: Currently, below does: L(targ, shift) = -||targ - shift||_1/scale
@@ -85,21 +91,34 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         dshift = dshift * modulator * mask
         dtarget = dtarget * modulator * mask
         mask = mask * 0. + 1.  ## "eat" the mask as it should only apply at time t
-        return dshift, dtarget, dScale, jnp.squeeze(L), mask
 
-    @transition(output_compartments=["dshift", "dtarget", "dScale", "target", "shift", "modulator", "L", "mask"])
-    @staticmethod
-    def reset(batch_size, n_units, scale_shape):
-        restVals = jnp.zeros((batch_size, n_units))
+        # Update compartments
+        self.dshift.set(dshift)
+        self.dtarget.set(dtarget)
+        self.dScale.set(dScale)
+        self.L.set(jnp.squeeze(L))
+        self.mask.set(mask)
+
+    @compilable
+    def reset(self): ## reset core components/statistics
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         dshift = restVals
         dtarget = restVals
-        dScale = jnp.zeros(scale_shape)
+        dScale = jnp.zeros(self.scale_shape)
         target = restVals
         shift = restVals
         modulator = shift + 1.
         L = 0.
-        mask = jnp.ones((batch_size, n_units))
-        return dshift, dtarget, dScale, target, shift, modulator, L, mask
+        mask = jnp.ones((self.batch_size, self.n_units))
+
+        self.dshift.set(dshift)
+        self.dtarget.set(dtarget)
+        self.dScale.set(dScale)
+        self.target.set(target)
+        self.shift.set(shift)
+        self.modulator.set(modulator)
+        self.L.set(L)
+        self.mask.set(mask)
 
     @classmethod
     def help(cls): ## component help function
@@ -129,20 +148,6 @@ class LaplacianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
                 "dynamics": "Laplacian(x=target; shift, scale)",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

@@ -1,16 +1,16 @@
 # %%
 
 from jax import numpy as jnp, random, jit
-from functools import partial
-from ngclearn.utils import tensorstats
-# from ngclearn import resolver, Component, Compartment
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.compilers.process import transition
+
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.model_utils import create_function, threshold_soft, \
                                        threshold_cauchy
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2, step_rk4
+from ngcsimlib.logger import info
+
 
 def _dfz_internal_laplace(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
     z_leak = jnp.sign(z) ## d/dx of Laplace is signum
@@ -158,11 +158,12 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         resist_scale: a scaling factor applied to incoming pressure `j` (default: 1)
     """
 
-    # Define Functions
     def __init__(
             self, name, n_units, tau_m, prior=("gaussian", 0.), act_fx="identity", output_scale=1., threshold=("none", 0.),
             integration_type="euler", batch_size=1, resist_scale=1., shape=None, is_stateful=True, **kwargs):
-        super().__init__(name, **kwargs)
+        jax_comp_kwargs = {k: v for k, v in kwargs.items() if k not in ('omega_0',)}
+        this_class_kwargs = {k: v for k, v in kwargs.items() if k in ('omega_0',)}
+        super().__init__(name, **jax_comp_kwargs)
 
         ## membrane parameter setup (affects ODE integration)
         self.output_scale = output_scale
@@ -199,10 +200,9 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.n_units = n_units
         self.batch_size = batch_size
 
-        
         omega_0 = None
         if act_fx == "sine":
-            omega_0 = kwargs["omega_0"]
+            omega_0 = this_class_kwargs["omega_0"]
         self.fx, self.dfx = create_function(fun_name=act_fx, args=omega_0)
 
         # compartments (state of the cell & parameters will be updated through stateless calls)
@@ -212,70 +212,79 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.j_td = Compartment(restVals, display_name="Modulatory Stimulus Current", units="mA") # top-down electrical current - pressure
         self.z = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
 
-    @transition(output_compartments=["j", "j_td", "z", "zF"])
-    @staticmethod
-    def advance_state(
-            dt, fx, dfx, tau_m, priorLeakRate, intgFlag, priorType, resist_scale, thresholdType, thr_lmbda, is_stateful,
-            output_scale, j, j_td, z):
+    @compilable
+    def advance_state(self, dt):
+        # Get the compartment values
+        j = self.j.get()
+        j_td = self.j_td.get()
+        z = self.z.get()
+
         #if tau_m > 0.:
-        if is_stateful:
+        if self.is_stateful:
             ### run a step of integration over neuronal dynamics
             ## Notes:
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal
-            dfx_val = dfx(z)
+            dfx_val = self.dfx(z)
             j = _modulate(j, dfx_val)
-            j = j * resist_scale
-            tmp_z = _run_cell(dt, j, j_td, z,
-                              tau_m, leak_gamma=priorLeakRate,
-                              integType=intgFlag, priorType=priorType)
+            j = j * self.resist_scale
+            tmp_z = _run_cell(
+                dt, j, j_td, z, self.tau_m, leak_gamma=self.priorLeakRate, integType=self.intgFlag,
+                priorType=self.priorType
+            )
             ## apply optional thresholding sub-dynamics
-            if thresholdType == "soft_threshold":
-                tmp_z = threshold_soft(tmp_z, thr_lmbda)
-            elif thresholdType == "cauchy_threshold":
-                tmp_z = threshold_cauchy(tmp_z, thr_lmbda)
+            if self.thresholdType == "soft_threshold":
+                tmp_z = threshold_soft(tmp_z, self.thr_lmbda)
+            elif self.thresholdType == "cauchy_threshold":
+                tmp_z = threshold_cauchy(tmp_z, self.thr_lmbda)
             z = tmp_z ## pre-activation function value(s)
-            zF = fx(z) * output_scale ## post-activation function value(s)
+            zF = self.fx(z) * self.output_scale ## post-activation function value(s)
         else:
             ## run in "stateless" mode (when no membrane time constant provided)
             j_total = j + j_td
             z = _run_cell_stateless(j_total)
-            zF = fx(z) * output_scale
-        return j, j_td, z, zF
+            zF = self.fx(z) * self.output_scale
 
-    @transition(output_compartments=["j", "j_td", "z", "zF"])
-    @staticmethod
-    def reset(batch_size, shape): #n_units
-        _shape = (batch_size, shape[0])
-        if len(shape) > 1:
-            _shape = (batch_size, shape[0], shape[1], shape[2])
+        # Update compartments
+        self.j.set(j)
+        self.j_td.set(j_td)
+        self.z.set(z)
+        self.zF.set(zF)
+
+    @compilable
+    def reset(self): #, batch_size, shape): #n_units
+        _shape = (self.batch_size, self.shape[0])
+        if len(self.shape) > 1:
+            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
-        return tuple([restVals for _ in range(4)])
+        self.j.set(restVals)
+        self.j_td.set(restVals)
+        self.z.set(restVals)
+        self.zF.set(restVals)
 
-
-    def save(self, directory, **kwargs):
-        ## do a protected save of constants, depending on whether they are floats or arrays
-        tau_m = (self.tau_m if isinstance(self.tau_m, float)
-                 else jnp.ones([[self.tau_m]]))
-        priorLeakRate = (self.priorLeakRate if isinstance(self.priorLeakRate, float)
-                         else jnp.ones([[self.priorLeakRate]]))
-        resist_scale = (self.resist_scale if isinstance(self.resist_scale, float)
-                        else jnp.ones([[self.resist_scale]]))
-
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  tau_m=tau_m, priorLeakRate=priorLeakRate,
-                  resist_scale=resist_scale) #, key=self.key.value)
-
-    def load(self, directory, seeded=False, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        ## constants loaded in
-        self.tau_m = data['tau_m']
-        self.priorLeakRate = data['priorLeakRate']
-        self.resist_scale = data['resist_scale']
-        #if seeded:
-        #    self.key.set(data['key'])
+    # def save(self, directory, **kwargs):
+    #     ## do a protected save of constants, depending on whether they are floats or arrays
+    #     tau_m = (self.tau_m if isinstance(self.tau_m, float)
+    #              else jnp.ones([[self.tau_m]]))
+    #     priorLeakRate = (self.priorLeakRate if isinstance(self.priorLeakRate, float)
+    #                      else jnp.ones([[self.priorLeakRate]]))
+    #     resist_scale = (self.resist_scale if isinstance(self.resist_scale, float)
+    #                     else jnp.ones([[self.resist_scale]]))
+    #
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     jnp.savez(file_name,
+    #               tau_m=tau_m, priorLeakRate=priorLeakRate,
+    #               resist_scale=resist_scale) #, key=self.key.value)
+    #
+    # def load(self, directory, seeded=False, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     ## constants loaded in
+    #     self.tau_m = data['tau_m']
+    #     self.priorLeakRate = data['priorLeakRate']
+    #     self.resist_scale = data['resist_scale']
+    #     #if seeded:
+    #     #    self.key.set(data['key'])
 
     @classmethod
     def help(cls): ## component help function
@@ -307,20 +316,6 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                 "dynamics": "tau_m * dz/dt = Prior(z; gamma) + (j + j_td)",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

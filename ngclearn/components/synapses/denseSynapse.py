@@ -1,12 +1,10 @@
 from jax import random, numpy as jnp, jit
 from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
-from ngclearn.utils.weight_distribution import initialize_params
+from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
 
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class DenseSynapse(JaxComponent): ## base dense synaptic cable
     """
@@ -40,75 +38,55 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             (lower values yield sparse structure)
     """
 
-    # Define Functions
     def __init__(
-            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., 
-            p_conn=1., batch_size=1, **kwargs
+            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs
     ):
         super().__init__(name, **kwargs)
 
         self.batch_size = batch_size
-        self.weight_init = weight_init
-        self.bias_init = bias_init
 
         ## Synapse meta-parameters
         self.shape = shape
-        self.Rscale = resist_scale
+        self.resist_scale = resist_scale
 
         ## Set up synaptic weight values
-        tmp_key, *subkeys = random.split(self.key.value, 4)
-        if self.weight_init is None:
+        tmp_key, *subkeys = random.split(self.key.get(), 4)
+
+        if weight_init is None:
             info(self.name, "is using default weight initializer!")
-            self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
-        weights = initialize_params(subkeys[0], self.weight_init, shape)
-        if 0. < p_conn < 1.: ## only non-zero and <1 probs allowed
+            # self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
+            weight_init = DistributionGenerator.uniform(0.025, 0.8)
+        weights = weight_init(shape, subkeys[0])
+
+        if 0. < p_conn < 1.: ## Modifier/constraint: only non-zero and <1 probs allowed
             p_mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
             weights = weights * p_mask ## sparsify matrix
 
-        self.batch_size = batch_size #1
         ## Compartment setup
         preVals = jnp.zeros((self.batch_size, shape[0]))
         postVals = jnp.zeros((self.batch_size, shape[1]))
+
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
         self.weights = Compartment(weights)
         ## Set up (optional) bias values
-        if self.bias_init is None:
-            info(self.name, "is using default bias value of zero (no bias "
-                            "kernel provided)!")
-        self.biases = Compartment(initialize_params(subkeys[2], bias_init,
-                                                    (1, shape[1]))
-                                  if bias_init else 0.0)
+        if bias_init is None:
+            info(self.name, "is using default bias value of zero (no bias kernel provided)!")
+        self.biases = Compartment(bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0)
+        ## pin weight/bias initializers to component
+        self.weight_init = weight_init
+        self.bias_init = bias_init
 
-    @transition(output_compartments=["outputs"])
-    @staticmethod
-    def advance_state(Rscale, inputs, weights, biases):
-        outputs = (jnp.matmul(inputs, weights) * Rscale) + biases
-        return outputs
+    @compilable
+    def advance_state(self):
+        self.outputs.set((jnp.matmul(self.inputs.get(), self.weights.get()) * self.resist_scale) + self.biases.get())
 
-    @transition(output_compartments=["inputs", "outputs"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        inputs = preVals
-        outputs = postVals
-        return inputs, outputs
+    @compilable
+    def reset(self):
+        if not self.inputs.targeted:
+            self.inputs.set(jnp.zeros((self.batch_size, self.shape[0])))
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        if self.bias_init != None:
-            jnp.savez(file_name, weights=self.weights.value,
-                      biases=self.biases.value)
-        else:
-            jnp.savez(file_name, weights=self.weights.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-        if "biases" in data.keys():
-            self.biases.set(data['biases'])
+        self.outputs.set(jnp.zeros((self.batch_size, self.shape[1])))
 
     @classmethod
     def help(cls): ## component help function
@@ -140,20 +118,6 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
                 "dynamics": "outputs = [W * inputs] * Rscale + b",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

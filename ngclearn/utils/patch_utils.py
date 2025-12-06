@@ -39,17 +39,19 @@ class Create_Patches:
 
     Args:
         img: jax array of size (H, W)
-        patched: (height_patch, width_patch)
-        overlap: (height_overlap, width_overlap)
 
-        add_frame: increases the img size by (height_patch - height_overlap, width_patch - width_overlap)
-        create_patches: creates small patches out of the image based on the provided attributes.
+        patch_shape: (height_patch, width_patch)
+
+        overlap_shape: (height_overlap, width_overlap)
 
     Returns:
-        jnp.array: Array containing the patches
-        shape: (num_patches, patch_height, patch_width)
+        jnp.array: Array containing the patches, shape: (num_patches, patch_height, patch_width)
 
     """
+    #patched: (height_patch, width_patch)
+    #overlap: (height_overlap, width_overlap)
+    #add_frame: increases the img size by (height_patch - height_overlap, width_patch - width_overlap)
+    #create_patches: creates small patches out of the image based on the provided attributes.
 
     def __init__(self, img, patch_shape, overlap_shape):
         self.img = img
@@ -89,6 +91,8 @@ class Create_Patches:
 
         Keyword Args:
             add_frame: If true the function will add zero frames (increase the dimension) to the image
+
+            center:
 
         Returns:
             jnp.array: Array containing the patches

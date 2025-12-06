@@ -1,21 +1,55 @@
+# %%
+
 import matplotlib.pyplot as plt
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils import tensorstats
-from ngcsimlib.compilers.process import transition
-from ngclearn.utils.weight_distribution import initialize_params
+from ngclearn.utils.distribution_generator import DistributionGenerator
+
 from ngcsimlib.logger import info
-import math
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+# from ngclearn.utils.weight_distribution import initialize_params
 
 
-def create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_init):
+# def _create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_init):
+#     sub_shape = (shape[0] // n_sub_models, shape[1] // n_sub_models)
+#     di, dj = sub_shape
+#     si, sj = sub_stride
+
+#     weight_shape = ((n_sub_models * di) + 2 * si, (n_sub_models * dj) + 2 * sj)
+#     #weights = initialize_params(key[2], {"dist": "constant", "value": 0.}, weight_shape, use_numpy=True)
+#     large_weight_init = DistributionGenerator.constant(value=0.)
+#     weights = large_weight_init(weight_shape, key[2])
+
+#     for i in range(n_sub_models):
+#         start_i = i * di
+#         end_i = (i + 1) * di + 2 * si
+#         start_j = i * dj
+#         end_j = (i + 1) * dj + 2 * sj
+
+#         shape_ = (end_i - start_i, end_j - start_j) # (di + 2 * si, dj + 2 * sj)
+
+#         ## FIXME: this line below might be wonky...
+#         weights.at[start_i: end_i, start_j: end_j].set( weight_init(shape_, key[2]) )
+#         # weights[start_i : end_i,
+#         #         start_j : end_j] = initialize_params(key[2], init_kernel=weight_init, shape=shape_, use_numpy=True)
+#     if si != 0:
+#         weights.at[:si,:].set(0.) ## FIXME: this setter line might be wonky...
+#         weights.at[-si:,:].set(0.) ## FIXME: this setter line might be wonky...
+#     if sj != 0:
+#         weights.at[:,:sj].set(0.) ## FIXME: this setter line might be wonky...
+#         weights.at[:, -sj:].set(0.) ## FIXME: this setter line might be wonky...
+
+#     return weights
+
+def _create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_init):
     sub_shape = (shape[0] // n_sub_models, shape[1] // n_sub_models)
     di, dj = sub_shape
     si, sj = sub_stride
 
     weight_shape = ((n_sub_models * di) + 2 * si, (n_sub_models * dj) + 2 * sj)
-    weights = initialize_params(key[2], {"dist": "constant", "value": 0.}, weight_shape, use_numpy=True)
+    # weights = initialize_params(key[2], {"dist": "constant", "value": 0.}, weight_shape, use_numpy=True)
+    weights = DistributionGenerator.constant(value=0.)(weight_shape, key[2])
 
     for i in range(n_sub_models):
         start_i = i * di
@@ -25,20 +59,21 @@ def create_multi_patch_synapses(key, shape, n_sub_models, sub_stride, weight_ini
 
         shape_ = (end_i - start_i, end_j - start_j) # (di + 2 * si, dj + 2 * sj)
 
-        weights[start_i : end_i,
-                start_j : end_j] = initialize_params(key[2],
-                                                     init_kernel=weight_init,
-                                                     shape=shape_,
-                                                     use_numpy=True)
+        # weights[start_i : end_i,
+        #         start_j : end_j] = initialize_params(key[2],
+        #                                              init_kernel=weight_init,
+        #                                              shape=shape_,
+        #                                              use_numpy=True)
+        weights = weights.at[start_i : end_i,
+                start_j : end_j].set(weight_init(shape_, key[2]))
     if si!=0:
-        weights[:si,:] = 0.
-        weights[-si:,:] = 0.
+        weights = weights.at[:si,:].set(0.)
+        weights = weights.at[-si:,:].set(0.)
     if sj!=0:
-        weights[:,:sj] = 0.
-        weights[:, -sj:] = 0.
+        weights = weights.at[:,:sj].set(0.)
+        weights = weights.at[:, -sj:].set(0.)
 
     return weights
-
 
 
 class PatchedSynapse(JaxComponent): ## base patched synaptic cable
@@ -66,7 +101,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             with number of inputs by number of outputs)
 
         n_sub_models: The number of submodels in each layer (Default: 1 similar functionality as DenseSynapse)
-        
+
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
 
@@ -92,8 +127,10 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             this to < 1. will result in a sparser synaptic structure
     """
 
-    def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), block_mask=None, weight_init=None, bias_init=None,
-                 resist_scale=1., p_conn=1., batch_size=1, **kwargs):
+    def __init__(
+            self, name, shape, n_sub_models=1, stride_shape=(0,0), block_mask=None, weight_init=None, bias_init=None,
+            resist_scale=1., p_conn=1., batch_size=1, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         self.Rscale = resist_scale
@@ -104,13 +141,16 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.n_sub_models = n_sub_models
         self.sub_stride = stride_shape
 
-        tmp_key, *subkeys = random.split(self.key.value, 4)
+        tmp_key, *subkeys = random.split(self.key.get(), 4)
         if self.weight_init is None:
             info(self.name, "is using default weight initializer!")
-            self.weight_init = {"dist": "fan_in_gaussian"}
+            #self.weight_init = {"dist": "fan_in_gaussian"}
+            self.weight_init = DistributionGenerator.fan_in_gaussian()
 
-        weights = create_multi_patch_synapses(key=subkeys, shape=shape, n_sub_models=self.n_sub_models, sub_stride=self.sub_stride,
-                                              weight_init=self.weight_init)
+        weights = _create_multi_patch_synapses(
+            key=subkeys, shape=shape, n_sub_models=self.n_sub_models, sub_stride=self.sub_stride,
+            weight_init=self.weight_init
+        )
 
         self.block_mask = jnp.where(weights!=0, 1, 0)
         self.sub_shape = (shape[0]//n_sub_models, shape[1]//n_sub_models)
@@ -133,39 +173,31 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         if self.bias_init is None:
             info(self.name, "is using default bias value of zero (no bias "
                             "kernel provided)!")
-        self.biases = Compartment(initialize_params(subkeys[2], bias_init,
-                                                    (1, self.shape[1]))
-                                  if bias_init else 0.0)
+        self.biases = Compartment(self.bias_init((1, self.shape[1]), subkeys[2]) if bias_init else 0.0)
+        #elf.biases = Compartment(initialize_params(subkeys[2], bias_init, (1, self.shape[1])) if bias_init else 0.0)
 
-    @transition(output_compartments=["outputs"])
-    @staticmethod
-    def advance_state(Rscale, inputs, weights, biases):
-        outputs = (jnp.matmul(inputs, weights) * Rscale) + biases
-        return outputs
+    @compilable
+    def advance_state(self):
+        # Get the variables
+        inputs = self.inputs.get()
+        weights = self.weights.get()
+        biases = self.biases.get()
 
-    @transition(output_compartments=["inputs", "outputs"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
+        outputs = (jnp.matmul(inputs, weights) * self.Rscale) + biases
+
+        # Update compartment
+        self.outputs.set(outputs)
+
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
         inputs = preVals
         outputs = postVals
-        return inputs, outputs
-
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        if self.bias_init != None:
-            jnp.savez(file_name, weights=self.weights.value,
-                      biases=self.biases.value)
-        else:
-            jnp.savez(file_name, weights=self.weights.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-        if "biases" in data.keys():
-            self.biases.set(data['biases'])
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(inputs)
+        self.outputs.set(outputs)
 
     @classmethod
     def help(cls): ## component help function
@@ -201,36 +233,11 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
-
-
-
-
-
-
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         Wab = PatchedSynapse("Wab", (9, 30), 3)
     print(Wab)
-    plt.imshow(Wab.weights.value, cmap='gray')
+    plt.imshow(Wab.weights.get(), cmap='gray')
     plt.show()
-
-
-
-
-
-
 

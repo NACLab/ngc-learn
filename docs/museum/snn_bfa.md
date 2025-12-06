@@ -1,8 +1,8 @@
-# Spiking Neural Networks: Learning with Broadcast Feedback Alignment
+# Spiking Neural Networks: Learning with Broadcast Feedback Alignment (Samadi et al.; 2017)
 
 In this exhibit, we will see how one can train a spiking neural network model
 using surrogate functions and a credit assignment scheme called broadcast
-feedback alignment (BFA) <b>[1]</b>.
+feedback alignment (BFA) <b>[1]</b>. 
 This exhibit model effectively reproduces some of the results
 reported (Samadi et al., 2017) <b>[1]</b>. The model code for this
 exhibit can be found

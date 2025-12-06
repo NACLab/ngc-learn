@@ -1,14 +1,11 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit, nn
-from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
 from ngcsimlib.logger import info, warn
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2
+
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @jit
 def _dfv_internal(j, v, w, tau_m, v_rest, sharpV, vT, R_m): ## raw voltage dynamics
@@ -32,7 +29,7 @@ def _dfw(t, w, params): ## recovery dynamics wrapper
     dv_dt = _dfw_internal(j, v, w, a, tau_m, v_rest)
     return dv_dt
 
-class AdExCell(JaxComponent):
+class AdExCell(JaxComponent): ## adaptive exponential integrate-and-fire cell
     """
     The AdEx (adaptive exponential leaky integrate-and-fire) neuronal cell
     model; a two-variable model. This cell model iteratively evolves
@@ -136,39 +133,40 @@ class AdExCell(JaxComponent):
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
                                 units="ms") ## time-of-last-spike
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def advance_state(
-            t, dt, tau_m, R_m, tau_w, thr, a, b, sharpV, vT, v_rest, v_reset, intgFlag, j, v, w, tols
-    ):
-        if intgFlag == 1:  ## RK-2/midpoint
-            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)
-            w_params = (j, v, a, tau_w, v_rest)
-            _, _w = step_rk2(0., w, _dfw, dt, w_params)
+    @compilable
+    def advance_state(self, t, dt):
+        if self.intgFlag == 1:  ## RK-2/midpoint
+            v_params = (self.j.get(), self.w.get(), self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
+            w_params = (self.j.get(), self.v.get(), self.a, self.tau_w, self.v_rest)
+            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)
         else:  # intgFlag == 0 (default -- Euler)
-            v_params = (j, w, tau_m, v_rest, sharpV, vT, R_m)
-            _, _v = step_euler(0., v, _dfv, dt, v_params)
-            w_params = (j, v, a, tau_w, v_rest)
-            _, _w = step_euler(0., w, _dfw, dt, w_params)
-        s = (_v > thr) * 1. ## emit spikes/pulses
+            v_params = (self.j.get(), self.w.get(), self.tau_m, self.v_rest, self.sharpV, self.vT, self.R_m)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
+            w_params = (self.j.get(), self.v.get(), self.a, self.tau_w, self.v_rest)
+            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)
+        s = (_v > self.thr) * 1. ## emit spikes/pulses
         ## hyperpolarize/reset/snap variables
-        v = _v * (1. - s) + s * v_reset
-        w = _w * (1. - s) + s * (_w + b)
+        v = _v * (1. - s) + s * self.v_reset
+        w = _w * (1. - s) + s * (_w + self.b)
 
-        tols = (1. - s) * tols + (s * t) ## update time-of-last spike variable(s)
-        return j, v, w, s, tols
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
 
-    @transition(output_compartments=["j", "v", "w", "s", "tols"])
-    @staticmethod
-    def reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
+        #self.j.set(j) ## j is not getting modified in these dynamics
+        self.v.set(v)
+        self.w.set(w)
+        self.s.set(s)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v0)
+        self.w.set(restVals + self.w0)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -210,20 +208,6 @@ class AdExCell(JaxComponent):
                             "tau_w * dw/dt =  -w + (v - v_rest) * a; where w = w + s * (w + b)",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

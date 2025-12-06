@@ -1,13 +1,8 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+from ngclearn.components.synapses.convolution.convSynapse import ConvSynapse
 
-from .convSynapse import ConvSynapse
-from ngclearn.utils.weight_distribution import initialize_params
-from ngcsimlib.logger import info
-from ngclearn.utils import tensorstats
-import ngclearn.utils.weight_distribution as dist
 from ngclearn.components.synapses.convolution.ngcconv import (_conv_same_transpose_padding,
                                                               _conv_valid_transpose_padding)
 from ngclearn.components.synapses.convolution.ngcconv import (conv2d, _calc_dX_conv,
@@ -17,8 +12,7 @@ from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
 
 class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
     """
-    A synaptic convolutional cable that adjusts its efficacies via a two-factor
-    Hebbian adjustment rule.
+    A specialized synaptic convolutional cable that adjusts its efficacies via a two-factor Hebbian adjustment rule.
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
@@ -87,11 +81,11 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         batch_size: batch size dimension of this component
     """
 
-    # Define Functions
-    def __init__(self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None,
-                 stride=1, padding=None, resist_scale=1., w_bound=0.,
-                 is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",
-                 batch_size=1, **kwargs):
+    def __init__(
+            self, name, shape, x_shape, eta=0., filter_init=None, bias_init=None, stride=1, padding=None,
+            resist_scale=1., w_bound=0., is_nonnegative=False, w_decay=0., sign_value=1., optim_type="sgd",
+            batch_size=1, **kwargs
+    ):
         super().__init__(
             name, shape, x_shape=x_shape, filter_init=filter_init, bias_init=bias_init, resist_scale=resist_scale,
             stride=stride, padding=padding, batch_size=batch_size, **kwargs
@@ -107,9 +101,9 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
 
         ######################### set up compartments ##########################
         ## Compartment setup and shape computation
-        self.dWeights = Compartment(self.weights.value * 0)
+        self.dWeights = Compartment(self.weights.get() * 0)
         self.dInputs = Compartment(jnp.zeros(self.in_shape))
-        self.dBiases = Compartment(self.biases.value * 0)
+        self.dBiases = Compartment(self.biases.get() * 0)
         self.pre = Compartment(jnp.zeros(self.in_shape))
         self.post = Compartment(jnp.zeros(self.out_shape))
 
@@ -120,80 +114,75 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         self.antiPad = None
         k_size, k_size, n_in_chan, n_out_chan = self.shape
         if padding == "SAME":
-            self.antiPad = _conv_same_transpose_padding(self.post.value.shape[1],
+            self.antiPad = _conv_same_transpose_padding(self.post.get().shape[1],
                                                         self.x_size, k_size, stride)
         elif padding == "VALID":
-            self.antiPad = _conv_valid_transpose_padding(self.post.value.shape[1],
+            self.antiPad = _conv_valid_transpose_padding(self.post.get().shape[1],
                                                          self.x_size, k_size, stride)
 
         ########################################################################
 
         ## set up outer optimization compartments
-        self.opt_params = Compartment(get_opt_init_fn(optim_type)(
-            [self.weights.value, self.biases.value]
-            if bias_init else [self.weights.value]))
+        self.opt_params = Compartment(
+            get_opt_init_fn(optim_type)([self.weights.get(), self.biases.get()] if bias_init else [self.weights.get()])
+        )
 
     def _init(self, batch_size, x_size, shape, stride, padding, pad_args, weights):
         k_size, k_size, n_in_chan, n_out_chan = shape
         _x = jnp.zeros((batch_size, x_size, x_size, n_in_chan))
-        _d = conv2d(_x, weights.value, stride_size=stride, padding=padding) * 0
+        _d = conv2d(_x, weights.get(), stride_size=stride, padding=padding) * 0
         _dK = _calc_dK_conv(_x, _d, stride_size=stride, padding=pad_args)
         ## get filter update correction
-        dx = _dK.shape[0] - weights.value.shape[0]
-        dy = _dK.shape[1] - weights.value.shape[1]
+        dx = _dK.shape[0] - weights.get().shape[0]
+        dy = _dK.shape[1] - weights.get().shape[1]
         self.delta_shape = (max(dx, 0), max(dy, 0))
         ## get input update correction
-        _dx = _calc_dX_conv(weights.value, _d, stride_size=stride,
-                            anti_padding=pad_args)
+        _dx = _calc_dX_conv(weights.get(), _d, stride_size=stride, anti_padding=pad_args)
         dx = (_dx.shape[1] - _x.shape[1])
         dy = (_dx.shape[2] - _x.shape[2])
         self.x_delta_shape = (dx, dy)
 
-    @staticmethod
-    def _compute_update(
-            sign_value, w_decay, bias_init, stride, pad_args, delta_shape, pre, post, weights
-    ): ## synaptic kernel adjustment calculation co-routine
+    def _compute_update(self):  #sign_value, w_decay, bias_init, stride, pad_args, delta_shape, pre, post, weights
+        ## synaptic kernel adjustment calculation co-routine
         ## compute adjustment to filters
-        dWeights = calc_dK_conv(pre, post, delta_shape=delta_shape, stride_size=stride, padding=pad_args)
-        dWeights = dWeights * sign_value
-        if w_decay > 0.:  ## apply synaptic decay
-            dWeights = dWeights - weights * w_decay
+        dWeights = calc_dK_conv(
+            self.pre.get(), self.post.get(), delta_shape=self.delta_shape, stride_size=self.stride, padding=self.pad_args
+        )
+        dWeights = dWeights * self.sign_value
+        if self.w_decay > 0.:  ## apply synaptic decay
+            dWeights = dWeights - self.weights.get() * self.w_decay
         ## compute adjustment to base-rates (if applicable)
         dBiases = 0.  # jnp.zeros((1,1))
-        if bias_init != None:
-            dBiases = jnp.sum(post, axis=0, keepdims=True) * sign_value
+        if self.bias_init != None:
+            dBiases = jnp.sum(self.post.get(), axis=0, keepdims=True) * self.sign_value
         return dWeights, dBiases
 
-    @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
-    @staticmethod
-    def evolve(
-            opt, sign_value, w_decay, w_bounds, is_nonnegative, bias_init, stride, pad_args, delta_shape, pre, post,
-            weights, biases, opt_params
-    ):
+    @compilable
+    def evolve(self):
         ## calc dFilters / dBiases - update to filters and biases
-        dWeights, dBiases = HebbianConvSynapse._compute_update(
-            sign_value, w_decay, bias_init, stride, pad_args, delta_shape, pre, post, weights
-        )
-        if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
+        dWeights, dBiases = self._compute_update()
+        if self.bias_init is not None:
+            opt_params, [weights, biases] = self.opt(self.opt_params.get(), [self.weights.get(), self.biases.get()], [dWeights, dBiases])
         else: ## ignore dBiases since no biases configured
-            opt_params, [weights] = opt(opt_params, [weights], [dWeights])
-
+            opt_params, [weights] = self.opt(self.opt_params.get(), [self.weights.get()], [dWeights])
+            biases = None
         ## apply any enforced filter constraints
-        if w_bounds > 0.:
-            if is_nonnegative:
-                weights = jnp.clip(weights, 0., w_bounds)
+        if self.w_bounds > 0.:
+            if self.is_nonnegative:
+                weights = jnp.clip(weights, 0., self.w_bounds)
             else:
-                weights = jnp.clip(weights, -w_bounds, w_bounds)
-        return opt_params, weights, biases, dWeights, dBiases
+                weights = jnp.clip(weights, -self.w_bounds, self.w_bounds)
 
-    @transition(output_compartments=["dInputs"])
-    @staticmethod
-    def backtransmit(
-            sign_value, x_size, shape, stride, padding, x_delta_shape, antiPad, post, weights
-    ): ## action-backpropagating routine
+        self.opt_params.set(opt_params)
+        self.weights.set(weights)
+        self.biases.set(biases)
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
+
+    @compilable
+    def backtransmit(self): ## action-backpropagating co-routine
         ## calc dInputs - adjustment w.r.t. input signal
-        k_size, k_size, n_in_chan, n_out_chan = shape
+        k_size, k_size, n_in_chan, n_out_chan = self.shape
         # antiPad = None
         # if padding == "SAME":
         #     antiPad = _conv_same_transpose_padding(post.shape[1], x_size,
@@ -201,22 +190,20 @@ class HebbianConvSynapse(ConvSynapse): ## Hebbian-evolved convolutional cable
         # elif padding == "VALID":
         #     antiPad = _conv_valid_transpose_padding(post.shape[1], x_size,
         #                                             k_size, stride)
-        dInputs = calc_dX_conv(weights, post, delta_shape=x_delta_shape, stride_size=stride, anti_padding=antiPad)
+        dInputs = calc_dX_conv(self.weights.get(), self.post.get(), delta_shape=self.x_delta_shape, stride_size=self.stride, anti_padding=self.antiPad)
         ## flip sign of back-transmitted signal (if applicable)
-        dInputs = dInputs * sign_value
-        return dInputs
+        dInputs = dInputs * self.sign_value
+        self.dInputs.set(dInputs)
 
-    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dInputs"])
-    @staticmethod
-    def reset(in_shape, out_shape):
-        preVals = jnp.zeros(in_shape)
-        postVals = jnp.zeros(out_shape)
-        inputs = preVals
-        outputs = postVals
-        pre = preVals
-        post = postVals
-        dInputs = preVals
-        return inputs, outputs, pre, post, dInputs
+    @compilable
+    def reset(self): #in_shape, out_shape):
+        preVals = jnp.zeros(self.in_shape.get())
+        postVals = jnp.zeros(self.out_shape.get())
+        self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.pre.set(preVals)
+        self.post.set(postVals)
+        self.dInputs.set(preVals)
 
     @classmethod
     def help(cls): ## component help function

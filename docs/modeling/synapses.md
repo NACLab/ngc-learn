@@ -1,17 +1,7 @@
 # Synapses
 
-The synapse is a key building block for connecting/wiring together the various
-component cells that one would use for characterizing a biomimetic neural system.
-These particular objects are meant to perform, per simulated time step, a
-specific type of transformation -- such as a linear transform or a 
-convolution -- utilizing their underlying synaptic parameters.
-Most times, a synaptic cable will be represented by a set of matrices (or filters) 
-that are used to conduct a projection of an input signal (a value presented to a
-pre-synaptic/input compartment) resulting in an output signal (a value that
-appears within one of its post-synaptic compartments). Notably, a synapse component is
-typically associated with a local plasticity rule, e.g., a Hebbian-type
-update, that either is triggered online, i.e., at some or all simulation time
-steps, or by integrating a differential equation, e.g., via eligibility traces.
+The synapse is a key building block for connecting/wiring together the various component cells that one would use for characterizing a biomimetic neural system. These particular objects are meant to perform, per simulated time step, a specific type of transformation -- such as a linear transform or a convolution -- utilizing their underlying synaptic parameters. Most times, a synaptic cable will be represented by a set of matrices (or filters) that are used to conduct a projection of an input signal (a value presented to a pre-synaptic/input compartment) resulting in an output signal (a value that appears within one of its post-synaptic compartments). There are three general groupings of synaptic components in ngc-learn: 1) non-plastic static synapses (only perform fixed transformations of input signals); 2) non-plastic dynamic synapses (perform time-varying, input-dependent transformations on input signals); and 3) plastic synapses that carry out long-term evolution. 
+Notably, plastic synapse components are typically associated with a local plasticity rule, e.g., a Hebbian-type update, that either is triggered online, i.e., at some or all simulation time steps, or by integrating a differential equation, e.g., via eligibility traces.
 
 ## Non-Plastic Synapse Types
 
@@ -66,6 +56,20 @@ This (chemical) synapse performs a linear transform of its input signals. Note t
 
 ```{eval-rst}
 .. autoclass:: ngclearn.components.ExponentialSynapse
+  :noindex:
+
+  .. automethod:: advance_state
+    :noindex:
+  .. automethod:: reset
+    :noindex:
+```
+
+### Double-Exponential Synapse
+
+This (chemical) synapse performs a linear transform of its input signals. Note that this synapse is "dynamic" in the sense that its efficacies are a function of their pre-synaptic inputs; there is no inherent form of long-term plasticity in this base implementation. Synaptic strength values can be viewed as being filtered/smoothened through a doubleexpoential / difference of two exponentials kernel.
+
+```{eval-rst}
+.. autoclass:: ngclearn.components.DoubleExpSynapse
   :noindex:
 
   .. automethod:: advance_state

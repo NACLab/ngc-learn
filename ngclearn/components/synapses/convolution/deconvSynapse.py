@@ -1,14 +1,12 @@
 from jax import random, numpy as jnp, jit
-from ngclearn.components.jaxComponent import JaxComponent
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-
-from ngclearn.utils.weight_distribution import initialize_params
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngcsimlib.logger import info
-from ngclearn.utils import tensorstats
-import ngclearn.utils.weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngclearn.components.synapses.convolution.ngcconv import deconv2d
+
+from ngclearn.components.jaxComponent import JaxComponent
+
 
 class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
     """
@@ -47,7 +45,6 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         batch_size: batch size dimension of this component
     """
 
-    # Define Functions
     def __init__(
             self, name, shape, x_shape, filter_init=None, bias_init=None, stride=1, padding=None, resist_scale=1.,
             batch_size=1, **kwargs
@@ -61,7 +58,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         self.shape = shape ## shape of synaptic filter tensor
         x_size, x_size = x_shape
         self.x_size = x_size
-        self.Rscale = resist_scale ## post-transformation scale factor
+        self.resist_scale = resist_scale ## post-transformation scale factor
         self.padding = padding
         self.stride = stride
 
@@ -70,9 +67,13 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         self.pad_args = None
 
         ######################### set up compartments ##########################
-        tmp_key, *subkeys = random.split(self.key.value, 4)
-        weights = dist.initialize_params(subkeys[0], filter_init,
-                                         shape)  ## filter tensor
+        tmp_key, *subkeys = random.split(self.key.get(), 4)
+        #weights = dist.initialize_params(subkeys[0], filter_init, shape)
+        if self.filter_init is None:
+            info(self.name, "is using default weight initializer!")
+            self.filter_init = DistributionGenerator.uniform(0.025, 0.8)
+        weights = self.filter_init(shape, subkeys[0]) ## filter tensor
+
         self.batch_size = batch_size # 1
         ## Compartment setup and shape computation
         _x = jnp.zeros((self.batch_size, x_size, x_size, n_in_chan))
@@ -85,40 +86,40 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         if self.bias_init is None:
             info(self.name, "is using default bias value of zero (no bias "
                             "kernel provided)!")
-        self.biases = Compartment(dist.initialize_params(subkeys[2], bias_init,
-                                                         (1, shape[1]))
-                                  if bias_init else 0.0)
+        self.biases = Compartment(
+            # dist.initialize_params(subkeys[2], bias_init, (1, shape[1])) if bias_init else 0.0
+            self.bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0
+        )
 
-    @transition(output_compartments=["outputs"])
-    @staticmethod
-    def advance_state(Rscale, padding, stride, weights, biases, inputs):
-        _x = inputs
-        out = deconv2d(_x, weights, stride_size=stride, padding=padding) * Rscale + biases
-        return out
+    @compilable
+    def advance_state(self):
+        _x = self.inputs.get()
+        out = deconv2d(
+            _x, self.weights.get(), stride_size=self.stride, padding=self.padding
+        ) * self.resist_scale + self.biases.get()
+        self.outputs.set(out)
 
-    @transition(output_compartments=["inputs", "outputs"])
-    @staticmethod
-    def reset(in_shape, out_shape):
-        preVals = jnp.zeros(in_shape)
-        postVals = jnp.zeros(out_shape)
-        inputs = preVals
-        outputs = postVals
-        return inputs, outputs
+    @compilable
+    def reset(self): #in_shape, out_shape):
+        preVals = jnp.zeros(self.in_shape)
+        postVals = jnp.zeros(self.out_shape)
+        self.inputs.set(preVals)
+        self.outputs.set(postVals)
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        if self.bias_init != None:
-            jnp.savez(file_name, weights=self.weights.value,
-                      biases=self.biases.value)
-        else:
-            jnp.savez(file_name, weights=self.weights.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.weights.set(data['weights'])
-        if "biases" in data.keys():
-            self.biases.set(data['biases'])
+    # def save(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     if self.bias_init != None:
+    #         jnp.savez(file_name, weights=self.weights.get(),
+    #                   biases=self.biases.get())
+    #     else:
+    #         jnp.savez(file_name, weights=self.weights.get())
+    #
+    # def load(self, directory, **kwargs):
+    #     file_name = directory + "/" + self.name + ".npz"
+    #     data = jnp.load(file_name)
+    #     self.weights.set(data['weights'])
+    #     if "biases" in data.keys():
+    #         self.biases.set(data['biases'])
 
     @classmethod
     def help(cls): ## component help function
@@ -151,17 +152,3 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
                 "dynamics": "outputs = [K @.T inputs] * R + b",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines

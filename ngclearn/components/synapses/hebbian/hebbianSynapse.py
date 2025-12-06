@@ -1,16 +1,23 @@
+# %%
+
+import jax
+import pickle
 from jax import random, numpy as jnp, jit
 from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
-from ngclearn import resolver, Component, Compartment
-from ngcsimlib.compilers.process import transition
+
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+from ngcsimlib import deprecate_args
+from ngclearn.utils.io_utils import save_pkl, load_pkl
 
 @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
-def _calc_update(pre, post, W, w_bound, is_nonnegative=True, signVal=1.,
-                 prior_type=None, prior_lmbda=0.,
-                 pre_wght=1., post_wght=1.):
+def _calc_update(
+        pre, post, W, w_bound, is_nonnegative=True, signVal=1., prior_type=None, prior_lmbda=0., pre_wght=1.,
+        post_wght=1.
+):
     """
     Compute a tensor of adjustments to be applied to a synaptic value matrix.
 
@@ -160,15 +167,13 @@ class HebbianSynapse(DenseSynapse):
             this to < 1. will result in a sparser synaptic structure
     """
 
-    # Define Functions
     @deprecate_args(_rebind=False, w_decay='prior')
     def __init__(
             self, name, shape, eta=0., weight_init=None, bias_init=None, w_bound=1., is_nonnegative=False,
-            prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
-            resist_scale=1., batch_size=1, **kwargs
+            prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., 
+            p_conn=1., resist_scale=1., batch_size=1, **kwargs
     ):
-        super().__init__(name, shape, weight_init, bias_init, resist_scale,
-                         p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, batch_size=batch_size, **kwargs)
 
         if w_decay > 0.:
             prior = ('l2', w_decay)
@@ -204,13 +209,26 @@ class HebbianSynapse(DenseSynapse):
         self.dBiases = Compartment(jnp.zeros(shape[1]))
 
         #key, subkey = random.split(self.key.value)
-        self.opt_params = Compartment(get_opt_init_fn(optim_type)(
-            [self.weights.value, self.biases.value]
-            if bias_init else [self.weights.value]))
+        # NOTE: we don't save this compartment directly because it is a tuple can cannot be saved directly by numpy
+        self.opt_params = Compartment(
+            get_opt_init_fn(optim_type)([self.weights.get(), self.biases.get()] if bias_init else [self.weights.get()]),
+            auto_save=False
+        )
+
+    def save(self, directory: str):
+        super().save(directory)
+        # Also save the optimizer parameters
+        save_pkl(directory, self.name + "_opt_params", self.opt_params.get())
+
+    def load(self, directory: str):
+        super().load(directory)
+        # load the optimizer parameters in a custom way
+        self.opt_params.set(load_pkl(directory, self.name + "_opt_params"))
 
     @staticmethod
-    def _compute_update(w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
-                        post_wght, pre, post, weights):
+    def _compute_update(
+            w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght, post_wght, pre, post, weights
+    ):
         ## calculate synaptic update values
         dW, db = _calc_update(
             pre, post, weights, w_bound, is_nonnegative=is_nonnegative,
@@ -218,38 +236,65 @@ class HebbianSynapse(DenseSynapse):
             post_wght=post_wght)
         return dW, db
 
-    @transition(output_compartments=["opt_params", "weights", "biases", "dWeights", "dBiases"])
-    @staticmethod
-    def evolve(opt, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
-                post_wght, bias_init, pre, post, weights, biases, opt_params):
+    @compilable
+    def calc_update(self):
+       # Get the variables
+        pre = self.pre.get()
+        post = self.post.get()
+        weights = self.weights.get()
+        biases = self.biases.get()
+        opt_params = self.opt_params.get()
+
         ## calculate synaptic update values
         dWeights, dBiases = HebbianSynapse._compute_update(
-            w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght, post_wght,
+            self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
+            pre, post, weights
+        )
+
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
+
+    @compilable
+    def evolve(self):
+        # Get the variables
+        pre = self.pre.get()
+        post = self.post.get()
+        weights = self.weights.get()
+        biases = self.biases.get()
+        opt_params = self.opt_params.get()
+        
+        ## calculate synaptic update values
+        dWeights, dBiases = HebbianSynapse._compute_update(
+            self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
             pre, post, weights
         )
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
-        if bias_init != None:
-            opt_params, [weights, biases] = opt(opt_params, [weights, biases], [dWeights, dBiases])
+        if self.bias_init != None:
+            opt_params, [weights, biases] = self.opt(opt_params, [weights, biases], [dWeights, dBiases])
         else:
             # ignore db since no biases configured
-            opt_params, [weights] = opt(opt_params, [weights], [dWeights])
+            opt_params, [weights] = self.opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = _enforce_constraints(weights, w_bound, is_nonnegative=is_nonnegative)
-        return opt_params, weights, biases, dWeights, dBiases
+        weights = _enforce_constraints(weights, self.w_bound, is_nonnegative=self.is_nonnegative)
+        
+        # Update compartments
+        self.opt_params.set(opt_params)
+        self.weights.set(weights)
+        self.biases.set(biases)
+        self.dWeights.set(dWeights)
+        self.dBiases.set(dBiases)
 
-    @transition(output_compartments=["inputs", "outputs", "pre", "post", "dWeights", "dBiases"])
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        return (
-            preVals, # inputs
-            postVals, # outputs
-            preVals, # pre
-            postVals, # post
-            jnp.zeros(shape), # dW
-            jnp.zeros(shape[1]), # db
-        )
+    @compilable
+    def reset(self): #, batch_size, shape):
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals) # outputs
+        self.pre.set(preVals) # pre
+        self.post.set(postVals) # post
+        self.dWeights.set(jnp.zeros(self.shape)) # dW
+        self.dBiases.set(jnp.zeros(self.shape[1])) # db
 
     @classmethod
     def help(cls): ## component help function
@@ -296,23 +341,10 @@ class HebbianSynapse(DenseSynapse):
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
-
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         Wab = HebbianSynapse("Wab", (2, 3), 0.0004, optim_type='adam',
                              sign_value=-1.0, prior=("l1l2", 0.001))
     print(Wab)
+    print(Wab.opt_params.get())

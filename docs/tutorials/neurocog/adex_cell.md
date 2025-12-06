@@ -22,9 +22,7 @@ AdEx cell amounts to the following:
 from jax import numpy as jnp, random, jit
 import numpy as np
 
-from ngclearn.utils.model_utils import scanner
-from ngcsimlib.context import Context
-from ngclearn.utils import JaxProcess
+from ngclearn import Context, MethodProcess
 ## import model-specific mechanisms
 from ngclearn.components.neurons.spiking.adExCell import AdExCell
 
@@ -46,20 +44,15 @@ with Context("Model") as model:
         intrinsic_mem_thr=-55., v_thr=5., v_rest=-72., v_reset=-75., a=0.1, 
         b=0.75, v0=v0, w0=w0, integration_type="euler", key=subkeys[0]
     )
-
     ## create and compile core simulation commands
-    advance_process = (JaxProcess()
+    advance_process = (MethodProcess("advance_proc")
                        >> cell.advance_state)
-    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
-
-    reset_process = (JaxProcess()
+    reset_process = (MethodProcess("reset_proc")
                      >> cell.reset)
-    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
-
-    ## set up non-compiled utility commands
-    @Context.dynamicCommand
-    def clamp(x):
-        cell.j.set(x)
+   
+## set up non-compiled utility commands
+def clamp(x):
+    cell.j.set(x)
 ```
 
 In effect, the AdEx two-dimensional differential equation system <b>[1]-[2]</b> offers
@@ -109,19 +102,19 @@ i_app = 19. ## electrical current to inject into AdEx cell
 data = jnp.asarray([[i_app]], dtype=jnp.float32)
 
 time_span = []
-model.reset()
+reset_process.run() 
 t = 0.
 for ts in range(T):
     x_t = data
     ## pass in t and dt and run step forward of simulation
-    model.clamp(x_t)
-    model.advance(t=t, dt=dt)
+    clamp(x_t)
+    advance_process.run(t=t, dt=dt) # run one step of dynamics
     t = t + dt
 
     ## naively extract simple statistics at time ts and print them to I/O
-    v = cell.v.value
-    w = cell.w.value
-    s = cell.s.value
+    v = cell.v.get()
+    w = cell.w.get()
+    s = cell.s.get()
     curr_in.append(data)
     mem_rec.append(v)
     recov_rec.append(w)
@@ -150,26 +143,27 @@ recov_rec = np.squeeze(np.asarray(recov_rec))
 spk_rec = np.squeeze(np.asarray(spk_rec))
 
 # Plot the AdEx cell trajectory
-cell_tag = "RS"
 n_plots = 1
 fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 ax_ptr = ax
-ax_ptr.set(xlabel='Time', ylabel='Voltage (v)',
-           title="AdEx ({}) Voltage Dynamics".format(cell_tag))
+ax_ptr.set(
+    xlabel='Time', ylabel='Voltage (v)', title="AdEx Voltage Dynamics"
+)
 
 v = ax_ptr.plot(time_span, mem_rec, color='C0')
 ax_ptr.legend([v[0]],['v'])
 plt.tight_layout()
-plt.savefig("{0}".format("adex_v_plot.jpg".format(cell_tag.lower())))
+plt.savefig("{0}".format("adex_v_plot.jpg"))
 
 fig, ax = plt.subplots(1, n_plots, figsize=(5*n_plots,5))
 ax_ptr = ax
-ax_ptr.set(xlabel='Time', ylabel='Recovery (w)',
-           title="AdEx ({}) Recovery Dynamics".format(cell_tag))
+ax_ptr.set(
+    xlabel='Time', ylabel='Recovery (w)', title="AdEx Recovery Dynamics"
+)
 w = ax_ptr.plot(time_span, recov_rec, color='C1', alpha=.5)
 ax_ptr.legend([w[0]],['w'])
 plt.tight_layout()
-plt.savefig("{0}".format("adex_w_plot.jpg".format(cell_tag.lower())))
+plt.savefig("{0}".format("adex_w_plot.jpg"))
 plt.close()
 ```
 
@@ -194,27 +188,6 @@ however, one could configure it to use the midpoint method for integration
 by setting its argument `integration_type = rk2` in cases where more
 accuracy in the dynamics is needed (at the cost of additional computational time).
 
-## Optional: Setting Up The Components with a JSON Configuration
-
-While you are not required to create a JSON configuration file for ngc-learn,
-to get rid of the warning that ngc-learn will throw at the start of your
-program's execution (indicating that you do not have a configuration set up yet),
-all you need to do is create a sub-directory for your JSON configuration
-inside of your project code's directory, i.e., `json_files/modules.json`.
-Inside the JSON file, you would write the following:
-
-```json
-[
-    {"absolute_path": "ngclearn.components",
-        "attributes": [
-            {"name": "AdExCell"}]
-    },
-    {"absolute_path": "ngcsimlib.operations",
-        "attributes": [
-            {"name": "overwrite"}]
-    }
-]
-```
 
 ## References
 

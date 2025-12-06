@@ -4,7 +4,7 @@ from ngclearn.utils.analysis.probe import Probe
 from ngclearn.utils.model_utils import drop_out, softmax, layer_normalize
 from jax import jit, random, numpy as jnp, lax, nn
 from functools import partial as bind
-import ngclearn.utils.weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngclearn.utils.optim import adam, sgd
 
 @bind(jax.jit, static_argnums=[2, 3])
@@ -88,10 +88,10 @@ class LinearProbe(Probe):
 
         ## set up classifier
         flat_input_dim = input_dim * source_seq_length
-        weight_init = dist.fan_in_gaussian()  # dist.gaussian(mu=0., sigma=0.05)  # 0.02)
+        weight_init = DistributionGenerator.fan_in_gaussian() #dist.fan_in_gaussian()  # dist.gaussian(mu=0., sigma=0.05)  # 0.02)
         Wln_mu = jnp.zeros((1, flat_input_dim))
         Wln_scale = jnp.ones((1, flat_input_dim))
-        W = dist.initialize_params(subkeys[0], weight_init, (flat_input_dim, out_dim))
+        W = weight_init((flat_input_dim, out_dim), subkeys[0]) #dist.initialize_params(subkeys[0], weight_init, (flat_input_dim, out_dim))
         b = jnp.zeros((1, out_dim))
         self.probe_params = [Wln_mu, Wln_scale, W, b]
 

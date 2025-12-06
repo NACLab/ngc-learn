@@ -1,8 +1,9 @@
-from ngclearn import resolver, Component, Compartment
+# %%
+
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngclearn.utils import tensorstats
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class RewardErrorCell(JaxComponent): ## Reward prediction error cell
     """
@@ -51,38 +52,53 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
         self.accum_reward = Compartment(restVals)  ## accumulated reward signal(s)
         self.n_ep_steps = Compartment(jnp.zeros((self.batch_size, 1))) ## number of episode steps taken
 
-    @transition(output_compartments=["mu", "rpe", "n_ep_steps", "accum_reward"])
-    @staticmethod
-    def advance_state(dt, use_online_predictor, alpha, mu, rpe, reward,
-                       n_ep_steps, accum_reward):
+    @compilable
+    def advance_state(self, dt):
+        # Get the variables
+        mu = self.mu.get()
+        reward = self.reward.get()
+        n_ep_steps = self.n_ep_steps.get()
+        accum_reward = self.accum_reward.get()
+
         ## compute/update RPE and predictor values
         accum_reward = accum_reward + reward
         rpe = reward - mu
-        if use_online_predictor:
-            mu = mu * (1. - alpha) + reward * alpha
+        if self.use_online_predictor:
+            mu = mu * (1. - self.alpha) + reward * self.alpha
         n_ep_steps = n_ep_steps + 1
-        return mu, rpe, n_ep_steps, accum_reward
 
-    @transition(output_compartments=["mu"])
-    @staticmethod
-    def evolve(dt, use_online_predictor, ema_window_len, n_ep_steps, mu,
-                accum_reward):
-        if use_online_predictor:
+        # Update compartments
+        self.mu.set(mu)
+        self.rpe.set(rpe)
+        self.n_ep_steps.set(n_ep_steps)
+        self.accum_reward.set(accum_reward)
+
+    @compilable
+    def evolve(self, dt):
+        # Get the variables
+        mu = self.mu.get()
+        n_ep_steps = self.n_ep_steps.get()
+        accum_reward = self.accum_reward.get()
+
+        if self.use_online_predictor:
             ## total episodic reward signal
             r = accum_reward/n_ep_steps
-            mu = (1. - 1./ema_window_len) * mu + (1./ema_window_len) * r
-        return mu
+            mu = (1. - 1./self.ema_window_len) * mu + (1./self.ema_window_len) * r
 
-    @transition(output_compartments=["mu", "rpe", "accum_reward", "n_ep_steps"])
-    @staticmethod
-    def reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
+        # Update compartment
+        self.mu.set(mu)
+
+    @compilable
+    def reset(self): ## reset core components/statistics
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         mu = restVals
         rpe = restVals
         accum_reward = restVals
-        n_ep_steps = jnp.zeros((batch_size, 1))
-        return mu, rpe, accum_reward, n_ep_steps
-
+        n_ep_steps = jnp.zeros((self.batch_size, 1))
+        self.mu.set(mu)
+        self.rpe.set(rpe)
+        self.accum_reward.set(accum_reward)
+        self.n_ep_steps.set(n_ep_steps)
 
     @classmethod
     def help(cls): ## component help function
@@ -115,16 +131,8 @@ class RewardErrorCell(JaxComponent): ## Reward prediction error cell
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
+if __name__ == '__main__':
+    from ngcsimlib.context import Context
+    with Context("Bar") as bar:
+        X = RewardErrorCell("X", 9, 0.03)
+    print(X)

@@ -1,16 +1,11 @@
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import SLIFCell
-from ngcsimlib.compilers import compile_command, wrap_command
 from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
+from ngclearn import MethodProcess, Context
+
 
 def test_sLIFCell1():
     name = "slif_ctx"
@@ -25,26 +20,12 @@ def test_sLIFCell1():
             name="a", n_units=1, tau_m=50., resist_m=10., thr=0.3, key=subkeys[0]
         )
 
-        #"""
-        advance_process = (Process("advance_proc")
+        advance_process = (MethodProcess("advance_proc")
                            >> a.advance_state)
-        #ctx.wrap_and_add_command(advance_process.pure, name="run")
-        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-
-        reset_process = (Process("reset_proc")
+        reset_process = (MethodProcess("reset_proc")
                          >> a.reset)
-        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-        #"""
-
-        """
-        reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-        ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
-        advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-        ctx.add_command(wrap_command(jit(ctx.advance_state)), name="run")
-        """
 
         ## set up non-compiled utility commands
-        @Context.dynamicCommand
         def clamp(x):
             a.j.set(x)
 
@@ -54,12 +35,12 @@ def test_sLIFCell1():
     y_seq = jnp.asarray([[0., 1., 0., 0., 0., 1., 0.]], dtype=jnp.float32)
 
     outs = []
-    ctx.reset()
+    reset_process.run()
     for ts in range(x_seq.shape[1]):
         x_t = jnp.array([[x_seq[0, ts]]])  ## get data at time t
-        ctx.clamp(x_t)
-        ctx.run(t=ts * 1., dt=dt)
-        outs.append(a.s.value)
+        clamp(x_t)
+        advance_process.run(t=ts * 1., dt=dt)
+        outs.append(a.s.get())
     outs = jnp.concatenate(outs, axis=1)
 
     ## output should equal input

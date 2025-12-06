@@ -9,3 +9,4 @@ from .fitzhughNagumoCell import FitzhughNagumoCell
 from .izhikevichCell import IzhikevichCell
 from .RAFCell import RAFCell
 from .hodgkinHuxleyCell import HodgkinHuxleyCell
+

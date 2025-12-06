@@ -1,18 +1,11 @@
 # %%
 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
 from ngclearn.components import RewardErrorCell
-from ngcsimlib.compilers import compile_command, wrap_command
-from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
-from ngcsimlib.utils.compartment import Get_Compartment_Batch
+from ngclearn import MethodProcess, Context
 
 
 def test_rewardErrorCell():
@@ -27,21 +20,10 @@ def test_rewardErrorCell():
       name="a", n_units=1, alpha=alpha, ema_window_len=10, 
       use_online_predictor=True, batch_size=1
     )
-    advance_process = (Process("advance_proc") >> a.advance_state)
-    ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
-    reset_process = (Process("reset_proc") >> a.reset)
-    ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-    evolve_process = (Process("evolve_proc") >> a.evolve)
-    ctx.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
+    advance_process = (MethodProcess("advance_proc") >> a.advance_state)
+    reset_process = (MethodProcess("reset_proc") >> a.reset)
+    evolve_process = (MethodProcess("evolve_proc") >> a.evolve)
 
-    # reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-    # ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
-    # advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-    # ctx.add_command(wrap_command(jit(ctx.advance_state)), name="run")
-    # evolve_cmd, evolve_args = ctx.compile_by_key(a, compile_key="evolve")
-    # ctx.add_command(wrap_command(jit(ctx.evolve)), name="evolve")
-
-    @Context.dynamicCommand
     def clamp_reward(x):
       a.reward.set(x)
 
@@ -71,18 +53,18 @@ def test_rewardErrorCell():
   mu_outs = []
   rpe_outs = []
   accum_reward_outs = []
-  ctx.reset()
+  reset_process.run()
   for ts in range(reward_seq.shape[1]):
       reward_t = jnp.array([[reward_seq[0, ts]]])  ## get reward at time t
-      ctx.clamp_reward(reward_t)
-      ctx.run(t=ts * 1., dt=dt)
-      mu_outs.append(a.mu.value)
-      rpe_outs.append(a.rpe.value)
-      accum_reward_outs.append(a.accum_reward.value)
+      clamp_reward(reward_t)
+      advance_process.run(t=ts * 1., dt=dt)
+      mu_outs.append(a.mu.get())
+      rpe_outs.append(a.rpe.get())
+      accum_reward_outs.append(a.accum_reward.get())
 
   # Test evolve function
-  ctx.evolve(t=10 * 1., dt=dt)
-  final_mu = a.mu.value
+  evolve_process.run(t=10 * 1., dt=dt)
+  final_mu = a.mu.get()
   # print(f"final_mu: {final_mu}")
 
   mu_outs = jnp.concatenate(mu_outs, axis=1)
@@ -103,4 +85,4 @@ def test_rewardErrorCell():
   expected_final_mu = (1 - 1/10) * mu_outs[0, -1] + (1/10) * (accum_reward_outs[0, -1] / 10)
   np.testing.assert_allclose(final_mu, expected_final_mu, atol=1e-5)
 
-# test_rewardErrorCell()
+#test_rewardErrorCell()

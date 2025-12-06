@@ -1,13 +1,10 @@
+# %%
+
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
-from ngcsimlib.logger import info, warn
-
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[4])
 def _run_varfilter(dt, x, x_tr, decayFactor, gamma_tr, a_delta=0.):
@@ -77,17 +74,17 @@ class VarTrace(JaxComponent): ## low-pass filter
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, tau_tr, a_delta, P_scale=1., gamma_tr=1, decay_type="exp",
-                 n_nearest_spikes=0, batch_size=1, **kwargs):
-        super().__init__(name, **kwargs)
+                 n_nearest_spikes=0, batch_size=1, key=None):
+        super().__init__(name, key)
 
         ## Trace control coefficients
+        self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
+
         self.tau_tr = tau_tr ## trace time constant
         self.a_delta = a_delta ## trace increment (if spike occurred)
         self.P_scale = P_scale ## trace scale if non-additive trace to be used
         self.gamma_tr = gamma_tr
-        self.decay_type = decay_type ## lin --> linear decay; exp --> exponential decay
         self.n_nearest_spikes = n_nearest_spikes
 
         ## Layer Size Setup
@@ -99,32 +96,37 @@ class VarTrace(JaxComponent): ## low-pass filter
         self.outputs = Compartment(restVals) # output compartment
         self.trace = Compartment(restVals)
 
-    @transition(output_compartments=["outputs", "trace"])
-    @staticmethod
-    def advance_state(
-            dt, decay_type, tau_tr, a_delta, P_scale, gamma_tr, inputs, trace, n_nearest_spikes
-    ):
-        decayFactor = 0.
-        if "exp" in decay_type:
-            decayFactor = jnp.exp(-dt/tau_tr)
-        elif "lin" in decay_type:
-            decayFactor = (1. - dt/tau_tr)
-        _x_tr = gamma_tr * trace * decayFactor
-        if n_nearest_spikes > 0: ## run k-nearest neighbor trace
-            _x_tr = _x_tr + inputs * (a_delta - (trace/n_nearest_spikes))
+    @compilable
+    def advance_state(self, dt):
+        if "exp" in self.decay_type:
+            decayFactor = jnp.exp(-dt/self.tau_tr)
+        elif "lin" in self.decay_type:
+            decayFactor = (1. - dt/self.tau_tr)
         else:
-            if a_delta > 0.: ## run full convolution trace
-                _x_tr = _x_tr + inputs * a_delta
-            else: ## run simple max-clamped trace
-                _x_tr = _x_tr * (1. - inputs) + inputs * P_scale
-        trace = _x_tr
-        return trace, trace
+            decayFactor = 0.
 
-    @transition(output_compartments=["inputs", "outputs", "trace"])
-    @staticmethod
-    def reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
-        return restVals, restVals, restVals
+
+        _x_tr = self.gamma_tr * self.trace.get() * decayFactor
+        if self.n_nearest_spikes > 0:
+            _x_tr = _x_tr + self.inputs.get() * (self.a_delta - (self.trace.get() / self.n_nearest_spikes))
+        else:
+            if self.a_delta > 0.:
+                _x_tr = _x_tr + self.inputs.get() * self.a_delta
+            else:
+                _x_tr = _x_tr * (1. - self.inputs.get()) + self.inputs.get() * self.P_scale
+
+        self.trace.set(_x_tr)
+        self.outputs.set(_x_tr)
+
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
+        self.outputs.set(restVals)
+        self.trace.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -159,19 +161,6 @@ class VarTrace(JaxComponent): ## low-pass filter
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context
