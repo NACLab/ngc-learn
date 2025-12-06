@@ -8,8 +8,8 @@ build-backend = "setuptools.build_meta" # using setuptool building engine
 
 [project]
 name = "ngclearn"
-version = "2.0.3"
-description = "Simulation software for building and analyzing arbitrary predictive coding, spiking network, and biomimetic neural systems."
+version = "3.0.0"
+description = "Simulation software for building and analyzing computational neuroscience models, brain-inspired computing systems, and NeuroAI agents."
 authors = [
   {name = "Alexander Ororbia", email = "ago@cs.rit.edu"},
   {name = "William Gebhardt", email = "wdg1351@rit.edu"},

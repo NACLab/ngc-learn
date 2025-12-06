@@ -1,13 +1,11 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
+import jax
+from typing import Union
+
 from ngcsimlib.logger import info, warn
-
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class PhasorCell(JaxComponent):
     """
@@ -33,9 +31,9 @@ class PhasorCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(
-            self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs):
+            self, name, n_units, target_freq=63.75, batch_size=1, disable_phasor=False, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## Phasor meta-parameters
@@ -44,7 +42,7 @@ class PhasorCell(JaxComponent):
         ## Layer Size Setup
         self.batch_size = batch_size
         self.n_units = n_units
-        _key, *subkey = random.split(self.key.value, 3)
+        _key, *subkey = random.split(self.key.get(), 3)
         self.key.set(_key)
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -62,7 +60,7 @@ class PhasorCell(JaxComponent):
         # alpha = ((random.normal(subkey, self.angles.value.shape) * (jnp.sqrt(target_freq) / target_freq)) + 1)
         # beta = random.poisson(subkey, lam=target_freq, shape=self.angles.value.shape) / target_freq
 
-        self.base_scale = random.poisson(subkey[0], lam=target_freq, shape=self.angles.value.shape) / target_freq
+        self.base_scale = random.poisson(subkey[0], lam=target_freq, shape=self.angles.get().shape) / target_freq
         self.disable_phasor = disable_phasor
 
     def validate(self, dt=None, **validation_kwargs):
@@ -86,21 +84,27 @@ class PhasorCell(JaxComponent):
             )
         return valid
 
-    @transition(output_compartments=["outputs", "tols", "key", "angles"])
-    @staticmethod
-    def advance_state(t, dt, target_freq, key, inputs, angles, tols, base_scale, disable_phasor):
+    # @transition(output_compartments=["outputs", "tols", "key", "angles"])
+    # @staticmethod
+    @compilable
+    def advance_state(self, t, dt, ):
+
+        inputs = self.inputs.get()
+        angles = self.angles.get()
+        tols = self.tols.get()
+
         ms_per_second = 1000  # ms/s
-        events_per_ms = target_freq / ms_per_second  # e/s s/ms -> e/ms
+        events_per_ms = self.target_freq / ms_per_second  # e/s s/ms -> e/ms
         ms_per_event = 1 / events_per_ms  # ms/e
         time_step_per_event = ms_per_event / dt  # ms/e * ts/ms -> ts / e
         angle_per_event = 2 * jnp.pi  # rad / e
         angle_per_timestep = angle_per_event / time_step_per_event  # rad / e
         # * e/ts -> rad / ts
-        key, *subkey = random.split(key, 3)
+        key, *subkey = random.split(self.key.get(), 3)
         # scatter = random.uniform(subkey, angles.shape, minval=0.5,
         #                          maxval=1.5) * base_scale
 
-        scatter = ((random.normal(subkey[0], angles.shape) * 0.2) + 1) * base_scale
+        scatter = ((random.normal(subkey[0], angles.shape) * 0.2) + 1) * self.base_scale
         scattered_update = angle_per_timestep * scatter
         scaled_scattered_update = scattered_update * inputs
 
@@ -109,27 +113,30 @@ class PhasorCell(JaxComponent):
         updated_angles = jnp.where(updated_angles > angle_per_event,
                                    updated_angles - angle_per_event,
                                    updated_angles)
-        if disable_phasor:
+        if self.disable_phasor:
             outputs = inputs + 0
         tols = tols * (1. - outputs) + t * outputs
 
-        return outputs, tols, key, updated_angles
+        self.outputs.set(outputs)
+        self.tols.set(tols)
+        self.key.set(key)
+        self.angles.set(updated_angles)
 
-    @transition(output_compartments=["inputs", "outputs", "tols", "angles", "key"])
-    @staticmethod
-    def reset(batch_size, n_units, key, target_freq):
-        restVals = jnp.zeros((batch_size, n_units))
-        key, *subkey = random.split(key, 3)
-        return restVals, restVals, restVals, restVals, key
 
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
+    # @transition(output_compartments=["inputs", "outputs", "tols", "angles", "key"])
+    # @staticmethod
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        key, *subkey = random.split(self.key.get(), 3)
 
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.key.set(data['key'])
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
+        self.outputs.set(restVals)
+        self.tols.set(restVals)
+        self.angles.set(restVals)
+        self.key.set(key)
 
     @classmethod
     def help(cls):  ## component help function
@@ -156,20 +163,5 @@ class PhasorCell(JaxComponent):
                 "compartments": compartment_props,
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if
-                 Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 

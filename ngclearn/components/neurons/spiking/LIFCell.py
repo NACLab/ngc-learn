@@ -1,18 +1,13 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit, nn
-from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
-from ngcsimlib.logger import info, warn
+from jax import numpy as jnp, random, nn, Array
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 def _dfv(t, v, params): ## voltage dynamics wrapper
     j, rfr, tau_m, refract_T, v_rest, g_L = params
@@ -24,7 +19,7 @@ def _dfv(t, v, params): ## voltage dynamics wrapper
 
 
 #@partial(jit, static_argnums=[3, 4])
-def _update_theta(dt, v_theta, s, tau_theta, theta_plus=0.05):
+def _update_theta(dt, v_theta, s, tau_theta, theta_plus: Array=0.05):
     ### Runs homeostatic threshold update dynamics one step (via Euler integration).
     #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
     #theta_plus = 0.05
@@ -112,23 +107,23 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         v_min: minimum voltage to clamp dynamics to (Default: None)
     """ ## batch_size arg?
 
-    @deprecate_args(thr_jitter=None, v_decay="conduct_leak")
     def __init__(
             self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., conduct_leak=1., tau_theta=1e7,
             theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler", surrogate_type="straight_through",
-            v_min=None, max_one_spike=False, **kwargs
+            v_min=None, max_one_spike=False, key=None
     ):
-        super().__init__(name, **kwargs)
+        super().__init__(name, key)
 
         ## Integration properties
         self.integrationType = integration_type
         self.intgFlag = get_integrator_code(self.integrationType)
+        self.one_spike = one_spike ## True => constrains system to simulate 1 spike per time step
+        self.max_one_spike = max_one_spike
 
         ## membrane parameter setup (affects ODE integration)
         self.tau_m = tau_m ## membrane time constant
         self.resist_m = resist_m ## resistance value
-        self.one_spike = one_spike ## True => constrains system to simulate 1 spike per time step
-        self.max_one_spike = max_one_spike
+
         self.v_min = v_min ## ensures voltage is never < v_min
 
         self.v_rest = v_rest #-65. # mV
@@ -146,146 +141,87 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.batch_size = 1
         self.n_units = n_units
 
-        ## set up surrogate function for spike emission
-        if surrogate_type == "secant_lif":
-            self.spike_fx, self.d_spike_fx = secant_lif_estimator()
-        elif surrogate_type == "arctan":
-            self.spike_fx, self.d_spike_fx = arctan_estimator()
-        elif surrogate_type == "triangular":
-            self.spike_fx, self.d_spike_fx = triangular_estimator()
-        else: ## default: straight_through
-            self.spike_fx, self.d_spike_fx = straight_through_estimator()
-
+        # ## set up surrogate function for spike emission
+        # if surrogate_type == "secant_lif":
+        #     spike_fx, d_spike_fx = secant_lif_estimator()
+        # elif surrogate_type == "arctan":
+        #     spike_fx, d_spike_fx = arctan_estimator()
+        # elif surrogate_type == "triangular":
+        #     spike_fx, d_spike_fx = triangular_estimator()
+        # else: ## default: straight_through
+        #     spike_fx, d_spike_fx = straight_through_estimator()
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.j = Compartment(restVals, display_name="Current", units="mA")
-        self.v = Compartment(restVals + self.v_rest,
-                             display_name="Voltage", units="mV")
+        self.v = Compartment(restVals + self.v_rest, display_name="Voltage", units="mV")
         self.s = Compartment(restVals, display_name="Spikes")
         self.s_raw = Compartment(restVals, display_name="Raw Spike Pulses")
-        self.rfr = Compartment(restVals + self.refract_T,
-                               display_name="Refractory Time Period", units="ms")
-        self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift",
-                                     units="mV")
-        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
-                                units="ms") ## time-of-last-spike
-        self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
+        self.rfr = Compartment(restVals + self.refract_T, display_name="Refractory Time Period", units="ms")
+        self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift", units="mV")
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") ## time-of-last-spike
+        # self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
-    @transition(output_compartments=["v", "s", "s_raw", "rfr", "thr_theta", "tols", "key", "surrogate"])    
-    @staticmethod
-    def advance_state(
-            t, dt, tau_m, resist_m, v_rest, v_reset, g_L, refract_T, thr, tau_theta, theta_plus, one_spike, max_one_spike,
-            v_min, intgFlag, d_spike_fx, key, j, v, rfr, thr_theta, tols
-    ):
-        skey = None ## this is an empty dkey if single_spike mode turned off
-        if one_spike and not max_one_spike:
-            key, skey = random.split(key, 2)
-        ## run one integration step for neuronal dynamics
-        j = j * resist_m
-        ############################################################################
-        ### Runs leaky integrator (leaky integrate-and-fire; LIF) neuronal dynamics.
-        _v_thr = thr_theta + thr ## calc present voltage threshold
-        #mask = (rfr >= refract_T).astype(jnp.float32) # get refractory mask
-        ## update voltage / membrane potential
-        v_params = (j, rfr, tau_m, refract_T, v_rest, g_L)
-        if intgFlag == 1:
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)
+    @compilable
+    def advance_state(self, dt, t):
+        j = self.j.get() * self.resist_m
+
+        _v_thr = self.thr_theta.get() + self.thr  ## calc present voltage threshold
+
+        v_params = (j, self.rfr.get(), self.tau_m.get(), self.refract_T, self.v_rest, self.g_L)
+
+        if self.intgFlag == 1:
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
         else:
-            _, _v = step_euler(0., v, _dfv, dt, v_params)
-        ## obtain action potentials/spikes/pulses
-        s = (_v > _v_thr) * 1.
-        v_prespike = v
-        ## update refractory variables
-        _rfr = (rfr + dt) * (1. - s)
-        ## perform hyper-polarization of neuronal cells
-        _v = _v * (1. - s) + s * v_reset
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
 
-        raw_s = s + 0 ## preserve un-altered spikes
-        ############################################################################
-        ## this is a spike post-processing step
-        if skey is not None:
+        s = (_v > _v_thr) * 1.
+        _rfr = (self.rfr.get() + dt) * (1. - s)
+        _v = _v * (1. - s) + s * self.v_reset
+
+        raw_s = s
+
+        if self.one_spike and not self.max_one_spike:
+            key, skey = random.split(self.key.get(), 2)
+
             m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: not batch-able
             rS = s * random.uniform(skey, s.shape)
-            rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1],
-                            dtype=jnp.float32)
+            rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1], dtype=jnp.float32)
             s = s * (1. - m_switch) + rS * m_switch
-        if max_one_spike:
-            rS = nn.one_hot(jnp.argmax(v_prespike, axis=1), num_classes=s.shape[1], dtype=jnp.float32) ## get max-volt spike
+            self.key.set(key)
+
+        if self.max_one_spike:
+            rS = nn.one_hot(jnp.argmax(self.v.get(), axis=1), num_classes=s.shape[1], dtype=jnp.float32) ## get max-volt spike
             s = s * rS ## mask out non-max volt spikes
-        ############################################################################
-        raw_spikes = raw_s
-        v = _v
-        rfr = _rfr
 
-        surrogate = d_spike_fx(v, _v_thr) #d_spike_fx(v, thr + thr_theta)
-        if tau_theta > 0.:
+        if self.tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = _update_theta(dt, thr_theta, raw_spikes, tau_theta, theta_plus)
-        ## update tols
-        tols = (1. - s) * tols + (s * t)
-        if v_min is not None: ## ensures voltage never < v_rest
-            v = jnp.maximum(v, v_min)
-        return v, s, raw_spikes, rfr, thr_theta, tols, key, surrogate
+            thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus) #.get())
+            self.thr_theta.set(thr_theta)
 
-    @transition(output_compartments=["j", "v", "s", "s_raw", "rfr", "tols", "surrogate"])
-    @staticmethod
-    def reset(batch_size, n_units, v_rest, refract_T):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals #+ 0
-        v = restVals + v_rest
-        s = restVals #+ 0
-        s_raw = restVals
-        rfr = restVals + refract_T
-        #thr_theta = restVals ## do not reset thr_theta
-        tols = restVals #+ 0
-        surrogate = restVals + 1.
-        return j, v, s, s_raw, rfr, tols, surrogate
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
 
-    def save(self, directory, **kwargs):
-        ## do a protected save of constants, depending on whether they are floats or arrays
-        tau_m = (self.tau_m if isinstance(self.tau_m, float)
-                 else jnp.asarray([[self.tau_m * 1.]]))
-        thr = (self.thr if isinstance(self.thr, float)
-               else jnp.asarray([[self.thr * 1.]]))
-        v_rest = (self.v_rest if isinstance(self.v_rest, float)
-                  else jnp.asarray([[self.v_rest * 1.]]))
-        v_reset = (self.v_reset if isinstance(self.v_reset, float)
-                   else jnp.asarray([[self.v_reset * 1.]]))
-        g_L = (self.g_L if isinstance(self.g_L, float)
-               else jnp.asarray([[self.g_L * 1.]]))
-        resist_m = (self.resist_m if isinstance(self.resist_m, float)
-                    else jnp.asarray([[self.resist_m * 1.]]))
-        tau_theta = (self.tau_theta if isinstance(self.tau_theta, float)
-                     else jnp.asarray([[self.tau_theta * 1.]]))
-        theta_plus = (self.theta_plus if isinstance(self.theta_plus, float)
-                      else jnp.asarray([[self.theta_plus * 1.]]))
+        if self.v_min is not None: ## ensures voltage never < v_rest
+            _v = jnp.maximum(_v, self.v_min)
 
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  threshold_theta=self.thr_theta.value,
-                  tau_m=tau_m, thr=thr, v_rest=v_rest,
-                  v_reset=v_reset, g_L=g_L,
-                  resist_m=resist_m, tau_theta=tau_theta,
-                  theta_plus=theta_plus,
-                  key=self.key.value)
 
-    def load(self, directory, seeded=False, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.thr_theta.set(data['threshold_theta'])
-        ## constants loaded in
-        self.tau_m = data['tau_m']
-        self.thr = data['thr']
-        self.v_rest = data['v_rest']
-        self.v_reset = data['v_reset']
-        self.g_L = data['g_L']
-        self.resist_m = data['resist_m']
-        self.tau_theta = data['tau_theta']
-        self.theta_plus = data['theta_plus']
+        self.v.set(_v)
+        self.s.set(s)
+        self.s_raw.set(raw_s)
+        self.rfr.set(_rfr)
 
-        if seeded:
-            self.key.set(data['key'])
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v_rest)
+        self.s.set(restVals)
+        self.s_raw.set(restVals)
+        self.rfr.set(restVals + self.refract_T)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -315,37 +251,19 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             "v_reset": "Reset membrane potential value",
             "conduct_leak": "Conductance leak / voltage decay factor",
             "tau_theta": "Threshold/homoestatic increment time constant",
-            "theta_plus": "Amount to increment threshold by upon occurrence "
-                          "of spike",
+            "theta_plus": "Amount to increment threshold by upon occurrence of a spike",
             "refract_time": "Length of relative refractory period (ms)",
-            "one_spike": "Should only one spike be sampled/allowed to emit at "
-                         "any given time step?",
-            "integration_type": "Type of numerical integration to use for the "
-                                "cell dynamics",
+            "one_spike": "Should only one spike be sampled/allowed to emit at any given time step?",
+            "integration_type": "Type of numerical integration to use for the cell dynamics",
             "surrgoate_type": "Type of surrogate function to use approximate "
                               "derivative of spike w.r.t. voltage/current",
-            "lower_bound_clamp": "Should voltage be lower bounded to be never "
-                                 "be below `v_rest`"
+            "v_min": "Minimum voltage allowed before voltage variables are min-clipped/clamped"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
                 "dynamics": "tau_m * dv/dt = (v_rest - v) + j * resist_m",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

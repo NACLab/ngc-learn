@@ -60,8 +60,8 @@ The code you would write amounts to the below:
 
 ```python
 from jax import numpy as jnp, jit
-from ngcsimlib.context import Context
-from ngclearn.utils import JaxProcess
+
+from ngclearn import Context, MethodProcess
 ## import model-specific mechanisms
 from ngclearn.components.neurons.graded.gaussianErrorCell import GaussianErrorCell
 
@@ -71,32 +71,29 @@ T = 5  ## number time steps to simulate
 with Context("Model") as model:
     cell = GaussianErrorCell("z0", n_units=3)
 
-    advance_process = (JaxProcess()
+    advance_process = (MethodProcess("advance_proc")
                        >> cell.advance_state)
-    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
-
-    reset_process = (JaxProcess()
+    reset_process = (MethodProcess("reset_proc")
                      >> cell.reset)
-    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
-
-    @Context.dynamicCommand
-    def clamp(x, y):
-        ## error cells have two key input compartments; a "mu" and a "target"
-        cell.mu.set(x)
-        cell.target.set(y)
+## set up non-compiled utility commands
+def clamp(x, y):
+    ## error cells have two key input compartments; a "mu" and a "target"
+    cell.mu.set(x)
+    cell.target.set(y)
+    
 
 guess = jnp.asarray([[-1., 1., 1.]], jnp.float32)  ## the produced guess or prediction
 answer = jnp.asarray([[1., -1., 1.]], jnp.float32)  ## what we wish the guess had been
 
-model.reset()
+reset_process.run() 
 for ts in range(T):
-    model.clamp(guess, answer)
-    model.advance(t=ts * 1., dt=dt)
+    clamp(guess, answer)
+    advance_process.run(t=ts * 1., dt=dt) 
     ## extract compartment values of interest
-    dmu = cell.dmu.value
-    dtarget = cell.dtarget.value
-    loss = cell.L.value
+    dmu = cell.dmu.get()
+    dtarget = cell.dtarget.get()
+    loss = cell.L.get()
     ## print compartment values to I/O
     print("{} |  dmu: {}  dtarget: {}  loss: {} ".format(ts, dmu, dtarget, loss))
 ```

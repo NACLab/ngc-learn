@@ -12,6 +12,14 @@ ngclearn.utils.optim.adam module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.optim.nag module
+-------------------------------
+
+.. automodule:: ngclearn.utils.optim.nag
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.optim.optim\_utils module
 ----------------------------------------
 

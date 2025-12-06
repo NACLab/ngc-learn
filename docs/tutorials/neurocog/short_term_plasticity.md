@@ -1,69 +1,28 @@
 # Lecture 4E: Short-Term Plasticity
 
-In this lesson, we will study how short-term plasticity (STP) <b>[1]</b> dynamics 
--- where synaptic efficacy is cast in terms of the history of presynaptic activity -- 
-using ngc-learn's in-built `STPDenseSynapse`. 
-Specifically, we will study how a dynamic synapse may be constructed and 
-examine what short-term depression (STD) and short-term facilitation
-(STF) dominated configurations of an STP synapse look like. 
+In this lesson, we will study how short-term plasticity (STP) <b>[1]</b> dynamics -- where synaptic efficacy is cast in terms of the history of presynaptic activity -- using ngc-learn's in-built `STPDenseSynapse`. Specifically, we will study how a dynamic synapse may be constructed and examine what short-term depression (STD) and short-term facilitation (STF) dominated configurations of an STP synapse look like. 
 
 ## Probing Short-Term Plasticity
 
-Go ahead and make a new folder for this study and create a Python script,
-i.e., `run_shortterm_plasticity.py`, to write your code for this part of the 
-tutorial. 
+Go ahead and make a new folder for this study and create a Python script, i.e., `run_shortterm_plasticity.py`, to write your code for this part of the tutorial. 
 
-We will write a 3-component dynamical system that connects a Poisson input 
-encoding cell to a leaky integrate-and-fire (LIF) cell via a single dynamic 
-synapse that evolves according to STP. We will first write our 
-simulation of this dynamic synapse from the perspective of STF-dominated 
-dynamics, plotting out the results under two different Poisson spike trains 
-with different spiking frequencies. Then, we will modify our simulation 
-to emulate dynamics from an STD-dominated perspective.
+We will write a 3-component dynamical system that connects a Poisson input encoding cell to a leaky integrate-and-fire (LIF) cell via a single dynamic synapse that evolves according to STP. We will first write our simulation of this dynamic synapse from the perspective of STF-dominated dynamics, plotting out the results under two different Poisson spike trains with different spiking frequencies. Then, we will modify our simulation to emulate dynamics from an STD-dominated perspective.
 
 ### Starting with Facilitation-Dominated Dynamics
 
-One experimental goal with using a "dynamic synapse" <b>[1]</b> is often to computationally 
-model the fact that synaptic efficacy (strength/conductance magnitude) is 
-not a fixed quantity -- even in cases where long-term adaptation/learning is 
-absent -- and instead a time-varying property that depends on a fixed 
-quantity of biophysical resources. Specifically, biological neuronal networks, 
-synaptic signaling (or communication of information across synaptic connection 
-pathways) consumes some quantity of neurotransmitters -- STF results from an 
-influx of calcium into an axon terminal of a pre-synaptic neuron (after 
-emission of a spike pulse) whereas STD occurs after a depletion of 
-neurotransmitters that is consumed by the act of synaptic signaling at the axon 
-terminal of a pre-synaptic neuron. Studies of cortical neuronal regions have 
-empirically found that some areas are STD-dominated, STF-dominated, or exhibit 
-some mixture of the two.
+One experimental goal with using a "dynamic synapse" <b>[1]</b> is often to computationally model the fact that synaptic efficacy (strength/conductance magnitude) is not a fixed quantity -- even in cases where long-term adaptation/learning is absent -- and instead a time-varying property that depends on a fixed quantity of biophysical resources. Specifically, biological neuronal networks, synaptic signaling (or communication of information across synaptic connection pathways) consumes some quantity of neurotransmitters -- STF results from an influx of calcium into an axon terminal of a pre-synaptic neuron (after emission of a spike pulse) whereas STD occurs after a depletion of neurotransmitters that is consumed by the act of synaptic signaling at the axon terminal of a pre-synaptic neuron. Studies of cortical neuronal regions have empirically found that some areas are STD-dominated, STF-dominated, or exhibit some mixture of the two.
 
-Ultimately, the above means that, in the context of spiking cells, when a 
-pre-synaptic neuron emits a pulse, this act will affect the relative magnitude 
-of the synapse's efficacy. In some cases, this will result in an increase 
-(facilitation) and, in others, this will result in a decrease (depression) 
-that lasts over a short period of time (several hundreds to thousands of 
-milliseconds in many instances). 
-As a result of considering synapses to have a dynamic nature to them, both over 
-short and long time-scales, plasticity can now be thought of as a stimulus and 
-resource-dependent quantity, reflecting an important biophysical aspect that 
-affects how neuronal systems adapt and generalize given different kinds of 
-sensory stimuli.
+Ultimately, the above means that, in the context of spiking cells, when a pre-synaptic neuron emits a pulse, this act will affect the relative magnitude of the synapse's efficacy. In some cases, this will result in an increase (facilitation) and, in others, this will result in a decrease (depression) that lasts over a short period of time (several hundreds to thousands of milliseconds in many instances). As a result of considering synapses to have a dynamic nature to them, both over short and long time-scales, plasticity can now be thought of as a stimulus and resource-dependent quantity, reflecting an important biophysical aspect that affects how neuronal systems adapt and generalize given different kinds of sensory stimuli.
 
-Writing our STP dynamic synapse can be done by importing 
-[STPDenseSynapse](ngclearn.components.synapses.STPDenseSynapse)  
-from ngc-learn's in-built components and using it to wire the output 
-spike compartment of the `PoissonCell` to the input electrical current
-compartment of the `LIFCell`. This can be done as follows (using the 
-meta-parameters we provide in the code block below to ensure 
-STF-dominated dynamics):
+Writing our STP dynamic synapse can be done by importing [STPDenseSynapse](ngclearn.components.synapses.STPDenseSynapse) from ngc-learn's in-built components and using it to wire the output spike compartment of the `PoissonCell` to the input electrical current compartment of the `LIFCell`. This can be done as follows (using the meta-parameters we provide in the code block below to ensure STF-dominated dynamics):
 
 ```python 
 from jax import numpy as jnp, random, jit
-from ngcsimlib.context import Context
-from ngclearn.utils import JaxProcess
+
+from ngclearn import Context, MethodProcess
 ## import model-specific mechanisms
 from ngclearn.components import PoissonCell, STPDenseSynapse, LIFCell
-import ngclearn.utils.weight_distribution as dist
+from ngclearn.utils.distribution_generator import DistributionGenerator
 
 ## create seeding keys (JAX-style)
 dkey = random.PRNGKey(231)
@@ -88,49 +47,40 @@ plot_fname = "{}Hz_stp_{}.jpg".format(firing_rate_e, tag)
 
 with Context("Model") as model:
     W = STPDenseSynapse(
-	"W", shape=(1, 1), weight_init=dist.constant(value=2.5),
-        resources_init=dist.constant(value=Rval), tau_f=tau_f, tau_d=tau_d, 
-        key=subkeys[0]
+        "W", shape=(1, 1), weight_init=DistributionGenerator.constant(value=2.5),
+        resources_init=DistributionGenerator.constant(value=Rval), tau_f=tau_f, tau_d=tau_d, key=subkeys[0]
     )
     z0 = PoissonCell("z0", n_units=1, target_freq=firing_rate_e, key=subkeys[0])
     z1 = LIFCell(
-	"z1", n_units=1, tau_m=tau_m, resist_m=(tau_m / dt) * R_m, v_rest=-60., 
-        v_reset=-70., thr=-50., tau_theta=0., theta_plus=0., refract_time=0.
+        "z1", n_units=1, tau_m=tau_m, resist_m=(tau_m / dt) * R_m, v_rest=-60.,  v_reset=-70., thr=-50., tau_theta=0., 
+        theta_plus=0., refract_time=0. 
     )
 
-    W.inputs << z0.outputs ## z0 -> W
-    z1.j << W.outputs ## W -> z1
+    z0.outputs >> W.inputs ## z0 -> W
+    W.outputs >> z1.j ## W -> z1
 
-    advance_process = (JaxProcess()
+    advance_process = (MethodProcess("advance")
                        >> z0.advance_state
                        >> W.advance_state
                        >> z1.advance_state)
-    model.wrap_and_add_command(jit(advance_process.pure), name="advance")
 
-    reset_process = (JaxProcess()
+    reset_process = (MethodProcess("reset")
                      >> z0.reset
                      >> z1.reset
                      >> W.reset)
-    model.wrap_and_add_command(jit(reset_process.pure), name="reset")
 
-    @Context.dynamicCommand
-    def clamp(obs):
-        z0.inputs.set(obs)
+## set up some utility functions for the model context
+def clamp(obs):
+    z0.inputs.set(obs)
 ```
 
-Notice that the `STPDenseSynapse` has two important time constants to configure; 
-`tau_f` ($\tau_f$), the facilitation time constant, and `tau_d` ($\tau_d$), the 
-depression time constant. In effect, it is these two constants that you will 
-want to set to obtain different desired behavior from this in-built dynamic 
-synapse: 
+Notice that the `STPDenseSynapse` has two important time constants to configure; `tau_f` ($\tau_f$), the facilitation time constant, and `tau_d` ($\tau_d$), the depression time constant. In effect, it is these two constants that you will want to set to obtain different desired behavior from this in-built dynamic synapse: 
 1. setting $\tau_f > \tau_d$ will result in STF-dominated behavior; whereas 
 2. setting $\tau_f < \tau_d$ will produce STD-dominated behavior. 
 
-Note that setting $\tau_d = 0$ will result in short-term depression being turned off 
-completely (and $\tau_f = 0$ disables STF). 
+Note that setting $\tau_d = 0$ will result in short-term depression being turned off completely (and $\tau_f = 0$ disables STF). 
 
-Formally, given the time constants above the dynamics of the `STPDenseSynapse` 
-operate according to the following coupled ordinary differential equations (ODEs):
+Formally, given the time constants above the dynamics of the `STPDenseSynapse` operate according to the following coupled ordinary differential equations (ODEs):
 
 $$
 \tau_f \frac{\partial u_j(t)}{\partial t} &= -u_j(t) + N_R \big(1 - u_j(t)\big) s_j(t) \\
@@ -144,25 +94,11 @@ W^{dyn}_{ij}(t + \Delta t) = \Big( W^{max}_{ij} u_j(t + \Delta t) x_j(t) s_j(t) 
 + W^{dyn}_{ij} (1 - s_j(t))
 $$
 
-where $N_R$ represents an increment produced by a pre-synaptic spike $\mathbf{s}_j(t)$ 
-(and in essence, the neurotransmitter resources available to yield facilitation), 
-$W^{max}_{ij}$ denotes the absolute synaptic efficacy (or maximum response 
-amplitude of this synapse in the case of a complete release of all 
-neurotransmitters; $x_j(t) = u_j(t) = 1$) of the connection between pre-synaptic 
-neuron $j$ and post-synaptic neuron $i$, and $W^{dyn}_{ij}(t)$ is the value 
-of the dynamic synapse's efficacy at time `t`. 
-$\mathbf{x}_j$ is a variable (which lies in the range of $[0,1]$) that indicates 
-the fraction of (neurotransmitter) resources available after a depletion of the 
-neurotransmitter resource pool. $\mathbf{u}_j$, on the hand, 
-represents the neurotransmitter "release probability", or the fraction of available 
-resources ready for the dynamic synapse's use.
+where $N_R$ represents an increment produced by a pre-synaptic spike $\mathbf{s}_j(t)$ (and in essence, the neurotransmitter resources available to yield facilitation), $W^{max}_{ij}$ denotes the absolute synaptic efficacy (or maximum response amplitude of this synapse in the case of a complete release of all neurotransmitters; $x_j(t) = u_j(t) = 1$) of the connection between pre-synaptic neuron $j$ and post-synaptic neuron $i$, and $W^{dyn}_{ij}(t)$ is the value of the dynamic synapse's efficacy at time `t`. $\mathbf{x}_j$ is a variable (which lies in the range of $[0,1]$) that indicates the fraction of (neurotransmitter) resources available after a depletion of the neurotransmitter resource pool. $\mathbf{u}_j$, on the hand, represents the neurotransmitter "release probability", or the fraction of available resources ready for the dynamic synapse's use.
 
 ### Simulating and Visualizing STF
 
-Now that we understand the basics of how an ngc-learn STP synapse works, we can next 
-try it out on a simple pre-synaptic Poisson spike train.  Writing out the 
-simulated input Poisson spike train and our STP model's processing of this 
-data can be done as follows:
+Now that we understand the basics of how an ngc-learn STP synapse works, we can next try it out on a simple pre-synaptic Poisson spike train.  Writing out the simulated input Poisson spike train and our STP model's processing of this data can be done as follows:
 
 ```python 
 t_vals = []
@@ -170,26 +106,27 @@ u_vals = []
 x_vals = []
 W_vals = []
 num_z1_spikes = 0.
-model.reset()
+reset_process.run()
 obs = jnp.asarray([[1.]])
 ts = 1.
 ptr = 0 # spike time pointer
 for i in range(T_max):
-    model.clamp(obs)
-    model.advance(t=dt * ts, dt=dt)
-    u = jnp.squeeze(W.u.value)
-    x = jnp.squeeze(W.x.value)
-    Wexc = jnp.squeeze(W.Wdyn.value)
-    s0 = jnp.squeeze(W.inputs.value)
-    s1 = jnp.squeeze(z1.s.value)
+    clamp(obs)
+    advance_process.run(t=dt * ts, dt=dt)
+    u = jnp.squeeze(W.u.get())
+    x = jnp.squeeze(W.x.get())
+    Wexc = jnp.squeeze(W.Wdyn.get())
+    s0 = jnp.squeeze(W.inputs.get())
+    s1 = jnp.squeeze(z1.s.get())
     num_z1_spikes = s1 + num_z1_spikes
     u_vals.append(u)
     x_vals.append(x)
     W_vals.append(Wexc)
     t_vals.append(ts)
-    print("{}|  u: {}  x: {}  W: {} pre: {}  post {}".format(ts, u, x, Wexc, s0, s1))
+    print("\r{}|  u: {}  x: {}  W: {} pre: {}  post {}".format(ts, u, x, Wexc, s0, s1), end="")
     ts += dt
     ptr += 1
+print()
 print("Number of z1 spikes = ",num_z1_spikes)
 
 u_vals = jnp.squeeze(jnp.asarray(u_vals))
@@ -197,8 +134,7 @@ x_vals = jnp.squeeze(jnp.asarray(x_vals))
 t_vals = jnp.squeeze(jnp.asarray(t_vals))
 ```
 
-We may then plot out the result of the STF-dominated dynamics we 
-simulate above with the following code:
+We may then plot out the result of the STF-dominated dynamics we simulate above with the following code:
 
 ```python 
 import matplotlib.pyplot as plt
@@ -235,13 +171,13 @@ ax2.grid()
 fig1.savefig(plot_fname)
 ```
 
-Under the `2` Hertz Poisson spike train set up above, the plotting 
-code should produce (and save to disk) the following:
+Under the `2` Hertz Poisson spike train set up above, the plotting code should produce (and save to disk) the following:
 
 <img src="../../images/tutorials/neurocog/2Hz_stp_stf_dom.jpg" width="500" />
 
-Note that, if you change the frequency of the input Poisson spike train to `20` 
-Hertz instead, like so:
+where we also observe that about `3` spikes/pulses were emitted by the post-synaptic neuron over the course of this 
+simulation. 
+Note that, if you change the frequency of the input Poisson spike train to `20` Hertz instead, like so:
 
 ```python 
 firing_rate_e = 20 ## Hz (of Poisson input train)
@@ -251,16 +187,13 @@ and re-run your simulation script, you should obtain the following:
 
 <img src="../../images/tutorials/neurocog/20Hz_stp_stf_dom.jpg" width="500" />
 
-Notice that increasing the frequency in which the pre-synaptic spikes occur 
-results in more volatile dynamics with respect to the effective synaptic 
-efficacy over time.
+where we further observe that about `68` spikes/pulses were emitted by the post-synaptic neuron over the course of this 
+simulation. 
+In general, notice that increasing the frequency in which the pre-synaptic spikes occur results in more volatile dynamics with respect to the effective synaptic efficacy over time. 
 
 ### Depression-Dominated Dynamics
 
-With your code above, it's simple to reconfigure the model to emulate 
-the opposite of STF dominated dynamics, i.e., short-term depression (STD) 
-dominated dynamics. 
-Modify your meta-parameter values like so:
+With the code you have written code above, it's simple to reconfigure the model to emulate the opposite of STF dominated dynamics, i.e., short-term depression (STD) dominated dynamics. To do so, you will need to modify your meta-parameter values like so:
 
 ```python 
 firing_rate_e = 2 ## Hz (of Poisson input train)
@@ -274,17 +207,13 @@ and re-run your script to obtain an output akin to the following:
 
 <img src="../../images/tutorials/neurocog/2Hz_stp_std_dom.jpg" width="500" />
 
-Now, modify your meta-parameters one last time to use a higher-frequency 
-input spike train, i.e., `firing_rate_e = 20 ## Hz`, to obtain a plot similar 
-to the one below: 
+which, after running the script, will print out that the post-synaptic neuron spiked about `3` times. Now, modify your meta-parameters one last time to use a higher-frequency input spike train, i.e., `firing_rate_e = 20 ## Hz`, to obtain a plot similar to the one below: 
 
 <img src="../../images/tutorials/neurocog/20Hz_stp_std_dom.jpg" width="500" />
 
-You have now successfully simulated a dynamic synapse in ngc-learn across 
-several different Poisson input train frequencies under both STF and 
-STD-dominated regimes. In more complex biophysical models, it could prove useful 
-to consider combining STP with other forms of long-term experience-dependent 
-forms of synaptic adaptation, such as spike-timing-dependent plasticity.
+where the script will further print out that the post-synaptic neuron spiked only a single time. 
+
+You have now successfully simulated a dynamic synapse in ngc-learn across several different Poisson input train frequencies under both STF- and STD-dominated regimes. In more complex biophysical models, it could prove useful to consider combining STP with other forms of long-term experience-dependent forms of synaptic adaptation, such as [spike-timing-dependent plasticity](stdp.md).
 
 ## References
 

@@ -2,15 +2,11 @@ from jax import numpy as jnp, random, jit
 from ngcsimlib.context import Context
 import numpy as np
 np.random.seed(42)
-from ngclearn.components import TraceSTDPConvSynapse
-import ngclearn.utils.weight_distribution as dist
-from ngcsimlib.compilers import compile_command, wrap_command
-from numpy.testing import assert_array_equal
 
-from ngcsimlib.compilers.process import Process, transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
-from ngcsimlib.context import Context
+from ngclearn import Context, MethodProcess
+from ngclearn.utils.distribution_generator import DistributionGenerator as dist
+from ngclearn.components.synapses.convolution.traceSTDPConvSynapse import TraceSTDPConvSynapse
+from numpy.testing import assert_array_equal
 
 def test_TraceSTDPConvSynapse1():
     name = "stdp_conv_ctx"
@@ -36,34 +32,17 @@ def test_TraceSTDPConvSynapse1():
             stride=stride, padding=padding_style, batch_size=batch_size, key=subkeys[0]
         )
 
-        #"""
-        evolve_process = (Process("evolve_proc")
+        evolve_process = (MethodProcess("evolve_process")
                           >> a.evolve)
-        ctx.wrap_and_add_command(jit(evolve_process.pure), name="adapt")
 
-        backtransmit_process = (Process("btransmit_proc")
+        backtransmit_process = (MethodProcess("backtransmit_process")
                                 >> a.backtransmit)
-        ctx.wrap_and_add_command(jit(backtransmit_process.pure), name="backtransmit")
 
-        advance_process = (Process("advance_proc")
+        advance_process = (MethodProcess("advance_proc")
                            >> a.advance_state)
-        ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
 
-        reset_process = (Process("reset_proc")
+        reset_process = (MethodProcess("reset_proc")
                          >> a.reset)
-        ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
-        #"""
-
-        """
-        reset_cmd, reset_args = ctx.compile_by_key(a, compile_key="reset")
-        ctx.add_command(wrap_command(jit(ctx.reset)), name="reset")
-        advance_cmd, advance_args = ctx.compile_by_key(a, compile_key="advance_state")
-        ctx.add_command(wrap_command(jit(ctx.advance_state)), name="run")
-        evolve_cmd, evolve_args = ctx.compile_by_key(a, compile_key="evolve")
-        ctx.add_command(wrap_command(jit(ctx.evolve)), name="adapt")
-        backpass_cmd, backpass_args = ctx.compile_by_key(a, compile_key="backtransmit")
-        ctx.add_command(wrap_command(jit(ctx.backtransmit)), name="backtransmit")
-        """
 
     ## fake out a mix of pre-synaptic spikes/no-spikes
     x = np.ones(x_shape)
@@ -75,25 +54,25 @@ def test_TraceSTDPConvSynapse1():
           [[1.], [0.]]]]
     )
 
-    ctx.reset()
+    reset_process.run() # ctx.reset()
     a.inputs.set(x)
-    ctx.run(t=1., dt=dt)
-    y = (a.outputs.value > 0.) * 1. ## fake out post-syn spikes
+    advance_process.run(t=1., dt=dt)  # ctx.run(t=1., dt=dt)
+    y = (a.outputs.get() > 0.) * 1. ## fake out post-syn spikes
     assert_array_equal(y, y_truth)
-    #print(y)
-    #print("======")
+    # print(y)
+    # print("y.Tr:\n", y_truth)
+    # print("======")
 
-    # print("NGC-Learn.shape = ", node.outputs.value.shape)
+    # print("NGC-Learn.shape = ", node.outputs.get().shape)
     a.preSpike.set(x)
     a.postSpike.set(y)
     a.preTrace.set(x * 0.4) ## fake out pre-syn trace values
     a.postTrace.set(y * 1.3) ## fake out post-syn trace values
-    ctx.adapt(t=1., dt=dt)
-    dK = a.dWeights.value
-    #print(dK)
-    ctx.backtransmit(t=1., dt=dt)
-    dx = a.dInputs.value
-    #print(dx)
+    evolve_process.run(t=1., dt=dt)  # ctx.adapt(t=1., dt=dt)
+    dK = a.dWeights.get()
+
+    backtransmit_process.run(t=1., dt=dt)  # ctx.backtransmit(t=1., dt=dt)
+    dx = a.dInputs.get()
     dK_truth = jnp.array(
         [[[[-1.8]],
           [[-0.9]]],
@@ -106,6 +85,10 @@ def test_TraceSTDPConvSynapse1():
           [[2.],
             [3.]]]]
     )
+    # print(dK)
+    # print("dK.Tr:\n", dK_truth)
+    # print(dx)
+    # print("dx.Tr:\n", dx_truth)
     assert_array_equal(dK, dK_truth)
     assert_array_equal(dx, dx_truth)
 

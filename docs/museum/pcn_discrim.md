@@ -1,4 +1,4 @@
-# Discriminative Predictive Coding
+# Discriminative Predictive Coding (Whittington &amp; Bogacz; 2017)
 
 In this exhibit, we will see how a classifier can be created based on
 predictive coding. This exhibit model effectively reproduces some of the results

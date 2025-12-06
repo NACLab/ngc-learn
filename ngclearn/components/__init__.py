@@ -2,6 +2,7 @@ from .jaxComponent import JaxComponent
 
 ## point to rate-coded cell component types
 from .neurons.graded.rateCell import RateCell
+from .neurons.graded.leakyNoiseCell import LeakyNoiseCell
 from .neurons.graded.gaussianErrorCell import GaussianErrorCell
 from .neurons.graded.laplacianErrorCell import LaplacianErrorCell
 from .neurons.graded.bernoulliErrorCell import BernoulliErrorCell
@@ -39,7 +40,7 @@ from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .synapses.hebbian.BCMSynapse import BCMSynapse
 from .synapses.STPDenseSynapse import STPDenseSynapse
 from .synapses.exponentialSynapse import ExponentialSynapse
-from .synapses.doubleExpSynapse import DoupleExpSynapse
+from .synapses.doubleExpSynapse import DoubleExpSynapse
 from .synapses.alphaSynapse import AlphaSynapse
 
 ## point to convolutional component types
@@ -55,10 +56,7 @@ from .synapses.convolution.traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
 from .synapses.modulated.MSTDPETSynapse import MSTDPETSynapse
 from .synapses.modulated.REINFORCESynapse import REINFORCESynapse
 
-## point to monitors
-from .monitor import Monitor
-
-## point to patched component types 
+## point to patched component types
 from .synapses.patched.patchedSynapse import PatchedSynapse
 from .synapses.patched.staticPatchedSynapse import StaticPatchedSynapse
 from .synapses.patched.hebbianPatchedSynapse import HebbianPatchedSynapse

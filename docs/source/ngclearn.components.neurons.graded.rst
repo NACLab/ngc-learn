@@ -28,6 +28,14 @@ ngclearn.components.neurons.graded.laplacianErrorCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.neurons.graded.leakyNoiseCell module
+--------------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.graded.leakyNoiseCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.neurons.graded.rateCell module
 --------------------------------------------------
 

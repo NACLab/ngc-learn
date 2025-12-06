@@ -1,9 +1,10 @@
 """
 File and OS input/output (reading/writing) utilities.
 """
-import jax
-from jax import numpy as jnp, grad, jit, vmap, random, lax
+# import jax
+# from jax import numpy as jnp, grad, jit, vmap, random, lax
 import os, sys, pickle
+from typing import Any
 
 def serialize(fname, object): ## object "saving" routine
     """
@@ -65,3 +66,15 @@ def makedirs(directories):
     """
     for dir in directories:
         makedir(dir)
+
+
+def save_pkl(directory: str, name: str, value: Any) -> None:
+  file_name = directory + "/" + name + ".pkl"
+  with open(file_name, 'wb') as f:
+    pickle.dump(value, f)
+
+def load_pkl(directory: str, name: str) -> Any:
+  file_name = directory + "/" + name + ".pkl"
+  with open(file_name, 'rb') as f:
+    data = pickle.load(f)
+  return data

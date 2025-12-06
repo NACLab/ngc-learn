@@ -5,10 +5,7 @@
 Welcome to ngc-learn's documentation!
 =====================================
 
-**ngc-learn** is a Python library for building, simulating, and analyzing
-biomimetic computational models, arbitrary predictive processing/coding models,
-and spiking neural networks. This toolkit is built on top of 
-`JAX <https://github.com/google/jax>`_ and is distributed under the 3-Clause BSD license.
+**ngc-learn** is a Python library for building, simulating, and analyzing biomimetic and NeuroAI computational models, arbitrary predictive processing/coding models, spiking neural networks, and general dynamical systems. This toolkit is built on top of `JAX <https://github.com/google/jax>`_ and is distributed under the 3-Clause BSD license.
 
 .. toctree::
    :maxdepth: 1
@@ -23,6 +20,7 @@ and spiking neural networks. This toolkit is built on top of
 
   tutorials/intro
   tutorials/theory
+  tutorials/configuration/index
   tutorials/index
   tutorials/neurocog/index
 
@@ -52,9 +50,10 @@ and spiking neural networks. This toolkit is built on top of
 
 .. toctree::
   :maxdepth: 1
-  :caption: Papers that use NGC-Learn
+  :caption: NGC-Learn Papers & Media
 
   ngclearn_papers
+  ngclearn_talks
 
 Indices and tables
 ==================

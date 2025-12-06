@@ -1,12 +1,8 @@
 from jax import random, numpy as jnp, jit
-from ngcsimlib.compilers.process import transition
-from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
-from ngclearn.utils.weight_distribution import initialize_params
-from ngcsimlib.logger import info
 from ngclearn.components.synapses.hebbian import TraceSTDPSynapse
-from ngclearn.utils import tensorstats
 
 class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligility traces
     """
@@ -72,78 +68,69 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
+
+        w_bound: maximum value/magnitude any synaptic efficacy can be (default: 1)
     """
 
-    # Define Functions
     def __init__(
-            self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., tau_elg=0., elg_decay=1., tau_w=0.,
-            weight_init=None, resist_scale=1., p_conn=1., w_bound=1., batch_size=1, **kwargs
+            self, name, shape, A_plus, A_minus, eta=1., mu=0., pretrace_target=0., tau_elg=0., elg_decay=1., 
+            tau_w=0., weight_init=None, resist_scale=1., p_conn=1., w_bound=1., batch_size=1, **kwargs
     ):
-        super().__init__(
+        super().__init__( # call to parent trace-stdp component
             name, shape, A_plus, A_minus, eta=eta, mu=mu, pretrace_target=pretrace_target, weight_init=weight_init,
             resist_scale=resist_scale, p_conn=p_conn, w_bound=w_bound, batch_size=batch_size, **kwargs
         )
         self.w_eps = 0.
         self.tau_w = tau_w
         ## MSTDP/MSTDP-ET meta-parameters
-        self.tau_elg = tau_elg
-        self.elg_decay = elg_decay
+        self.tau_elg = tau_elg ## time constant for eligibility trace
+        self.elg_decay = elg_decay ## decay factor eligibility trace
         ## MSTDP/MSTDP-ET compartments
         self.modulator = Compartment(jnp.zeros((self.batch_size, 1)))
         self.eligibility = Compartment(jnp.zeros(shape))
         self.outmask = Compartment(jnp.zeros((1, shape[1])))
 
-    @transition(output_compartments=["weights", "dWeights", "eligibility"])
-    @staticmethod
-    def evolve(
-            dt, w_bound, w_eps, preTrace_target, mu, Aplus, Aminus, tau_elg, elg_decay, tau_w, preSpike, postSpike,
-            preTrace, postTrace, weights, dWeights, eta, modulator, eligibility, outmask
-    ):
-        # dW_dt = TraceSTDPSynapse._compute_update( ## use Hebbian/STDP rule to obtain a non-modulated update
-        #     dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
-        # )
+    @compilable
+    def evolve(self, dt, t):
+        # dW_dt = self._compute_update()
         # dWeights = dW_dt ## can think of this as eligibility at time t
 
-        if tau_elg > 0.: ## perform dynamics of M-STDP-ET
-            eligibility = eligibility * jnp.exp(-dt / tau_elg) * elg_decay + dWeights/tau_elg
+        if self.tau_elg > 0.: ## perform dynamics of M-STDP-ET
+            eligibility = self.eligibility.get() * jnp.exp(-dt / self.tau_elg) * self.elg_decay + self.dWeights.get()/self.tau_elg
         else: ## otherwise, just do M-STDP
-            eligibility = dWeights ## dynamics of M-STDP had no eligibility tracing
+            eligibility = self.dWeights.get() ## dynamics of M-STDP had no eligibility tracing
         ## do a gradient ascent update/shift
         decayTerm = 0.
-        if tau_w > 0.:
-            decayTerm = weights * (1. / tau_w)
-        weights = weights + (eligibility * modulator * eta) * outmask - decayTerm ## do modulated update
+        if self.tau_w > 0.:
+            decayTerm = self.weights.get() * (1. / self.tau_w)
+        ## do modulated update
+        weights = self.weights.get() + (eligibility * self.modulator.get() * self.eta) * self.outmask.get() - decayTerm
 
-        dW_dt = TraceSTDPSynapse._compute_update( ## use Hebbian/STDP rule to obtain a non-modulated update
-            dt, w_bound, preTrace_target, mu, Aplus, Aminus, preSpike, postSpike, preTrace, postTrace, weights
-        )
+        dW_dt = self._compute_update() ## apply a Hebbian/STDP rule to obtain a non-modulated update
         dWeights = dW_dt ## can think of this as eligibility at time t
 
         #w_eps = 0.01
-        weights = jnp.clip(weights, w_eps, w_bound - w_eps)  # jnp.abs(w_bound))
+        weights = jnp.clip(weights, self.w_eps, self.w_bound - self.w_eps)  # jnp.abs(w_bound))
+        self.weights.set(weights)
+        self.dWeights.set(dWeights)
+        self.eligibility.set(eligibility)
 
-        return weights, dWeights, eligibility
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
+        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
+        synVals = jnp.zeros(self.shape.get())
 
-    @transition(
-        output_compartments=[
-            "inputs", "outputs", "preSpike", "postSpike", "preTrace", "postTrace", "dWeights", "eligibility", "outmask"
-        ]
-    )
-    @staticmethod
-    def reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
-        synVals = jnp.zeros(shape)
-        inputs = preVals
-        outputs = postVals
-        preSpike = preVals
-        postSpike = postVals
-        preTrace = preVals
-        postTrace = postVals
-        dWeights = synVals
-        eligibility = synVals
-        outmask = postVals + 1.
-        return inputs, outputs, preSpike, postSpike, preTrace, postTrace, dWeights, eligibility, outmask
+        if not self.inputs.targeted:
+            self.inputs.set(preVals)
+        self.outputs.set(postVals)
+        self.preSpike.set(preVals)
+        self.postSpike.set(postVals)
+        self.preTrace.set(preVals)
+        self.postTrace.set(postVals)
+        self.dWeights.set(synVals)
+        self.eligibility.set(synVals)
+        self.outmask.set(postVals + 1.)
 
     @classmethod
     def help(cls): ## component help function
@@ -195,17 +182,3 @@ class MSTDPETSynapse(TraceSTDPSynapse): # modulated trace-based STDP w/ eligilit
                             "dW^{stdp}_{ij}/dt = A_plus * (z_j - x_tar) * s_i - A_minus * s_j * z_i",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines

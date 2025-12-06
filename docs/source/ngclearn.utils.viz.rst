@@ -4,6 +4,22 @@ ngclearn.utils.viz package
 Submodules
 ----------
 
+ngclearn.utils.viz.compartment\_plot module
+-------------------------------------------
+
+.. automodule:: ngclearn.utils.viz.compartment_plot
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.utils.viz.compartment\_raster module
+---------------------------------------------
+
+.. automodule:: ngclearn.utils.viz.compartment_raster
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.viz.dim\_reduce module
 -------------------------------------
 

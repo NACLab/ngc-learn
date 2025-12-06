@@ -1,8 +1,9 @@
-from ngclearn import resolver, Component, Compartment
+# %%
+
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, jit
-from ngclearn.utils import tensorstats
-from ngcsimlib.compilers.process import transition
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
@@ -71,9 +72,15 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         log_density = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
         return log_density
 
-    @transition(output_compartments=["dmu", "dtarget", "dSigma", "L", "mask"])
-    @staticmethod
-    def advance_state(dt, mu, target, Sigma, modulator, mask): ## compute Gaussian error cell output
+    @compilable
+    def advance_state(self, dt): ## compute Gaussian error cell output
+        # Get the variables
+        mu = self.mu.get()
+        target = self.target.get()
+        Sigma = self.Sigma.get()
+        modulator = self.modulator.get()
+        mask = self.mask.get()
+
         # Moves Gaussian cell dynamics one step forward. Specifically, this routine emulates the error unit
         # behavior of the local cost functional:
         # FIXME: Currently, below does: L(targ, mu) = -(1/(2*sigma)) * ||targ - mu||^2_2
@@ -90,24 +97,39 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         dmu = dmu * modulator * mask ## not sure how mask will apply to a full covariance...
         dtarget = dtarget * modulator * mask
         mask = mask * 0. + 1. ## "eat" the mask as it should only apply at time t
-        return dmu, dtarget, dSigma, jnp.squeeze(L), mask
 
-    @transition(output_compartments=["dmu", "dtarget", "dSigma", "target", "mu", "modulator", "L", "mask"])
-    @staticmethod
-    def reset(batch_size, shape, sigma_shape): ## reset core components/statistics
-        _shape = (batch_size, shape[0])
-        if len(shape) > 1:
-            _shape = (batch_size, shape[0], shape[1], shape[2])
+        # Update compartments
+        self.dmu.set(dmu)
+        self.dtarget.set(dtarget)
+        self.dSigma.set(dSigma)
+        self.L.set(jnp.squeeze(L))
+        self.mask.set(mask)
+
+    # @transition(output_compartments=["dmu", "dtarget", "dSigma", "target", "mu", "modulator", "L", "mask"])
+    # @staticmethod
+    @compilable
+    def reset(self): ## reset core components/statistics
+        _shape = (self.batch_size, self.shape[0])
+        if len(self.shape) > 1:
+            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
         dmu = restVals
         dtarget = restVals
-        dSigma = jnp.zeros(sigma_shape)
+        dSigma = jnp.zeros(self.sigma_shape)
         target = restVals
         mu = restVals
         modulator = mu + 1.
         L = 0. #jnp.zeros((1, 1))
         mask = jnp.ones(_shape)
-        return dmu, dtarget, dSigma, target, mu, modulator, L, mask
+
+        self.dmu.set(dmu)
+        self.dtarget.set(dtarget)
+        self.dSigma.set(dSigma)
+        self.target.set(target)
+        self.mu.set(mu)
+        self.modulator.set(modulator)
+        self.L.set(L)
+        self.mask.set(mask)
 
     @classmethod
     def help(cls): ## component help function
@@ -138,20 +160,6 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
                 "dynamics": "Gaussian(x=target; mu, sigma)",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context

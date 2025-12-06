@@ -1,18 +1,14 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit, nn
-from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
-from ngcsimlib.logger import info, warn
+from jax import numpy as jnp, random, nn, Array, jit
+from ngcsimlib import deprecate_args
 from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
                                             step_euler, step_rk2
 from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
 
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 
 @jit
@@ -35,7 +31,7 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
     The specific differential equation that characterizes this cell
     is (for adjusting v, given current j, over time) is:
 
-    | tau_m * dv/dt = (v_rest - v) + j * R
+    | tau_m * dv/dt = j * R
     | where R is the membrane resistance and v_rest is the resting potential
     | also, if a spike occurs, v is set to v_reset
 
@@ -91,10 +87,10 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
     """
 
     @deprecate_args(thr_jitter=None)
-    def __init__(self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65.,
-                 v_reset=-60., refract_time=0., integration_type="euler",
-                 surrogate_type="straight_through", lower_clamp_voltage=True,
-                 **kwargs):
+    def __init__(
+            self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., refract_time=0.,
+            integration_type="euler", surrogate_type="straight_through", lower_clamp_voltage=True, **kwargs
+    ):
         super().__init__(name, **kwargs)
 
         ## Integration properties
@@ -118,12 +114,12 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
         self.n_units = n_units
 
         ## set up surrogate function for spike emission
-        if surrogate_type == "arctan":
-            self.spike_fx, self.d_spike_fx = arctan_estimator()
-        elif surrogate_type == "triangular":
-            self.spike_fx, self.d_spike_fx = triangular_estimator()
-        else: ## default: straight_through
-            self.spike_fx, self.d_spike_fx = straight_through_estimator()
+        # if surrogate_type == "arctan":
+        #     self.spike_fx, self.d_spike_fx = arctan_estimator()
+        # elif surrogate_type == "triangular":
+        #     self.spike_fx, self.d_spike_fx = triangular_estimator()
+        # else: ## default: straight_through
+        #     self.spike_fx, self.d_spike_fx = straight_through_estimator()
 
 
         ## Compartment setup
@@ -136,76 +132,50 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
                                display_name="Refractory Time Period", units="ms")
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike",
                                 units="ms") ## time-of-last-spike
-        self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
+        #self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
-    @transition(output_compartments=["v", "s", "rfr", "tols", "key", "surrogate"])
-    @staticmethod
+    @compilable
     def advance_state(
-            t, dt, tau_m, resist_m, v_rest, v_reset, refract_T, thr, lower_clamp_voltage, intgFlag, d_spike_fx, key,
-            j, v, rfr, tols
+            self, dt, t
     ):
         ## run one integration step for neuronal dynamics
-        j = j * resist_m
+        j = self.j.get() * self.resist_m
 
         ### Runs integrator (or integrate-and-fire; IF) neuronal dynamics
         ## update voltage / membrane potential
-        v_params = (j, rfr, tau_m, refract_T)
-        if intgFlag == 1:
-            _, _v = step_rk2(0., v, _dfv, dt, v_params)
+        v_params = (j, self.rfr.get(), self.tau_m, self.refract_T)
+        if self.intgFlag == 1:
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
         else:
-            _, _v = step_euler(0., v, _dfv, dt, v_params)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
         ## obtain action potentials/spikes
-        s = (_v > thr) * 1.
+        s = (_v > self.thr) * 1.
         ## update refractory variables
-        rfr = (rfr + dt) * (1. - s)
+        rfr = (self.rfr.get() + dt) * (1. - s)
         ## perform hyper-polarization of neuronal cells
-        v = _v * (1. - s) + s * v_reset
+        v = _v * (1. - s) + s * self.v_reset
 
-        surrogate = d_spike_fx(v, thr)
+        #surrogate = d_spike_fx(v, self.thr)
+
         ## update tols
-        tols = (1. - s) * tols + (s * t)
-        if lower_clamp_voltage: ## ensure voltage never < v_rest
-            v = jnp.maximum(v, v_rest)
-        return v, s, rfr, tols, key, surrogate
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
+        if self.lower_clamp_voltage: ## ensure voltage never < v_rest
+            _v = jnp.maximum(v, self.v_rest)
 
-    @transition(output_compartments=["j", "v", "s", "rfr", "tols", "surrogate"])
-    @staticmethod
-    def reset(batch_size, n_units, v_rest, refract_T):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals #+ 0
-        v = restVals + v_rest
-        s = restVals #+ 0
-        rfr = restVals + refract_T
-        tols = restVals #+ 0
-        surrogate = restVals + 1.
-        return j, v, s, rfr, tols, surrogate
+        self.v.set(_v)
+        self.s.set(s)
+        self.rfr.set(rfr)
 
-    def save(self, directory, **kwargs):
-        ## do a protected save of constants, depending on whether they are floats or arrays
-        tau_m = (self.tau_m if isinstance(self.tau_m, float)
-                 else jnp.asarray([[self.tau_m * 1.]]))
-        thr = (self.thr if isinstance(self.thr, float)
-               else jnp.asarray([[self.thr * 1.]]))
-        v_rest = (self.v_rest if isinstance(self.v_rest, float)
-                  else jnp.asarray([[self.v_rest * 1.]]))
-        v_reset = (self.v_reset if isinstance(self.v_reset, float)
-                   else jnp.asarray([[self.v_reset * 1.]]))
-        v_decay = (self.v_decay if isinstance(self.v_decay, float)
-                   else jnp.asarray([[self.v_decay * 1.]]))
-        resist_m = (self.resist_m if isinstance(self.resist_m, float)
-                    else jnp.asarray([[self.resist_m * 1.]]))
-        tau_theta = (self.tau_theta if isinstance(self.tau_theta, float)
-                     else jnp.asarray([[self.tau_theta * 1.]]))
-        theta_plus = (self.theta_plus if isinstance(self.theta_plus, float)
-                      else jnp.asarray([[self.theta_plus * 1.]]))
-
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name,
-                  tau_m=tau_m, thr=thr, v_rest=v_rest,
-                  v_reset=v_reset, v_decay=v_decay,
-                  resist_m=resist_m, tau_theta=tau_theta,
-                  theta_plus=theta_plus,
-                  key=self.key.value)
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v_rest)
+        self.s.set(restVals)
+        self.rfr.set(restVals + self.refract_T)
+        self.tols.set(restVals)
+        #surrogate = restVals + 1.
 
     def load(self, directory, seeded=False, **kwargs):
         file_name = directory + "/" + self.name + ".npz"
@@ -259,18 +229,4 @@ class IFCell(JaxComponent): ## integrate-and-fire cell
                 "dynamics": "tau_m * dv/dt = (v_rest - v) + j * resist_m",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 

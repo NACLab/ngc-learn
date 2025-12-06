@@ -21,30 +21,29 @@ Specifically, we will zoom in on two particular code snippets from
 below:
 
 ```python
-Wab = HebbianSynapse(name="Wab", shape=(1, 1), eta=1.,   signVal=-1.,
-                     wInit=("constant", 1., None), w_bound=0., key=subkeys[3])
+Wab = HebbianSynapse(
+    name="Wab", shape=(1, 1), eta=1.,   signVal=-1., wInit=("constant", 1., None), w_bound=0., key=subkeys[3]
+)
 
 # wire output compartment (rate-coded output zF) of RateCell `a` to input compartment of HebbianSynapse `Wab`
-Wab.inputs << a.zF
+a.zF >> Wab.inputs
 # wire output compartment of HebbianSynapse `Wab` to input compartment (electrical current j) RateCell `b`
-b.j << Wab.outputs
+Wab.outputs >> b.j
 
 # wire output compartment (rate-coded output zF) of RateCell `a` to presynaptic compartment of HebbianSynapse `Wab`
-Wab.pre << a.zF
+a.zF >> Wab.pre
 # wire output compartment (rate-coded output zF) of RateCell `b` to postsynaptic compartment of HebbianSynapse `Wab`
-Wab.post << b.zF
+b.zF >> Wab.post
 ```
 
 as well as (a bit later in the model construction code):
 
 ```python
-evolve_process = (JaxProcess()
+evolve_process = (MethodProcess()
                   >> a.evolve)
-circuit.wrap_and_add_command(jit(evolve_process.pure), name="evolve")
 
-advance_process = (JaxProcess()
+advance_process = (MethodProcess()
                    >> a.advance_state)
-circuit.wrap_and_add_command(jit(advance_process.pure), name="advance")
 ```
 
 Notice that beyond wiring component `a`'s values into the synapse `Wab`'s input compartment
@@ -54,7 +53,7 @@ post-synaptic compartment `Wab.post`. These compartments are specifically
 used in `Wab`'s `evolve` call and are not strictly required to be exactly
 the same as its input and output compartments. Note that, if one wanted `pre`
 and `post` to be exactly identical to `inputs` and `outputs`, one would simply need
-to write `Wab.pre << Wab.inputs` and `Wab.post << Wab.outputs` in place
+to write `Wab.inputs >> Wab.pre` and `Wab.outputs >> Wab.post` in place
 of the pre- and post-synaptic compartment calls above.
 
 The above snippets highlight two key aspects of functionality that a synapse

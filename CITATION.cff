@@ -6,10 +6,12 @@ authors:
     orcid: https://orcid.org/0000-0002-2590-1310
   - family-names: Gebhardt
     given-names: William
+    orcid: https://orcid.org/0009-0008-7456-6556
   - family-names: Mali
     given-names: Ankur
+    orcid: https://orcid.org/0000-0001-5813-3584
 title: "ngc-learn"
-version: 1.0.0
+version: 3.0.0
 identifiers:
   - type: doi
     value: 10.5281/zenodo.6605728

@@ -1,32 +1,14 @@
 # Numerical Integration
 
-In constructing one's own biophysical models, particularly those of phenomena
-that change with time, ngc-learn offers useful flexible tools for numerical
-integration that facilitate an easier time in constructing your own components
-that play well with the library's simulation backend. Knowing how things work
-beyond Euler integration -- the base/default form of integration often employed
-by ngc-learn -- might be useful for constructing and simulating dynamics more
-accurately (often at the cost of additional computational time).
+In constructing one's own biophysical models, particularly those of phenomena that change with time, ngc-learn offers useful flexible tools for numerical integration that facilitate an easier time in constructing your own components that play well with the library's simulation backend. Knowing how things work beyond Euler integration -- the base/default form of integration often employed by ngc-learn -- might be useful for constructing and simulating dynamics more accurately (often at the cost of additional computational time).
 
 ## Euler Integration
 
-Euler integration is very simple (and fast) way of using the ordinary differential
-equations you typically define for the cellular dynamics of various components
-in ngc-learn (which typically get called in any component's `AdvanceState()`
-command).
+Euler integration is very simple (and fast) way of using the ordinary differential equations you typically define for the cellular dynamics of various components in ngc-learn (which typically get called in any component's `advance_state()` command).
 
-While utilizing the numerical integrator will depend on your component's design
-and the (biophysical) elements you wish to model, let's observe ngc-learn's
-base backend utilities (its integration backend `ngclearn.utils.diffeq`) in
-the context of numerically integrating a simple
-differential equation; specifically the autonomous (linear) ordinary differential equation (ODE):
-$\frac{\partial y(t)}{\partial t} = y(t)$. The analytic
-solution to this equation is also simple -- it is $y(t) = e^{t}$.
+While utilizing the numerical integrator will depend on your component's design and the (biophysical) elements you wish to model, let's observe ngc-learn's base backend utilities (its integration backend `ngclearn.utils.diffeq`) in the context of numerically integrating a simple differential equation; specifically the autonomous (linear) ordinary differential equation (ODE): $\frac{\partial y(t)}{\partial t} = y(t)$. The analytic solution to this equation is also simple -- it is $y(t) = e^{t}$.
 
-If you have defined your differential equation $\frac{\partial y(t)}{\partial t}$
-in a rather simple format[^1], you can write the following code to examine how
-Euler integration approximates the analytical solution (in this example, we
-examine just two different step sizes, i.e., `dt = 0.1` and `dt = 0.09`)
+If you have defined your differential equation $\frac{\partial y(t)}{\partial t}$ in a rather simple format[^1], you can write the following code to examine how Euler integration approximates the analytical solution (in this example, we examine just two different step sizes, i.e., `dt = 0.1` and `dt = 0.09`)
 
 ```python
 from jax import numpy as jnp, random, jit, nn
@@ -89,41 +71,13 @@ which should yield you a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/euler_integration.jpg" width="500" />
 
-Notice how the integration constant `dt` (or $\Delta t$) chosen affects the approximation of ngc-learn's
-Euler integrator and typically, when constructing your biophysical models, you
-will need to think about this constant in the context of your simulation time-scale
-and what you intend to model. Note that, in many biophysical component cells,
-you will have an integration time constant of some form, i.e., a $\tau$, that you
-can control, allowing you to fix your `dt` to your simulated time-scale
-(say to a value like `dt = 1` millisecond) while tuning/altering your
-time constant $\tau$ (since the differential equation will be weighted
-by $\frac{\Delta t}{\tau}$).
+Notice how the integration constant `dt` (or $\Delta t$) chosen affects the approximation of ngc-learn's Euler integrator and typically, when constructing your biophysical models, you will need to think about this constant in the context of your simulation time-scale and what you intend to model. Note that, in many biophysical component cells, you will have an integration time constant of some form, i.e., a $\tau$, that you can control, allowing you to fix your `dt` to your simulated time-scale (say to a value like `dt = 1` millisecond) while tuning/altering your time constant $\tau$ (since the differential equation will be weighted by $\frac{\Delta t}{\tau}$).
 
 ## Higher-Order Forms of (Explicit) Integration
 
-Notably, ngc-learn has built-in several forms of (explicit) numerical integration beyond
-the Euler method, such as a second order Runge-Kutta (RK-2) method (also known as
-the midpoint method) and 4th-order Runge-Kutta (RK-4) method or an error-predictor method such as Heun's method
-(also known as the trapezoid method). These forms of integration might be useful particularly
-if a cell or plastic synaptic component you might be writing follows dynamics
-that are more nonlinear or biophysically complex (requiring a higher degree
-of simulation accuracy). For instance, ngc-learn's in-built cell components,
-particularly those of higher biophysical complexity -- like the
-[Izhikevich cell](ngclearn.components.neurons.spiking.izhikevichCell) or the
-[FitzhughNagumo cell](ngclearn.components.neurons.spiking.fitzhughNagumoCell) --
-contain argument flags for switching their simulation steps to use RK-2.
+Notably, ngc-learn has built-in several forms of (explicit) numerical integration beyond the Euler method, such as a second order Runge-Kutta (RK-2) method (also known as the midpoint method) and 4th-order Runge-Kutta (RK-4) method or an error-predictor method such as Heun's method (also known as the trapezoid method). These forms of integration might be useful particularly if a cell or plastic synaptic component you might be writing follows dynamics that are more nonlinear or biophysically complex (requiring a higher degree of simulation accuracy). For instance, ngc-learn's in-built cell components, particularly those of higher biophysical complexity -- like the [Izhikevich cell](ngclearn.components.neurons.spiking.izhikevichCell) or the [FitzhughNagumo cell](ngclearn.components.neurons.spiking.fitzhughNagumoCell) -- contain argument flags for switching their simulation steps to use RK-2.
 
-To illustrate the value of higher-order numerical integration methods, let us
-examine a simple polynomial equation (thus nonlinear) that is further
-non-autonomous, i.e., it is a function of the time variable $t$ itself. A
-possible set of dynamics in this case might be:
-$\frac{\partial y(t)}{\partial t} = -2 t^3 + 12 t^2 - 20 t + 8.5$ which
-has the analytic solution $y(t) = -(1/2) t^4 + 4 t^3 - 10 t^2 + 8.5 t + C$ (
-where we will set $C = 1$). You can write code like below, importing from
-`ngclearn.utils.diffeq.ode_utils` the Euler routine (`step_euler`),
-the RK-2 routine (`step_rk2`), the RK-4 routine (`step_rk4`), and Heun's method (`step_heun`), and compare
-how these methods approximate the nonlinear dynamics inherent to our
-constructed $\frac{\partial y(t)}{\partial t}$ ODE below:
+To illustrate the value of higher-order numerical integration methods, let us examine a simple polynomial equation (thus nonlinear) that is further non-autonomous, i.e., it is a function of the time variable $t$ itself. A possible set of dynamics in this case might be: $\frac{\partial y(t)}{\partial t} = -2 t^3 + 12 t^2 - 20 t + 8.5$ which has the analytic solution $y(t) = -(1/2) t^4 + 4 t^3 - 10 t^2 + 8.5 t + C$ (where we will set $C = 1$). You can write code like below, importing from `ngclearn.utils.diffeq.ode_utils` the Euler routine (`step_euler`), the RK-2 routine (`step_rk2`), the RK-4 routine (`step_rk4`), and Heun's method (`step_heun`), and compare how these methods approximate the nonlinear dynamics inherent to our constructed $\frac{\partial y(t)}{\partial t}$ ODE below:
 
 ```python
 from jax import numpy as jnp, random, jit, nn
@@ -194,12 +148,7 @@ which should yield you a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/ode_method_comparison.jpg" width="500" />
 
-As you might observe, RK-4 gives the best approximation of the solution. In addition, 
-when the integration step size is held constant, Euler integration
-does quite poorly over just a few steps while RK-2 and Heun's method do much better
-at approximating the analytical equation. In the end, the type of numerical integration method employed can
-matter depending on the ODE(s) you use in modeling, particularly if you seek higher accuracy
-for more nonlinear dynamics like in our example above.
+As you might observe, RK-4 give the best approximation of the solution. In addition, when the integration step size is held constant, Euler integration does quite poorly over just a few steps while RK-2 and Heun's method do much better at approximating the analytical equation. In the end, the type of numerical integration method employed can matter depending on the ODE(s) you use in modeling, particularly if you seek higher accuracy for more nonlinear dynamics like in our example above.
 
 [^1]: The format expected by ngc-learn's backend is that the differential equation
       provides a functional API/form like so: for instance `dy/dt = diff_eqn(t, y(t), params)`,

@@ -1,16 +1,13 @@
 from ngclearn.components.jaxComponent import JaxComponent
 from jax import numpy as jnp, random, jit
 from functools import partial
-from ngclearn.utils import tensorstats
-from ngcsimlib.deprecators import deprecate_args
-from ngcsimlib.logger import info, warn
-
-from ngcsimlib.compilers.process import transition
-#from ngcsimlib.component import Component
-from ngcsimlib.compartment import Compartment
+import jax
+from typing import Union
 
 from ngclearn.utils.model_utils import clamp_min, clamp_max
 
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[5])
 def _calc_spike_times_linear(data, tau, thr, first_spk_t, num_steps=1.,
@@ -146,90 +143,79 @@ class LatencyCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(
-            self, name, n_units, tau=1., threshold=0.01, first_spike_time=0., linearize=False, normalize=False,
-            clip_spikes=False, num_steps=1., batch_size=1, **kwargs
+            self, name: str, n_units: int, tau: float = 1., threshold: float = 0.01, first_spike_time: float = 0.,
+            linearize: bool = False, normalize: bool = False, clip_spikes: bool = False, num_steps: float = 1.,
+            batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs
     ):
-        super().__init__(name, **kwargs)
+        super().__init__(name=name, key=key)
 
         ## latency meta-parameters
-        self.first_spike_time = first_spike_time
-        self.tau = tau
-        self.threshold = threshold
-        self.linearize = linearize
-        self.clip_spikes = clip_spikes
+        self.first_spike_time = Compartment(first_spike_time)
+        self.tau = Compartment(tau)
+        self.threshold = Compartment(threshold)
+        self.linearize = Compartment(linearize)
+        self.clip_spikes = Compartment(clip_spikes)
         ## normalize latency code s.t. final spike(s) occur w/in num_steps
-        self.normalize = normalize
-        self.num_steps = num_steps
+        self.normalize = Compartment(normalize)
+        self.num_steps = Compartment(num_steps)
 
         ## Layer Size Setup
-        self.batch_size = batch_size
-        self.n_units = n_units
+        self.batch_size = Compartment(batch_size)
+        self.n_units = Compartment(n_units)
 
         ## Compartment setup
-        restVals = jnp.zeros((self.batch_size, self.n_units))
+        restVals = jnp.zeros((batch_size, n_units))
         self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
         self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
         self.mask = Compartment(restVals, display_name="Spike Time Mask")
         self.clip_mask = Compartment(restVals, display_name="Clip Mask")
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
         self.targ_sp_times = Compartment(restVals, display_name="Target Spike Time", units="ms")
-        #self.reset()
 
-    @transition(output_compartments=["targ_sp_times", "clip_mask"])
-    @staticmethod
-    def calc_spike_times(
-            linearize, tau, threshold, first_spike_time, num_steps, normalize, clip_spikes, inputs
-    ):
-        ## would call this function before processing a spike train (at start)
-        data = inputs
-        if clip_spikes:
-            clip_mask = (data < threshold) * 1. ## find values under threshold
+    @compilable
+    def calc_spike_times(self):
+        if self.clip_spikes.get():
+            self.clip_mask.set((self.inputs.get() < self.threshold) * 1.)
         else:
-            clip_mask = data * 0.  ## all values allowed to fire spikes
-        if linearize: ## linearize spike time calculation
-            stimes = _calc_spike_times_linear(data, tau, threshold,
-                                              first_spike_time,
-                                              num_steps, normalize)
-            targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
-        else: ## standard nonlinear spike time calculation
-            stimes = _calc_spike_times_nonlinear(data, tau, threshold,
-                                                 first_spike_time,
-                                                 num_steps=num_steps,
-                                                 normalize=normalize)
-            targ_sp_times = stimes #* calcEvent + targ_sp_times * (1. - calcEvent)
-        return targ_sp_times, clip_mask
+            self.clip_mask.set(self.inputs.get() * 0.)
 
-    @transition(output_compartments=["outputs", "tols", "mask", "targ_sp_times", "key"])
-    @staticmethod
-    def advance_state(t, dt, key, inputs, mask, clip_mask, targ_sp_times, tols):
-        key, *subkeys = random.split(key, 2)
-        data = inputs  ## get sensory pattern data / features
-        spikes, spk_mask = _extract_spike(targ_sp_times, t, mask)  ## get spikes at t
+        if self.linearize.get():
+            self.targ_sp_times.set(
+                _calc_spike_times_linear(self.inputs.get(),
+                                         self.tau.get(),
+                                         self.threshold.get(),
+                                         self.first_spike_time.get(),
+                                         self.num_steps.get(),
+                                         self.normalize.get()))
+        else:
+            self.targ_sp_times.set(
+                _calc_spike_times_nonlinear(self.inputs.get(),
+                                            self.tau.get(),
+                                            self.threshold.get(),
+                                            self.first_spike_time.get(),
+                                            self.num_steps.get(),
+                                            self.normalize.get()))
 
-        # Updates time-of-last-spike (tols) variable:
-        # output = s = binary spike vector
-        # tols = current time-of-last-spike variable
-        tols = (1. - spikes) * tols + (spikes * t)
 
-        spikes = spikes * (1. - clip_mask)
-        return spikes, tols, spk_mask, targ_sp_times, key
+    @compilable
+    def advance_state(self, t):
+        spikes, spike_mask = _extract_spike(self.targ_sp_times.get(), t, self.mask.get())
+        self.tols.set((1. - spikes) * self.tols.get() + (spikes * t))
+        self.outputs.set(spikes * (1. - self.clip_mask.get()))
+        self.mask.set(spike_mask)
 
-    @transition(output_compartments=["inputs", "outputs", "tols", "mask", "clip_mask", "targ_sp_times"])
-    @staticmethod
-    def reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
-        return (restVals, restVals, restVals, restVals, restVals, restVals)
-
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.key.set(data['key'])
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
+        self.outputs.set(restVals)
+        self.tols.set(restVals)
+        self.mask.set(restVals)
+        self.clip_mask.set(restVals)
+        self.targ_sp_times.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -266,22 +252,10 @@ class LatencyCell(JaxComponent):
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
-
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         X = LatencyCell("X", 9)
     print(X)
+    print(X.calc_spike_times.compiled.code)
+    print(X.advance_state.compiled.code)
