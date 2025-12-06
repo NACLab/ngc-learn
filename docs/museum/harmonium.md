@@ -229,43 +229,44 @@ by cycling through it several times, saving the final
 $ python sim_harmonium.py 
 ```
 
-which will fit/adapt your harmonium to MNIST. This should produce per-training iteration output, printed to I/O, 
-similar to the following:
+which will fit/adapt your harmonium to MNIST. Note that the model exhibit code that you will run uses a special 
+extension of CD learning known as persistent CD (PCD); our PCD implementation[^3] essentially obtains negative-phase 
+statistics by maintaining a set of Gibbs sampling chains that are never reset but instead sampled from each time the 
+model parameters are to updated <b>[6]</b> (this extension that improves the quality of the samples produced by the RBM). 
+This should produce per-training iteration output, printed to I/O, similar to the following:
 
 ```console
 --- Initial RBM Synaptic Stats ---
 W1:  min -0.0494 ;  max 0.0445  mu -0.0000 ;  norm 4.4734
 b1:  min -4.0000 ;  max -4.0000  mu -4.0000 ;  norm 64.0000
-c0:  min -11.6114 ;  max 0.0635  mu -3.8398 ;  norm 135.2238
--1| Test:  err(X) = 54.3889
-0| Test:  |d.E(X)| = 16.8070  err(X) = 46.8236; Train: err(X) = 52.7418
-1| Test:  |d.E(X)| = 27.1183  err(X) = 36.8690; Train: err(X) = 41.3630
-2| Test:  |d.E(X)| = 13.7855  err(X) = 31.8582; Train: err(X) = 34.5511
-3| Test:  |d.E(X)| = 9.0927  err(X) = 28.6253; Train: err(X) = 30.4615
-4| Test:  |d.E(X)| = 5.8375  err(X) = 26.2317; Train: err(X) = 27.6882
-5| Test:  |d.E(X)| = 5.3187  err(X) = 24.3207; Train: err(X) = 25.5485
-6| Test:  |d.E(X)| = 3.7614  err(X) = 22.8012; Train: err(X) = 23.8361
-7| Test:  |d.E(X)| = 2.2589  err(X) = 21.6163; Train: err(X) = 22.4523
-8| Test:  |d.E(X)| = 3.2040  err(X) = 20.5934; Train: err(X) = 21.3355
-9| Test:  |d.E(X)| = 2.4215  err(X) = 19.7679; Train: err(X) = 20.4297
-10| Test:  |d.E(X)| = 1.5725  err(X) = 19.0672; Train: err(X) = 19.6835
-11| Test:  |d.E(X)| = 0.5418  err(X) = 18.4881; Train: err(X) = 19.0372
+c0:  min -15.2663 ;  max 0.1887  mu -4.0560 ;  norm 148.4289
+-1| Test:  err(X) = 66.7563
+0| Dev:  |d.E(X)| = 10.0093  err(X) = 64.7762
+1| Dev:  |d.E(X)| = 2.5509  err(X) = 57.7121
+2| Dev:  |d.E(X)| = 5.0427  err(X) = 53.9887
+3| Dev:  |d.E(X)| = 5.1724  err(X) = 52.6923
+4| Dev:  |d.E(X)| = 5.0167  err(X) = 51.1648
+5| Dev:  |d.E(X)| = 3.4010  err(X) = 49.9060
+6| Dev:  |d.E(X)| = 1.2844  err(X) = 48.9477
+7| Dev:  |d.E(X)| = 3.8469  err(X) = 48.2278
+8| Dev:  |d.E(X)| = 3.2666  err(X) = 47.3158
+9| Dev:  |d.E(X)| = 0.7140  err(X) = 46.4883
+10| Dev:  |d.E(X)| = 3.5822  err(X) = 45.7021
+11| Dev:  |d.E(X)| = 1.9054  err(X) = 45.2206
 ...
 <shortened for brevity>
 ...
-91| Test:  |d.E(X)| = 0.4870  err(X) = 11.0443; Train: err(X) = 10.9832
-92| Test:  |d.E(X)| = 0.0390  err(X) = 11.0118; Train: err(X) = 10.9820
-93| Test:  |d.E(X)| = 0.5127  err(X) = 11.0013; Train: err(X) = 10.9586
-94| Test:  |d.E(X)| = 1.9180  err(X) = 10.9874; Train: err(X) = 10.9312
-95| Test:  |d.E(X)| = 0.0258  err(X) = 10.9906; Train: err(X) = 10.9274
-96| Test:  |d.E(X)| = 0.4760  err(X) = 10.9712; Train: err(X) = 10.8940
-97| Test:  |d.E(X)| = 0.6038  err(X) = 10.9589; Train: err(X) = 10.8960
-98| Test:  |d.E(X)| = 0.2870  err(X) = 10.9563; Train: err(X) = 10.8727
-99| Test:  |d.E(X)| = 1.6622  err(X) = 10.9347; Train: err(X) = 10.8671
+93| Dev:  |d.E(X)| = 0.3789  err(X) = 27.3184
+94| Dev:  |d.E(X)| = 0.5906  err(X) = 27.2172
+95| Dev:  |d.E(X)| = 0.0461  err(X) = 27.2518
+96| Dev:  |d.E(X)| = 1.9164  err(X) = 27.1477
+97| Dev:  |d.E(X)| = 2.3997  err(X) = 27.0035
+98| Dev:  |d.E(X)| = 2.9253  err(X) = 27.1244
+99| Dev:  |d.E(X)| = 1.2569  err(X) = 26.9761
 --- Final RBM Synaptic Stats ---
-W1:  min -1.8648 ;  max 1.3757  mu -0.0012 ;  norm 70.6230
-b1:  min -7.5815 ;  max 0.2337  mu -2.3395 ;  norm 53.3993
-c0:  min -11.6316 ;  max -2.4227  mu -5.3259 ;  norm 161.5646
+W1:  min -1.1823 ;  max 0.7636  mu -0.0087 ;  norm 57.4068
+b1:  min -4.0943 ;  max -2.8031  mu -3.5501 ;  norm 56.9961
+c0:  min -16.0370 ;  max -0.8244  mu -4.6686 ;  norm 158.2293
 ```
 
 You will find, after the training script has finished executing, several outputs in the `exp/filters/` model 
@@ -282,7 +283,7 @@ if not). In particular, we remark notice that the filters that our harmonium has
 to the fact our exhibit employs some weight decay (specifically,  Gaussian/L2 decay -- with intensity 
 `l2_lambda=0.01` -- to the `W1` synaptic matrix of our RBM). 
 Weight decay of this form is particularly useful to not only mitigate against the harmonium overfitting to its training 
-data but also to ensure that the Markov chain inherent to its negative-phase mixes more effectively [5] (which ensures 
+data but also to ensure that the Markov chain inherent to its negative-phase mixes more effectively <b>[5]</b> (which ensures 
 better-quality samples from the block Gibbs sampler, which we will use next).  
 
 Finally, you will also find in the `exp/filters/` model sub-folder another grid-plot containing some (about `100`) of 
@@ -330,8 +331,9 @@ Gibbs sampling process.
 reading the plot follows the ordering of samples extracted from the specific Markov chain sequence.) 
 Note that, although each chain is run for many total steps, the `sample_harmonium.py` script "thins" out each Markov 
 chain by only pulling out a fantasized pattern every `20` steps (further "burning" in each chain before collecting 
-samples). Each chain is merely initialized with random Bernoulli noise. Note that higher-quality samples can be 
-obtained if one modifies the earlier harmonium to learn with persistent CD or parallel tempering.
+samples). <!--Each chain is merely initialized with random Bernoulli noise. -->
+We remark that higher-quality samples can be 
+obtained if one modifies the earlier harmonium to learn with more advanced forms of CD-learning, such as parallel tempering.
 
 ### Final Notes
 
@@ -343,15 +345,16 @@ Boltzmann machine (GRBM).
 
 <!-- references -->
 ## References
-[1] Smolensky, P. "Information Processing in Dynamical Systems: Foundations of Harmony Theory" (Chapter 6). Parallel 
+<b>[1]</b> Smolensky, P. "Information Processing in Dynamical Systems: Foundations of Harmony Theory" (Chapter 6). Parallel 
 distributed processing: explorations in the microstructure of cognition 1 (1986). <br>
-[2] Hinton, Geoffrey. Products of Experts. International conference on artificial neural networks (1999). <br>
-[3] Hinton, Geoffrey E. "Training products of experts by maximizing contrastive likelihood." Technical Report, Gatsby 
+<b>[2]</b> Hinton, Geoffrey. Products of Experts. International conference on artificial neural networks (1999). <br>
+<b>[3]</b> Hinton, Geoffrey E. "Training products of experts by maximizing contrastive likelihood." Technical Report, Gatsby 
 computational neuroscience unit (1999). <br>
-[4] Movellan, Javier R. "Contrastive Hebbian learning in the continuous Hopfield model." Connectionist models. Morgan 
+<b>[4]</b> Movellan, Javier R. "Contrastive Hebbian learning in the continuous Hopfield model." Connectionist models. Morgan 
 Kaufmann, 1991. 10-17. <br> 
-[5] Hinton, Geoffrey E. "A practical guide to training restricted Boltzmann machines." Neural networks: Tricks of the 
-trade. Springer, Berlin, Heidelberg, 2012. 599-619.
+<b>[5]</b> Hinton, Geoffrey E. "A practical guide to training restricted Boltzmann machines." Neural networks: Tricks of the 
+trade. Springer, Berlin, Heidelberg. 599-619 (2012). <br>
+<b>[6]</b> Tieleman, Tijmen. "Training restricted Boltzmann machines using approximations to the likelihood gradient." Proceedings of the 25th international conference on Machine learning. (2008).
 
 <!-- footnotes -->
 [^1]: In fact, it is intractable to compute the partition function $Z$ for any reasonably-sized harmonium; fortunately, 
@@ -359,3 +362,8 @@ we will not need to calculate $Z$ in order to learn and sample from a Harmonium.
 [^2]: In general, CD-1 means contrastive divergence where the negative phase is only run for one single step, i.e., 
 `K=1`. The more general form of CD is known as CD-K, the K-step CD algorithm where `K > 1`. (Sometimes, CD-1 is just 
 referred to as just "CD".)
+[^3]: Note that we have slightly modified the PCD algorithm to include a "chain-swapping" mechanism taken from the 
+statistical approach known as "parallel tempering". In our implementation, we randomy swap the states of the 
+set of Gibbs chains we maintain under a fixed mixing probability `p_mix`; we found that this somewhat improved 
+the quality of our model's confabulations more consistently.
+ 
