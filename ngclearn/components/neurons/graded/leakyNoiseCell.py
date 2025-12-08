@@ -22,10 +22,14 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
 
     The specific differential equation that characterizes this cell is (for adjusting x) is:
 
-    | tau_x * dx/dt = -x + j_rec + j_in + sqrt(2 alpha (sigma_rec)^2) * eps
+    | tau_x * dx/dt = -x + j_rec + j_in + sqrt(2 alpha (sigma_pre)^2) * eps; and,
+    | r = f(x) + (eps * sigma_post). 
     | where j_in is the set of incoming input signals
     | and j_rec is the set of recurrent input signals
     | and eps is a sample of unit Gaussian noise, i.e., eps ~ N(0, 1)
+    | and f(x) is the rectification function
+    | and sigma_pre is the pre-rectification noise applied to membrane x
+    | and sigma_post is the post-rectification noise applied to rates f(x)
 
     | --- Cell Input Compartments: ---
     | j_input - input (bottom-up) electrical/stimulus current (takes in external signals)
@@ -33,7 +37,8 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
     | --- Cell State Compartments ---
     | x - noisy rate activity / current value of state
     | --- Cell Output Compartments: ---
-    | r - post-rectified activity, i.e., fx(x) = relu(x)
+    | r - post-rectified activity, e.g., fx(x) = relu(x)
+    | r_prime - post-rectified temporal derivative, e.g., dfx(x) = d_relu(x)
 
     Args:
         name: the string name of this cell
