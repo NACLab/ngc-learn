@@ -89,7 +89,8 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
         self.j_input = Compartment(restVals, display_name="Input Stimulus Current", units="mA") # electrical current
         self.j_recurrent = Compartment(restVals, display_name="Recurrent Stimulus Current", units="mA") # electrical current
         self.x = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
-        self.r = Compartment(restVals, display_name="Rectified Rate Activity") # rectified output
+        self.r = Compartment(restVals, display_name="(Rectified) Rate Activity") # rectified output
+        self.r_prime = Compartment(restVals, display_name="Derivative of rate activity")
 
     @compilable
     def advance_state(self, t, dt):
@@ -106,12 +107,14 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
         _step_fn = _step_fns[self.intgFlag] #_step_fns.get(self.intgFlag, step_euler)
         params = (self.j_input.get(), self.j_recurrent.get(), eps, self.tau_x, self.sigma_rec, self.leak_scale)
         _, x = _step_fn(0., self.x.get(), _dfz, dt, params) ## update state activation dynamics
-        r = self.fx(x)  ## calculate rectified / post-activation function value(s)
+        r = self.fx(x)  ## calculate (rectified) activity rates; f(x)
+        r_prime = self.dfx(x) ## calculate local deriv of activity rates; f'(x)
 
         ## set compartments to next state values in accordance with dynamics
         self.key.set(key)
         self.x.set(x)
         self.r.set(r)
+        self.r_prime.set(r_prime)
 
     @compilable
     def reset(self):
@@ -123,6 +126,7 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
         self.j_recurrent.set(restVals)
         self.x.set(restVals)
         self.r.set(restVals)
+        self.r_prime.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
