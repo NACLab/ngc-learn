@@ -71,7 +71,6 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
     ):
         super().__init__(name, **kwargs)
 
-
         self.tau_x = tau_x
         self.sigma_pre = sigma_pre ## a pre-rectification scaling factor
         self.sigma_post = sigma_post ## a post-rectification scaling factor
@@ -110,7 +109,6 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
         key, skey = random.split(self.key.get(), 2)
         eps_post = random.normal(skey, shape=self.x.get().shape)  ## post-rectifier distributional noise
 
-        #x = _run_cell(dt, self.j_input.get(), self.j_recurrent.get(), self.x.get(), eps, self.tau_x, self.sigma_rec, integType=self.intgFlag)
         _step_fns = {
             0: step_euler,
             1: step_rk2,
@@ -152,13 +150,16 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
             "states":
                 {"x": "Update to continuous noisy, leaky dynamics; value at time t"},
             "outputs":
-                {"r": "A linear rectifier applied to rate-coded dynamics; f(z)"},
+                {"r": "A linear rectifier applied to rate-coded dynamics; f(z)",
+                 "r_prime": "Temporal derivative applied to rate-coded dynamics; f'(z)"},
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
             "batch_size": "Batch size dimension of this component",
             "tau_x": "State time constant",
-            "sigma_pre": "The non-zero degree/scale of (pre-rectification) noise to inject into this neuron"
+            "act_fx": "Type of rectification function to use",
+            "sigma_pre": "The non-zero degree/scale of pre-rectification noise to inject into this neuron",
+            "sigma_post": "The non-zero degree/scale of post-rectification noise to inject into this neuron"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
