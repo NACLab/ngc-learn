@@ -36,14 +36,20 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1 and > 0. will result in a sparser synaptic structure
             (lower values yield sparse structure)
+
+        mask: if non-None, a (multiplicative) mask is applied to this synaptic weight matrix
     """
 
     def __init__(
-            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs
+            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., mask=None, batch_size=1,
+            **kwargs
     ):
         super().__init__(name, **kwargs)
 
         self.batch_size = batch_size
+        self.mask = 1.
+        if mask is not None:
+            self.mask = mask
 
         ## Synapse meta-parameters
         self.shape = shape
@@ -79,7 +85,9 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
     @compilable
     def advance_state(self):
-        self.outputs.set((jnp.matmul(self.inputs.get(), self.weights.get()) * self.resist_scale) + self.biases.get())
+        weights = self.weights.get()
+        weights = weights * self.mask
+        self.outputs.set((jnp.matmul(self.inputs.get(), weights) * self.resist_scale) + self.biases.get())
 
     @compilable
     def reset(self):

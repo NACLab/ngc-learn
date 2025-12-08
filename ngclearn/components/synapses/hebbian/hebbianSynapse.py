@@ -86,7 +86,7 @@ def _enforce_constraints(W, w_bound, is_nonnegative=True):
     """
     _W = W
     if w_bound > 0.:
-        if is_nonnegative == True:
+        if is_nonnegative:
             _W = jnp.clip(_W, 0., w_bound)
         else:
             _W = jnp.clip(_W, -w_bound, w_bound)
@@ -173,7 +173,10 @@ class HebbianSynapse(DenseSynapse):
             prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., 
             p_conn=1., resist_scale=1., batch_size=1, **kwargs
     ):
-        super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(
+            name, shape=shape, weight_init=weight_init, bias_init=bias_init, resist_scale=resist_scale, p_conn=p_conn,
+            batch_size=batch_size, **kwargs
+        )
 
         if w_decay > 0.:
             prior = ('l2', w_decay)
@@ -243,19 +246,20 @@ class HebbianSynapse(DenseSynapse):
         post = self.post.get()
         weights = self.weights.get()
         biases = self.biases.get()
-        opt_params = self.opt_params.get()
+        #opt_params = self.opt_params.get()
 
         ## calculate synaptic update values
         dWeights, dBiases = HebbianSynapse._compute_update(
-            self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
-            pre, post, weights
+            self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght,
+            self.post_wght, pre, post, weights
         )
 
         self.dWeights.set(dWeights)
         self.dBiases.set(dBiases)
+        #self.opt_params.set(opt_params)
 
     @compilable
-    def evolve(self):
+    def evolve(self, dt):
         # Get the variables
         pre = self.pre.get()
         post = self.post.get()
@@ -268,6 +272,7 @@ class HebbianSynapse(DenseSynapse):
             self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
             pre, post, weights
         )
+
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if self.bias_init != None:
             opt_params, [weights, biases] = self.opt(opt_params, [weights, biases], [dWeights, dBiases])
