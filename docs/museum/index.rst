@@ -16,6 +16,7 @@ of detailed walkthroughs presented in the table of contents below.)
 
   sparse_coding
   pc_rao_ballard1999
+  eirnn_song_etal2016
   snn_dc
   event_stdp_patches
   rl_snn
