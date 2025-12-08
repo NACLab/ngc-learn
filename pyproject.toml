@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta" # using setuptool building engine
 
 [project]
 name = "ngclearn"
-version = "3.0.0"
+version = "3.0.1"
 description = "Simulation software for building and analyzing computational neuroscience models, brain-inspired computing systems, and NeuroAI agents."
 authors = [
   {name = "Alexander Ororbia", email = "ago@cs.rit.edu"},
