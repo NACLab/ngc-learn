@@ -53,19 +53,23 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
             :Note: setting the integration type to the midpoint method will increase the accuracy of the estimate of
                 the cell's evolution at an increase in computational cost (and simulation time)
 
-        sigma_rec: noise scaling factor / standard deviation (Default: 1)
+        sigma_pre: pre-rectification noise scaling factor / standard deviation (Default: 0.1)
+
+        sigma_post: post-rectification noise scaling factor / standard deviation (Default: 0.)
+
+        leak_scale: degree to which membrane leak should be scaled (Default: 1)
     """
 
-    # Define Functions
     def __init__(
-            self, name, n_units, tau_x, act_fx="relu", integration_type="euler", batch_size=1, sigma_rec=1.,
-            leak_scale=1., shape=None, **kwargs
+            self, name, n_units, tau_x, act_fx="relu", integration_type="euler", batch_size=1, sigma_pre=0.1,
+            sigma_post=0.1, leak_scale=1., shape=None, **kwargs
     ):
         super().__init__(name, **kwargs)
 
 
         self.tau_x = tau_x
-        self.sigma_rec = sigma_rec ## a "resistance" scaling factor
+        self.sigma_pre = sigma_pre ## a pre-rectification scaling factor
+        self.sigma_post = sigma_post ## a post-rectification scaling factor
         self.leak_scale = leak_scale ## the leak scaling factor (most appropriate default is 1)
 
         ## integration properties
@@ -94,9 +98,12 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
 
     @compilable
     def advance_state(self, t, dt):
-        ### run a step of integration over neuronal dynamics
+        ## run a step of integration over neuronal dynamics
+        ### Note: self.fx is the "rectifier" (rectification function)
         key, skey = random.split(self.key.get(), 2)
-        eps = random.normal(skey, shape=self.x.get().shape) ## sample of unit distributional noise
+        eps_pre = random.normal(skey, shape=self.x.get().shape) ## pre-rectifier distributional noise
+        key, skey = random.split(self.key.get(), 2)
+        eps_post = random.normal(skey, shape=self.x.get().shape)  ## post-rectifier distributional noise
 
         #x = _run_cell(dt, self.j_input.get(), self.j_recurrent.get(), self.x.get(), eps, self.tau_x, self.sigma_rec, integType=self.intgFlag)
         _step_fns = {
@@ -105,13 +112,13 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
             2: step_rk4,
         }
         _step_fn = _step_fns[self.intgFlag] #_step_fns.get(self.intgFlag, step_euler)
-        params = (self.j_input.get(), self.j_recurrent.get(), eps, self.tau_x, self.sigma_rec, self.leak_scale)
+        params = (self.j_input.get(), self.j_recurrent.get(), eps_pre, self.tau_x, self.sigma_pre, self.leak_scale)
         _, x = _step_fn(0., self.x.get(), _dfz, dt, params) ## update state activation dynamics
-        r = self.fx(x)  ## calculate (rectified) activity rates; f(x)
+        r = self.fx(x) + (eps_post * self.sigma_post)  ## calculate (rectified) activity rates; f(x)
         r_prime = self.dfx(x) ## calculate local deriv of activity rates; f'(x)
 
         ## set compartments to next state values in accordance with dynamics
-        self.key.set(key)
+        self.key.set(key) ## carry noise key over transition (to next state of component)
         self.x.set(x)
         self.r.set(r)
         self.r_prime.set(r_prime)
@@ -146,7 +153,7 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
             "n_units": "Number of neuronal cells to model in this layer",
             "batch_size": "Batch size dimension of this component",
             "tau_x": "State time constant",
-            "sigma_rec": "The non-zero degree/scale of noise to inject into this neuron"
+            "sigma_pre": "The non-zero degree/scale of (pre-rectification) noise to inject into this neuron"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
