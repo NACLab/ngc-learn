@@ -226,7 +226,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal
             dfx_val = self.dfx(z)
-            j = _modulate(j, dfx_val)
+            j = _modulate(j, dfx_val) ## TODO: make this optional (for NGC circuit dynamics)
             j = j * self.resist_scale
             tmp_z = _run_cell(
                 dt, j, j_td, z, self.tau_m, leak_gamma=self.priorLeakRate, integType=self.intgFlag,

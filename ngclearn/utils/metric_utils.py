@@ -308,7 +308,7 @@ def measure_CatNLL(p, x, offset=1e-7, preserve_batch=False):
         nll = jnp.mean(nll)
     return nll #tf.reduce_mean(nll)
 
-@jit
+@partial(jit, static_argnums=[2])
 def measure_RMSE(mu, x, preserve_batch=False):
     """
     Measures root mean squared error (RMSE). Note: If batch is preserved, this returns a column vector where each
@@ -328,7 +328,7 @@ def measure_RMSE(mu, x, preserve_batch=False):
     mse = measure_MSE(mu, x, preserve_batch=preserve_batch)
     return jnp.sqrt(mse) ## sqrt(MSE) is the root-mean-squared-error
 
-@jit
+@partial(jit, static_argnums=[2])
 def measure_MSE(mu, x, preserve_batch=False):
     """
     Measures mean squared error (MSE), or the negative Gaussian log likelihood with variance of 1.0. Note: If batch
@@ -352,7 +352,7 @@ def measure_MSE(mu, x, preserve_batch=False):
         mse = jnp.mean(mse) # this is proper mse
     return mse
 
-@jit
+@partial(jit, static_argnums=[2])
 def measure_MAE(shift, x, preserve_batch=False):
     """
     Measures mean absolute error (MAE), or the negative Laplacian log likelihood with scale of 1.0. Note: If batch
@@ -376,7 +376,7 @@ def measure_MAE(shift, x, preserve_batch=False):
         mae = jnp.mean(mae) # this is proper mae
     return mae
 
-@jit
+@partial(jit, static_argnums=[3])
 def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
     """
     Calculates the negative Bernoulli log likelihood or binary cross entropy (BCE). Note: If batch is preserved,
