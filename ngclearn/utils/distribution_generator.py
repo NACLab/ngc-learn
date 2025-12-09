@@ -152,6 +152,47 @@ class DistributionGenerator(object):
         return gaussian_generator
 
     @staticmethod
+    def log_gaussian(sigma: float = 1.0, **params: Unpack[DistributionParams]) -> DistributionInitializer:
+        """
+        Produces a distribution initializer for a log-Gaussian/normal distribution. Note that this 
+        distribution is constrained to be centered (zero-mean); thus, only a scale/standard-devation 
+        `sigma` can be provided as argument. This is a useful distribution to produce non-negative/
+        positive-valued sample values.
+
+        Args:
+            sigma: standard deviation of the underlying normal distribution (Default: 1.)
+            **params: the extra distribution parameters
+
+        Returns:
+            a distribution initializer
+        """
+        using_np = params.get("use_numpy", False)
+
+        if using_np:
+            def log_gaussian_generator(shape: Sequence[int], seed: int | None = None) -> numpy.ndarray:
+                rng = numpy.random.default_rng(seed)
+                matrix = rng.lognormal(mean=0.0, sigma=sigma, size=shape).astype(
+                    params.get("dtype", numpy.float32))
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
+                return matrix
+        else:
+            def log_gaussian_generator(shape: Sequence[int], dKey: jax.Array | None = None) -> jax.Array:
+                if dKey is None:
+                    dKey = jax.random.PRNGKey(time.time_ns())
+                dKey, subKey = jax.random.split(dKey, 2)
+
+                matrix = jax.random.lognormal(
+                    dkey,
+                    sigma=sigma,
+                    shape=shape,
+                    dtype=params.get("dtype", jax.numpy.float32)
+                )
+                matrix = DistributionGenerator._process_params_jax(matrix, params, subKey)
+                return matrix
+
+        return log_gaussian_generator
+
+    @staticmethod
     def fan_in_uniform(**params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer using a fan-in uniform strategy.
