@@ -182,7 +182,7 @@ class DistributionGenerator(object):
                 dKey, subKey = jax.random.split(dKey, 2)
 
                 matrix = jax.random.lognormal(
-                    dkey,
+                    dKey,
                     sigma=sigma,
                     shape=shape,
                     dtype=params.get("dtype", jax.numpy.float32)
