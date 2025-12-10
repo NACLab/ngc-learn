@@ -48,7 +48,7 @@ z1 = RateCell("z1", n_units=h1_dim, tau_m=tau_m, act_fx=act_fx, prior=(prior_typ
 <br>
 <br>
 
-<img src="images/GEC.png" width="120" align="right"/>
+<img src="../images/museum/hgpc/GEC.png" width="120" align="right" />
 
 **Error Neurons**
 <br>
