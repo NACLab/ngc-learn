@@ -245,7 +245,7 @@ Corrected prediction comes back from top to the down in the backward pass.
 <!-- ----------------------------------------------------------------------------------------------------- -->
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
-#### Train PC model for reconstructing the full image
+### Train PC model for reconstructing the full image
 
 ```python
     for nb in range(n_batches):
@@ -259,7 +259,7 @@ Corrected prediction comes back from top to the down in the backward pass.
 <!-- ----------------------------------------------------------------------------------------------------- -->
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
-#### Train PC model for reconstructing the full image
+### Train PC model for reconstructing the patched image
 
 ```python
     for nb in range(n_batches):
