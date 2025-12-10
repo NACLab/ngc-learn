@@ -261,6 +261,13 @@ Corrected prediction comes back from top to the down in the backward pass.
 
 ### Train PC model for reconstructing the patched image
 
+<img src="../images/museum/hgpc/patch_input.png" width="120" align="right" />
+
+This time, the input image is not the full scene while it is locally patched. This changes the processing
+units among the network where local features are now important.
+
+
+
 ```python
     for nb in range(n_batches):
         Xb = X[nb * images_per_batch: (nb + 1) * images_per_batch, :]               ## shape: (mb_size, 784)
