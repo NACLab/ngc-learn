@@ -245,24 +245,12 @@ Corrected prediction comes back from top to the down in the backward pass.
 <!-- ----------------------------------------------------------------------------------------------------- -->
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
-### Train PC model for reconstructing the full image
-
-```python
-    for nb in range(n_batches):
-        Xb = X[nb * mb_size: (nb + 1) * mb_size, :]                                 ## shape: (mb_size, 784)
-        Xmu, Lb = model.process(Xb)
-```
-
-        
-<br>
-<br>
-<!-- ----------------------------------------------------------------------------------------------------- -->
-<!-- ----------------------------------------------------------------------------------------------------- -->
-
 
 ### Train PC model for reconstructing the patched image 
 
 <img src="../images/museum/hgpc/patch_input.png" width="300" align="right"/>
+
+<br>
 
 This time, the input image is not the full scene while it is locally patched. This changes the processing
 units among the network where local features are now important. The original models in Rao & ballard 1999
@@ -270,7 +258,6 @@ are also in patch format where similar to retina the processing units are locali
 similar filters or receptive fields as in convolutional neural networks (CNNs).
 
 
-<br>
 <br>
 
 ```python
@@ -286,6 +273,15 @@ similar filters or receptive fields as in convolutional neural networks (CNNs).
 
 
 
+<!-- -------------------------------------------------------------------------------------
+### Train PC model for reconstructing the full image
+
+```python
+    for nb in range(n_batches):
+        Xb = X[nb * mb_size: (nb + 1) * mb_size, :]                                 ## shape: (mb_size, 784)
+        Xmu, Lb = model.process(Xb)
+```
+------------------------------------------------------------------------------------- -->
 
 
 <!-- references -->
