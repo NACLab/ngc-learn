@@ -14,17 +14,22 @@ The model code for this exhibit can be found
 
 ### PC model for Reconstruction Task
 
-<!-- Autoencoder -->
+For building PC model you first need to define all the components inside the model.
+Then you should wire those components together with specific configuration depending
+on the task.
+
+1. **Create neural component**
+2. **Create synaptic component**
+3. **Wire components** – define how the components connect and interact with each others.
 
 
+-----------------------------------------------------------------------------------------------------
 
+<!-- ################################################################################ -->
 
+### 1- Make Neural component:
 
-#### Build PC model
-
-##### Make Component:
-
-###### 1- Make Neural component:
+<!-- ################################################################################ -->
 
 
 **Responding Neurons**
@@ -70,7 +75,7 @@ e0 = GaussianErrorCell("e0", n_units=in_dim)          ## e0_size == z0_size (x s
 
 <!-- ################################################################################ -->
 
-###### 2- Make Synaptic component:
+### 2- Make Synaptic component:
 
 <!-- ################################################################################ -->
 
@@ -142,7 +147,7 @@ W1 = BackwardSynapse("W1",
 <br>
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
-##### Wire Component:
+### Wire Component:
 
 
 The signal pathway is according to Rao & Ballard 1999.
