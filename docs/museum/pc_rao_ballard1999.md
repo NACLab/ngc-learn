@@ -6,9 +6,7 @@ model originally proposed in (Rao &amp; Ballard, 1999) [1].
 The model code for this exhibit can be found 
 [here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_recon).
 
-
 ## Setting Up Hierarchical Predictive Coding (HPC) with NGC-Learn
-
 
 ### The HPC Model for Reconstruction Tasks
 
@@ -210,28 +208,81 @@ Finally, to enable learning, we will need to set up simple 2-term/factor Hebbian
 
 #### Specifying the HPC Model's Process Dynamics:
 
+The only remaining thing to do for the above model is to specify its core simulation functions 
+(known in NGC-Learn as `MethodProcess` mechanisms). For an HPC model, we want to make sure 
+we define how it's full message-passing is carried out as well as how learning (synaptic plasticity) 
+occurs. Ultimately, this will follow the (dynamic) expectation-maximization (E-M) scheme we have 
+discussed in other model exhibits, e.g., the [sparse coding and dictionary learning exhibit](sparse_coding.md). 
 
-```python
-    ######### Process #########
-  
-    ########### reset/set all components to their resting values / initial conditions
-    circuit.reset()
-    
-    circuit.clamp_input(obs)      ## clamp the signal to the lowest layer activation
-    z0.z.set(obs)                 ## or directly put obs in e0.target.set(obs)
-    
-    ########### pin/tie feedback synapses to transpose of forward ones
-    E1.weights.set(jnp.transpose(W1.weights.value))
-    E2.weights.set(jnp.transpose(W2.weights.value))
-    E3.weights.set(jnp.transpose(W3.weights.value))
-    
-    circuit.process(jnp.array([[dt * i, dt] for i in range(T)])) ## Perform several E-steps
-    circuit.evolve(t=T, dt=1.)    ## Perform M-step (scheduled synaptic updates)
-            
-    obs_mu = e0.mu.value          ## get reconstructed signal
-    L0 = e0.L.value               ## calculate reconstruction loss
+The method-processes for inference (expectation) and adaptation (maximization) can be written out under 
+your model context as follows:
+
+```python 
+    reset_process = (MethodProcess(name="reset_process") ## reset-to-baseline
+                     >> z3.reset
+                     >> z2.reset
+                     >> z1.reset
+                     >> e2.reset
+                     >> e1.reset
+                     >> e0.reset
+                     >> W3.reset
+                     >> W2.reset
+                     >> W1.reset
+                     >> E3.reset
+                     >> E2.reset
+                     >> E1.reset)
+    advance_process = (MethodProcess(name="advance_process") ## E-step
+                       >> E1.advance_state
+                       >> E2.advance_state
+                       >> E3.advance_state
+                       >> z3.advance_state
+                       >> z2.advance_state
+                       >> z1.advance_state
+                       >> W3.advance_state
+                       >> W2.advance_state
+                       >> W1.advance_state
+                       >> e2.advance_state
+                       >> e1.advance_state
+                       >> e0.advance_state)
+    evolve_process = (MethodProcess(name="evolve_process") ## M-step
+                      >> W1.evolve
+                      >> W2.evolve
+                      >> W3.evolve)
 ```
 
+Below we show a code-snippet depicting how the HPC model's ability to process a stimulus input 
+(or batch of inputs) `obs` -- or observation -- is carried out in practice: 
+
+```python
+######### Process #########
+  
+#### reset/set all neuronal components to their resting values / initial conditions
+circuit.reset.run() 
+    
+#### clamp the observation/signal obs to the lowest layer activation
+e0.target.set(obs) ## e0 contains the place where our stimulus target goes
+    
+#### pin/tie feedback synapses to transpose of forward ones
+E1.weights.set(jnp.transpose(W1.weights.value))
+E2.weights.set(jnp.transpose(W2.weights.value))
+E3.weights.set(jnp.transpose(W3.weights.value))
+
+#### apply the dynamic E-M algorithm on the HPC model given obs
+inputs = jnp.array(self.advance_proc.pack_rows(T, t=lambda x: x, dt=dt))
+stateManager.state, outputs = self.process.scan(inputs)    ## Perform several (T) E-steps
+circuit.evolve.run(t=T, dt=1.)    ## Perform M-step (scheduled synaptic updates)
+            
+#### extract some statistics for downstream analysis
+obs_mu = e0.mu.value          ## get reconstructed signal
+L0 = e0.L.value               ## calculate reconstruction loss
+free_energy = e0.L.value + e1.L.value + e2.L.value   ## F = Sum_l Sum_j [e^l_j]^2
+```
+
+Note that we make use of NGC-Learn's backend state-manager (`ngcsimlib.global_state.StateManager`) to 
+roll-out the `T` E-steps carried out above efficiently (and effectively using JAX's scan utilities; 
+see the NGC-Learn configuration documents, such as the one related to the 
+[global state](../tutorials/configuration/global_state.md) for more information). 
+
 <br>
 <br>
 <br>
@@ -240,17 +291,19 @@ Finally, to enable learning, we will need to set up simple 2-term/factor Hebbian
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
 
-### Train the PC model for Reconstructing the "Patched" Image 
+### Train the PC model for Reconstructing Image Patches
 
 <img src="../images/museum/hgpc/patch_input.png" width="300" align="right"/>
 
 <br>
 
-This time, the input image is not the full scene while it is locally patched. This changes the processing
-units among the network where local features are now important. The original models in Rao & ballard 1999
-are also in patch format where similar to retina the processing units are localized. This also is results in
-similar filters or receptive fields as in convolutional neural networks (CNNs).
-
+In this scenario, the input image is not the full scene (or complete set of pixels that fully describe an image); 
+instead, the input is locally "patched", which means that is has been broken down into smaller $K \times K$ 
+blocks/grids. This input patch exctraction scheme changes the information processing of the neuronal 
+units within the network, i.e., local features are now important. The original model(s) of Rao and Ballard's 
+1999 work <b>[1]</b> are also in a patched format, modeling how retinal processing units are localized in nature. 
+Setting up the input stimulus in this manner also results in models that acquire filters (or receptive fields) 
+similar to those acquired in convolutional neural networks (CNNs).
 
 <br>
 
