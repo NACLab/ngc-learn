@@ -10,7 +10,10 @@ The model code for this exhibit can be found
 
 
 ## Predictive Coding with NGC-Learn
+<!--
 -----------------------------------------------------------------------------------------------------
+-->
+---
 
 ### PC model for Reconstruction Task
 
@@ -22,12 +25,14 @@ on the task.
 2. **Create synaptic component**
 3. **Wire components** – define how the components connect and interact with each others.
 
-
+<!--
 -----------------------------------------------------------------------------------------------------
+-->
+---
 
 <!-- ################################################################################ -->
 
-### 1- Make Neural component:
+### 1: Make Neural Component(s):
 
 <!-- ################################################################################ -->
 
@@ -75,7 +80,7 @@ e0 = GaussianErrorCell("e0", n_units=in_dim)          ## e0_size == z0_size (x s
 
 <!-- ################################################################################ -->
 
-### 2- Make Synaptic component:
+### 2: Make Synaptic Component(s):
 
 <!-- ################################################################################ -->
 
@@ -147,7 +152,7 @@ W1 = BackwardSynapse("W1",
 <br>
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
-### Wire Component:
+### Wire the Component(s) Together:
 
 
 The signal pathway is according to Rao & Ballard 1999.
@@ -156,7 +161,7 @@ Corrected prediction comes back from top to the down in the backward pass.
 
 
 ```python
-            ######### feedback (Top-down) #########
+            ######### Feedback pathways (Top-down) #########
             ### actual neural activation
             e2.target << z2.z
             e1.target << z1.z
@@ -177,7 +182,7 @@ Corrected prediction comes back from top to the down in the backward pass.
 
 
 ```python
-            ######### forward (Bottom-up) #########
+            ######### Forward propagation (Bottom-up) #########
             ## feedforward the errors via synapses
             E3.inputs << e2.dmu
             E2.inputs << e1.dmu
@@ -197,7 +202,7 @@ Corrected prediction comes back from top to the down in the backward pass.
             W2.pre << z2.zF
             W1.pre << z1.zF
 
-            ## Post Synaptic residual error
+            ## Post-synaptic residual error
             W3.post << e2.dmu
             W2.post << e1.dmu
             W1.post << e0.dmu
@@ -210,7 +215,7 @@ Corrected prediction comes back from top to the down in the backward pass.
 <br>
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
-##### Process Dynamics:
+#### Specifying the Process Dynamics:
 
 
 ```python
@@ -246,7 +251,7 @@ Corrected prediction comes back from top to the down in the backward pass.
 <!-- ----------------------------------------------------------------------------------------------------- -->
 
 
-### Train PC model for reconstructing the patched image 
+### Train the PC model for Reconstructing the "Patched" Image 
 
 <img src="../images/museum/hgpc/patch_input.png" width="300" align="right"/>
 
