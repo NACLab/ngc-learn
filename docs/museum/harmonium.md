@@ -8,9 +8,8 @@ In this walkthrough, we will design a simple Harmonium, also known as the restri
 specifically focus on learning its synaptic connections with an algorithmic recipe known as contrastive divergence (CD), 
 which can be considered to be a stochastic form of CHL. After going through this exhibit, you will:
 
-1. Learn how to construct an `NGCGraph` that emulates the structure of an RBM and adapt the NGC settling process to 
-   calculate approximate synaptic weight gradients in accordance to contrastive divergence.
-2. Simulate fantasized image samples using the block Gibbs sampler implicitly defined by the negative phase graph.
+1. Learn how to construct a model context that emulates the structure of an RBM and simulate its inference/reconstruction process to calculate approximate synaptic weight gradients in accordance to contrastive divergence (including an extension of it called persistent contrastive divergence). 
+2. Simulate fantasized image samples using a block Gibbs sampler that is defined by (re-)using a portion of the model's message-passing structure.
 
 Note that the folders of interest to this walkthrough are: 
 + `ngc-museum/exhibits/harmonium/`: this contains the necessary simulation scripts (which can be found 
