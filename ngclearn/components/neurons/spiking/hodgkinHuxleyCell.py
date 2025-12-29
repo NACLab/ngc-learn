@@ -38,7 +38,7 @@ def dx_dt(t, x, params):
 
 class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
     """
-    A spiking cell based the Hodgkin-Huxley (H-H) 1952 set of dynamics for describing the ionic mechanisms that underwrite
+    A spiking cell based on the Hodgkin-Huxley (H-H) 1952 set of dynamics for describing the ionic mechanisms that underwrite
     the initiation and propagation of action potentials within a (giant) squid axon.
 
     The four differential equations for adjusting this specific cell
@@ -64,11 +64,9 @@ class HodgkinHuxleyCell(JaxComponent): ## Hodgkin-Huxley spiking cell
     | tols - time-of-last-spike
 
     | References:
-    | Hodgkin, Alan L., and Andrew F. Huxley. "A quantitative description of membrane current and its application to
-    | conduction and excitation in nerve." The Journal of physiology 117.4 (1952): 500.
+    | Hodgkin, Alan L., and Andrew F. Huxley. "A quantitative description of membrane current and its application to conduction and excitation in nerve." The Journal of physiology 117.4 (1952): 500.
     |
-    | Kistler, Werner M., Wulfram Gerstner, and J. Leo van Hemmen. "Reduction of the Hodgkin-Huxley equations to a
-    | single-variable threshold model." Neural computation 9.5 (1997): 1015-1045.
+    | Kistler, Werner M., Wulfram Gerstner, and J. Leo van Hemmen. "Reduction of the Hodgkin-Huxley equations to a single-variable threshold model." Neural computation 9.5 (1997): 1015-1045.
 
     Args:
         name: the string name of this cell
