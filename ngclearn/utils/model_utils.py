@@ -726,6 +726,40 @@ def d_clip(x, min_val, max_val):
     return jnp.where((x < min_val) | (x > max_val), 0.0, 1.0)
 
 
+@partial(jit, static_argnums=[2])
+def lkwta(x, group_masks, nWTA=(20,)): ## local k-WTA
+    out = 0.
+    for g in range(len(group_masks)):
+        m = group_masks[g]
+        x_g = kwta(x, m, nWTA[g])
+        out = x_g + out
+    return out
+
+@partial(jit, static_argnums=[2])
+def d_lkwta(x, group_masks, nWTA=(20,)): ## d(lkwta(x))/dx
+    out = 0.
+    for g in range(len(group_masks)):
+        m = group_masks[g]
+        x_g = d_kwta(x, m, nWTA[g])
+        out = x_g + out
+    return out
+
+@partial(jit, static_argnums=[2])
+def kwta(x, m, nWTA=20):
+    _x = x * m + (1. - m) * (jnp.amin(x) - 1.)
+    values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
+    kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
+    topK = jnp.greater_equal(_x, kth).astype(jnp.float32) # cast booleans to floats
+    return topK * x
+
+@partial(jit, static_argnums=[2])
+def d_kwta(x, m, nWTA=20): ## d(kwta(x))/dx
+    _x = x * m + (1. - m) * (jnp.amin(x) - 1.)
+    values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
+    kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
+    topK = jnp.greater_equal(_x, kth).astype(jnp.float32) # cast booleans to floats
+    return topK
+
 # def scanner(fn):
 #     """
 #     A wrapper for Jax's scanner that handles the "getting" of the current
