@@ -197,8 +197,8 @@ class HebbianPatchedSynapse(PatchedSynapse):
             pre_wght=1., post_wght=1., p_conn=1., resist_scale=1., batch_size=1, **kwargs
     ):
         super().__init__(
-            name, shape, n_sub_models, stride_shape, block_mask, weight_init, bias_init, resist_scale, p_conn,
-            batch_size=batch_size, **kwargs
+            name, shape, n_sub_models, stride_shape, weight_init, bias_init, resist_scale, p_conn,
+            batch_size, **kwargs
         )
 
         prior_type, prior_lmbda = prior
@@ -288,6 +288,8 @@ class HebbianPatchedSynapse(PatchedSynapse):
         # NOTE: Quick workaround is to check if targeted is in the input or not
         hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(preVals) # inputs
         self.outputs.set(postVals) # outputs
+        self.post_in.set(postVals) # post_in
+        self.pre_out.set(preVals) # pre_out
         self.pre.set(preVals) # pre
         self.post.set(postVals) # post
         self.dWeights.set(jnp.zeros(self.shape)) # dW
@@ -304,6 +306,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         compartment_props = {
             "inputs":
                 {"inputs": "Takes in external input signal values",
+                 "post_in": "Takes in external input signal values",
                  "pre": "Pre-synaptic statistic for Hebb rule (z_j)",
                  "post": "Post-synaptic statistic for Hebb rule (z_i)"},
             "states":
@@ -314,7 +317,8 @@ class HebbianPatchedSynapse(PatchedSynapse):
                 {"dWeights": "Synaptic weight value adjustment matrix produced at time t",
                  "dBiases": "Synaptic bias/base-rate value adjustment vector produced at time t"},
             "outputs":
-                {"outputs": "Output of synaptic transformation"},
+                {"outputs": "Output of synaptic transformation",
+                 "pre_out": "Output of synaptic transformation"},
         }
         hyperparams = {
             "shape": "Overall shape of synaptic weight value matrix; number inputs x number outputs",
@@ -350,4 +354,11 @@ if __name__ == '__main__':
     print(Wab)
     plt.imshow(Wab.weights.get(), cmap='gray')
     plt.show()
+
+
+
+
+
+
+
 
