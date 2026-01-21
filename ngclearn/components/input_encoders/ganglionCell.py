@@ -6,6 +6,8 @@ import jax
 from typing import Union, Tuple
 
 
+
+
 def create_gaussian_filter(patch_shape, sigma):
     """
     Create a 2D Gaussian kernel centered on patch_shape with given sigma.
@@ -21,7 +23,22 @@ def create_gaussian_filter(patch_shape, sigma):
     yc = py // 2
 
     filter = jnp.exp(-((x - xc) ** 2 + (y - yc) ** 2) / (2 * (sigma ** 2)))
-    return filter
+    return filter / jnp.sum(filter)
+
+
+
+
+
+def create_dog_filter(patch_shape, sigma, k=1.6, lmbda=1):
+    g1 = create_gaussian_filter(patch_shape, sigma=sigma)
+    g2 = create_gaussian_filter(patch_shape, sigma=sigma * k)
+
+    dog = g1 - lmbda * g2
+
+    return dog #- jnp.mean(dog)
+
+
+
 
 
 def create_patches(obs, patch_shape, step_shape):
@@ -59,6 +76,10 @@ def create_patches(obs, patch_shape, step_shape):
     ], axis=1)
 
     return patches
+
+
+
+
 
 class RetinalGanglionCell(JaxComponent):
     """
@@ -120,12 +141,7 @@ class RetinalGanglionCell(JaxComponent):
         if filter_type == 'gaussian':
             filter = create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
         elif filter_type == 'difference_of_gaussian':
-            #     TODO: need to be accuarte
-            scale = 1.6
-            gauss_center = create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
-            gauss_surround = create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma * scale) * 0.
-            filter = gauss_center - gauss_surround #/ (scale**2)
-
+            filter = create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
 
         # ═════════════════ compartments initial values ════════════════════
         in_restVals = jnp.zeros((self.batch_size,
@@ -139,25 +155,23 @@ class RetinalGanglionCell(JaxComponent):
         self.filter = Compartment(filter, display_name="Filter") # Filter compartment
         self.outputs = Compartment(out_restVals, display_name="Output Signal") # output compartment
 
-
-
     @compilable
     def advance_state(self, t):
         inputs = self.inputs.get()
         filter = self.filter.get()
         px, py = self.patch_shape
 
-        input_patches = create_patches(inputs, patch_shape=self.patch_shape,
-                                               step_shape=self.step_shape)
+        # ═══════════════════ extract pathches for filters ══════════════════
+        input_patches = create_patches(inputs, patch_shape=self.patch_shape, step_shape=self.step_shape)
 
         # ═══════════════════ apply filter to all pathches ══════════════════
-        filtered_input = input_patches * filter                        ## shape: (B | n_cell | px | py)
+        filtered_input = input_patches * filter                                 ## shape: (B | n_cells | px | py)
+
+        # ════════════ reshape all cells responses to a single input to brain ════════════
+        filtered_input = filtered_input.reshape(-1, self.n_cells * (px * py))   ## shape: (B | n_cells * px * py)
 
         # ═══════════════════ normalize filtered signals ══════════════════
-        filters_output = filtered_input - jnp.mean(filtered_input)      ## shape: (B | n_cell | px | py)
-
-        # ═══════════════════ normalize filtered signals ══════════════════
-        outputs = filters_output.reshape(-1, self.n_cells * (px * py))  ## shape: (B | n_cells * px * py)
+        outputs = filtered_input - jnp.mean(filtered_input, axis=1, keepdims=True)         ## shape: (B | n_cells * px * py)
 
         self.outputs.set(outputs)
 
@@ -168,10 +182,7 @@ class RetinalGanglionCell(JaxComponent):
 
         out_restVals = jnp.zeros((self.batch_size,      ## output.shape: (B | n_cells * px * py)
                                   self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
-        #
-        # # BUG: the self.inputs here does not have the targeted field
-        # # NOTE: Quick workaround is to check if targeted is in the input or not
-        # hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(in_restVals)
+
         self.inputs.set(in_restVals)
         self.outputs.set(out_restVals)
 
@@ -214,3 +225,7 @@ if __name__ == '__main__':
                                 step_shape=(0, 5)
                                 )
     print(X)
+
+
+
+
