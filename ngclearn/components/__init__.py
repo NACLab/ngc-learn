@@ -27,6 +27,7 @@ from .other.expKernel import ExpKernel
 ## point to input encoder component types
 from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
+from .input_encoders.ganglionCell import RetinalGanglionCell
 from .input_encoders.latencyCell import LatencyCell
 from .input_encoders.phasorCell import PhasorCell
 
