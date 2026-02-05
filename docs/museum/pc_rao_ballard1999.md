@@ -4,7 +4,7 @@ In this exhibit, we create, simulate, and visualize the internally acquired rece
 model originally proposed in (Rao &amp; Ballard, 1999) [1]. 
 
 The model code for this exhibit can be found 
-[here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_recon).
+[here](https://github.com/NACLab/ngc-museum/tree/main/exhibits/pc_reconstruction).
 
 ## Setting Up Hierarchical Predictive Coding (HPC) with NGC-Learn
 
