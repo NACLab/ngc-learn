@@ -13,6 +13,7 @@ from .hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .hebbian.BCMSynapse import BCMSynapse
+from .mpsSynapse import MPSSynapse
 
 ## conv/deconv synaptic components
 from .convolution.convSynapse import ConvSynapse
