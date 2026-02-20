@@ -17,6 +17,8 @@ class MPSSynapse(JaxComponent):
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
     | outputs - output signals (transformation induced by synapses)
+    | pre - pre-synaptic latent state (used for learning)
+    | post - post-synaptic error signal (used for learning)
     | core1 - first MPS tensor core (1 x in_dim x bond_dim)
     | core2 - second MPS tensor core (bond_dim x out_dim x 1)
     | key - JAX PRNG key
@@ -57,6 +59,8 @@ class MPSSynapse(JaxComponent):
 
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
+        self.pre = Compartment(preVals)
+        self.post = Compartment(postVals)
 
     @compilable
     def advance_state(self):
@@ -76,6 +80,35 @@ class MPSSynapse(JaxComponent):
         self.outputs.set(out)
 
     @compilable
+    def evolve(self, eta=0.01):
+        """
+        Updates the MPS tensor cores using local error gradients.
+        Expects self.pre (latent state) and self.post (error signal).
+        """
+        x = self.pre.get()       # Shape: (Batch, In)
+        err = self.post.get()    # Shape: (Batch, Out)
+        c1 = self.core1.get()    # Shape: (1, In, K)
+        c2 = self.core2.get()    # Shape: (K, Out, 1)
+
+        # 1. Forward pass up to the bond: z = x @ c1 -> (Batch, K)
+        z = jnp.einsum('bi,mik->bk', x, c1)
+
+        # 2. Update Core 2 (Depends on z and err)
+        # dC2 = z^T @ err
+        dc2 = jnp.einsum('bk,bn->kn', z, err)
+        dc2 = jnp.expand_dims(dc2, axis=2) # Shape: (K, Out, 1)
+
+        # 3. Update Core 1 (Depends on x, err, and c2)
+        # dC1 = x^T @ (err @ c2^T)
+        err_back = jnp.einsum('bn,kno->bk', err, c2) # Project error back across bond
+        dc1 = jnp.einsum('bi,bk->ik', x, err_back)
+        dc1 = jnp.expand_dims(dc1, axis=0) # Shape: (1, In, K)
+
+        # Apply gradients
+        self.core1.set(c1 + eta * dc1)
+        self.core2.set(c2 + eta * dc2)
+
+    @compilable
     def reset(self):
         """
         Resets input and output compartments to zero.
@@ -84,6 +117,12 @@ class MPSSynapse(JaxComponent):
             self.inputs.set(jnp.zeros((self.batch_size, self.shape[0])))
 
         self.outputs.set(jnp.zeros((self.batch_size, self.shape[1])))
+        
+        if not self.pre.targeted:
+            self.pre.set(jnp.zeros((self.batch_size, self.shape[0])))
+
+        if not self.post.targeted:
+            self.post.set(jnp.zeros((self.batch_size, self.shape[1])))
 
     @property
     def weights(self):
@@ -110,7 +149,9 @@ class MPSSynapse(JaxComponent):
         }
         compartment_props = {
             "inputs":
-                {"inputs": "Takes in external input signal values"},
+                {"inputs": "Takes in external input signal values",
+                 "pre": "Pre-synaptic latent state values for learning",
+                 "post": "Post-synaptic error signal values for learning"},
             "states":
                 {"core1": "First MPS tensor core (1, in_dim, bond_dim)",
                  "core2": "Second MPS tensor core (bond_dim, out_dim, 1)",
