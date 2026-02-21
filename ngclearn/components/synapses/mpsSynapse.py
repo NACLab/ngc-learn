@@ -80,6 +80,16 @@ class MPSSynapse(JaxComponent):
         self.outputs.set(out)
 
     @compilable
+    def project_backward(self, error_signal):
+        """Passes error backwards without reconstructing the dense matrix!"""
+        c1 = self.core1.get()
+        c2 = self.core2.get()
+        # 1. Project error through Core 2
+        e_back = jnp.einsum('bo,kno->bk', error_signal, c2)
+        # 2. Project error through Core 1
+        return jnp.einsum('bk,mik->bi', e_back, c1)
+
+    @compilable
     def evolve(self, eta=0.01):
         """
         Updates the MPS tensor cores using local error gradients.
