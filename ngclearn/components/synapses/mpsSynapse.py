@@ -129,7 +129,7 @@ class MPSSynapse(JaxComponent):
         """
         Reconstructs the full dense matrix from MPS cores for analysis.
         """
-        return jnp.einsum('mik,kno->in', self.core1.get(), self.core2.get())
+        return Compartment(jnp.einsum('mik,kno->in', self.core1.get(), self.core2.get()))
 
     @weights.setter
     def weights(self, W):
