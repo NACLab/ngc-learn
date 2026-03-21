@@ -39,6 +39,7 @@ from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .synapses.hebbian.BCMSynapse import BCMSynapse
+from .synapses.competitive.SOMSynapse import SOMSynapse
 from .synapses.STPDenseSynapse import STPDenseSynapse
 from .synapses.exponentialSynapse import ExponentialSynapse
 from .synapses.doubleExpSynapse import DoubleExpSynapse

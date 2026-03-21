@@ -103,7 +103,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         dtheta = jnp.mean(jnp.square(self.post.get()), axis=0, keepdims=True)  ## batch avg
         theta = self.theta.get() + (-self.theta.get() + dtheta) * dt / self.tau_theta
 
-        #self.weights.set(weights)
+        self.weights.set(_W) ## TODO: this should update?
         self.theta.set(theta)
         self.dWeights.set(dWeights)
         self.post_term.set(post_term)

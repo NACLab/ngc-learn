@@ -8,12 +8,14 @@ from .doubleExpSynapse import DoubleExpSynapse
 from .alphaSynapse import AlphaSynapse
 
 ## dense synaptic components
-# from .hebbian.hebbianSynapse import HebbianSynapse
+from .hebbian.hebbianSynapse import HebbianSynapse ##
 from .hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .hebbian.BCMSynapse import BCMSynapse
 from .mpsSynapse import MPSSynapse
+### dense competitive synaptic components/elements
+from .competitive.SOMSynapse import SOMSynapse
 
 ## conv/deconv synaptic components
 from .convolution.convSynapse import ConvSynapse

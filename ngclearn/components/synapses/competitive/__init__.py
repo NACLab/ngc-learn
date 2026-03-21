@@ -1,0 +1,2 @@
+from .SOMSynapse import SOMSynapse
+
