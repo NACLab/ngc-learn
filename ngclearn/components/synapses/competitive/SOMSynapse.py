@@ -179,28 +179,23 @@ class SOMSynapse(DenseSynapse): # Self-organizing map (SOM) synaptic cable
         return bmu_idx, delta
 
     def _calc_neighborhood_weights(self):  ## neighborhood function
-        bmu = self.bmu.get() ## get best-matching unit
-        bmu = bmu[0, 0]
+        bmu = self.bmu.get()[0, 0] ## get best-matching unit
         coords = self.coords ## constant coordinate array
-        radius = self.radius.get()
+        radius = self.radius.get() ## get current neighborhood radius value
         coord_bmu = coords[bmu:bmu + 1, :]  ## TODO: might need to one-hot mask + sum
-        delta = coords - coord_bmu  ## raw differences (delta)
+        delta = coords - coord_bmu  ## raw coordinate differences (delta)
 
+        ### neighborhood-weighting computation note: 
+        ### internally, calculation of neighborhood weighting depends on 1st calculating
+        ### L2 distance in Cartesian coordinate-space, then applying the neighborhood 
+        ### over these coordinate distance values
         bmu_dist = jnp.linalg.norm(delta, axis=1, keepdims=True)
-        if self.neighbor_fx == 1:
+        if self.neighbor_fx == 1: ## apply Mexican-hat kernel
             neighbor_weights = _ricker_marr_kernel(bmu_dist, sigma=radius)
-        else:
+        else: ## apply Gaussian kernel
             neighbor_weights = _gaussian_kernel(bmu_dist, sigma=radius)
+        ## TODO: add in triangular, bubble, & laplacian kernels
 
-        '''
-        ## calc distance values
-        bmu_distance = jnp.sqrt(jnp.sum(jnp.square(delta), axis=1, keepdims=True))
-        ## apply kernel weighting function (below); e.g., Gaussian, Mexican-hat, triangular, etc.
-        if self.neighbor_fx == 1:
-            neighbor_weights = _ricker_marr_kernel(bmu_distance, sigma=radius)
-        else:
-            neighbor_weights = _gaussian_kernel(bmu_distance, sigma=radius)
-        '''
         return neighbor_weights.T  ## transpose to (1 x n_units)
 
     @compilable
