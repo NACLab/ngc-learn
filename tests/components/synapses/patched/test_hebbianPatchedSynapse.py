@@ -17,7 +17,7 @@ def test_hebbianPatchedSynapse():
   dt = 1.  # ms
 
   # model hyper
-  shape = (10, 5)
+  shape = (10, 10)
   n_sub_models = 2
   stride_shape = (1, 1)
   batch_size = 1
@@ -64,6 +64,6 @@ def test_hebbianPatchedSynapse():
   assert a.weights.get()[0, 0] == 0.5, ""
 
 
-test_hebbianPatchedSynapse()
+# test_hebbianPatchedSynapse()
 
 
