@@ -252,10 +252,10 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF.set(zF)
 
     @compilable
-    def reset(self): #, batch_size, shape): #n_units
-        _shape = (self.batch_size, self.shape[0])
+    def reset(self, batch_size):
+        _shape = (batch_size, self.shape[0])
         if len(self.shape) > 1:
-            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
+            _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
         self.j.set(restVals)
         self.j_td.set(restVals)
