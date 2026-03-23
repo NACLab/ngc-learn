@@ -131,7 +131,6 @@ class RetinalGanglionCell(JaxComponent):
         self.n_cells = n_cells
         self.sigma = sigma
 
-        self.batch_size = batch_size
         self.area_shape = area_shape
         self.patch_shape = patch_shape
         self.step_shape = step_shape
@@ -144,10 +143,10 @@ class RetinalGanglionCell(JaxComponent):
             filter = create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
 
         # ═════════════════ compartments initial values ════════════════════
-        in_restVals = jnp.zeros((self.batch_size,
+        in_restVals = jnp.zeros((batch_size,
                                  *self.area_shape))    ## input: (B | ix | iy)
 
-        out_restVals = jnp.zeros((self.batch_size,     ## output.shape: (B | n_cells * px * py)
+        out_restVals = jnp.zeros((batch_size,     ## output.shape: (B | n_cells * px * py)
                                   self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
 
         # ═══════════════════ set compartments ══════════════════════
@@ -176,11 +175,11 @@ class RetinalGanglionCell(JaxComponent):
         self.outputs.set(outputs)
 
     @compilable
-    def reset(self):
-        in_restVals = jnp.zeros((self.batch_size,
+    def reset(self, batch_size):
+        in_restVals = jnp.zeros((batch_size,
                                  *self.area_shape))      ## input: (B | ix | iy)
 
-        out_restVals = jnp.zeros((self.batch_size,      ## output.shape: (B | n_cells * px * py)
+        out_restVals = jnp.zeros((batch_size,      ## output.shape: (B | n_cells * px * py)
                                   self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
 
         self.inputs.set(in_restVals)
