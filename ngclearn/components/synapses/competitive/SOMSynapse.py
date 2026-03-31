@@ -7,22 +7,14 @@ from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
 def _gaussian_kernel(dist, sigma): ## Gaussian neighborhood function
     density = jnp.exp(-jnp.power(dist, 2) / (2 * (sigma ** 2)))  # n_units x 1
-    #return jnp.prod(density, axis=1, keepdims=True) ## calc likelihood
     return density
 
 def _ricker_marr_kernel(dist, sigma): ## mexican hat neighborhood function
-    # p = jnp.square(dist)
-    # d = sigma * sigma * 2.
-    # density = jnp.exp(-p/d) * (1. - 2./d * p)
-    # p = jnp.square(dist/ sigma)
-    # density = (1. - p) * jnp.exp(p * -0.5)
-    # #return jnp.prod(density, axis=1, keepdims=True) ## calc likelihood
-    # return density
+    ## can reform Ricker-Marr in terms of a function of a Gaussian density
     gauss_density = _gaussian_kernel(dist, sigma)
     density = gauss_density * (1. - (jnp.power(dist, 2) / (sigma ** 2)))
     # NOTE: Since the mexican hat density can produce negative values,
-    #   we clip to 0 to avoid this.
-    #   Negative density mess up learning
+    #       we clip to 0 to avoid this as negative density messes up SOM learning
     return jnp.maximum(density, 0.)
 
 def _euclidean_dist(a, b): ## Euclidean (L2) distance
