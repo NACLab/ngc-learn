@@ -5,10 +5,7 @@ from ngclearn import Compartment
 import jax
 from typing import Union, Tuple
 
-
-
-
-def create_gaussian_filter(patch_shape, sigma):
+def _create_gaussian_filter(patch_shape, sigma):
     """
     Create a 2D Gaussian kernel centered on patch_shape with given sigma.
     """
@@ -25,23 +22,15 @@ def create_gaussian_filter(patch_shape, sigma):
     filter = jnp.exp(-((x - xc) ** 2 + (y - yc) ** 2) / (2 * (sigma ** 2)))
     return filter / jnp.sum(filter)
 
-
-
-
-
-def create_dog_filter(patch_shape, sigma, k=1.6, lmbda=1):
-    g1 = create_gaussian_filter(patch_shape, sigma=sigma)
-    g2 = create_gaussian_filter(patch_shape, sigma=sigma * k)
+def _create_dog_filter(patch_shape, sigma, k=1.6, lmbda=1):
+    g1 = _create_gaussian_filter(patch_shape, sigma=sigma)
+    g2 = _create_gaussian_filter(patch_shape, sigma=sigma * k)
 
     dog = g1 - lmbda * g2
 
     return dog #- jnp.mean(dog)
 
-
-
-
-
-def create_patches(obs, patch_shape, step_shape):
+def _create_patches(obs, patch_shape, step_shape):
     """
     Extract 2D patches from a batch of images using a sliding window.
 
@@ -76,9 +65,6 @@ def create_patches(obs, patch_shape, step_shape):
     ], axis=1)
 
     return patches
-
-
-
 
 
 class RetinalGanglionCell(JaxComponent):
@@ -131,6 +117,7 @@ class RetinalGanglionCell(JaxComponent):
         self.n_cells = n_cells
         self.sigma = sigma
 
+        self.batch_size = batch_size
         self.area_shape = area_shape
         self.patch_shape = patch_shape
         self.step_shape = step_shape
@@ -138,9 +125,9 @@ class RetinalGanglionCell(JaxComponent):
         filter = jnp.ones(self.patch_shape)
 
         if filter_type == 'gaussian':
-            filter = create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
+            filter = _create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
         elif filter_type == 'difference_of_gaussian':
-            filter = create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
+            filter = _create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
 
         # ═════════════════ compartments initial values ════════════════════
         in_restVals = jnp.zeros((batch_size,
@@ -161,7 +148,7 @@ class RetinalGanglionCell(JaxComponent):
         px, py = self.patch_shape
 
         # ═══════════════════ extract pathches for filters ══════════════════
-        input_patches = create_patches(inputs, patch_shape=self.patch_shape, step_shape=self.step_shape)
+        input_patches = _create_patches(inputs, patch_shape=self.patch_shape, step_shape=self.step_shape)
 
         # ═══════════════════ apply filter to all pathches ══════════════════
         filtered_input = input_patches * filter                                 ## shape: (B | n_cells | px | py)
@@ -175,9 +162,12 @@ class RetinalGanglionCell(JaxComponent):
         self.outputs.set(outputs)
 
     @compilable
-    def reset(self, batch_size):
-        in_restVals = jnp.zeros((batch_size,
-                                 *self.area_shape))      ## input: (B | ix | iy)
+    def reset(self):  ## reset core components/statistics
+        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
+
+    @compilable
+    def batched_reset(self, batch_size):
+        in_restVals = jnp.zeros((batch_size, *self.area_shape))      ## input: (B | ix | iy)
 
         out_restVals = jnp.zeros((batch_size,      ## output.shape: (B | n_cells * px * py)
                                   self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
