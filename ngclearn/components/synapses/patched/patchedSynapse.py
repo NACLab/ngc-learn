@@ -167,10 +167,15 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.pre_out.set(pre_out)
 
     @compilable
-    def reset(self, batch_size):
+    def reset(self): ## closed, no-batch argument reset
+        ## write reset command to call inner batched_reset command
+        self.batched_reset(batch_size=self.batch_size) ## arg = batch_size data-member
+
+    @compilable
+    def batched_reset(self, batch_size): ## open, batch argument reset
         preVals = jnp.zeros((batch_size, self.shape[0]))
         postVals = jnp.zeros((batch_size, self.shape[1]))
-        
+
         # BUG: the self.inputs here does not have the targeted field
         # NOTE: Quick workaround is to check if targeted is in the input or not
         hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(preVals)

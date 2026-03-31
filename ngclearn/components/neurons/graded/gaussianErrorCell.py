@@ -47,6 +47,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
             sigma_shape = jnp.array(sigma).shape
         self.sigma_shape = sigma_shape
         self.shape = shape
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## Convolution shape setup
@@ -104,10 +105,12 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.L.set(jnp.squeeze(L))
         self.mask.set(mask)
 
-    # @transition(output_compartments=["dmu", "dtarget", "dSigma", "target", "mu", "modulator", "L", "mask"])
-    # @staticmethod
     @compilable
-    def reset(self, batch_size): ## reset core components/statistics
+    def reset(self): ## reset core components/statistics
+        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
+
+    @compilable
+    def batched_reset(self, batch_size):
         _shape = (batch_size, self.shape[0])
         if len(self.shape) > 1:
             _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])

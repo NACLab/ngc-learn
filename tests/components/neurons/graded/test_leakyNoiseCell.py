@@ -16,7 +16,14 @@ def test_LeakyNoiseCell1():
   dt = 1.  # ms
   with Context(name) as ctx:
     a = LeakyNoiseCell(
-        name="a", n_units=1, tau_x=50., act_fx="identity", integration_type="euler", batch_size=1, sigma_rec=0.,
+        name="a",
+        n_units=1,
+        tau_x=50.,
+        act_fx="identity",
+        integration_type="euler",
+        batch_size=1,
+        sigma_pre=0.,
+        sigma_post=0.,
         leak_scale=0.
     )
     advance_process = (MethodProcess("advance_proc") >> a.advance_state)

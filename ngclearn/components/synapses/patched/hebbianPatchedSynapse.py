@@ -281,20 +281,24 @@ class HebbianPatchedSynapse(PatchedSynapse):
         self.dBiases.set(dBiases)
 
     @compilable
-    def reset(self, batch_size):
+    def reset(self):  ## closed, no-batch argument reset
+        ## write reset command to call inner batched_reset command
+        self.batched_reset(batch_size=self.batch_size) ## arg = batch_size data-member
+
+    @compilable
+    def batched_reset(self, batch_size): ## open, batch argument reset
         preVals = jnp.zeros((batch_size, self.shape[0]))
         postVals = jnp.zeros((batch_size, self.shape[1]))
         # BUG: the self.inputs here does not have the targeted field
         # NOTE: Quick workaround is to check if targeted is in the input or not
-        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(preVals) # inputs
-        self.outputs.set(postVals) # outputs
-        self.post_in.set(postVals) # post_in
-        self.pre_out.set(preVals) # pre_out
-        self.pre.set(preVals) # pre
-        self.post.set(postVals) # post
-        self.dWeights.set(jnp.zeros(self.shape)) # dW
-        self.dBiases.set(jnp.zeros(self.shape[1])) # db
-
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(preVals)  # inputs
+        self.outputs.set(postVals)  # outputs
+        self.post_in.set(postVals)  # post_in
+        self.pre_out.set(preVals)  # pre_out
+        self.pre.set(preVals)  # pre
+        self.post.set(postVals)  # post
+        self.dWeights.set(jnp.zeros(self.shape))  # dW
+        self.dBiases.set(jnp.zeros(self.shape[1]))  # db
 
     @classmethod
     def help(cls): ## component help function

@@ -252,7 +252,11 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF.set(zF)
 
     @compilable
-    def reset(self, batch_size):
+    def reset(self):  ## reset core components/statistics
+        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
+
+    @compilable
+    def batched_reset(self, batch_size):
         _shape = (batch_size, self.shape[0])
         if len(self.shape) > 1:
             _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
