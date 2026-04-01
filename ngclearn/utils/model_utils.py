@@ -458,7 +458,8 @@ def d_relu6(x):
     """
     # df/dx = 1 if 0<x<6 else 0
     # I_x = (z >= a_min) *@ (z <= b_max) //create an indicator function  a = 0 b = 6
-    Ix1 = (x > 0.).astype(jnp.float32) #tf.cast(tf.math.greater_equal(x, 0.0),dtype=tf.float32)
+    #Ix1 = (x > 0.).astype(jnp.float32) #tf.cast(tf.math.greater_equal(x, 0.0),dtype=tf.float32)
+    Ix1 = (x >= 0.).astype(jnp.float32)
     Ix2 = (x <= 6.).astype(jnp.float32) #tf.cast(tf.math.less_equal(x, 6.0),dtype=tf.float32)
     Ix = Ix1 * Ix2
     return Ix
@@ -726,34 +727,37 @@ def d_clip(x, min_val, max_val):
     return jnp.where((x < min_val) | (x > max_val), 0.0, 1.0)
 
 
-@partial(jit, static_argnums=[2])
-def lkwta(x, group_masks, nWTA=(20,)): ## local k-WTA
+@partial(jit, static_argnums=[2, 3])
+def lkwta(x, group_masks, nWTA=(20,), clipval=-1.): ## local k-WTA
     out = 0.
     for g in range(len(group_masks)):
         m = group_masks[g]
-        x_g = kwta(x, m, nWTA[g])
+        x_g = kwta(x, m, nWTA[g], clipval)
         out = x_g + out
     return out
 
-@partial(jit, static_argnums=[2])
-def d_lkwta(x, group_masks, nWTA=(20,)): ## d(lkwta(x))/dx
+@partial(jit, static_argnums=[2, 3])
+def d_lkwta(x, group_masks, nWTA=(20,), clipval=-1.): ## d(lkwta(x))/dx
     out = 0.
     for g in range(len(group_masks)):
         m = group_masks[g]
-        x_g = d_kwta(x, m, nWTA[g])
+        x_g = d_kwta(x, m, nWTA[g], clipval)
         out = x_g + out
     return out
 
-@partial(jit, static_argnums=[2])
-def kwta(x, m, nWTA=20):
+@partial(jit, static_argnums=[2, 3])
+def kwta(x, m, nWTA=20, clipval=-1.):
     _x = x * m + (1. - m) * (jnp.amin(x) - 1.)
     values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
     kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
     topK = jnp.greater_equal(_x, kth).astype(jnp.float32) # cast booleans to floats
-    return topK * x
+    topK = topK * x
+    if clipval > 0.:
+        topK = jnp.clip(topK, -clipval, clipval)
+    return topK
 
-@partial(jit, static_argnums=[2])
-def d_kwta(x, m, nWTA=20): ## d(kwta(x))/dx
+@partial(jit, static_argnums=[2, 3])
+def d_kwta(x, m, nWTA=20, clipval=-1.): ## d(kwta(x))/dx
     _x = x * m + (1. - m) * (jnp.amin(x) - 1.)
     values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
     kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch

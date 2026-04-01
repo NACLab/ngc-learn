@@ -19,7 +19,6 @@ def test_BCMSynapse1():
         a = BCMSynapse(
             name="a", shape=(1,1), tau_w=40., tau_theta=20., key=subkeys[0]
         )
-
         evolve_process = (MethodProcess("evolve_process")
                            >> a.evolve)
 
@@ -42,4 +41,5 @@ def test_BCMSynapse1():
     # print(truth)
     assert_array_equal(a.dWeights.get(), truth)
 
-test_BCMSynapse1()
+#test_BCMSynapse1()
+

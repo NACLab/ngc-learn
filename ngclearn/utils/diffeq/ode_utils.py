@@ -127,7 +127,7 @@ def _leapfrog(carry, dfq, dt, params):
     return new_carry, (new_carry, carry)
 
 @partial(jit, static_argnums=(3, 4))
-def leapfrog(t_curr, q_curr, p_curr, dfq, L, step_size, params):
+def leapfrog(t_curr, q_curr, p_curr, dfq, L, step_size, params): ## leapfrog estimator step
     t = t_curr + 0.
     q = q_curr + 0.
     p = p_curr + 0.
