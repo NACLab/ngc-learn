@@ -113,7 +113,9 @@ class SOMSynapse(DenseSynapse): # Self-organizing map (SOM) synaptic cable
             **kwargs
     ):
         shape = (n_inputs, n_units_x * n_units_y)
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(
+            name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs
+        )
 
         ### build (rectangular) topology coordinates
         coords = []
