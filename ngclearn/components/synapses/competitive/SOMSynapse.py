@@ -1,3 +1,4 @@
+import jax
 from jax import random, numpy as jnp, jit
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
@@ -17,20 +18,65 @@ def _ricker_marr_kernel(dist, sigma): ## mexican hat neighborhood function
     #       we clip to 0 to avoid this as negative density messes up SOM learning
     return jnp.maximum(density, 0.)
 
-def _euclidean_dist(a, b): ## Euclidean (L2) distance
-    delta = a - b
-    d = jnp.linalg.norm(delta, axis=0, keepdims=True)
+def _euclidean_dist(a: jax.Array, b: jax.Array):
+    """ Compute batch-wise Euclidean (L2) distance between two sets of vectors a and b
+
+    Args:
+        a (jax.Array): (batch_size, n_inputs)
+        b (jax.Array): (n_inputs, n_units_xy) n_units here is height * width of SOM topology
+
+    Returns:
+        d (jax.Array): (batch_size, n_units_xy) distance of each input pattern to each SOM unit
+        delta (jax.Array): (batch_size, n_inputs, n_units_xy) raw differences between each input pattern and each SOM unit
+    """
+    # (B, I, 1) - (1, I, U) -> (B, I, U)
+    delta = jnp.expand_dims(a, axis=-1) - jnp.expand_dims(b, axis=0)
+    # (B, U) # norm across n_inputs dimension
+    d = jnp.linalg.norm(delta, axis=1)
     return d, delta
 
-def _manhattan_dist(a, b): ## Manhattan (L1) distance
-    delta = a - b
-    d = jnp.linalg.norm(delta, ord=1, axis=0, keepdims=True)
+def _manhattan_dist(a: jax.Array, b:jax.Array):
+    """Manhattan (L1) distance
+
+    Args:
+        a (jax.Array): (batch_size, n_inputs)
+        b (jax.Array): (n_inputs, n_units_xy) n_units here is height * width of SOM topology
+
+    Returns:
+        d (jax.Array): (batch_size, n_units_xy) distance of each input pattern to each SOM unit
+        delta (jax.Array): (batch_size, n_inputs, n_units_xy) raw differences between each input pattern and each SOM unit
+    """
+    # (B, I, 1) - (1, I, U) -> (B, I, U)
+    delta = jnp.expand_dims(a, axis=-1) - jnp.expand_dims(b, axis=0)
+    # (B, U) # norm across n_inputs dimension
+    d = jnp.linalg.norm(delta, ord=1, axis=1)
     return d, delta
 
-def _cosine_dist(a, b): ## Cosine-similarity distance
-    delta = a - b
-    d = 1. - (jnp.matmul(a.T, b) / (jnp.linalg.norm(a, axis=0) * jnp.linalg.norm(b, axis=0)))
+def _cosine_dist(a: jax.Array, b: jax.Array):
+    """Cosine-similarity distance
+
+    Args:
+        a (jax.Array): (batch_size, n_inputs)
+        b (jax.Array): (n_inputs, n_units_xy) n_units here is height * width of SOM topology
+
+    Returns:
+        d (jax.Array): (batch_size, n_units_xy) distance of each input pattern to each SOM unit
+        delta (jax.Array): (batch_size, n_inputs, n_units_xy) raw differences between each input pattern and each SOM unit
+    """
+    # (B, I, 1) - (1, I, U) -> (B, I, U)
+    delta = jnp.expand_dims(a, axis=-1) - jnp.expand_dims(b, axis=0)
+
+    # Viet: Original code
+    # d = 1. - (jnp.matmul(a.T, b) / (jnp.linalg.norm(a, axis=0) * jnp.linalg.norm(b, axis=0)))
+
+    # Viet: new code for cosine similarity distance (similar code but more readable)
+    a_norm = jnp.linalg.norm(a, axis=1, keepdims=True) # (B, 1)
+    b_norm = jnp.linalg.norm(b, axis=0, keepdims=True) # (1, U)
+    # (I, U) / (B, 1) * (1, U) = (B, U) = (B, I)
+    cosine_similarity = a @ b / (a_norm * b_norm) # (B, U)
+    d = 1. - cosine_similarity # convert similarity to distance
     return d, delta
+
 
 class SOMSynapse(DenseSynapse): # Self-organizing map (SOM) synaptic cable
     """
@@ -118,6 +164,10 @@ class SOMSynapse(DenseSynapse): # Self-organizing map (SOM) synaptic cable
         )
 
         ### build (rectangular) topology coordinates
+        # NOTE: Viet: We might want to use np.meshgrid here instead of the for-loop approach to build coordinates
+        #  for performance reasons. But for now, we can keep it as is for readability and clarity.
+        #  We can optimize later if needed.
+        # Shape: (n_units_x * n_units_y, 2)
         coords = []
         for i in range(n_units_x):
             x = jnp.ones((n_units_x, 1)) * i
@@ -156,44 +206,55 @@ class SOMSynapse(DenseSynapse): # Self-organizing map (SOM) synaptic cable
         self.radius = Compartment(jnp.zeros((1, 1)) + self.initial_radius)
         self.eta = Compartment(jnp.zeros((1, 1)) + self.initial_eta)
         self.i_tick = Compartment(jnp.zeros((1, 1)))
-        self.bmu = Compartment(jnp.zeros((1, 1)))
-        self.delta = Compartment(self.weights.get() * 0)
-        self.neighbor_weights = Compartment(jnp.zeros((1, shape[1])))
+        # Viet: batch-aware setup
+        self.bmu = Compartment(jnp.zeros((self.batch_size, 1), dtype=jnp.int32))
+        self.delta = Compartment(jnp.zeros((self.batch_size, shape[0], shape[1])))
+        self.neighbor_weights = Compartment(jnp.zeros((self.batch_size, shape[1])))
         self.dWeights = Compartment(self.weights.get() * 0)
 
-    def _calc_bmu(self): ## obtain index of best-matching unit (BMU)
+    def _calc_bmu(self):
+        """obtain index of best-matching unit (BMU)
+        This will compute the distance between x (batch_size, n_inputs)
+          and W (n_inputs, n_units_xy)
+
+        Returns:
+            jax.Array: bmu and delta
+        """
         x = self.inputs.get()
         W = self.weights.get()
-        # W * I - x * I ?
         if self.dist_fx == 1:  ## L1 distance
-            d, delta = _manhattan_dist(x.T, W)
+            d, delta = _manhattan_dist(x, W)
         elif self.dist_fx == 2: ## cosine distance
-            d, delta = _cosine_dist(x.T, W)
+            d, delta = _cosine_dist(x, W)
         else: ## L2 distance
-            d, delta = _euclidean_dist(x.T, W)
-        bmu = jnp.argmin(d, axis=1, keepdims=True)
-        bmu_idx = bmu #bmu[0, 0]
-        return bmu_idx, delta
+            d, delta = _euclidean_dist(x, W)
+        # Viet: BMU has to have shape (batch_size, 1)
+        return jnp.argmin(d, axis=1, keepdims=True), delta
 
     def _calc_neighborhood_weights(self):  ## neighborhood function
-        bmu = self.bmu.get()[0, 0] ## get best-matching unit
+        # bmu is not a vector of indices, each one is best-matching unit for each sample in batch
+        bmu = self.bmu.get().reshape(-1) ## get best-matching unit per sample, flatten to (batch_size,)
         coords = self.coords ## constant coordinate array
         radius = self.radius.get() ## get current neighborhood radius value
-        coord_bmu = coords[bmu:bmu + 1, :]  ## TODO: might need to one-hot mask + sum
-        delta = coords - coord_bmu  ## raw coordinate differences (delta)
+        coord_bmu = coords[bmu, :] # (B, 2) get coordinates of BMU for each sample in batch
+        # (1, n_units_xy, 2) - (B, 1, 2) -> (B, n_units_xy, 2) # get delta between coordinates of each SOM unit and BMU
+        delta = jnp.expand_dims(coords, axis=0) - jnp.expand_dims(coord_bmu, axis=1)
 
-        ### neighborhood-weighting computation note: 
+        ### neighborhood-weighting computation note:
         ### internally, calculation of neighborhood weighting depends on 1st calculating
-        ### L2 distance in Cartesian coordinate-space, then applying the neighborhood 
+        ### L2 distance in Cartesian coordinate-space, then applying the neighborhood
         ### over these coordinate distance values
-        bmu_dist = jnp.linalg.norm(delta, axis=1, keepdims=True)
+        # (B, n_units_xy)
+        bmu_dist = jnp.linalg.norm(delta, axis=2)
         if self.neighbor_fx == 1: ## apply Mexican-hat kernel
             neighbor_weights = _ricker_marr_kernel(bmu_dist, sigma=radius)
         else: ## apply Gaussian kernel
             neighbor_weights = _gaussian_kernel(bmu_dist, sigma=radius)
         ## TODO: add in triangular, bubble, & laplacian kernels
 
-        return neighbor_weights.T  ## transpose to (1 x n_units)
+        # (B, n_units_xy)
+        return neighbor_weights
+
 
     @compilable
     def advance_state(self): ## forward-inference step of SOM
@@ -211,42 +272,69 @@ class SOMSynapse(DenseSynapse): # Self-organizing map (SOM) synaptic cable
 
     @compilable
     def evolve(self, t, dt):  ## competitive Hebbian update step of SOM
-        #bmu = self.bmu.get() ## best-matching unit
-        delta = self.delta.get() ## deltas/differences between input & all SOM templates
-        neighbor_weights = self.neighbor_weights.get() ## get neighborhood weight values
+        # #bmu = self.bmu.get() ## best-matching unit
+        # delta = self.delta.get() ## deltas/differences between input & all SOM templates
+        # neighbor_weights = self.neighbor_weights.get() ## get neighborhood weight values
 
-        ## exponential decay -> dz/dt = -kz has sol'n:  z0 exp(-k t)
-        #t = self.i_tick.get()
-        ## update radius
+        # ## exponential decay -> dz/dt = -kz has sol'n:  z0 exp(-k t)
+        # #t = self.i_tick.get()
+        # ## update radius
+        # r = self.radius.get()
+        # r = r + (-r) * (1./self.tau_radius)
+        # self.radius.set(r)
+        # ## update learning rate alpha
+        # a = self.eta.get()
+        # a = a + (-a) * (1./self.tau_eta)
+        # self.eta.set(a)
+        # # self.radius.set(self.initial_radius * jnp.exp(-self.i_tick.get() / self.C))  ## update radius
+        # # self.eta.set(self.initial_eta * jnp.exp(-self.i_tick.get() / self.iterations)) ## update learning rate alpha
+
+        # dWeights = delta * neighbor_weights * self.eta.get() ## calculate change-in-synapses
+        # self.dWeights.set(dWeights)
+        # _W = self.weights.get() + dWeights ## update via competitive Hebbian rule
+        # self.weights.set(_W)
+
+        # self.i_tick.set(self.i_tick.get() + 1)
+
+        ### Viet: My batchified code
+        # (B, n_inputs, n_units_xy)
+        delta = self.delta.get() ## deltas/differences between input & all SOM templates
+        # (B, n_units_xy)
+        neighbor_weights = self.neighbor_weights.get() ## get neighborhood weight values
+        # NOTE: Viet: since we are doing batch mode, do we need to scale the updates by the batch size?
+        # update neighborhood radius
         r = self.radius.get()
-        r = r + (-r) * (1./self.tau_radius)
+        r = r + (-r) * (1. / self.tau_radius)
         self.radius.set(r)
         ## update learning rate alpha
         a = self.eta.get()
-        a = a + (-a) * (1./self.tau_eta)
+        a = a + (-a) * (1. / self.tau_eta)
         self.eta.set(a)
-        # self.radius.set(self.initial_radius * jnp.exp(-self.i_tick.get() / self.C))  ## update radius
-        # self.eta.set(self.initial_eta * jnp.exp(-self.i_tick.get() / self.iterations)) ## update learning rate alpha
-
-        dWeights = delta * neighbor_weights * self.eta.get() ## calculate change-in-synapses
+        # Update weights
+        # (B, n_inputs, n_units_xy) * (B, 1, n_units_xy) -> (B, n_inputs, n_units_xy)
+        dWeights = delta * jnp.expand_dims(neighbor_weights, axis=1) * self.eta.get()
+        # NOTE: Viet: since we are doing batch mode, we need to average the updates across the
+        #  batch dimension
+        dWeights = dWeights.mean(axis=0) ## (n_inputs, n_units_xy)
         self.dWeights.set(dWeights)
         _W = self.weights.get() + dWeights ## update via competitive Hebbian rule
         self.weights.set(_W)
-
+        # update tick. NOTE: are we ticking by batch size or 1?
         self.i_tick.set(self.i_tick.get() + 1)
+
 
     @compilable
     def reset(self):
-        preVals = jnp.zeros((self.batch_size.get(), self.shape.get()[0]))
-        postVals = jnp.zeros((self.batch_size.get(), self.shape.get()[1]))
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
 
         if not self.inputs.targeted:
             self.inputs.set(preVals)
         self.outputs.set(postVals)
-        self.dWeights.set(jnp.zeros(self.shape.get()))
-        self.delta.set(jnp.zeros(self.shape.get()))
-        self.bmu.set(jnp.zeros((1, 1)))
-        self.neighbor_weights.set(jnp.zeros((1, self.shape.get()[1])))
+        self.dWeights.set(jnp.zeros(self.shape))
+        self.delta.set(jnp.zeros((self.batch_size, self.shape[0], self.shape[1])))
+        self.bmu.set(jnp.zeros((self.batch_size, 1), dtype=jnp.int32))
+        self.neighbor_weights.set(jnp.zeros((self.batch_size, self.shape[1])))
 
     @classmethod
     def help(cls): ## component help function
