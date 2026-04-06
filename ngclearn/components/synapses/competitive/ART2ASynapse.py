@@ -1,4 +1,4 @@
-from jax import random, numpy as jnp, jit
+from jax import random, numpy as jnp, jit, nn
 from functools import partial
 from ngclearn import compilable 
 from ngclearn import Compartment 
@@ -69,7 +69,7 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
             name,
             shape, ## determines memory matrix size
             eta=0.05, ## learning rate
-            eta_decrement=0., 
+            eta_decrement=0., ## linear scheduled decrement over eta
             vigilance=0.3, ## vigilance parameter (rho)
             weight_init=None,
             resist_scale=1.,
@@ -96,34 +96,64 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
         self.i_tick = Compartment(jnp.zeros((1, 1)))
         #self.bmu = Compartment(jnp.zeros((1, 1)), display_name="Best matching unit mask")
         self.dWeights = Compartment(self.weights.get() * 0)
-        self.misses = Compartment(jnp.zeros((batch_size, 1)))
+        self.misses = Compartment(jnp.zeros((batch_size, 1))) ## marker for non-resonant patterns in a batch
 
-    #@compilable
-    def consolidate(self, wipe_mem=False): ## memory storage/consolidation routine
-        ## note that this co-routine needs to be non-compilable/non-jit-i-fied, as 
-        ## its main purpose is to structurally alter the memory matrix W (dynamically)
-        x_in = self.inputs.get()
-        #xprobe = self.xprobe.get()
-        xprobe = _normalize(x_in, norm_fx=self.norm_fx)
-        if wipe_mem is False:
-            W = self.weights.get() ## get current memory matrix
-            miss_mask = self.misses.get()
-            if jnp.sum(miss_mask) > 0: ## for non-resonant patterns
-                r, c = jnp.nonzero(miss_mask)
-                mem = xprobe[r, :]
-                W = jnp.concat([W, mem.T], axis=1)
-                self.weights.set(W)
-        else:
-            self.weights.set(xprobe.T)
+        self.weights.set(self.weights.get() * 0)
+        self.used = Compartment(jnp.zeros((1, shape[1]))) ## marks if memory slot used
+
+    def insert(self, x, idx): ## manual memory insertion co-routine
+        W = self.weights.get()
+        z_m = jnp.expand_dims(nn.one_hot(idx, W.shape[1]), axis=0)
+        dW = (W * 0 + x.T) * z_m
+        W = W + dW
+        self.weights.set(W)
+        self.used.set(((self.used.get() + z_m) > 0.) * 1.)
+
+    def grow(self, n_memories): ## grow out memory matrix by fixed amount
+        W = self.weights.get()
+        used = self.used.get()
+        ## expand memory matrix by a fixed set of empty memory slots
+        W = jnp.concat([W, jnp.zeros((W.shape[0], n_memories))], axis=1)
+        n_unused = jnp.zeros((1, n_memories))
+        used = jnp.concat([used, n_unused], axis=1)
+        #print("used: ", used.shape)
+        self.used.set(used)
+        self.weights.set(W)
+        self.dWeights.set(W * 0)
+        self.shape = self.weights.get().shape
+
+    @compilable
+    def consolidate(self): ## memory consolition co-routine (for non-resonant signals)
+        n_used = int(jnp.sum(self.used.get())) ## number unused slots left
+        x = self.xprobe.get()
+        W = self.weights.get()
+        nonresonants = self.misses.get()
+        ## we project non-resonant memories to empty slots in memory W
+        S = jnp.eye(x.shape[0], self.shape[1], k=n_used)
+        dWstore = jnp.matmul((x * nonresonants).T, S)
+        W = W + dWstore ## Hebbian update to memory
+        ## re-compute number of used slots post-consolidation
+        nW = jnp.linalg.norm(W, ord=2, axis=0, keepdims=True)
+        used = (nW > 0.) * 1
+
+        self.weights.set(W)
+        self.used.set(used)
+        ## else, currently discard un-absorbed/non-resonant patterns
+        ##       can add a function that "grows" out block matrix by a chunk (to control growth)
+        ## TODO: add pruning mechanism for low-usage slots
 
     @compilable
     def advance_state(self): ## forward-inference step of ART2A
         x_in = self.inputs.get()
         W = self.weights.get() ## get (transposed) memory matrix
+        used = self.used.get()
 
         x = _normalize(x_in, norm_fx=self.norm_fx) 
         self.xprobe.set(x)
         sims = jnp.matmul(x, W) ## compute similarities (parallel dot products)
+        ## we correct activities by masking out unused slots
+        sims_min = jnp.amin(sims, axis=1, keepdims=True)
+        sims = sims * used + (1. - used) * (sims_min - 1.)
         z_winners = sims * bkwta(sims, nWTA=self.K) ## get winner mask (hidden layer)
         self.outputs.set(z_winners)
 
@@ -142,15 +172,17 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
         wnew = (-jnp.matmul(z_winners, W.T) + x) * m ## B x D
         dW = jnp.matmul(wnew.T, hits) ## D x Z ## adjustment matrix
         W = W + dW * eta ## D x Z ## do a step of Hebbian ascent
+        nonresonants = 1. - m ## mark non-resonant patterns in batch
 
         ## NOTE: is this post-weight-update normalization needed?
-        nW = jnp.linalg.norm(W, ord=2, axis=0, keepdims=True)
-        mz = (jnp.sum(hits, axis=0, keepdims=True) > 0.) * 1.
-        W = W / (nW * mz + (1. - mz))
+        #nW = jnp.linalg.norm(W, ord=2, axis=0, keepdims=True)
+        #used = (nW > 0.) * 1
+        #mz = (jnp.sum(hits, axis=0, keepdims=True) > 0.) * 1.
+        #W = W / (nW * mz + (1. - mz))
 
-        self.weights.set(W) ## memory matrix advances forward to new state
-        self.misses.set(1. - m) ## store unused/non-resonant pattern mask
-
+        self.weights.set(W)
+        self.misses.set(nonresonants) ## store unused/non-resonant pattern mas
+    
         #tmp_key, *subkeys = random.split(self.key.get(), 3)
         #self.key.set(tmp_key)
         ## synaptic update noise
@@ -171,8 +203,8 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
             self.inputs.set(preVals)
         self.outputs.set(postVals)
         self.xprobe.set(preVals)
-        self.misses.set(jnp.zeros((self.batch_size.get(), 1)))
-
+        #self.misses.set(jnp.zeros((self.batch_size.get(), 1)))
+        self.misses.set(self.misses.get() * 0)
         self.dWeights.set(jnp.zeros(self.shape.get()))
 
     @classmethod

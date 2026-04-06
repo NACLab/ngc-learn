@@ -227,6 +227,26 @@ def one_hot(P):
     p_t = jnp.argmax(P, axis=1)
     return nn.one_hot(p_t, num_classes=nC, dtype=jnp.float32)
 
+@partial(jit, static_argnums=[1, 2])
+def chebyshev_norm(d, axis=-1, keepdims=False):
+    """
+    Calculate the Chebyshev distance between two tensor-arrays.
+
+    Args:
+        d: tensor d to measure against the origin
+
+        axis: axis to measure distance between the two tensors
+
+        keepdims: preserve dimensions of d
+
+    Returns:
+        the Chebyshev distance (values) within d
+    """
+    abs_diff = jnp.abs(d) ## d could be (a - b) externally
+    dist_vals = jnp.max(abs_diff, axis=axis, keepdims=keepdims)
+    return dist_vals
+
+@jit
 def binarize(data, threshold=0.5):
     """
     Converts the vector *data* to its binary equivalent
