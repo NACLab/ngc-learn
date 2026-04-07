@@ -92,7 +92,7 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
             distance_function=("minkowski", 2),
             label_dim=0, ## if > 0, then this becomes supervised LVQ(1)
             initial_patterns=None, ## possible class-based prototypes to init by
-            lanvegin_noise_scale=0., ## scale of Langevin noise to apply to updates
+            langevin_noise_scale=0., ## scale of Langevin noise to apply to updates
             weight_init=None,
             resist_scale=1.,
             p_conn=1.,
@@ -103,7 +103,7 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
             name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs
         )
 
-        ### Synapse and VQ hyper-parameters
+        ### Synapse / VQ hyper-parameters
         self.label_dim = label_dim
         self.K = 1 ## number of winners (for a bmu) 
         dist_fun, dist_order = distance_function ## Default: ("minkowski", 2) -> Euclidean
@@ -120,11 +120,11 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
         self.eta_decr = eta_decrement #0.001
         self.syn_decay = syn_decay
         self.w_bound = w_bound ## soft synaptic value bound (on magnitude)
-        self.zeta = langevin_noise_scale #0.2 #0.35 #1. ## Langevin dampening factor
+        self.zeta = langevin_noise_scale ## Langevin dampening factor
 
         ## VQ Compartment setup
         label_syn_init = labels_init = jnp.zeros((1, 1))
-        if self.label_dim > 0:
+        if self.label_dim > 0: ## do we set up label memory matrix? 
             label_syn_init = jnp.zeros((label_dim, self.shape[1]))
             labels_init = jnp.zeros((self.batch_size, self.label_dim))
         self.labels = Compartment(labels_init, display_name="Label Units")
@@ -132,7 +132,6 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
         self.label_weights = Compartment(label_syn_init, display_name="Label Synapses / Memory") 
         self.eta = Compartment(jnp.zeros((1, 1)) + self.initial_eta, display_name="Dynamic step size")
         self.i_tick = Compartment(jnp.zeros((1, 1)))
-        #self.bmu = Compartment(jnp.zeros((1, 1)), display_name="Best matching unit mask")
         self.dWeights = Compartment(self.weights.get() * 0)
 
         if initial_patterns is not None: ## preload memory synaptic matrix
@@ -145,19 +144,19 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
                 W = jnp.concat([initX, W[:, 0:(H - initX.shape[1])]], axis=1)
                 W = W[:, ptrs] ## shuffle memories
                 self.weights.set(W)
-                if self.label_dim > 0:
+                if self.label_dim > 0: ## do we preload label matrix?
                     Wy = self.label_weights.get()
                     Wy = jnp.concat([initY, Wy[:, 0:(H - initX.shape[1])]], axis=1)
                     Wy = Wy[:, ptrs]  ## shuffle memories
                     self.label_weights.set(Wy)
             else: ## memory is exactly the set of stored patterns/templates
                 self.weights.set(initX)
-                if self.label_dim > 0:
+                if self.label_dim > 0: ## do we preload label matrix?
                     self.label_weights.set(initY)
     @compilable
     def advance_state(self): ## forward-inference step of VQ
         x_in = self.inputs.get()
-        x_in = x_in / jnp.linalg.norm(x_in, axis=1, keepdims=True)
+        x_in = x_in / jnp.linalg.norm(x_in, axis=1, keepdims=True) ## NOTE: we normalize input patterns (?)
         self.inputs.set(x_in)
         W = self.weights.get().T ## get (transposed) memory matrix
 
