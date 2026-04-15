@@ -7,12 +7,12 @@ from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     """
-    A simple (non-spiking) Gaussian error cell - this is a fixed-point solution
-    of a mismatch signal.
+    A simple (non-spiking) Gaussian error cell - this is a fixed-point calculation of a mismatch signal. Specifically,
+    this error cell offers a configurable variance and calculates its local free energy (Gaussian log likelihood).
 
     | --- Cell Input Compartments: ---
     | mu - predicted value (takes in external signals)
-    | Sigma - predicted covariance (takes in external signals)
+    | Sigma - predicted covariance (takes in external signals), or, if just a scalar, then it's sigma^2
     | target - desired/goal value (takes in external signals)
     | modulator - modulation signal (takes in optional external signals)
     | mask - binary/gating mask to apply to error neuron calculations
@@ -31,7 +31,8 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
         sigma: initial/fixed value for prediction covariance matrix (𝚺) in multivariate gaussian distribution;
             Note that if the compartment `Sigma` is never used, then this cell assumes that the covariance collapses
-            to a constant/fixed `sigma`
+            to a constant/fixed `sigma^2`, i.e., Sigma = sigma^2, where `sigma` is a scalar standard deviation argument
+            (Default: 1)
     """
     def __init__(self, name, n_units, batch_size=1, sigma=1., shape=None, **kwargs):
         super().__init__(name, **kwargs)
@@ -67,13 +68,14 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.mask = Compartment(restVals + 1.0)
 
     @staticmethod
-    def eval_log_density(target, mu, Sigma):
+    def _eval_log_density(target, mu, Sigma): ## Gaussian log likelihood
+        ## NOTE: ln(p) = -(x - mu)^2 * 1/(2 Sigma), where Sigma might be sigma^2 or covariance matrix
         _dmu = (target - mu)
         log_density = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
-        return log_density
+        return log_density, _dmu ## return density and raw delta
 
     @compilable
-    def advance_state(self, dt): ## compute Gaussian error cell output
+    def advance_state(self, dt): ## compute Gaussian error cell output (fixed-point)
         # Get the variables
         mu = self.mu.get()
         target = self.target.get()
@@ -87,12 +89,12 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         #        but should support full log likelihood of the multivariate Gaussian with covariance of different types
         # TODO: could introduce a variant of GaussianErrorCell that moves according to an ODE
         #       (using integration time constant dt)
-        _dmu = (target - mu)  # e (error unit)
-        dmu = _dmu / Sigma
-        dtarget = -dmu  # reverse of e
-        dSigma = Sigma * 0 + 1. # no derivative is calculated at this time for sigma
-        L = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
-        #L = GaussianErrorCell.eval_log_density(target, mu, Sigma)
+
+        L, _dmu = GaussianErrorCell._eval_log_density(target, mu, Sigma) # L = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
+        ## _dmu => "raw" e (error unit/mis-match) # _dmu = (target - mu)
+        dmu = _dmu / Sigma  ## obtain precision-scaled e: (target - mu)/Sigma
+        dtarget = -dmu  # reverse of e ## -(target - mu)/Sigma
+        dSigma = Sigma * 0 + 1.  # no derivative is calculated at this time for Sigma
 
         dmu = dmu * modulator * mask ## not sure how mask will apply to a full covariance...
         dtarget = dtarget * modulator * mask
@@ -127,8 +129,10 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.dSigma.set(dSigma)
-        self.target.set(target)
-        self.mu.set(mu)
+        if not self.target.targeted:
+            self.target.set(target)
+        if not self.mu.targeted:
+            self.mu.set(mu)
         self.modulator.set(modulator)
         self.L.set(L)
         self.mask.set(mask)
@@ -136,7 +140,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     @classmethod
     def help(cls): ## component help function
         properties = {
-            "cell_type": "GaussianErrorcell - computes mismatch/error signals at "
+            "cell_type": "GaussianErrorCell - computes mismatch/error signals at "
                          "each time step t (between a `target` and a prediction `mu`)"
         }
         compartment_props = {
@@ -147,7 +151,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
                  "modulator": "External input modulatory/scaling signal(s)",
                  "mask": "External binary/gating mask to apply to signals"},
             "outputs":
-                {"L": "Local loss value computed/embodied by this error-cell",
+                {"L": "Local loss / free-energy value embodied by this error-cell",
                  "dmu": "first derivative of loss w.r.t. prediction value(s)",
                  "dSigma": "first derivative of loss w.r.t. variance/covariance value(s)",
                  "dtarget": "first derivative of loss w.r.t. target value(s)"},
