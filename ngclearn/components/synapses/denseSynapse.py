@@ -41,15 +41,23 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
     """
 
     def __init__(
-            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., mask=None, batch_size=1,
+            self,
+            name,
+            shape,
+            weight_init=None,
+            bias_init=None,
+            resist_scale=1.,
+            p_conn=1.,
+            mask=None,
+            batch_size=1,
             **kwargs
     ):
         super().__init__(name, **kwargs)
 
         self.batch_size = batch_size
-        self.mask = 1.
-        if mask is not None:
-            self.mask = mask
+        # self.mask = 1.
+        # if mask is not None:
+        #     self.mask = mask
 
         ## Synapse meta-parameters
         self.shape = shape
@@ -75,6 +83,10 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
         self.weights = Compartment(weights)
+        _mask = 1.
+        if mask is not None:
+            _mask = mask
+        self.mask = Compartment(_mask)
         ## Set up (optional) bias values
         if bias_init is None:
             info(self.name, "is using default bias value of zero (no bias kernel provided)!")
@@ -86,7 +98,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
     @compilable
     def advance_state(self):
         weights = self.weights.get()
-        weights = weights * self.mask
+        weights = weights * self.mask.get()
         self.outputs.set((jnp.matmul(self.inputs.get(), weights) * self.resist_scale) + self.biases.get())
 
     @compilable

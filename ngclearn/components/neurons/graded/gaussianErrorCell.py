@@ -71,7 +71,8 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
     def _eval_log_density(target, mu, Sigma): ## Gaussian log likelihood
         ## NOTE: ln(p) = -(x - mu)^2 * 1/(2 Sigma), where Sigma might be sigma^2 or covariance matrix
         _dmu = (target - mu)
-        log_density = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
+        #_numerator = 1. # 0.5
+        log_density = -jnp.sum(jnp.square(_dmu)) * (1./((Sigma ** 2) * 2)) #* (_numerator / Sigma)
         return log_density, _dmu ## return density and raw delta
 
     @compilable
@@ -92,7 +93,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
         L, _dmu = GaussianErrorCell._eval_log_density(target, mu, Sigma) # L = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
         ## _dmu => "raw" e (error unit/mis-match) # _dmu = (target - mu)
-        dmu = _dmu / Sigma  ## obtain precision-scaled e: (target - mu)/Sigma
+        dmu = _dmu * (1./ Sigma)  ## obtain precision-scaled e: (target - mu)/Sigma
         dtarget = -dmu  # reverse of e ## -(target - mu)/Sigma
         dSigma = Sigma * 0 + 1.  # no derivative is calculated at this time for Sigma
 
