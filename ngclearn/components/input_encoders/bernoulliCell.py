@@ -26,12 +26,14 @@ class BernoulliCell(JaxComponent):
         batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    def __init__(self, name: str, n_units: int, batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs):
+    def __init__(
+            self, name: str, n_units: int, batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs
+    ):
         super().__init__(name=name, key=key)
 
         ## Layer Size Setup
-        self.batch_size = Compartment(batch_size)
-        self.n_units = Compartment(n_units)
+        self.batch_size = batch_size
+        self.n_units = n_units
 
         restVals = jnp.zeros((batch_size, n_units))
         self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
@@ -47,7 +49,7 @@ class BernoulliCell(JaxComponent):
 
     @compilable
     def reset(self):
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         # BUG: the self.inputs here does not have the targeted field
         # NOTE: Quick workaround is to check if targeted is in the input or not
         hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
