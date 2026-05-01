@@ -31,7 +31,7 @@ for key in required:
                           "currently installed!")
 
 ##################################################################################
-## Needed to preload is called before anything in ngclearn
+## Following are needed to preload is called before anything in ngclearn
 from pathlib import Path
 from sys import argv
 import numpy
