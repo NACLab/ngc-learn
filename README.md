@@ -15,14 +15,11 @@ which implements several historical models, can be found
 <a href="https://github.com/NACLab/ngc-museum">here</a>.
 
 The official blog-post related to the source paper behind this software library
-can be found
+can be found 
 <a href="https://go.nature.com/3rgl1K8">here</a>.<br>
 You can find the related paper <a href="https://www.nature.com/articles/s41467-022-29632-7">right here</a>, which
 was selected to appear in the Nature <i>Neuromorphic Hardware and Computing Collection</i> in 2023 and was
 chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics</i> in 2022.
-
-<!--The technical report going over the theoretical underpinnings of the
-    NGC framework can be found here. TO BE RELEASED SOON. -->
 
 ## Installation
 
@@ -42,7 +39,7 @@ ngc-learn requires:
 -->
 
 ---
-ngc-learn 3.0.0 and later require Python 3.10 or newer as well as ngcsimlib >=3.0.0.
+ngc-learn 3.1.0 and later require Python 3.10 or newer as well as ngcsimlib >=3.0.0.
 ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require
 Matplotlib (>=3.8.0) and imageio (>=2.31.5) and both plotting and density estimation
 tools (routines within ``ngclearn.utils.density``) will require Scikit-learn (>=0.24.2).
@@ -75,7 +72,7 @@ Python 3.11.4 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'3.0.0'
+'3.1.0'
 ```
 
 <i>Note:</i> For access to the previous Tensorflow-2 version of ngc-learn (of
@@ -122,7 +119,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-3.0.1 <!--1.2.3-Beta--> <!-- -Alpha -->
+3.1.0 <!--1.2.3-Beta--> <!-- -Alpha -->
 
 Author:
 Alexander G. Ororbia II<br>
