@@ -31,7 +31,7 @@ for key in required:
                           "currently installed!")
 
 ##################################################################################
-## Needed to preload is called before anything in ngclearn
+## Following are needed to preload is called before anything in ngclearn
 from pathlib import Path
 from sys import argv
 import numpy
@@ -49,7 +49,6 @@ from ngcsimlib.operations import Summation, Product
 ## this prevents ngc-learn from messing with sphinx/building
 if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
     if "readthedocs" not in argv[0]:  ## prevent readthedocs execution of preload
-        from ngcs
-from importlib.metadata import distributionsimlib import configure
+        from ngcsimlib import configure
         configure()
         logger.init_logging()
