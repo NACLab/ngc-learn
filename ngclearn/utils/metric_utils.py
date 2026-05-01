@@ -89,9 +89,13 @@ def measure_sparsity(codes, tolerance=0., preserve_batch=True, flip_measure=Fals
     this matrix is a non-negative vector. 
     
     Formally, this means we compute, per i-th row:
+    
     | rho(x_i) = num_zeros(x_i) / dim(x_i)
+    
     and for a global score for matrix X with N codes/rows, we measure: 
+    
     | rho_mean(X) = 1/N Sum^N_{i=1} rho(x_i)
+    
     where lower/closer to 0 means codes more sparse and closer to 1 means 
     codes are more dense.
 
