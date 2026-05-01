@@ -105,13 +105,15 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.L.set(jnp.squeeze(L))
         self.mask.set(mask)
 
-
-    # @transition(output_compartments=["dp", "dtarget", "target", "p", "modulator", "L", "mask"])
     @compilable
-    def reset(self): ## reset core components/statistics
-        _shape = (self.batch_size, self.shape[0])
+    def reset(self):  ## reset core components/statistics
+        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
+
+    @compilable
+    def batched_reset(self, batch_size):
+        _shape = (batch_size, self.shape[0])
         if len(self.shape) > 1:
-            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
+            _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape) ## "rest"/reset values
         dp = restVals
         dtarget = restVals
@@ -129,7 +131,6 @@ class BernoulliErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cel
         self.modulator.set(modulator)
         self.L.set(L)
         self.mask.set(mask)
-
 
     @classmethod
     def help(cls): ## component help function

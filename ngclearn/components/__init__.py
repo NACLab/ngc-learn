@@ -27,6 +27,7 @@ from .other.expKernel import ExpKernel
 ## point to input encoder component types
 from .input_encoders.bernoulliCell import BernoulliCell
 from .input_encoders.poissonCell import PoissonCell
+from .input_encoders.ganglionCell import RetinalGanglionCell
 from .input_encoders.latencyCell import LatencyCell
 from .input_encoders.phasorCell import PhasorCell
 
@@ -34,10 +35,12 @@ from .input_encoders.phasorCell import PhasorCell
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
+from .synapses.hebbian.STDPSynapse import STDPSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .synapses.hebbian.BCMSynapse import BCMSynapse
+from .synapses.competitive.SOMSynapse import SOMSynapse
 from .synapses.STPDenseSynapse import STPDenseSynapse
 from .synapses.exponentialSynapse import ExponentialSynapse
 from .synapses.doubleExpSynapse import DoubleExpSynapse

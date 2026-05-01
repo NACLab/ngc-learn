@@ -85,7 +85,10 @@ def create_function(fun_name, args=None):
         fx = tanh
         dfx = d_tanh
     elif fun_name == "bkwta":
-        fx = bkwta
+        ## NOTE: this requires an auxiliary arg to be set
+        ##       which means this only supports binary WTA 
+        fx = bkwta ## nWTA=1
+        ## NOTE: this is an improper derivative proxy
         dfx = bkwta #d_identity
     elif fun_name == "sine":
         fx = sine
@@ -119,7 +122,9 @@ def create_function(fun_name, args=None):
         dfx = d_softplus
     elif fun_name == "softmax":
         fx = softmax
-        dfx = d_identity ## TODO: currently Jacobian of softmax not supported!
+        ## NOTE: below is an improper derivative proxy
+        ##       correct dfx is a Jacobian of softmax (not currently supported!)
+        dfx = d_identity 
     elif fun_name == "unit_threshold":
         fx = threshold ## default threshold is 1 (thus unit)
         dfx = d_threshold ## STE approximation
@@ -227,6 +232,26 @@ def one_hot(P):
     p_t = jnp.argmax(P, axis=1)
     return nn.one_hot(p_t, num_classes=nC, dtype=jnp.float32)
 
+@partial(jit, static_argnums=[1, 2])
+def chebyshev_norm(d, axis=-1, keepdims=False):
+    """
+    Calculate the Chebyshev distance between two tensor-arrays.
+
+    Args:
+        d: tensor d to measure against the origin
+
+        axis: axis to measure distance between the two tensors
+
+        keepdims: preserve dimensions of d
+
+    Returns:
+        the Chebyshev distance (values) within d
+    """
+    abs_diff = jnp.abs(d) ## d could be (a - b) externally
+    dist_vals = jnp.max(abs_diff, axis=axis, keepdims=keepdims)
+    return dist_vals
+
+@jit
 def binarize(data, threshold=0.5):
     """
     Converts the vector *data* to its binary equivalent
@@ -458,7 +483,8 @@ def d_relu6(x):
     """
     # df/dx = 1 if 0<x<6 else 0
     # I_x = (z >= a_min) *@ (z <= b_max) //create an indicator function  a = 0 b = 6
-    Ix1 = (x > 0.).astype(jnp.float32) #tf.cast(tf.math.greater_equal(x, 0.0),dtype=tf.float32)
+    #Ix1 = (x > 0.).astype(jnp.float32) #tf.cast(tf.math.greater_equal(x, 0.0),dtype=tf.float32)
+    Ix1 = (x >= 0.).astype(jnp.float32)
     Ix2 = (x <= 6.).astype(jnp.float32) #tf.cast(tf.math.less_equal(x, 6.0),dtype=tf.float32)
     Ix = Ix1 * Ix2
     return Ix
@@ -725,40 +751,206 @@ def clip(x, min_val, max_val):
 def d_clip(x, min_val, max_val):
     return jnp.where((x < min_val) | (x > max_val), 0.0, 1.0)
 
+## block-matrix generation routine
+def create_block_matrix(map_matrix, group_shape, alpha_inh=-1., alpha_exc=1.):
+    nrows, ncols = map_matrix.shape
+    gh, gw = group_shape
+    block = jnp.eye(gh, gw) * alpha_exc - (1. - jnp.eye(gh, gw)) * alpha_inh
+    gmat = []
+    for r in range(nrows):
+        row = []
+        for c in range(ncols):
+            element = map_matrix[r][c]
+            if element > 0.:
+                row.append(block)
+            else:
+                row.append(block * 0)
+        row = jnp.concatenate(row, axis=1)
+        gmat.append(row)
+    gmat = jnp.concatenate(gmat, axis=0)
+    return gmat
 
-# def scanner(fn):
-#     """
-#     A wrapper for Jax's scanner that handles the "getting" of the current
-#     state and "setting" of the final state to and from the model.
-#
-#     | @scanner
-#     | def process(current_state, args):
-#     |    t = args[0]
-#     |    dt = args[1]
-#     |    current_state = model.advance_state(current_state, t, dt)
-#     |    current_state = model.evolve(current_state, t, dt)
-#     |    return current_state, (current_state[COMPONENT.COMPARTMENT.path], ...)
-#     |
-#     | outputs = models.process(jnp.array([[ARG0, ARG1] for i in range(NUM_LOOPS)]))
-#
-#     | Notes on the scanner function call:
-#     | 1) `current_state` is a hash-map mapped to all compartment values by path
-#     | 2) `args` is the external arguments defined in the passed Jax array
-#     | 3) `outputs` is a tuple containing time-concatenated Jax arrays of the
-#     |     compartment statistics you want tracked
-#
-#     Args:
-#         fn: function that is executed at every time step of a Jax-unrolled loop,
-#             it must take in the current state and external arguments
-#
-#     Returns:
-#         wrapped (fast) function that is Jax-scanned/jit-i-fied
-#     """
-#     def _scanned(_xs):
-#         vals, stacked = _scan(fn, init=Get_Compartment_Batch(), xs=_xs)
-#         Set_Compartment_Batch(vals)
-#         return stacked
-#
-#     if get_current_context() is not None:
-#         get_current_context().__setattr__(fn.__name__, _scanned)
-#     return _scanned
+@partial(jit, static_argnums=[1, 2, 3, 4])
+def normalize_block_matrix(matrix, block_size, order=2, axis=0, norm_targ=1.):
+    """
+    Normalizes columns of blocks within a matrix.
+
+    Args:
+        matrix: 2D JAX Array (M, N)
+
+        block_size: Tuple (block_rows, block_cols)
+
+        order:
+
+        axis: (relative) axis for normalization within block; 0 -> by rows, 1 -> by cols
+
+        norm_targ:
+
+    Returns:
+        block-normalized (M, N) matrix
+    """
+    _tensor_axis = (2, 3) ## assume row-axis for normalization
+    if axis == 1:
+        _tensor_axis = 3 ## get col-axis for normalization
+    elif axis == 0:
+        _tensor_axis = 2 ## assume row-axis for normalization
+    ## else, we leave row-axis as target for normalization
+    M, N = matrix.shape
+    r_blk, c_blk = block_size
+    # Reshape to 4D to isolate blocks: (num_blocks_row, block_rows, num_blocks_col, block_cols)
+    reshaped = matrix.reshape(M // r_blk, r_blk, N // c_blk, c_blk)
+    # Transpose to group block data: (num_blocks_row, num_blocks_col, block_rows, block_cols)
+    transposed = jnp.transpose(reshaped, (0, 2, 1, 3))
+    # Calculate norm for each column "w/in" each block
+    ## (over axis 2 -> block_rows); (over axis 3 -> block_cols)
+    norms = jnp.linalg.norm(transposed, ord=order, axis=_tensor_axis, keepdims=True)
+    #normalized_blocks = jnp.divide(transposed, norms + 1e-8) ## normalize (w/ safe-division)
+    normalized_blocks = transposed * (norm_targ/(norms + 1e-8))
+    # Reverse transpose: (num_blocks_row, block_rows, num_blocks_col, block_cols)
+    reverted = jnp.transpose(normalized_blocks, (0, 2, 1, 3))
+    # Reshape back to original 2D shape (M, N)
+    return reverted.reshape(M, N)
+
+@partial(jit, static_argnums=[2, 3])
+def quantile_lkwta(x, m, nWTA=20, clipval=-1.): ## local k-WTA
+    """
+    A quantile-based K-WTA function - NOTE: this is experimental and no guarantees are
+    offered at this point.
+
+    Args:
+        x: data to apply quantile-KWTA function over
+
+        m: masking tensor
+
+        nWTA: number of winners
+
+        clipval:
+
+    Returns:
+        y = KWTA(x)
+    """
+    ## expand to 3D tensor space and do logic in 3D
+    _x = jnp.expand_dims(x, axis=1) ## B x 1 x D
+    _M = jnp.expand_dims(m, axis=0)  ## 1 x 1 x D
+    _x = _x * _M + (1. - _M) * (jnp.amin(_x) - 1.)
+    threshold = jnp.quantile(
+        _x, (_x.shape[2] - nWTA) / _x.shape[2], method='linear', axis=2, keepdims=True
+    )
+    topK = (_x >= threshold) * 1. ## Do thresholding
+    topK = jnp.sum(topK, axis=1) * x
+    # if clipval > 0.:
+    #     topK = jnp.clip(topK, -clipval, clipval)
+    return topK
+
+@partial(jit, static_argnums=[2, 3])
+def d_quantile_lkwta(x, m, nWTA=20, clipval=-1.): ## local k-WTA
+    """
+        First derivative of quantile-based K-WTA function with respect to its input
+        - NOTE: this is experimental and no guarantees are
+        offered at this point.
+
+        Args:
+            x: data to apply quantile-KWTA function over
+
+            m: masking tensor
+
+            nWTA: number of winners
+
+            clipval:
+
+        Returns:
+            y = KWTA(x)
+        """
+    ## expand to 3D tensor space and do logic in 3D
+    _x = jnp.expand_dims(x, axis=1)  ## B x 1 x D
+    _M = jnp.expand_dims(m, axis=0)  ## 1 x 1 x D
+    _x = _x * _M + (1. - _M) * (jnp.amin(_x) - 1.)
+    threshold = jnp.quantile(
+        _x, (_x.shape[2] - nWTA) / _x.shape[2], method='linear', axis=2, keepdims=True
+    )
+    topK = (_x >= threshold) * 1.  ## Do thresholding
+    topK = jnp.sum(topK, axis=1) #* x
+    return topK
+
+@jit
+def group_mean(x, masks):
+    ## expand to 3D tensor space and do logic in 3D (avoids a for-loop over groups in mask)
+    _x = jnp.expand_dims(x, axis=1)  ## B x 1 x D
+    _M = jnp.expand_dims(masks, axis=0)  ## 1 x 1 x D
+    x3D = _x * _M
+    mu = jnp.sum(x3D, axis=2, keepdims=True) / jnp.sum(_M, axis=2, keepdims=True) ## calc means over axis 2 of 3D tensor
+    mu = jnp.sum(mu * _M, axis=1) ## now contract back to 2D and smear group means to each dimension per group
+    return mu
+
+@partial(jit, static_argnums=[2])
+def kwta(x, m, nWTA=1):
+    return lkwta(x, m=m, nWTA=nWTA)
+
+@partial(jit, static_argnums=[2])
+def d_kwta(x, m, nWTA=1):
+    return d_lkwta(x, m=m, nWTA=nWTA)
+
+@partial(jit, static_argnums=[2, 3])
+def lkwta(x, m, nWTA=1, clipval=-1.): ## local/group K-WTA
+    """
+    A group-based K-WTA function, i.e., local K-WTA (LKWTA), as proposed in:
+
+    | Ororbia, Alexander, Karl Friston, and Rajesh PN Rao. "Meta-representational predictive coding: biomimetic
+    | self-supervised learning." arXiv preprint arXiv:2503.21796 (2025).
+
+    Args:
+        x: data to apply quantile-KWTA function over
+
+        m: masking tensor
+
+        nWTA: number of winners
+
+        clipval:
+
+    Returns:
+        y = LKWTA(x)
+    """
+    ## expand to 3D tensor space and do logic in 3D (avoids a for-loop over groups in mask)
+    ## this is as efficient as lax.top_k can be made for batches
+    _x = jnp.expand_dims(x, axis=1) ## B x 1 x D
+    _M = jnp.expand_dims(m, axis=0)  ## 1 x 1 x D
+    _x = _x * _M + (1. - _M) * (jnp.amin(_x) - 1.)
+    values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
+    ## go back to 2D matrix space
+    kth = jnp.expand_dims(jnp.min(values, axis=(1, 2)), axis=1) # must do comparison per sample in potential mini-batch
+    topK = jnp.greater_equal(x, kth).astype(jnp.float32)  # cast booleans to floats
+    topK = topK * x
+    if clipval > 0.:
+        topK = jnp.clip(topK, -clipval, clipval)
+    return topK
+
+@partial(jit, static_argnums=[2, 3])
+def d_lkwta(x, m, nWTA=1, clipval=-1.): ## derivative of local/group K-WTA w.r.t. input
+    """
+        Derivative of group-based K-WTA function with respect to its input. This function, local K-WTA (LKWTA),
+         was proposed in:
+
+        | Ororbia, Alexander, Karl Friston, and Rajesh PN Rao. "Meta-representational predictive coding: biomimetic
+        | self-supervised learning." arXiv preprint arXiv:2503.21796 (2025).
+
+        Args:
+            x: data to apply quantile-KWTA function over
+
+            m: masking tensor
+
+            nWTA: number of winners
+
+            clipval:
+
+        Returns:
+            y = LKWTA(x)
+        """
+    ## expand to 3D tensor space and do logic in 3D
+    _x = jnp.expand_dims(x, axis=1) ## B x 1 x D
+    _M = jnp.expand_dims(m, axis=0)  ## 1 x 1 x D
+    _x = _x * _M + (1. - _M) * (jnp.amin(_x) - 1.)
+    values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
+    ## go back to 2D matrix space
+    kth = jnp.expand_dims(jnp.min(values, axis=(1, 2)), axis=1) # must do comparison per sample in potential mini-batch
+    topK = jnp.greater_equal(x, kth).astype(jnp.float32)  # cast booleans to floats
+    return topK

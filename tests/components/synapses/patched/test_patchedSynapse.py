@@ -36,6 +36,7 @@ def test_patchedSynapse():
 
     advance_process = (MethodProcess("advance_proc") >> a.advance_state)
     reset_process = (MethodProcess("reset_proc") >> a.reset)
+    #batch_reset_process = (MethodProcess("batched_reset_proc") >> a.batched_reset)
 
     def clamp_inputs(x):
       a.inputs.set(x)
@@ -46,6 +47,7 @@ def test_patchedSynapse():
   expected_outputs = (jnp.matmul(inputs_seq, weights) * resist_scale) + biases
   outputs_outs = []
   reset_process.run()
+  #batch_reset_process.run(batch_size=batch_size)
   clamp_inputs(inputs_seq)
   advance_process.run(t=0., dt=dt)
   outputs_outs.append(a.outputs.get())

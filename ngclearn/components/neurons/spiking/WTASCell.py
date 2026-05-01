@@ -50,7 +50,16 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
 
     @deprecate_args(thrBase="thr_base")
     def __init__(
-            self, name, n_units, tau_m, resist_m=1., thr_base=0.4, thr_gain=0.002, refract_time=0., thr_jitter=0.05,
+            self, 
+            name, 
+            n_units, 
+            tau_m, 
+            resist_m=1., 
+            thr_base=0.4, 
+            thr_gain=0.002, 
+            refract_time=0., 
+            thr_jitter=0.05,
+            batch_size=1, 
             **kwargs
     ):
         super().__init__(name, **kwargs)
@@ -63,7 +72,7 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.refract_T = refract_time
 
         ## Layer Size Setup
-        self.batch_size = 1
+        self.batch_size = batch_size
         self.n_units = n_units
 
         ## base threshold setup
@@ -112,15 +121,6 @@ class WTASCell(JaxComponent): ## winner-take-all spiking cell
         self.s.set(restVals)
         self.rfr.set(restVals + self.refract_T)
         self.tols.set(restVals)
-
-    # def save(self, directory, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     jnp.savez(file_name, threshold=self.thr.get())
-    #
-    # def load(self, directory, seeded=False, **kwargs):
-    #     file_name = directory + "/" + self.name + ".npz"
-    #     data = jnp.load(file_name)
-    #     self.thr.set( data['threshold'] )
 
     @classmethod
     def help(cls): ## component help function

@@ -241,7 +241,7 @@ class HebbianSynapse(DenseSynapse):
 
     @compilable
     def calc_update(self):
-       # Get the variables
+        # Get the variables
         pre = self.pre.get()
         post = self.post.get()
         weights = self.weights.get()
@@ -265,13 +265,17 @@ class HebbianSynapse(DenseSynapse):
         post = self.post.get()
         weights = self.weights.get()
         biases = self.biases.get()
-        opt_params = self.opt_params.get()
-        
+        opt_params = self.opt_params.get() 
+
         ## calculate synaptic update values
         dWeights, dBiases = HebbianSynapse._compute_update(
             self.w_bound, self.is_nonnegative, self.sign_value, self.prior_type, self.prior_lmbda, self.pre_wght, self.post_wght,
             pre, post, weights
         )
+
+        #if "W1" in self.name:
+        #    print("dWn: ", jnp.linalg.norm(dWeights))
+        #    print(" Wn: ", jnp.linalg.norm(weights))
 
         ## conduct a step of optimization - get newly evolved synaptic weight value matrix
         if self.bias_init != None:
@@ -279,9 +283,15 @@ class HebbianSynapse(DenseSynapse):
         else:
             # ignore db since no biases configured
             opt_params, [weights] = self.opt(opt_params, [weights], [dWeights])
+        #if "W1" in self.name:
+        #    print("dWn: ", jnp.linalg.norm(dWeights))
+        #    print(" Wn: ", jnp.linalg.norm(weights))
+
         ## ensure synaptic efficacies adhere to constraints
         weights = _enforce_constraints(weights, self.w_bound, is_nonnegative=self.is_nonnegative)
-        
+        ## TODO: temporary fix
+        weights = weights * self.mask.get()
+
         # Update compartments
         self.opt_params.set(opt_params)
         self.weights.set(weights)

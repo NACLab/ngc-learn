@@ -22,7 +22,16 @@ available for external download in the `Model Museum <https://github.com/NACLab/
 
 .. toctree::
   :maxdepth: 1
-  :caption: Sensory Input Encoding / Transformation
+  :caption: Model and Analysis Tools
+
+  plotting
+  metrics
+  integration
+  density_modeling
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Sensory Input Encoding & Tracing
 
   input_cells
   traces
@@ -54,12 +63,3 @@ available for external download in the `Model Museum <https://github.com/NACLab/
   stdp
   mod_stdp
   short_term_plasticity
-
-.. toctree::
-  :maxdepth: 1
-  :caption: Model and Analysis Tools
-
-  plotting
-  metrics
-  integration
-  density_modeling

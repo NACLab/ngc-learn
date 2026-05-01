@@ -151,18 +151,18 @@ class LatencyCell(JaxComponent):
         super().__init__(name=name, key=key)
 
         ## latency meta-parameters
-        self.first_spike_time = Compartment(first_spike_time)
-        self.tau = Compartment(tau)
-        self.threshold = Compartment(threshold)
-        self.linearize = Compartment(linearize)
-        self.clip_spikes = Compartment(clip_spikes)
+        self.first_spike_time = first_spike_time
+        self.tau = tau
+        self.threshold = threshold
+        self.linearize = linearize
+        self.clip_spikes = clip_spikes
         ## normalize latency code s.t. final spike(s) occur w/in num_steps
-        self.normalize = Compartment(normalize)
-        self.num_steps = Compartment(num_steps)
+        self.normalize = normalize
+        self.num_steps = num_steps
 
         ## Layer Size Setup
-        self.batch_size = Compartment(batch_size)
-        self.n_units = Compartment(n_units)
+        self.batch_size = batch_size
+        self.n_units = n_units
 
         ## Compartment setup
         restVals = jnp.zeros((batch_size, n_units))
@@ -175,12 +175,12 @@ class LatencyCell(JaxComponent):
 
     @compilable
     def calc_spike_times(self):
-        if self.clip_spikes.get():
+        if self.clip_spikes:
             self.clip_mask.set((self.inputs.get() < self.threshold) * 1.)
         else:
             self.clip_mask.set(self.inputs.get() * 0.)
 
-        if self.linearize.get():
+        if self.linearize:
             self.targ_sp_times.set(
                 _calc_spike_times_linear(self.inputs.get(),
                                          self.tau.get(),
@@ -207,7 +207,7 @@ class LatencyCell(JaxComponent):
 
     @compilable
     def reset(self):
-        restVals = jnp.zeros((self.batch_size.get(), self.n_units.get()))
+        restVals = jnp.zeros((self.batch_size, self.n_units))
         # BUG: the self.inputs here does not have the targeted field
         # NOTE: Quick workaround is to check if targeted is in the input or not
         hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)

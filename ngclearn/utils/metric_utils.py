@@ -82,11 +82,24 @@ def measure_breadth_TC(spikes, preserve_batch=False):
         BTC = jnp.mean(BTC)
     return BTC
 
-@jit
-def measure_sparsity(codes, tolerance=0.):
+@partial(jit, static_argnums=[2, 3])
+def measure_sparsity(codes, tolerance=0., preserve_batch=True, flip_measure=False):
     """
     Calculates the sparsity (ratio) of an input matrix, assuming each row within
-    it is a non-negative vector.
+    this matrix is a non-negative vector. 
+    
+    Formally, this means we compute, per i-th row:
+    | rho(x_i) = num_zeros(x_i) / dim(x_i)
+    and for a global score for matrix X with N codes/rows, we measure: 
+    | rho_mean(X) = 1/N Sum^N_{i=1} rho(x_i)
+    where lower/closer to 0 means codes more sparse and closer to 1 means 
+    codes are more dense.
+
+    Note that this definition of sparsity aligns with Foldiak's definition of 
+    the ratio of active neurons to inactive ones (assuming binary coding):
+
+    | Foldiak, Peter. "Sparse and explicit neural coding." Principles of neural 
+    | coding. CRC Press, 2013. 379-389.
 
     Args:
         codes: matrix (shape: N x D) of non-negative codes to measure
@@ -94,11 +107,21 @@ def measure_sparsity(codes, tolerance=0.):
 
         tolerance: lowest number to consider as "empty"/non-existent (Default: 0.)
 
+        preserve_batch: if True, will return one score per sample (N x 1) in batch 
+            (Default: True), otherwise, returns scalar average/mean score
+
+        flip_measure: if True, will score sparsity via "1 - nzero/dim" (Default: False)
+
     Returns:
-        sparsity measurements per code (output shape: N x 1)
+        sparsity measurements per code (shape: N x 1) or single score (shape: 1 x 1)
     """
+    dim = codes.shape[1]
     m = (codes > tolerance).astype(jnp.float32)
-    rho = jnp.sum(m, axis=1, keepdims=True)/(codes.shape[1] * 1.)
+    rho = jnp.sum(m, axis=1, keepdims=True)/(dim * 1.) ## per-code sparsity
+    if flip_measure: ## closer to 1 = more sparse, closer to 0, more dense
+        rho = 1. - rho
+    if not preserve_batch:
+        rho = jnp.mean(rho)
     return rho
 
 #@partial(jit, static_argnums=[2])

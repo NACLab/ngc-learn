@@ -1,5 +1,6 @@
 from jax import numpy as jnp, random, jit
-from ngcsimlib.logger import info
+#from ngcsimlib.logger import info
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.jaxComponent import JaxComponent
@@ -65,6 +66,7 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
         leak_scale: degree to which membrane leak should be scaled (Default: 1)
     """
 
+    @deprecate_args(sigma_rec="sigma_pre")
     def __init__(
             self, name, n_units, tau_x, act_fx="relu", integration_type="euler", batch_size=1, sigma_pre=0.1,
             sigma_post=0.1, leak_scale=1., shape=None, **kwargs
@@ -127,13 +129,19 @@ class LeakyNoiseCell(JaxComponent): ## Real-valued, leaky noise cell
         self.r_prime.set(r_prime)
 
     @compilable
-    def reset(self):
-        _shape = (self.batch_size, self.shape[0])
+    def reset(self):  ## reset core components/statistics
+        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
+
+    @compilable
+    def batched_reset(self, batch_size):
+        _shape = (batch_size, self.shape[0])
         if len(self.shape) > 1:
-            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
+            _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
-        self.j_input.set(restVals)
-        self.j_recurrent.set(restVals)
+        if not self.j_input.targeted:
+            self.j_input.set(restVals)
+        if not self.j_recurrent.targeted:
+            self.j_recurrent.set(restVals)
         self.x.set(restVals)
         self.r.set(restVals)
         self.r_prime.set(restVals)

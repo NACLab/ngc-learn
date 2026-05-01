@@ -218,10 +218,25 @@ class AttentiveProbe(Probe):
 
     """
     def __init__(
-            self, dkey, source_seq_length, input_dim, out_dim, num_heads=8, attn_dim=64,
-            target_seq_length=1, learnable_query_dim=32, batch_size=1, hid_dim=32,
-            use_LN=True, use_LN_input=False, use_softmax=True, dropout=0.5, eta=0.0002,
-            eta_decay=0.0, min_eta=1e-5, **kwargs
+            self,
+            dkey,
+            source_seq_length,
+            input_dim,
+            out_dim,
+            num_heads=8,
+            attn_dim=64,
+            target_seq_length=1,
+            learnable_query_dim=32,
+            batch_size=1,
+            hid_dim=32,
+            use_LN=True,
+            use_LN_input=False,
+            use_softmax=True,
+            dropout=0.5,
+            eta=0.0002,
+            eta_decay=0.0,
+            min_eta=1e-5,
+            **kwargs
     ):
         super().__init__(dkey, batch_size, **kwargs)
         assert attn_dim % num_heads == 0, f"`attn_dim` must be divisible by `num_heads`. Got {attn_dim} and {num_heads}."

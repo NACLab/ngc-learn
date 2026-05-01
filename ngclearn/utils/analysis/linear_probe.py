@@ -73,7 +73,15 @@ class LinearProbe(Probe):
 
     """
     def __init__(
-            self, dkey, source_seq_length, input_dim, out_dim, batch_size=1, use_LN=False, use_softmax=False, **kwargs
+            self,
+            dkey,
+            source_seq_length,
+            input_dim,
+            out_dim,
+            batch_size=1,
+            use_LN=False,
+            use_softmax=False,
+            **kwargs
     ):
         super().__init__(dkey, batch_size, **kwargs)
         self.dkey, *subkeys = random.split(self.dkey, 3)
