@@ -50,6 +50,14 @@ ngclearn.utils.io\_utils module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.matrix\_utils module
+-----------------------------------
+
+.. automodule:: ngclearn.utils.matrix_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.metric\_utils module
 -----------------------------------
 

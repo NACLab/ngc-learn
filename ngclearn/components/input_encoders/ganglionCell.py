@@ -6,9 +6,7 @@ import jax
 from typing import Union, Tuple
 
 def _create_gaussian_filter(patch_shape, sigma):
-    """
-    Create a 2D Gaussian kernel centered on patch_shape with given sigma.
-    """
+    ## Create a 2D Gaussian kernel centered on patch_shape with given sigma.
     px, py = patch_shape
 
     x_ = jnp.linspace(0, px - 1, px)
@@ -34,13 +32,16 @@ def _create_patches(obs, patch_shape, step_shape):
     """
     Extract 2D patches from a batch of images using a sliding window.
 
-    Inputs:
-            obs: Input array (B, ix, iy)
-            patch_shape: Patch size (px, py)
-            step_shape: Stride (sx, sy) -- use 0 for full-overlap
+    Args:
+        obs: Input array (B, ix, iy)
 
-    Output:
-            Patches array (B, n_cells, px, py)
+        patch_shape: Patch size (px, py)
+
+        step_shape: Stride (sx, sy) -- use 0 for full-overlap
+
+    Returns:
+        Patches array (B, n_cells, px, py)
+
     """
 
     B, ix, iy = obs.shape
@@ -69,8 +70,7 @@ def _create_patches(obs, patch_shape, step_shape):
 
 class RetinalGanglionCell(JaxComponent):
     """
-    A groupd of retinal ganglion cell that senses the input
-    stimuli and sends out the filtered signal to the brain.
+    A group of retinal ganglion cell that senses the input stimuli and sends out the filtered signal to the brain.
 
     | --- Cell Input Compartments: ---
     | inputs - input (takes in external signals)
@@ -83,8 +83,7 @@ class RetinalGanglionCell(JaxComponent):
         name: the string name of this cell
 
         filter_type: string name of filter function (Default: identity)
-
-        :Note: supported filters include "gaussian", "difference_of_gaussian"
+            :Note: supported filters include "gaussian", "difference_of_gaussian"
 
         sigma: standard deviation of gaussian kernel
 

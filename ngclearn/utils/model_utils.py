@@ -882,6 +882,14 @@ def group_mean(x, masks):
     mu = jnp.sum(mu * _M, axis=1) ## now contract back to 2D and smear group means to each dimension per group
     return mu
 
+@partial(jit, static_argnums=[2])
+def kwta(x, m, nWTA=1):
+    return lkwta(x, m=m, nWTA=nWTA)
+
+@partial(jit, static_argnums=[2])
+def d_kwta(x, m, nWTA=1):
+    return d_lkwta(x, m=m, nWTA=nWTA)
+
 @partial(jit, static_argnums=[2, 3])
 def lkwta(x, m, nWTA=1, clipval=-1.): ## local/group K-WTA
     """
