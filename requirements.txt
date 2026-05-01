@@ -8,3 +8,4 @@ jaxlib>=0.4.28
 ngcsimlib>=3.1.0
 imageio>=2.37.0
 pandas>=2.2.3
+typing_extensions>=4.15.0
