@@ -2,7 +2,7 @@
 
 <img src="docs/images/ngc-learn-logo.png" width="300">
 
-<b>ngc-learn</b> is a Python library for building, simulating, and analyzing biophysical / neurobiological systems, spiking neuronal networks, predictive coding circuitry, and biomimetic (NeuroAI) agents that learn in a biologically-plausible manner. This simulation toolkit, meant to support computational neuroscience and brain-inspired computing research, is built on top of JAX and is distributed under the 3-Clause BSD license.
+<b>ngc-learn</b> is a Python library for building, simulating, and analyzing biophysical / neurobiological systems, spiking neural networks, predictive coding circuitry, and biomimetic (NeuroAI) agents that learn in a biologically-plausible manner. This simulation toolkit, meant to support computational neuroscience and brain-inspired computing research, is built on top of JAX and is distributed under the 3-Clause BSD license.
 
 It is currently maintained by the
 <a href="https://www.cs.rit.edu/~ago/nac_lab.html">Neural Adaptive Computing (NAC) laboratory</a>.
