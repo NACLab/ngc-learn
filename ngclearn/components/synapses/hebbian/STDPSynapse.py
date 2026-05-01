@@ -1,5 +1,6 @@
 from jax import random, numpy as jnp, jit
-from ngclearn import resolver, Component, Compartment
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 
@@ -112,43 +113,48 @@ class STDPSynapse(DenseSynapse): # power-law / trace-based STDP
         dW = (dWpost + dWpre)
         return dW
 
-    @staticmethod
-    def _evolve(dt, w_bound, w_decay, tau_w, Aplus, Aminus, tau_plus, tau_minus, preSpike,
-                postSpike, pre_tols, post_tols, weights, eta):
+    @compilable
+    def evolve(self, t, dt):
+        weights = self.weights.get()
+        preSpike = self.preSpike.get()
+        postSpike = self.postSpike.get()
+        pre_tols = self.pre_tols.get()
+        post_tols = self.post_tols.get()
         dWeights = STDPSynapse._compute_update(
-            Aplus, Aminus, tau_plus, tau_minus, preSpike, postSpike, pre_tols,
-            post_tols, weights
+            self.Aplus,
+            self.Aminus,
+            self.tau_plus,
+            self.tau_minus,
+            preSpike,
+            postSpike,
+            pre_tols,
+            post_tols,
+            weights
         )
         ## shift/alter values of synaptic efficacies
-        if tau_w > 0.: ## triggers Euler-style synaptic update
-            weights = weights + (-weights * dt/tau_w + dWeights * eta)
-        else: ## raw simple ascent-style update
-            weights = weights + dWeights * eta - weights * w_decay
+        if self.tau_w > 0.:  ## triggers Euler-style synaptic update
+            weights = weights + (-weights * dt / self.tau_w + dWeights * self.eta)
+        else:  ## raw simple ascent-style update
+            weights = weights + dWeights * self.eta - weights * self.w_decay
         ## enforce non-negativity
-        eps = 0.001 # 0.01
-        weights = jnp.clip(weights, eps, w_bound - eps)  # jnp.abs(w_bound))
-        return weights, dWeights
+        eps = 0.001  # 0.01
+        weights = jnp.clip(weights, eps, self.w_bound - eps)  # jnp.abs(w_bound))
 
-    @resolver(_evolve)
-    def evolve(self, weights, dWeights):
         self.weights.set(weights)
         self.dWeights.set(dWeights)
 
-    @staticmethod
-    def _reset(batch_size, shape):
-        preVals = jnp.zeros((batch_size, shape[0]))
-        postVals = jnp.zeros((batch_size, shape[1]))
+    @compilable
+    def reset(self):
+        preVals = jnp.zeros((self.batch_size, self.shape[0]))
+        postVals = jnp.zeros((self.batch_size, self.shape[1]))
         inputs = preVals
         outputs = postVals
         preSpike = preVals
         postSpike = postVals
         pre_tols = preVals
         post_tols = postVals
-        dWeights = jnp.zeros(shape)
-        return inputs, outputs, preSpike, postSpike, pre_tols, post_tols, dWeights
+        dWeights = jnp.zeros(self.shape)
 
-    @resolver(_reset)
-    def reset(self, inputs, outputs, preSpike, postSpike, pre_tols, post_tols, dWeights):
         self.inputs.set(inputs)
         self.outputs.set(outputs)
         self.preSpike.set(preSpike)
