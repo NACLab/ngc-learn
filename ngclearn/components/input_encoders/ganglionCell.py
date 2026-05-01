@@ -126,23 +126,22 @@ class RetinalGanglionCell(JaxComponent):
         self.patch_shape = patch_shape
         self.step_shape = step_shape
 
-        filter = jnp.ones(self.patch_shape)
-
+        _filter = jnp.ones(self.patch_shape)
         if filter_type == 'gaussian':
-            filter = _create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
+            _filter = _create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
         elif filter_type == 'difference_of_gaussian':
-            filter = _create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
+            _filter = _create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
 
         # ═════════════════ compartments initial values ════════════════════
-        in_restVals = jnp.zeros((batch_size,
-                                 *self.area_shape))    ## input: (B | ix | iy)
+        in_restVals = jnp.zeros((batch_size, *self.area_shape)) ## input: (B | ix | iy)
 
-        out_restVals = jnp.zeros((batch_size,     ## output.shape: (B | n_cells * px * py)
-                                  self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
+        out_restVals = jnp.zeros(
+            (batch_size, self.n_cells * self.patch_shape[0] * self.patch_shape[1])
+        ) ## output.shape: (B | n_cells * px * py)
 
         # ═══════════════════ set compartments ══════════════════════
         self.inputs = Compartment(in_restVals, display_name="Input Stimulus") # input compartment
-        self.filter = Compartment(filter, display_name="Filter") # Filter compartment
+        self.filter = Compartment(_filter, display_name="Filter") # Filter compartment
         self.outputs = Compartment(out_restVals, display_name="Output Signal") # output compartment
 
     @compilable
