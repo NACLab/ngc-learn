@@ -163,17 +163,24 @@ class RetinalGanglionCell(JaxComponent):
 
     @compilable
     def reset(self):  ## reset core components/statistics
-        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
-
-    @compilable
-    def batched_reset(self, batch_size):
-        in_restVals = jnp.zeros((batch_size, *self.area_shape))      ## input: (B | ix | iy)
-
-        out_restVals = jnp.zeros((batch_size,      ## output.shape: (B | n_cells * px * py)
+        # self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
+        in_restVals = jnp.zeros((self.batch_size, *self.area_shape))      ## input: (B | ix | iy)
+        out_restVals = jnp.zeros((self.batch_size,      ## output.shape: (B | n_cells * px * py)
                                   self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
-
         self.inputs.set(in_restVals)
         self.outputs.set(out_restVals)
+
+    # Viet: NOTE: we should not need this function since the reset function
+    #   one could set the batch size then do reset
+    # @compilable
+    # def batched_reset(self, batch_size):
+    #     in_restVals = jnp.zeros((batch_size, *self.area_shape))      ## input: (B | ix | iy)
+
+    #     out_restVals = jnp.zeros((batch_size,      ## output.shape: (B | n_cells * px * py)
+    #                               self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
+
+    #     self.inputs.set(in_restVals)
+    #     self.outputs.set(out_restVals)
 
     @classmethod
     def help(cls): ## component help function
