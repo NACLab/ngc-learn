@@ -49,6 +49,7 @@ from ngcsimlib.operations import Summation, Product
 ## this prevents ngc-learn from messing with sphinx/building
 if not Path(argv[0]).name == "sphinx-build" or Path(argv[0]).name == "build.py":
     if "readthedocs" not in argv[0]:  ## prevent readthedocs execution of preload
-        from ngcsimlib import configure
+        from ngcs
+from importlib.metadata import distributionsimlib import configure
         configure()
         logger.init_logging()
