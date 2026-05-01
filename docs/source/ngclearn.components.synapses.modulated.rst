@@ -4,22 +4,6 @@ ngclearn.components.synapses.modulated package
 Submodules
 ----------
 
-ngclearn.components.synapses.modulated.MSTDPETConvSynapse module
-----------------------------------------------------------------
-
-.. automodule:: ngclearn.components.synapses.modulated.MSTDPETConvSynapse
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ngclearn.components.synapses.modulated.MSTDPETDeconvSynapse module
-------------------------------------------------------------------
-
-.. automodule:: ngclearn.components.synapses.modulated.MSTDPETDeconvSynapse
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.components.synapses.modulated.MSTDPETSynapse module
 ------------------------------------------------------------
 
@@ -28,10 +12,10 @@ ngclearn.components.synapses.modulated.MSTDPETSynapse module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.components.synapses.modulated.eligibilityTrace module
+ngclearn.components.synapses.modulated.REINFORCESynapse module
 --------------------------------------------------------------
 
-.. automodule:: ngclearn.components.synapses.modulated.eligibilityTrace
+.. automodule:: ngclearn.components.synapses.modulated.REINFORCESynapse
    :members:
    :undoc-members:
    :show-inheritance:

@@ -6,3 +6,4 @@ from .hebbianConvSynapse import HebbianConvSynapse
 from .hebbianDeconvSynapse import HebbianDeconvSynapse
 from .traceSTDPConvSynapse import TraceSTDPConvSynapse
 from .traceSTDPDeconvSynapse import TraceSTDPDeconvSynapse
+

@@ -39,14 +39,10 @@ spike train over $100$ steps in time as follows:
 
 ```python
 from jax import numpy as jnp, random, jit
-import time
+from ngclearn import Context, MethodProcess
 
-from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
-from ngcsimlib.compilers import compile_command, wrap_command
 from ngclearn.utils.viz.raster import create_raster_plot
 ## import model-specific mechanisms
-from ngclearn.operations import summation
 from ngclearn.components.input_encoders.bernoulliCell import BernoulliCell
 
 ## create seeding keys (JAX-style)
@@ -59,25 +55,24 @@ T = 100  ## number time steps to simulate
 with Context("Model") as model:
     cell = BernoulliCell("z0", n_units=10, key=subkeys[0])
 
-    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
+    advance_process = (MethodProcess("advance_proc")
+                       >> cell.advance_state)
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
+    reset_process = (MethodProcess("reset_proc")
+                     >> cell.reset)
 
-
-    @Context.dynamicCommand
-    def clamp(x):
-        cell.inputs.set(x)
+def clamp(x):
+    cell.inputs.set(x)
+    
 
 probs = jnp.asarray([[0.8, 0.2, 0., 0.55, 0.9, 0, 0.15, 0., 0.6, 0.77]], dtype=jnp.float32)
 spikes = []
-model.reset()
+reset_process.run() 
 for ts in range(T):
-    model.clamp(probs)
-    model.advance(t=ts * 1., dt=dt)
+    clamp(probs)
+    advance_process.run(t=ts * 1., dt=dt)
 
-    s_t = cell.outputs.value
+    s_t = cell.outputs.get()
     spikes.append(s_t)
 spikes = jnp.concatenate(spikes, axis=0)
 create_raster_plot(spikes, plot_fname="input_cell_raster.jpg")
@@ -122,7 +117,7 @@ and by replacing the line that has the `BernoulliCell` call with the
 following line instead:
 
 ```python
-cell = PoissonCell("z0", n_units=10, max_freq=63.75, key=subkeys[0])
+cell = PoissonCell("z0", n_units=10, target_freq=63.75, key=subkeys[0])
 ```
 
 Running the code with the two above small modifications will
@@ -150,12 +145,12 @@ mu = 0.
 probs = jnp.asarray([[1.]],dtype=jnp.float32)
 for _ in range(n_trials):
     spikes = []
-    model.reset()
+    reset_process.run() 
     for ts in range(T):
-        model.clamp(probs)
-        model.advance(t=ts*1., dt=dt)
+        clamp(probs)
+        advance_process.run(t=ts * 1., dt=dt)
 
-        s_t = cell.outputs.value
+        s_t = cell.outputs.get()
         spikes.append(s_t)
     count = jnp.sum(jnp.concatenate(spikes, axis=0))
     mu += count

@@ -1,4 +1,8 @@
+
+
 # Lecture 3B: Error Cell Models
+
+<img src="../../images/tutorials/neurocog/SingleGEC.png" width="250" align="right"/>
 
 Error cells are a particularly useful component cell that offers a simple and
 fast way of computing mismatch signals, i.e., error values that compare a
@@ -13,7 +17,10 @@ key examples of where error neurons come into play). In this lesson, we will
 briefly review one of the most commonly used ones -- the
 [Gaussian error cell](ngclearn.components.neurons.graded.gaussianErrorCell).
 
+
 ## Calculating Mismatch Values with the Gaussian Error Cell
+
+<img src="../../images/tutorials/neurocog/GEC.png" width="200" align="right"/>
 
 The Gaussian error cell, much like most error neurons, is in fact a derived
 calculation when considering a cost function. Specifically, this error cell
@@ -53,12 +60,8 @@ The code you would write amounts to the below:
 
 ```python
 from jax import numpy as jnp, jit
-import time
 
-from ngcsimlib.context import Context
-from ngcsimlib.commands import Command
-from ngcsimlib.compilers import compile_command, wrap_command
-from ngclearn.utils.viz.raster import create_raster_plot
+from ngclearn import Context, MethodProcess
 ## import model-specific mechanisms
 from ngclearn.components.neurons.graded.gaussianErrorCell import GaussianErrorCell
 
@@ -68,30 +71,29 @@ T = 5  ## number time steps to simulate
 with Context("Model") as model:
     cell = GaussianErrorCell("z0", n_units=3)
 
-    reset_cmd, reset_args = model.compile_by_key(cell, compile_key="reset")
-    advance_cmd, advance_args = model.compile_by_key(cell, compile_key="advance_state")
+    advance_process = (MethodProcess("advance_proc")
+                       >> cell.advance_state)
+    reset_process = (MethodProcess("reset_proc")
+                     >> cell.reset)
 
-    model.add_command(wrap_command(jit(model.reset)), name="reset")
-    model.add_command(wrap_command(jit(model.advance_state)), name="advance")
-
-
-    @Context.dynamicCommand
-    def clamp(x, y):
-        ## error cells have two key input compartments; a "mu" and a "target"
-        cell.mu.set(x)
-        cell.target.set(y)
+## set up non-compiled utility commands
+def clamp(x, y):
+    ## error cells have two key input compartments; a "mu" and a "target"
+    cell.mu.set(x)
+    cell.target.set(y)
+    
 
 guess = jnp.asarray([[-1., 1., 1.]], jnp.float32)  ## the produced guess or prediction
 answer = jnp.asarray([[1., -1., 1.]], jnp.float32)  ## what we wish the guess had been
 
-model.reset()
+reset_process.run() 
 for ts in range(T):
-    model.clamp(guess, answer)
-    model.advance(t=ts * 1., dt=dt)
+    clamp(guess, answer)
+    advance_process.run(t=ts * 1., dt=dt) 
     ## extract compartment values of interest
-    dmu = cell.dmu.value
-    dtarget = cell.dtarget.value
-    loss = cell.L.value
+    dmu = cell.dmu.get()
+    dtarget = cell.dtarget.get()
+    loss = cell.L.get()
     ## print compartment values to I/O
     print("{} |  dmu: {}  dtarget: {}  loss: {} ".format(ts, dmu, dtarget, loss))
 ```

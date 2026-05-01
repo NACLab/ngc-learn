@@ -1,8 +1,9 @@
-from jax import numpy as jnp, jit
-from functools import partial
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
+from jax import numpy as jnp, random, jit
+from functools import partial
 from ngclearn.utils import tensorstats
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @partial(jit, static_argnums=[5,6])
 def _apply_kernel(tf_curr, s, t, tau_w, win_len, krn_start, krn_end):
@@ -40,9 +41,10 @@ class ExpKernel(JaxComponent): ## exponential kernel
         nu: (ms, spike time interval for window)
 
         tau_w: spike window time constant (in micro-secs, or nano-s)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, dt, tau_w=500., nu=4., batch_size=1, **kwargs):
         super().__init__(name, **kwargs)
 
@@ -60,30 +62,31 @@ class ExpKernel(JaxComponent): ## exponential kernel
         ## window of spike times
         self.tf = Compartment(jnp.zeros((self.win_len, self.batch_size, self.n_units)))
 
-    @staticmethod
-    def _advance_state(t, tau_w, win_len, inputs, tf):
+    @compilable
+    def advance_state(self, t):
+        # Get the variables
+        inputs = self.inputs.get()
+        tf = self.tf.get()
+
         s = inputs
         ## update spike time window and corresponding window volume
-        tf, epsp = _apply_kernel(tf, s, t, tau_w, win_len, krn_start=0,
-                                 krn_end=win_len-1) #0:win_len-1)
-        return epsp, tf
+        tf, epsp = _apply_kernel(
+            tf, s, t, self.tau_w, self.win_len, krn_start=0, krn_end=self.win_len-1
+        ) #0:win_len-1)
 
-    @resolver(_advance_state)
-    def advance_state(self, epsp, tf):
+        # Update compartments
         self.epsp.set(epsp)
         self.tf.set(tf)
 
-    @staticmethod
-    def _reset(batch_size, n_units, win_len):
-        restVals = jnp.zeros((batch_size, n_units))
-        restTensor = jnp.zeros([win_len, batch_size, n_units], jnp.float32) # tf
-        return restVals, restVals, restTensor # inputs, epsp, tf
-
-    @resolver(_reset)
-    def reset(self, inputs, epsp, tf):
-        self.inputs.set(inputs)
-        self.epsp.set(epsp)
-        self.tf.set(tf)
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units)) ## inputs, epsp
+        restTensor = jnp.zeros([self.win_len, self.batch_size, self.n_units], jnp.float32)  ## tf
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
+        self.epsp.set(restVals)
+        self.tf.set(restTensor)
 
     @classmethod
     def help(cls): ## component help function

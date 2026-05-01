@@ -1,0 +1,57 @@
+from jax import numpy as jnp, random, jit
+from ngcsimlib.context import Context
+import numpy as np
+np.random.seed(42)
+
+from ngclearn import Context, MethodProcess
+from ngclearn.components.neurons.spiking.quadLIFCell import QuadLIFCell
+from numpy.testing import assert_array_equal
+
+def test_quadLIFCell1():
+    name = "quadlif_ctx"
+    ## create seeding keys
+    dkey = random.PRNGKey(1234)
+    dkey, *subkeys = random.split(dkey, 6)
+    dt = 1.  # ms
+    critical_V = 1.
+    # ---- build a simple Poisson cell system ----
+    with Context(name) as ctx:
+        a = QuadLIFCell(
+            name="a", n_units=1, tau_m=30., resist_m=1., critical_V=critical_V, key=subkeys[0]
+        )
+
+        # """
+        advance_process = (MethodProcess("advance_proc")
+                           >> a.advance_state)
+        # ctx.wrap_and_add_command(jit(advance_process.pure), name="run")
+
+        reset_process = (MethodProcess("reset_proc")
+                         >> a.reset)
+        # ctx.wrap_and_add_command(jit(reset_process.pure), name="reset")
+        # """
+        ## set up non-compiled utility commands
+        # @Context.dynamicCommand
+        # def clamp(x):
+        #     a.j.set(x)
+
+    def clamp(x):
+        a.j.set(x)
+
+    ## input spike train
+    x_seq = jnp.asarray([[1., 1., 1., 1., 1., 0., 0., 0., 1., 1., 1., 1., 1., 1., 0., 0.]], dtype=jnp.float32)
+    ## desired output/epsp pulses
+    y_seq = jnp.asarray([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 1., 0., 0.]], dtype=jnp.float32)
+
+    outs = []
+    reset_process.run()  # ctx.reset()
+    for ts in range(x_seq.shape[1]):
+        x_t = jnp.array([[x_seq[0, ts]]])  ## get data at time t
+        clamp(x_t)  # ctx.clamp(x_t)
+        advance_process.run(t=ts * 1., dt=dt)  # ctx.run(t=ts * 1., dt=dt)
+        outs.append(a.s.get())
+    outs = jnp.concatenate(outs, axis=1)
+
+    ## output should equal input
+    assert_array_equal(outs, y_seq)
+
+#test_quadLIFCell1()

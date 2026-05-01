@@ -1,4 +1,4 @@
-# Lecture 4A: Hebbian Synaptic Plasticity
+# Lecture 4B: Hebbian Synaptic Plasticity
 
 In ngc-learn, synaptic plasticity is a key concept at the forefront of its
 design in order to promote research into novel ideas and framings of how
@@ -21,28 +21,29 @@ Specifically, we will zoom in on two particular code snippets from
 below:
 
 ```python
-Wab = HebbianSynapse(name="Wab", shape=(1, 1), eta=1.,   signVal=-1.,
-                     wInit=("constant", 1., None), w_bound=0., key=subkeys[3])
+Wab = HebbianSynapse(
+    name="Wab", shape=(1, 1), eta=1.,   signVal=-1., wInit=("constant", 1., None), w_bound=0., key=subkeys[3]
+)
 
 # wire output compartment (rate-coded output zF) of RateCell `a` to input compartment of HebbianSynapse `Wab`
-Wab.inputs << a.zF
+a.zF >> Wab.inputs
 # wire output compartment of HebbianSynapse `Wab` to input compartment (electrical current j) RateCell `b`
-b.j << Wab.outputs
+Wab.outputs >> b.j
 
 # wire output compartment (rate-coded output zF) of RateCell `a` to presynaptic compartment of HebbianSynapse `Wab`
-Wab.pre << a.zF
+a.zF >> Wab.pre
 # wire output compartment (rate-coded output zF) of RateCell `b` to postsynaptic compartment of HebbianSynapse `Wab`
-Wab.post << b.zF
+b.zF >> Wab.post
 ```
 
 as well as (a bit later in the model construction code):
 
 ```python
-advance_cmd, advance_args = circuit.compile_by_key(a, Wab, b, compile_key="advance_state")
-circuit.add_command(wrap_command(jit(circuit.advance_state)), name="advance")
+evolve_process = (MethodProcess()
+                  >> a.evolve)
 
-evolve_cmd, evolve_args = circuit.compile_by_key(Wab, compile_key="evolve")
-circuit.add_command(wrap_command(jit(circuit.evolve)), name="evolve")
+advance_process = (MethodProcess()
+                   >> a.advance_state)
 ```
 
 Notice that beyond wiring component `a`'s values into the synapse `Wab`'s input compartment
@@ -52,7 +53,7 @@ post-synaptic compartment `Wab.post`. These compartments are specifically
 used in `Wab`'s `evolve` call and are not strictly required to be exactly
 the same as its input and output compartments. Note that, if one wanted `pre`
 and `post` to be exactly identical to `inputs` and `outputs`, one would simply need
-to write `Wab.pre << Wab.inputs` and `Wab.post << Wab.outputs` in place
+to write `Wab.inputs >> Wab.pre` and `Wab.outputs >> Wab.post` in place
 of the pre- and post-synaptic compartment calls above.
 
 The above snippets highlight two key aspects of functionality that a synapse

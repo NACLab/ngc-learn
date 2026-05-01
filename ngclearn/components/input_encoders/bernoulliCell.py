@@ -1,48 +1,17 @@
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, random, jit
-from ngclearn.utils import tensorstats
-
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
-
-@jit
-def _sample_bernoulli(dkey, data):
-    """
-    Samples a Bernoulli spike train on-the-fly
-
-    Args:
-        dkey: JAX key to drive stochasticity/noise
-
-        data: sensory data (vector/matrix)
-
-    Returns:
-        binary spikes
-    """
-    s_t = random.bernoulli(dkey, p=data).astype(jnp.float32)
-    return s_t
+from jax import numpy as jnp, random
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+import jax
+from typing import Union
 
 class BernoulliCell(JaxComponent):
     """
-    A Bernoulli cell that produces Bernoulli-distributed spikes on-the-fly.
+    A Bernoulli cell that produces spikes by sampling a Bernoulli distribution
+    on-the-fly (to produce data-scaled Bernoulli spike trains).
 
     | --- Cell Input Compartments: ---
-    | inputs - input (takes in external signals)
+    | inputs - input (takes in external signals -- should be probabilities w/ values in [0,1])
     | --- Cell State Compartments: ---
     | key - JAX PRNG key
     | --- Cell Output Compartments: ---
@@ -53,54 +22,39 @@ class BernoulliCell(JaxComponent):
         name: the string name of this cell
 
         n_units: number of cellular entities (neural population size)
+
+        batch_size: batch size dimension of this cell (Default: 1)
     """
 
-    # Define Functions
-    def __init__(self, name, n_units, batch_size=1, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(
+            self, name: str, n_units: int, batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs
+    ):
+        super().__init__(name=name, key=key)
 
         ## Layer Size Setup
         self.batch_size = batch_size
         self.n_units = n_units
 
-        # Compartments (state of the cell, parameters, will be updated through stateless calls)
-        restVals = jnp.zeros((self.batch_size, self.n_units))
-        self.inputs = Compartment(restVals) # input compartment
-        self.outputs = Compartment(restVals) # output compartment
-        self.tols = Compartment(restVals) # time of last spike
+        restVals = jnp.zeros((batch_size, n_units))
+        self.inputs = Compartment(restVals, display_name="Input Stimulus") # input compartment
+        self.outputs = Compartment(restVals, display_name="Spikes") # output compartment
+        self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") # time of last spike
 
-    @staticmethod
-    def _advance_state(t, key, inputs, tols):
-        key, *subkeys = random.split(key, 2)
-        outputs = _sample_bernoulli(subkeys[0], data=inputs)
-        timeOfLastSpike = _update_times(t, outputs, tols)
-        return outputs, timeOfLastSpike, key
-
-    @resolver(_advance_state)
-    def advance_state(self, outputs, tols, key):
-        self.outputs.set(outputs)
-        self.tols.set(tols)
+    @compilable
+    def advance_state(self, t):
+        key, subkey = random.split(self.key.get(), 2)
+        self.outputs.set(random.bernoulli(subkey, p=self.inputs.get()).astype(jnp.float32))
+        self.tols.set((1. - self.outputs.get()) * self.tols.get() + (self.outputs.get() * t))
         self.key.set(key)
 
-    @staticmethod
-    def _reset(batch_size, n_units):
-        restVals = jnp.zeros((batch_size, n_units))
-        return restVals, restVals, restVals
-
-    @resolver(_reset)
-    def reset(self, inputs, outputs, tols):
-        self.inputs.set(inputs)
-        self.outputs.set(outputs) #None
-        self.tols.set(tols)
-
-    def save(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        jnp.savez(file_name, key=self.key.value)
-
-    def load(self, directory, **kwargs):
-        file_name = directory + "/" + self.name + ".npz"
-        data = jnp.load(file_name)
-        self.key.set(data['key'])
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        # BUG: the self.inputs here does not have the targeted field
+        # NOTE: Quick workaround is to check if targeted is in the input or not
+        hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(restVals)
+        self.outputs.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -110,11 +64,11 @@ class BernoulliCell(JaxComponent):
                           "the dimension's magnitude/value/intensity"
         }
         compartment_props = {
-            "input_compartments":
+            "inputs":
                 {"inputs": "Takes in external input signal values"},
             "states":
                 {"key": "JAX PRNG key"},
-            "output_compartments":
+            "outputs":
                 {"tols": "Time-of-last-spike",
                  "outputs": "Binary spike values emitted at time t"},
         }
@@ -128,22 +82,9 @@ class BernoulliCell(JaxComponent):
                 "hyperparameters": hyperparams}
         return info
 
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
-
 if __name__ == '__main__':
     from ngcsimlib.context import Context
     with Context("Bar") as bar:
         X = BernoulliCell("X", 9)
-    print(X)
+
+    X.batch_size.set(10)

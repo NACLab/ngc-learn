@@ -6,24 +6,24 @@ import io, sys, time
 
 class DataLoader(object):
     """
-        A data loader object, meant to allow sampling w/o replacement of one or
-        more named design matrices. Note that this object is iterable (and
-        implements an __iter__() method).
+    A data loader object, meant to allow sampling w/o replacement of one or
+    more named design matrices. Note that this object is iterable (and
+    implements an __iter__() method).
 
-        Args:
-            design_matrices:  list of named data design matrices - [("name", matrix), ...]
+    Args:
+        design_matrices:  list of named data design matrices - [("name", matrix), ...]
 
-            batch_size:  number of samples to place inside a mini-batch
+        batch_size:  number of samples to place inside a mini-batch
 
-            disable_shuffle:  if True, turns off sample shuffling (thus no sampling w/o replacement)
+        disable_shuffle:  if True, turns off sample shuffling (thus no sampling w/o replacement)
 
-            ensure_equal_batches: if True, ensures sampled batches are equal in size (Default = True).
-                Note that this means the very last batch, if it's not the same size as the rest, will
-                reuse random samples from previously seen batches (yielding a batch with a mix of
-                vectors sampled with and without replacement).
+        ensure_equal_batches: if True, ensures sampled batches are equal in size (Default = True).
+            Note that this means the very last batch, if it's not the same size as the rest, will
+            reuse random samples from previously seen batches (yielding a batch with a mix of
+            vectors sampled with and without replacement).
 
-            key: PRNG key to control determinism of any underlying random values
-                associated with this synaptic cable
+        key: PRNG key to control determinism of any underlying random values
+            associated with this synaptic cable
     """
     def __init__(self, design_matrices, batch_size, disable_shuffle=False,
                  ensure_equal_batches=True, key=None):
@@ -47,7 +47,7 @@ class DataLoader(object):
 
     def __iter__(self):
         """
-            Yields a mini-batch of the form:  [("name", batch),("name",batch),...]
+        Yields a mini-batch of the form:  [("name", batch),("name",batch),...]
         """
         if self.disable_shuffle == False:
             self.key, *subkeys = random.split(self.key, 2)

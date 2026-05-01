@@ -1,8 +1,8 @@
-# Spiking Neural Networks: Learning with Broadcast Feedback Alignment
+# Spiking Neural Networks: Learning with Broadcast Feedback Alignment (Samadi et al.; 2017)
 
 In this exhibit, we will see how one can train a spiking neural network model
 using surrogate functions and a credit assignment scheme called broadcast
-feedback alignment (BFA) <b>[1]</b>.
+feedback alignment (BFA) <b>[1]</b>. 
 This exhibit model effectively reproduces some of the results
 reported (Samadi et al., 2017) <b>[1]</b>. The model code for this
 exhibit can be found
@@ -233,7 +233,7 @@ of $1000$ `SLIF` cells) similar to the one below:
 <img src="../images/museum/bfa_snn/bfasnn_codes.jpg" width="450" />
 
 Intriguingly, we see that the latent codes represented by the BFA-SNN's hidden
-layer spikes yield a rather (piecewise) linearly-separable transformation
+layer spikes yield a rather (piecewise) linearly-separable representation
 of the input digits, making the process of mapping inputs to label vectors
 much easier for the model's second layer of classification LIF units.
 Note that, in the `BFA_SNN` model exhibit class, we estimated

@@ -117,7 +117,7 @@ html_context = {
 html_logo = "images/ngc-learn-logo.png"
 html_theme_options = {
     'logo_only': True,
-    'display_version': True,
+    #'display_version': True,
 }
 
 # def setup(app):

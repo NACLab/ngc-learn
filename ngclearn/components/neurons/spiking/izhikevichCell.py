@@ -1,27 +1,11 @@
-from jax import numpy as jnp, jit
-from ngclearn.utils import tensorstats
-from ngclearn import resolver, Component, Compartment
 from ngclearn.components.jaxComponent import JaxComponent
-from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
-                                            step_euler, step_rk2
+from jax import numpy as jnp, random, jit, nn
+from ngcsimlib import deprecate_args
+from ngcsimlib.logger import info, warn
+from ngclearn.utils.diffeq.ode_utils import get_integrator_code, step_euler, step_rk2
 
-@jit
-def _update_times(t, s, tols):
-    """
-    Updates time-of-last-spike (tols) variable.
-
-    Args:
-        t: current time (a scalar/int value)
-
-        s: binary spike vector
-
-        tols: current time-of-last-spike variable
-
-    Returns:
-        updated tols variable
-    """
-    _tols = (1. - s) * tols + (s * t)
-    return _tols
+from ngclearn import compilable #from ngcsimlib.parser import compilable
+from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
 @jit
 def _dfv_internal(j, v, w, b, tau_m): ## raw voltage dynamics
@@ -54,39 +38,6 @@ def _post_process(s, _v, _w, v, w, c, d): ## internal post-processing routine
     v_next = _v * (1. - s) + s * c
     w_next = _w * (1. - s) + s * (w + d)
     return v_next, w_next
-
-@jit
-def _emit_spike(v, v_thr):
-    s = (v > v_thr).astype(jnp.float32)
-    return s
-
-@jit
-def _modify_current(j, R_m):
-    _j = j * R_m
-    return _j
-
-def _run_cell(dt, j, v, s, w, v_thr=30., tau_m=1., tau_w=50., b=0.2, c=-65., d=8.,
-              R_m=1., integType=0):
-    ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
-    a = 1./tau_w ## we map time constant to variable "a" (a = 1/tau_w)
-    _j = _modify_current(j, R_m)
-    #_j = jnp.maximum(-30.0, _j) ## lower-bound/clip input current
-    ## check for spikes
-    s = _emit_spike(v, v_thr)
-    ## for non-spikes, evolve according to dynamics
-    if integType == 1:
-        v_params = (_j, w, b, tau_m)
-        _, _v = step_rk2(0., v, _dfv, dt, v_params) #_v = step_rk2(v, v_params, _dfv, dt)
-        w_params = (_j, v, b, tau_w)
-        _, _w = step_rk2(0., w, _dfw, dt, w_params) #_w = step_rk2(w, w_params, _dfw, dt)
-    else: # integType == 0 (default -- Euler)
-        v_params = (_j, w, b, tau_m)
-        _, _v = step_euler(0., v, _dfv, dt, v_params) #_v = step_euler(v, v_params, _dfv, dt)
-        w_params = (_j, v, b, tau_w)
-        _, _w = step_euler(0., w, _dfw, dt, w_params) #_w = step_euler(w, w_params, _dfw, dt)
-    ## for spikes, snap to particular states
-    _v, _w = _post_process(s, _v, _w, v, w, c, d)
-    return _v, _w, s
 
 class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
     """
@@ -159,21 +110,20 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
             and "midpoint" or "rk2" (midpoint method/RK-2 integration) (Default: "euler")
 
             :Note: setting the integration type to the midpoint method will
-                increase the accuray of the estimate of the cell's evolution
+                increase the accuracy of the estimate of the cell's evolution
                 at an increase in computational cost (and simulation time)
     """
 
-    # Define Functions
     def __init__(self, name, n_units, tau_m=1., resist_m=1., v_thr=30., v_reset=-65.,
                  tau_w=50., w_reset=8., coupling_factor=0.2, v0=-65., w0=-14.,
                  integration_type="euler", **kwargs):
         super().__init__(name, **kwargs)
 
         ## Cell properties
-        self.R_m = resist_m
+        self.resist_m = resist_m ## resistance R_m
         self.tau_m = tau_m
         self.tau_w = tau_w
-        self.coupling = coupling_factor
+        self.coupling_factor = coupling_factor
         self.v_reset = v_reset
         self.w_reset = w_reset
 
@@ -197,39 +147,47 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
         self.s = Compartment(restVals)
         self.tols = Compartment(restVals) ## time-of-last-spike
 
-    @staticmethod
-    def _advance_state(t, dt, tau_m, tau_w, v_thr, coupling, v_reset, w_reset, R_m,
-                       intgFlag, j, v, w, s, tols):
-        v, w, s = _run_cell(dt, j, v, s, w, v_thr=v_thr, tau_m=tau_m, tau_w=tau_w,
-                            b=coupling, c=v_reset, d=w_reset, R_m=R_m, integType=intgFlag)
-        tols = _update_times(t, s, tols)
-        return j, v, w, s, tols
+    @compilable
+    def advance_state(self, t, dt):
+        ## note: a = 0.1 --> fast spikes, a = 0.02 --> regular spikes
+        a = 1. / self.tau_w  ## we map time constant to variable "a" (a = 1/tau_w)
+        _j = self.j.get() * self.resist_m
+        # _j = jnp.maximum(-30.0, _j) ## lower-bound/clip input current
+        ## check for spikes
+        s = (self.v.get() > self.v_thr) * 1.
+        ## for non-spikes, evolve according to dynamics
+        if self.intgFlag == 1:
+            v_params = (_j, self.w.get(), self.coupling_factor, self.tau_m)
+            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)  # _v = step_rk2(v, v_params, _dfv, dt)
+            w_params = (_j, self.v.get(), self.coupling_factor, self.tau_w)
+            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)  # _w = step_rk2(w, w_params, _dfw, dt)
+        else:  # integType == 0 (default -- Euler)
+            v_params = (_j, self.w.get(), self.coupling_factor, self.tau_m)
+            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)  # _v = step_euler(v, v_params, _dfv, dt)
+            w_params = (_j, self.v.get(), self.coupling_factor, self.tau_w)
+            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)  # _w = step_euler(w, w_params, _dfw, dt)
+        ## for spikes, snap to particular states
+        _v, _w = _post_process(s, _v, _w, self.v.get(), self.w.get(), self.v_reset, self.w_reset)
+        v = _v
+        w = _w
 
-    @resolver(_advance_state)
-    def advance_state(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.w.set(w)
+        ## update time-of-last spike variable(s)
+        self.tols.set((1. - s) * self.tols.get() + (s * t))
+
+        # self.j.set(j) ## j is not getting modified in these dynamics
         self.v.set(v)
-        self.s.set(s)
-        self.tols.set(tols)
-
-    @staticmethod
-    def _reset(batch_size, n_units, v0, w0):
-        restVals = jnp.zeros((batch_size, n_units))
-        j = restVals # None
-        v = restVals + v0
-        w = restVals + w0
-        s = restVals #+ 0
-        tols = restVals #+ 0
-        return j, v, w, s, tols
-
-    @resolver(_reset)
-    def reset(self, j, v, w, s, tols):
-        self.j.set(j)
-        self.v.set(v)
         self.w.set(w)
         self.s.set(s)
-        self.tols.set(tols)
+
+    @compilable
+    def reset(self):
+        restVals = jnp.zeros((self.batch_size, self.n_units))
+        if not self.j.targeted:
+            self.j.set(restVals)
+        self.v.set(restVals + self.v0)
+        self.w.set(restVals + self.w0)
+        self.s.set(restVals)
+        self.tols.set(restVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -257,8 +215,7 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
             "v_rest": "Resting membrane potential value",
             "v_reset": "Reset membrane potential value",
             "w_reset": "Reset recover variable value",
-            "coupling_factor": "Degree to which recovery variable is sensitive to "
-                               "subthreshold voltage fluctuations",
+            "coupling_factor": "Degree to which recovery variable is sensitive to subthreshold voltage fluctuations",
             "v0": "Initial condition for membrane potential/voltage",
             "w0": "Initial condition for recovery variable",
             "integration_type": "Type of numerical integration to use for the cell dynamics"
@@ -269,20 +226,6 @@ class IzhikevichCell(JaxComponent): ## Izhikevich neuronal cell
                             "tau_w * dw/dt = (v * b - w),  where tau_w = 1/a",
                 "hyperparameters": hyperparams}
         return info
-
-    def __repr__(self):
-        comps = [varname for varname in dir(self) if Compartment.is_compartment(getattr(self, varname))]
-        maxlen = max(len(c) for c in comps) + 5
-        lines = f"[{self.__class__.__name__}] PATH: {self.name}\n"
-        for c in comps:
-            stats = tensorstats(getattr(self, c).value)
-            if stats is not None:
-                line = [f"{k}: {v}" for k, v in stats.items()]
-                line = ", ".join(line)
-            else:
-                line = "None"
-            lines += f"  {f'({c})'.ljust(maxlen)}{line}\n"
-        return lines
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context
