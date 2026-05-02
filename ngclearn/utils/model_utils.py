@@ -804,32 +804,31 @@ def normalize_block_matrix(matrix, block_size, order=2, axis=0, norm_targ=1.):
     # Calculate norm for each column "w/in" each block
     ## (over axis 2 -> block_rows); (over axis 3 -> block_cols)
     norms = jnp.linalg.norm(transposed, ord=order, axis=_tensor_axis, keepdims=True)
-    normalized_blocks = jnp.divide(transposed, norms + 1e-8) ## normalize (w/ safe-division)
+    #normalized_blocks = jnp.divide(transposed, norms + 1e-8) ## normalize (w/ safe-division)
+    normalized_blocks = transposed * (norm_targ/(norms + 1e-8))
     # Reverse transpose: (num_blocks_row, block_rows, num_blocks_col, block_cols)
     reverted = jnp.transpose(normalized_blocks, (0, 2, 1, 3))
     # Reshape back to original 2D shape (M, N)
     return reverted.reshape(M, N)
 
-# @partial(jit, static_argnums=[2, 3])
-# def lkwta(x, group_masks, nWTA=(20,), clipval=-1.): ## local k-WTA
-#     out = 0.
-#     for g in range(len(group_masks)):
-#         m = group_masks[g]
-#         x_g = kwta(x, m, nWTA[g], clipval)
-#         out = x_g + out
-#     return out
-#
-# @partial(jit, static_argnums=[2, 3])
-# def d_lkwta(x, group_masks, nWTA=(20,), clipval=-1.): ## d(lkwta(x))/dx
-#     out = 0.
-#     for g in range(len(group_masks)):
-#         m = group_masks[g]
-#         x_g = d_kwta(x, m, nWTA[g], clipval)
-#         out = x_g + out
-#     return out
-
 @partial(jit, static_argnums=[2, 3])
 def quantile_lkwta(x, m, nWTA=20, clipval=-1.): ## local k-WTA
+    """
+    A quantile-based K-WTA function - NOTE: this is experimental and no guarantees are
+    offered at this point.
+
+    Args:
+        x: data to apply quantile-KWTA function over
+
+        m: masking tensor
+
+        nWTA: number of winners
+
+        clipval:
+
+    Returns:
+        y = KWTA(x)
+    """
     ## expand to 3D tensor space and do logic in 3D
     _x = jnp.expand_dims(x, axis=1) ## B x 1 x D
     _M = jnp.expand_dims(m, axis=0)  ## 1 x 1 x D
@@ -845,6 +844,23 @@ def quantile_lkwta(x, m, nWTA=20, clipval=-1.): ## local k-WTA
 
 @partial(jit, static_argnums=[2, 3])
 def d_quantile_lkwta(x, m, nWTA=20, clipval=-1.): ## local k-WTA
+    """
+        First derivative of quantile-based K-WTA function with respect to its input
+        - NOTE: this is experimental and no guarantees are
+        offered at this point.
+
+        Args:
+            x: data to apply quantile-KWTA function over
+
+            m: masking tensor
+
+            nWTA: number of winners
+
+            clipval:
+
+        Returns:
+            y = KWTA(x)
+        """
     ## expand to 3D tensor space and do logic in 3D
     _x = jnp.expand_dims(x, axis=1)  ## B x 1 x D
     _M = jnp.expand_dims(m, axis=0)  ## 1 x 1 x D
@@ -866,8 +882,34 @@ def group_mean(x, masks):
     mu = jnp.sum(mu * _M, axis=1) ## now contract back to 2D and smear group means to each dimension per group
     return mu
 
+@partial(jit, static_argnums=[2])
+def kwta(x, m, nWTA=1):
+    return lkwta(x, m=m, nWTA=nWTA)
+
+@partial(jit, static_argnums=[2])
+def d_kwta(x, m, nWTA=1):
+    return d_lkwta(x, m=m, nWTA=nWTA)
+
 @partial(jit, static_argnums=[2, 3])
 def lkwta(x, m, nWTA=1, clipval=-1.): ## local/group K-WTA
+    """
+    A group-based K-WTA function, i.e., local K-WTA (LKWTA), as proposed in:
+
+    | Ororbia, Alexander, Karl Friston, and Rajesh PN Rao. "Meta-representational predictive coding: biomimetic
+    | self-supervised learning." arXiv preprint arXiv:2503.21796 (2025).
+
+    Args:
+        x: data to apply quantile-KWTA function over
+
+        m: masking tensor
+
+        nWTA: number of winners
+
+        clipval:
+
+    Returns:
+        y = LKWTA(x)
+    """
     ## expand to 3D tensor space and do logic in 3D (avoids a for-loop over groups in mask)
     ## this is as efficient as lax.top_k can be made for batches
     _x = jnp.expand_dims(x, axis=1) ## B x 1 x D
@@ -884,6 +926,25 @@ def lkwta(x, m, nWTA=1, clipval=-1.): ## local/group K-WTA
 
 @partial(jit, static_argnums=[2, 3])
 def d_lkwta(x, m, nWTA=1, clipval=-1.): ## derivative of local/group K-WTA w.r.t. input
+    """
+        Derivative of group-based K-WTA function with respect to its input. This function, local K-WTA (LKWTA),
+         was proposed in:
+
+        | Ororbia, Alexander, Karl Friston, and Rajesh PN Rao. "Meta-representational predictive coding: biomimetic
+        | self-supervised learning." arXiv preprint arXiv:2503.21796 (2025).
+
+        Args:
+            x: data to apply quantile-KWTA function over
+
+            m: masking tensor
+
+            nWTA: number of winners
+
+            clipval:
+
+        Returns:
+            y = LKWTA(x)
+        """
     ## expand to 3D tensor space and do logic in 3D
     _x = jnp.expand_dims(x, axis=1) ## B x 1 x D
     _M = jnp.expand_dims(m, axis=0)  ## 1 x 1 x D
@@ -893,59 +954,3 @@ def d_lkwta(x, m, nWTA=1, clipval=-1.): ## derivative of local/group K-WTA w.r.t
     kth = jnp.expand_dims(jnp.min(values, axis=(1, 2)), axis=1) # must do comparison per sample in potential mini-batch
     topK = jnp.greater_equal(x, kth).astype(jnp.float32)  # cast booleans to floats
     return topK
-
-# @partial(jit, static_argnums=[2, 3])
-# def _kwta(x, m, nWTA=20, clipval=-1.):
-#     _x = x * m + (1. - m) * (jnp.amin(x) - 1.)
-#     values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
-#     kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
-#     topK = jnp.greater_equal(_x, kth).astype(jnp.float32) # cast booleans to floats
-#     topK = topK * x
-#     if clipval > 0.:
-#         topK = jnp.clip(topK, -clipval, clipval)
-#     return topK
-#
-# @partial(jit, static_argnums=[2, 3])
-# def _d_kwta(x, m, nWTA=20, clipval=-1.): ## d(kwta(x))/dx
-#     _x = x * m + (1. - m) * (jnp.amin(x) - 1.)
-#     values, indices = lax.top_k(_x, nWTA) # Note: we do not care to sort the indices
-#     kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
-#     topK = jnp.greater_equal(_x, kth).astype(jnp.float32) # cast booleans to floats
-#     return topK
-
-# def scanner(fn):
-#     """
-#     A wrapper for Jax's scanner that handles the "getting" of the current
-#     state and "setting" of the final state to and from the model.
-#
-#     | @scanner
-#     | def process(current_state, args):
-#     |    t = args[0]
-#     |    dt = args[1]
-#     |    current_state = model.advance_state(current_state, t, dt)
-#     |    current_state = model.evolve(current_state, t, dt)
-#     |    return current_state, (current_state[COMPONENT.COMPARTMENT.path], ...)
-#     |
-#     | outputs = models.process(jnp.array([[ARG0, ARG1] for i in range(NUM_LOOPS)]))
-#
-#     | Notes on the scanner function call:
-#     | 1) `current_state` is a hash-map mapped to all compartment values by path
-#     | 2) `args` is the external arguments defined in the passed Jax array
-#     | 3) `outputs` is a tuple containing time-concatenated Jax arrays of the
-#     |     compartment statistics you want tracked
-#
-#     Args:
-#         fn: function that is executed at every time step of a Jax-unrolled loop,
-#             it must take in the current state and external arguments
-#
-#     Returns:
-#         wrapped (fast) function that is Jax-scanned/jit-i-fied
-#     """
-#     def _scanned(_xs):
-#         vals, stacked = _scan(fn, init=Get_Compartment_Batch(), xs=_xs)
-#         Set_Compartment_Batch(vals)
-#         return stacked
-#
-#     if get_current_context() is not None:
-#         get_current_context().__setattr__(fn.__name__, _scanned)
-#     return _scanned

@@ -12,6 +12,14 @@ ngclearn.utils.analysis.attentive\_probe module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.utils.analysis.knn\_probe module
+-----------------------------------------
+
+.. automodule:: ngclearn.utils.analysis.knn_probe
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.analysis.linear\_probe module
 --------------------------------------------
 

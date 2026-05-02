@@ -92,3 +92,13 @@ History
   * integration/addition of RL-SNN model in model-museum
   * integration of full dynamics synapses -- alpha, exponential, and double-exponential synaptic cables
   * new metrics/clean-up of metrics in utils.metric_utils (e.g., KL divs, etc.)
+
+  3.1.0
+  — — — — — — — — -
+  * important patch made to ensure MethodProcess auto-jits (by default) - recovers ngc-learn's jax-driven speed
+  * new suite of competitive learning synapses (generalized formats), including vector-quantization, self-organizing map, adaptive resonance theory (contus-version), and modern hopfield network
+  * revisions to metric and model utils
+  * some additional clean-up, including supported retinal ganglion encoder
+  * fixed pkg-resource header (in both ngcsimlib and ngclearn) to account for newer python(s)
+
+
