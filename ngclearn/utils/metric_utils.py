@@ -82,6 +82,22 @@ def measure_breadth_TC(spikes, preserve_batch=False):
         BTC = jnp.mean(BTC)
     return BTC
 
+@partial(jit, static_argnums=[1])
+def measure_gini_index(codes, preserve_batch=True):
+    ## Gini index
+    ### values closer to 1 indicate high sparsity (sparser codes)
+    ### values closer to 0 indicate lower sparsity (denser codes)
+    ## calculation requires sorted array for O(n) or O(nlogn)
+    D = codes.shape[1] ## length of vector
+    codes_sorted = jnp.sort(jnp.abs(codes), axis=1) ## sort all codes w/in batch matrix
+    index = jnp.arange(1, D + 1)
+    term1 = jnp.sum((2 * index - D - 1) * codes_sorted, axis=1, keepdims=True)
+    term2 = D * jnp.sum(codes_sorted, axis=1, keepdims=True)
+    gini = term1 / term2
+    if not preserve_batch:
+        gini = jnp.mean(gini)
+    return gini
+
 @partial(jit, static_argnums=[2, 3])
 def measure_sparsity(codes, tolerance=0., preserve_batch=True, flip_measure=False):
     """
