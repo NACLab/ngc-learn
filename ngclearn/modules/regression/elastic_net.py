@@ -77,13 +77,15 @@ class Iterative_ElasticNet():
             self.W = HebbianSynapse(
                 "W", shape=(feature_dim, sys_dim), eta=self.lr, sign_value=-1,
                 weight_init=dist.constant(value=weight_fill), prior=('elastic_net', (lmbda, l1_ratio)), w_bound=0.,
-                optim_type=optim_type, key=subkeys[0]
+                optim_type=optim_type, key=subkeys[0], batch_size=batch_size
             )
-            self.err = GaussianErrorCell("err", n_units=sys_dim)
+            self.err = GaussianErrorCell("err", n_units=sys_dim, batch_size=batch_size)
 
             # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             self.W.batch_size = batch_size
             self.err.batch_size = batch_size
+            self.W.reset()
+            self.err.reset()
             # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             self.W.outputs >> self.err.mu
             self.err.dmu >> self.W.post
