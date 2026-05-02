@@ -67,12 +67,12 @@ def measure_breadth_TC(spikes, preserve_batch=False):
         spikes: full spike train matrix; shape is (T x D) where D is number of
             neurons in a group/cluster
 
-        preserve_batch: if True, will return one score per sample in batch
+        preserve_batch: if True, will return one score per neuron in train/window  
             (Default: False), otherwise, returns scalar average score
 
     Returns:
-        a 1 x D Fano factor vector (one factor per neuron) OR a single
-        average Fano factor across the neuronal group
+        a 1 x D BTC vector (one factor per neuron) OR a single
+        average BTC across the neuronal group
     """
     mu = jnp.mean(spikes, axis=0, keepdims=True)
     sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
@@ -84,6 +84,23 @@ def measure_breadth_TC(spikes, preserve_batch=False):
 
 @partial(jit, static_argnums=[1])
 def measure_gini_index(codes, preserve_batch=True):
+    """
+    Calculates the gini index a group of neurons represented as vector code samples. 
+    Gini index measures the sparseness of the values within each vector code, where 
+    a higher index value indicates higher sparsity and a lower index value indicates a 
+    lower sparsity (higher density).
+
+    Args:
+        codes: a batch of neural codes; shape is (N x D) where D is number of
+            neurons in a group/cluster and N is number of samples
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar average score
+
+    Returns:
+        a N x 1 Gini index vector (one score per neuron) OR a single
+        average Gini score for the whole sample/set of codes
+    """
     ## Gini index
     ### values closer to 1 indicate high sparsity (sparser codes)
     ### values closer to 0 indicate lower sparsity (denser codes)
