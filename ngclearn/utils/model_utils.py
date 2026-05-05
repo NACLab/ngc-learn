@@ -770,6 +770,23 @@ def create_block_matrix(map_matrix, group_shape, alpha_inh=-1., alpha_exc=1.):
     gmat = jnp.concatenate(gmat, axis=0)
     return gmat
 
+@partial(jit, static_argnums=[0])
+def eye_wrapped(N, k, values):
+    """
+    Creates an N x N matrix with a wrapped off-diagonal.
+
+    Args:
+        N: Size of the square matrix (N x N)
+
+        k: Diagonal offset (positive=above, negative=below)
+
+        values: Array of values to place (length should match n)
+    """
+    matrix = jnp.zeros((N, N)) ## Create empty matrix
+    row_indices = jnp.arange(N) ## Generate indices for the diagonal
+    col_indices = (row_indices + k) % N ## Wrap column indices using modulo
+    return matrix.at[row_indices, col_indices].set(values) ## Fill diagonal using efficient indexing
+
 @partial(jit, static_argnums=[1, 2, 3, 4])
 def normalize_block_matrix(matrix, block_size, order=2, axis=0, norm_targ=1.):
     """

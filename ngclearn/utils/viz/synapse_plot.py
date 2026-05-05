@@ -9,8 +9,13 @@ import imageio.v3 as iio
 import jax.numpy as jnp
 
 
-
-def visualize(thetas, sizes, prefix, order=None, suffix='.jpg'):
+def visualize(
+        thetas,
+        sizes,
+        prefix,
+        order=None,
+        suffix='.jpg'
+):
     """
 
     Args:
@@ -22,8 +27,6 @@ def visualize(thetas, sizes, prefix, order=None, suffix='.jpg'):
 
         suffix:
     """
-
-
     if order is None:
         order = ['C' for _ in range(len(thetas))]
 
@@ -62,7 +65,14 @@ def visualize(thetas, sizes, prefix, order=None, suffix='.jpg'):
     plt.close()
 
 
-def visualize_labels(thetas, sizes, prefix, space_width=None, widths=None, suffix='.jpg'):
+def visualize_labels(
+        thetas,
+        sizes,
+        prefix,
+        space_width=None,
+        widths=None,
+        suffix='.jpg'
+):
     """
 
     Args:
@@ -139,14 +149,34 @@ def visualize_labels(thetas, sizes, prefix, space_width=None, widths=None, suffi
     fig.savefig(prefix+suffix, bbox_inches='tight')
     plt.close(fig)
 
-def visualize_frame(frame, path='.', name='tmp', suffix='.jpg', **kwargs):
+def visualize_frame(
+        frame,
+        path='.',
+        name='tmp',
+        suffix='.jpg',
+        **kwargs
+):
     iio.imwrite(path + '/' + name + suffix, frame.astype(jnp.uint8), **kwargs)
 
-def visualize_gif(frames, path='.', name='tmp', suffix='.jpg', **kwargs):
+def visualize_gif(
+        frames,
+        path='.',
+        name='tmp',
+        suffix='.jpg',
+        **kwargs
+):
     _frames = [f.astype(jnp.uint8) for f in frames]
     iio.imwrite(path + '/' + name + '.gif', _frames, **kwargs)
 
-def make_video(f_start, f_end, path, prefix, suffix='.jpg', skip=1, **kwargs):
+def make_video(
+        f_start,
+        f_end,
+        path,
+        prefix,
+        suffix='.jpg',
+        skip=1,
+        **kwargs
+):
     images = []
     for i in range(f_start, f_end+1, skip):
         print("Reading frame " + str(i))
@@ -154,10 +184,13 @@ def make_video(f_start, f_end, path, prefix, suffix='.jpg', skip=1, **kwargs):
     print("writing gif")
     iio.imwrite(path + '/training.gif', images, **kwargs)
 
-
-# def visualize_norm(thetas, sizes, prefix, suffix='.jpg'):
-
-def viz_block(thetas, sizes, prefix, suffix=".jpg", padding=1, low_rez=True):
+def viz_block(
+        thetas,
+        sizes, prefix,
+        suffix=".jpg",
+        padding=1,
+        low_rez=True
+):
     num_filters = [T.shape[1] for T in thetas]
     n_cols = [math.ceil(math.sqrt(nf)) for nf in num_filters]
     n_rows = [math.ceil(nf / c) for nf, c in zip(num_filters, n_cols)]

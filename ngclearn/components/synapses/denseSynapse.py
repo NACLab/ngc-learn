@@ -83,7 +83,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
         self.weights = Compartment(weights)
-        _mask = 1.
+        _mask = jnp.ones((1, 1))
         if mask is not None:
             _mask = mask
         self.mask = Compartment(_mask)
