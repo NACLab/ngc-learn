@@ -8,24 +8,18 @@ from typing import Union, Tuple
 def _create_gaussian_filter(patch_shape, sigma):
     ## Create a 2D Gaussian kernel centered on patch_shape with given sigma.
     px, py = patch_shape
-
     x_ = jnp.linspace(0, px - 1, px)
     y_ = jnp.linspace(0, py - 1, py)
-
     x, y = jnp.meshgrid(x_, y_)
-
     xc = px // 2
     yc = py // 2
-
-    filter = jnp.exp(-((x - xc) ** 2 + (y - yc) ** 2) / (2 * (sigma ** 2)))
-    return filter / jnp.sum(filter)
+    _filter = jnp.exp(-((x - xc) ** 2 + (y - yc) ** 2) / (2 * (sigma ** 2)))
+    return _filter / jnp.sum(_filter)
 
 def _create_dog_filter(patch_shape, sigma, k=1.6, lmbda=1):
     g1 = _create_gaussian_filter(patch_shape, sigma=sigma)
     g2 = _create_gaussian_filter(patch_shape, sigma=sigma * k)
-
     dog = g1 - lmbda * g2
-
     return dog #- jnp.mean(dog)
 
 def _create_patches(obs, patch_shape, step_shape):

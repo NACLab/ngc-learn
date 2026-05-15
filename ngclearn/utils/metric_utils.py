@@ -104,12 +104,12 @@ def measure_gini_index(codes, preserve_batch=True):
     ## Gini index
     ### values closer to 1 indicate high sparsity (sparser codes)
     ### values closer to 0 indicate lower sparsity (denser codes)
-    
+    _codes = codes + (jnp.sum(codes, axis=1, keepdims=True) <= 0.) + 1e-8
     ### note that the calculation below is faster than the mean-absolute-value 
     ### form of gini-index; below calculation requires sorting but yields a 
     ### lower-complexity calculation
     D = codes.shape[1] ## length of vector
-    codes_sorted = jnp.sort(jnp.abs(codes), axis=1) ## sort all codes w/in batch matrix
+    codes_sorted = jnp.sort(jnp.abs(_codes), axis=1) ## sort all codes w/in batch matrix
     index = jnp.arange(1, D + 1)
     term1 = jnp.sum((2 * index - D - 1) * codes_sorted, axis=1, keepdims=True)
     term2 = D * jnp.sum(codes_sorted, axis=1, keepdims=True)

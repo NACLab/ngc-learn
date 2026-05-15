@@ -55,8 +55,11 @@ def visualize(
 
             point = start + 1 + i + (r * extra)
             plt.subplot(n_rows_total, n_cols_total, point)
-            filter = T[i, :]
-            plt.imshow(np.reshape(filter, (sizes[idx][0], sizes[idx][1]), order=order[idx]), cmap=plt.cm.bone, interpolation='nearest')
+            _filter = T[i, :]
+            plt.imshow(
+                np.reshape(_filter, (sizes[idx][0], sizes[idx][1]), order=order[idx]), 
+                cmap=plt.cm.bone, interpolation='nearest'
+            )
             plt.axis("off")
 
     plt.subplots_adjust(top=0.9)
