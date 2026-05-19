@@ -8,12 +8,13 @@ def visualize_confusion_heatmap(
     figure_title="Confusion Matrix", 
     color_map="Blues", # "Greens" "Reds"
     fontsize=10, 
-    show_percent=True
+    norm_by="none"
 ):
     _conf = confuse_matrix
-    pscale = 1. ## percentage scale
-    if show_percent:
+    if "recall" in norm_by: ## normalize by row (recall)
         _conf = (_conf / np.sum(_conf, axis=1, keepdims=True)) * 100
+    elif "precision" in norm_by: ## normalize by col (precision)
+        _conf = (_conf / np.sum(_conf, axis=0, keepdims=True)) * 100
     ## Initialize plot
     fig, ax = plt.subplots(figsize=(6, 6))
     vmin = np.floor(np.min(_conf))

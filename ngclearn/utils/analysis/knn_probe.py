@@ -139,25 +139,25 @@ class KNNProbe(Probe):
         Wy = labels
         self.probe_params = (Wx, Wy)
 
-if __name__ == '__main__':
-    seed = 42
-    D = 7
-    C = 5
-    dkey = random.PRNGKey(seed)
-    dkey, *subkeys = random.split(dkey, 3)
-    knn = KNNProbe(
-        subkeys[0], 1, input_dim=D, out_dim=C, K=1, dist_function="euclidean"
-    )
-    X = random.uniform(subkeys[1], shape=(10, D))
-    Y = jnp.concat(
-        [
-            jnp.ones((2, C)) * jnp.array([[1., 0., 0., 0., 0.]]),
-            jnp.ones((2, C)) * jnp.array([[0., 1., 0., 0., 0.]]),
-            jnp.ones((2, C)) * jnp.array([[0., 0., 1., 0., 0.]]),
-            jnp.ones((2, C)) * jnp.array([[0., 0., 0., 1., 0.]]),
-            jnp.ones((2, C)) * jnp.array([[0., 0., 0., 0., 1.]])
-         ],
-        axis=0
-    )
-    knn.update(X, Y) ## fit KNN to data
-    print(knn.process(X)) ## should construct the (smeared) identity matrix, exactly same as Y
+# if __name__ == '__main__':
+#     seed = 42
+#     D = 7
+#     C = 5
+#     dkey = random.PRNGKey(seed)
+#     dkey, *subkeys = random.split(dkey, 3)
+#     knn = KNNProbe(
+#         subkeys[0], 1, input_dim=D, out_dim=C, K=1, dist_function="euclidean"
+#     )
+#     X = random.uniform(subkeys[1], shape=(10, D))
+#     Y = jnp.concat(
+#         [
+#             jnp.ones((2, C)) * jnp.array([[1., 0., 0., 0., 0.]]),
+#             jnp.ones((2, C)) * jnp.array([[0., 1., 0., 0., 0.]]),
+#             jnp.ones((2, C)) * jnp.array([[0., 0., 1., 0., 0.]]),
+#             jnp.ones((2, C)) * jnp.array([[0., 0., 0., 1., 0.]]),
+#             jnp.ones((2, C)) * jnp.array([[0., 0., 0., 0., 1.]])
+#          ],
+#         axis=0
+#     )
+#     knn.update(X, Y) ## fit KNN to data
+#     print(knn.process(X)) ## should construct the (smeared) identity matrix, exactly same as Y
