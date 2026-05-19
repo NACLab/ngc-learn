@@ -176,9 +176,9 @@ def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation st
         y: target / ground-truth (design) matrix; shape is (N x C) OR an array
             of class integers of length N (with "extract_label_indx = True")
 
-        extract_label_indx: run an argmax to pull class integer indices from
+        extract_label_indx: wehn True, run an argmax to pull class integer indices from
             "y", assuming y is a one-hot binary encoding matrix (Default: True),
-            otherwise, this assumes "y" is an array of class integer indices
+            otherwise, if False, this treats "y" is an array of class integer indices
             of length N
 
     Returns:
