@@ -665,9 +665,33 @@ def softmax(x, tau=0.0):
     return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
 
 @jit
+def d_softmax(x):
+    """
+    Derivative of the softmax function. 
+    Note that this returns specifically the Jacobian tensor of softmax(x) w.r.t. 
+    potential batch set of vectors (one per row).
+
+    Args:
+        x: input (tensor) value (B x D)
+
+    Returns:
+        output (tensor) derivative values (Jacobian with respect to input argument; B x D x D)
+    """
+    ## caclulate softmax along feature dimension (axis=-1)
+    s = jax.nn.softmax(x, axis=-1) ## Shape: (B, D)
+    ## Batch-up diag(s); multiply s by 3D identity tensor
+    ## Shape: (B, D, 1) * (1, D, D) => (B, D, D)
+    diag_s = jnp.expand_dims(s, axis=-1) * jnp.eye(s.shape[-1])
+    ## Batched outer(s, s): Broadcasted multiplication
+    ## Shape: (B, D, 1) * (B, 1, D) => (B, D, D)
+    outer_s = jnp.expand_dims(s, axis=-1) * jnp.expand_dims(s, axis=-2)
+    return diag_s - outer_s ## return full final Jacobian
+
+@jit
 def threshold_soft(x, lmbda):
     """
-    A soft threshold routine applied to each dimension of input
+    A soft threshold routine applied to each dimension of input. 
+    (Note that this function does not contain a complementary derivative.)
 
     Args:
         x: data to apply threshold function over
@@ -684,7 +708,8 @@ def threshold_soft(x, lmbda):
 @jit
 def threshold_cauchy(x, lmbda):
     """
-    A Cauchy distributional threshold routine applied to each dimension of input
+    A Cauchy distributional threshold routine applied to each dimension of input. 
+    (Note that this function does not contain a complementary derivative.)
 
     Args:
         x: data to apply threshold function over
