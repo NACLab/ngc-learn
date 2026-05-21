@@ -108,7 +108,7 @@ def create_function(fun_name, args=None):
     elif fun_name == "elu":
         fx = elu
         dfx = d_elu
-    elif fun_name == "silu":
+    elif fun_name == "silu": # NOTE: this is also the swish function
         fx = silu
         dfx = d_silu
     elif fun_name == "gelu":
@@ -122,22 +122,20 @@ def create_function(fun_name, args=None):
         dfx = d_softplus
     elif fun_name == "softmax":
         fx = softmax
-        ## NOTE: below is an improper derivative proxy
-        ##       correct dfx is a Jacobian of softmax (not currently supported!)
-        dfx = d_identity 
+        dfx = d_softmax ## NOTE: this yields a Jacobian tensor Jx
     elif fun_name == "unit_threshold":
         fx = threshold ## default threshold is 1 (thus unit)
         dfx = d_threshold ## STE approximation
     elif "heaviside" in fun_name:
         fx = heaviside
-        dfx = d_heaviside ## STE approximation
+        dfx = d_heaviside ## NOTE: this is an STE approximation
     elif fun_name == "identity":
         fx = identity
         dfx = d_identity
-    else:
+    else: ## throw exception for un-supported activation
         raise RuntimeError(
             "Activation function (" + fun_name + ") is not recognized/supported!"
-            )
+        )
     return fx, dfx
 
 @partial(jit, static_argnums=[1])
@@ -213,7 +211,6 @@ def clamp_max(x, max_val):
     mask = (x < max_val).astype(jnp.float32)
     _x = x * mask + (1. - mask) * max_val
     return _x
-
 
 @jit
 def one_hot(P):
@@ -514,7 +511,7 @@ def d_softplus(x):
         output (tensor) derivative value (with respect to input argument)
     """
     ## d/dx of softplus = logistic sigmoid
-    return nn.sigmoid(x)
+    return sigmoid(x) #nn.sigmoid(x)
 
 @jit
 def threshold(x, thr=1.):
@@ -522,7 +519,7 @@ def threshold(x, thr=1.):
 
 @jit
 def d_threshold(x, thr=1.):
-    return x * 0. + 1. ## straight-thru estimator
+    return x * 0. + 1. ## NOTE: straight-thru estimator (STE)
 
 @jit
 def heaviside(x):
@@ -530,15 +527,16 @@ def heaviside(x):
 
 @jit
 def d_heaviside(x):
-    return x * 0. + 1. ## straight-thru estimator
+    return x * 0. + 1. ## NOTE: straight-thru estimator (STE)
 
 @jit
 def sigmoid(x):
-    return nn.sigmoid(x)
+    sigm_x = 1./ (1. + jnp.exp(-x))
+    return sigm_x #nn.sigmoid(x)
 
 @jit
 def d_sigmoid(x):
-    sigm_x = nn.sigmoid(x) ## pre-compute once
+    sigm_x = sigmoid(x) #nn.sigmoid(x) ## pre-compute once
     return sigm_x * (1. - sigm_x)
 
 def inverse_sigmoid(x, clip_bound=0.03): ## wrapper call for naming convention ease
@@ -590,7 +588,9 @@ def d_swish(x, beta):
 @jit
 def silu(x):
     """
-    Applies the sigmoid-weighted linear unit (SiLU or SiL) activation.
+    Applies the sigmoid-weighted linear unit (SiLU or SiL) activation. 
+    Note that this is primarily a convenience wrapper function for 
+    the `swish` activation.
 
     Args:
         x: data to transform via inverse logistic function
@@ -607,7 +607,8 @@ def d_silu(x):
 @jit
 def gelu(x):
     """
-    Applies the Gaussian Error Linear Unit (GeLU) activation (specifically, a fast approximation is used).
+    Applies the Gaussian Error Linear Unit (GeLU) activation 
+    (specifically, a fast approximation is used via a weighted `swish`).
 
     Args:
         x: data to transform via inverse logistic function
@@ -635,7 +636,7 @@ def elu(x, alpha=1.):
     Returns:
         output of the GeLU activation
         """
-    mask = x >= 0.
+    mask = x >= 0. ## pre-compute mask
     return x * mask + ((jnp.exp(x) - 1) * alpha) * (1. - mask)
 
 @jit
@@ -653,7 +654,8 @@ def softmax(x, tau=0.0):
     Args:
         x: a (N x D) input argument (pre-activity) to the softmax operator
 
-        tau: probability sharpening/softening factor
+        tau: probability sharpening/softening factor, if > 0.; else, <= 0 disables
+            this (Default: 0.)
 
     Returns:
         a (N x D) probability distribution output block
@@ -664,28 +666,47 @@ def softmax(x, tau=0.0):
     exp_x = jnp.exp(x - max_x)
     return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
 
-@jit
-def d_softmax(x):
+@partial(jit, static_argnums=[2])
+def d_softmax(x, tau=0., vmap_form=False): ## temperature-controlled softmax derivative co-routine
     """
     Derivative of the softmax function. 
-    Note that this returns specifically the Jacobian tensor of softmax(x) w.r.t. 
+    Note that this returns specifically the Jacobian tensor `Jx` of softmax(x) w.r.t. 
     potential batch set of vectors (one per row).
 
     Args:
         x: input (tensor) value (B x D)
 
+        vmap_form: optional algorithm switch flag; if True, `Jx` is computed using 
+            Jax vmap (Default: False) 
+
     Returns:
         output (tensor) derivative values (Jacobian with respect to input argument; B x D x D)
     """
+    _m = tau > 0.
+    _tau = tau * _m + (1. - _m) ## sets _tau=1 if tau <= 0
+    Jx = 0. ## d_softmax(x)/d_x is a Jacobian matrix per sample
     ## caclulate softmax along feature dimension (axis=-1)
-    s = jax.nn.softmax(x, axis=-1) ## Shape: (B, D)
-    ## Batch-up diag(s); multiply s by 3D identity tensor
-    ## Shape: (B, D, 1) * (1, D, D) => (B, D, D)
-    diag_s = jnp.expand_dims(s, axis=-1) * jnp.eye(s.shape[-1])
-    ## Batched outer(s, s): Broadcasted multiplication
-    ## Shape: (B, D, 1) * (B, 1, D) => (B, D, D)
-    outer_s = jnp.expand_dims(s, axis=-1) * jnp.expand_dims(s, axis=-2)
-    return diag_s - outer_s ## return full final Jacobian
+    s = softmax(x, tau=_tau) # nn.softmax(x, axis=-1) ## (BxD)
+    if not vmap_form: ### use pure tensorized batch-identity trick algorithm
+        diag_s = jnp.expand_dims(s, axis=-1) * jnp.eye(s.shape[-1]) ## Shape: (BxDx1) * (1xDxD) => (BxDxD)
+        ## batched outer(s, s) ~> outer product for each batch vector
+        outer_s = jnp.expand_dims(s, axis=-1) * jnp.expand_dims(s, axis=-2) ## (BxDx1) * (Bx1xD) => (BxDxD)
+        Jx = (diag_s - outer_s) * (1. / _tau)
+    else: ### switch to vmap algorithm
+        ## calc outer product using einsum (clean and readable)
+        outer_s = jnp.einsum('bi,bj->bij', s, s) ## (BxDxD)
+        ## fast batched diagonal insertion via a diagonal mask
+        d = s.shape[-1]
+        diag_indices = jnp.arange(d)
+        ## jax.at subtracts outer product from diagonal
+        ## (s - s^2) for diagonal, (-s_i s_j) for off-diagonal
+        ## avoids constructing a giant identity matrix
+        jacobian = -outer_s
+        ## vmap over index updates across batch
+        def add_diag(J_matrix, s_vector):
+            return J_matrix.at[diag_indices, diag_indices].add(s_vector)  
+        Jx = ( jax.vmap(add_diag)(jacobian, s) ) * (1. / _tau)
+    return Jx ## return full, final Jacobian
 
 @jit
 def threshold_soft(x, lmbda):
