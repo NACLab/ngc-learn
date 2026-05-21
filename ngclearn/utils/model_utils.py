@@ -660,8 +660,11 @@ def softmax(x, tau=0.0):
     Returns:
         a (N x D) probability distribution output block
     """
-    if tau > 0.0:
-        x = x / tau
+    #if tau > 0.0:
+    #    x = x / tau
+    _m = tau > 0.
+    _tau = tau * _m + (1. - _m) ## sets _tau=1 if tau <= 0
+    x = x * (1./ _tau)
     max_x = jnp.max(x, axis=1, keepdims=True)
     exp_x = jnp.exp(x - max_x)
     return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
