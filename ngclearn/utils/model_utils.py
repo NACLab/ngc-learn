@@ -73,8 +73,7 @@ def create_function(fun_name, args=None):
     Args:
         fun_name: string name of activation function to produce;
             Currently supports: "tanh", "bkwta" (binary K-winners-take-all), "sigmoid", "relu", "lrelu", "relu6",
-            "elu", "silu", "gelu",  "softplus", "softmax" (derivative not supported), "unit_threshold", "heaviside",
-            "identity"
+            "elu", "silu", "gelu",  "softplus", "softmax", "unit_threshold", "heaviside", "identity"
 
     Returns:
         function fx, first derivative of function (w.r.t. input) dfx
@@ -125,10 +124,10 @@ def create_function(fun_name, args=None):
         dfx = d_softmax ## NOTE: this yields a Jacobian tensor Jx
     elif fun_name == "unit_threshold":
         fx = threshold ## default threshold is 1 (thus unit)
-        dfx = d_threshold ## STE approximation
+        dfx = d_threshold ## NOTE: STE approximation
     elif "heaviside" in fun_name:
         fx = heaviside
-        dfx = d_heaviside ## NOTE: this is an STE approximation
+        dfx = d_heaviside ## NOTE: STE approximation
     elif fun_name == "identity":
         fx = identity
         dfx = d_identity
@@ -139,7 +138,16 @@ def create_function(fun_name, args=None):
     return fx, dfx
 
 @partial(jit, static_argnums=[1])
-def bkwta(x, nWTA=5): #5 10 15 #K=50):
+def bkwta(x, nWTA=5): ## binarized k-winner-take-all function
+    """
+    The binarized K winner-take-all (K-WTA) function:
+
+    Args:
+        x: input (tensor) value (real-valued)
+
+    Returns:
+        output (tensor) value (binary values)
+    """
     values, indices = lax.top_k(x, nWTA) # Note: we do not care to sort the indices
     kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
     topK = jnp.greater_equal(x, kth).astype(jnp.float32) # cast booleans to floats
@@ -251,7 +259,7 @@ def chebyshev_norm(d, axis=-1, keepdims=False):
 @jit
 def binarize(data, threshold=0.5):
     """
-    Converts the vector *data* to its binary equivalent
+    Converts the vector *data* to its binary equivalent. 
 
     Args:
         data: the data to binarize (real-valued)
@@ -354,10 +362,13 @@ def d_telu(x):
     ex = jnp.exp(x)
     tanh_ex = jnp.tanh(ex)
     return tanh_ex + x * ex * (1.0 - tanh_ex ** 2)
+
 @jit
 def sine(x, omega_0=30):
     """
-    f(x) = sin(x * omega_0).
+    The sine function, parameterized by frequency `omega`:
+
+    | f(x) = sin(x * omega_0).
 
     Args:
         x: input (tensor) value
@@ -370,14 +381,15 @@ def sine(x, omega_0=30):
 @jit
 def d_sine(x, omega_0=30):
     """
-    frequency = omega_0
-    frequency * cos(x * frequency).
+    The derivative of the sine function: 
+    
+    | f'(x) = frequency * cos(x * frequency); where frequency = omega_0
 
     Args:
         x: input (tensor) value
 
     Returns:
-        output (tensor) value
+        output (tensor) derivative value (with respect to input)
     """
     return omega_0 * jnp.cos(omega_0 * x)
 
@@ -489,7 +501,9 @@ def d_relu6(x):
 @jit
 def softplus(x):
     """
-    The softplus elementwise function.
+    The softplus elementwise function:
+
+    | f(x) = ln(1 + exp(-x))
 
     Args:
         x: input (tensor) value
@@ -515,27 +529,89 @@ def d_softplus(x):
 
 @jit
 def threshold(x, thr=1.):
+    """
+    The threshold function (or Heaviside but with a non-zero boundary):
+
+    | f(x) = 1 if x >= thr, otherwise 0 (for x < thr)
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return (x >= thr).astype(jnp.float32)
 
 @jit
 def d_threshold(x, thr=1.):
+    """
+    Derivative of the threshold function; specifically, this employs the
+    straight-through estimator (STE) as a proxy/surrogate derivative instead.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
     return x * 0. + 1. ## NOTE: straight-thru estimator (STE)
 
 @jit
 def heaviside(x):
+    """
+    The Heaviside function:
+
+    | f(x) = 1 if x >= 0, otherwise 0 (for x < 0)
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return (x >= 0.).astype(jnp.float32)
 
 @jit
 def d_heaviside(x):
+    """
+    Derivative of the Heaviside function; specifically, this employs the 
+    straight-through estimator (STE) as a proxy/surrogate derivative instead. 
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
     return x * 0. + 1. ## NOTE: straight-thru estimator (STE)
 
 @jit
 def sigmoid(x):
+    """
+    The sigmoid / logistic-link function: 
+
+    | f(x) = 1/(1 + exp(-x)
+
+    Args:
+        x: input (tensor) value
+
+    Returns: 
+        output (tensor) value
+    """
     sigm_x = 1./ (1. + jnp.exp(-x))
     return sigm_x #nn.sigmoid(x)
 
 @jit
 def d_sigmoid(x):
+    """
+    Derivative of the sigmoid / logistic-link function.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
     sigm_x = sigmoid(x) #nn.sigmoid(x) ## pre-compute once
     return sigm_x * (1. - sigm_x)
 
