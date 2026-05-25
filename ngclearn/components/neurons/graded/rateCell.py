@@ -226,7 +226,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             ## self.pressure <-- "top-down" expectation / contextual pressure
             ## self.current <-- "bottom-up" data-dependent signal
             dfx_val = self.dfx(z)
-            j = _modulate(j, dfx_val) ## TODO: make this optional (for NGC circuit dynamics)
+            j = _modulate(j, dfx_val)
             j = j * self.resist_scale
             tmp_z = _run_cell(
                 dt, j, j_td, z, self.tau_m, leak_gamma=self.priorLeakRate, integType=self.intgFlag,
@@ -252,14 +252,10 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF.set(zF)
 
     @compilable
-    def reset(self):  ## reset core components/statistics
-        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
-
-    @compilable
-    def batched_reset(self, batch_size):
-        _shape = (batch_size, self.shape[0])
+    def reset(self): #, batch_size, shape): #n_units
+        _shape = (self.batch_size, self.shape[0])
         if len(self.shape) > 1:
-            _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
+            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
         self.j.set(restVals)
         self.j_td.set(restVals)

@@ -48,8 +48,8 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
             sigma_shape = jnp.array(sigma).shape
         self.sigma_shape = sigma_shape
         self.shape = shape
-        self.batch_size = batch_size
         self.n_units = n_units
+        self.batch_size = batch_size
 
         ## Convolution shape setup
         self.width = self.height = n_units
@@ -68,7 +68,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.mask = Compartment(restVals + 1.0)
 
     @staticmethod
-    def _eval_log_density(target, mu, Sigma): ## Gaussian log likelihood
+    def eval_log_density(target, mu, Sigma):
         ## NOTE: ln(p) = -(x - mu)^2 * 1/(2 Sigma), where Sigma might be sigma^2 or covariance matrix
         _dmu = (target - mu)
         #_numerator = 1. # 0.5
@@ -76,7 +76,7 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         return log_density, _dmu ## return density and raw delta
 
     @compilable
-    def advance_state(self, dt): ## compute Gaussian error cell output (fixed-point)
+    def advance_state(self, dt): ## compute Gaussian error cell output
         # Get the variables
         mu = self.mu.get()
         target = self.target.get()
@@ -84,18 +84,23 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         modulator = self.modulator.get()
         mask = self.mask.get()
 
-        # Moves Gaussian cell dynamics one step forward. Specifically, this routine emulates the error unit
-        # behavior of the local cost functional:
-        # FIXME: Currently, below does: L(targ, mu) = -(1/(2*sigma)) * ||targ - mu||^2_2
-        #        but should support full log likelihood of the multivariate Gaussian with covariance of different types
-        # TODO: could introduce a variant of GaussianErrorCell that moves according to an ODE
-        #       (using integration time constant dt)
-
+        # Move Gaussian cell dynamics one step forward. Specifically, this
+        # routine emulates the error unit
+        '''
+        ## This commented-out block of code should be adapted to replace the
+        ## five lines below it in future iterations (more accurate/flexible)
         L, _dmu = GaussianErrorCell._eval_log_density(target, mu, Sigma) # L = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
         ## _dmu => "raw" e (error unit/mis-match) # _dmu = (target - mu)
         dmu = _dmu * (1./ Sigma)  ## obtain precision-scaled e: (target - mu)/Sigma
         dtarget = -dmu  # reverse of e ## -(target - mu)/Sigma
         dSigma = Sigma * 0 + 1.  # no derivative is calculated at this time for Sigma
+        '''
+        _dmu = (target - mu)  # e (error unit)
+        dmu = _dmu / Sigma
+        dtarget = -dmu  # reverse of e
+        dSigma = Sigma * 0 + 1. # no derivative is calculated at this time for sigma
+        L = -jnp.sum(jnp.square(_dmu)) * (0.5 / Sigma)
+        #L = GaussianErrorCell.eval_log_density(target, mu, Sigma)
 
         dmu = dmu * modulator * mask ## not sure how mask will apply to a full covariance...
         dtarget = dtarget * modulator * mask
@@ -110,13 +115,9 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
 
     @compilable
     def reset(self): ## reset core components/statistics
-        self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
-
-    @compilable
-    def batched_reset(self, batch_size):
-        _shape = (batch_size, self.shape[0])
+        _shape = (self.batch_size, self.shape[0])
         if len(self.shape) > 1:
-            _shape = (batch_size, self.shape[0], self.shape[1], self.shape[2])
+            _shape = (self.batch_size, self.shape[0], self.shape[1], self.shape[2])
         restVals = jnp.zeros(_shape)
         dmu = restVals
         dtarget = restVals
@@ -130,10 +131,8 @@ class GaussianErrorCell(JaxComponent): ## Rate-coded/real-valued error unit/cell
         self.dmu.set(dmu)
         self.dtarget.set(dtarget)
         self.dSigma.set(dSigma)
-        if not self.target.targeted:
-            self.target.set(target)
-        if not self.mu.targeted:
-            self.mu.set(mu)
+        self.target.set(target)
+        self.mu.set(mu)
         self.modulator.set(modulator)
         self.L.set(L)
         self.mask.set(mask)
