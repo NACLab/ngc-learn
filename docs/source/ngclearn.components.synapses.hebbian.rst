@@ -36,6 +36,14 @@ ngclearn.components.synapses.hebbian.expSTDPSynapse module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.synapses.hebbian.gerstnerHebbianSynapse module
+------------------------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.hebbian.gerstnerHebbianSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.synapses.hebbian.hebbianSynapse module
 ----------------------------------------------------------
 
