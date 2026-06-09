@@ -464,6 +464,65 @@ def measure_BCE(p, x, offset=1e-7, preserve_batch=False): #1e-10
         bce = jnp.mean(bce)
     return bce
 
+@partial(jit, static_argnums=[1])
+def measure_hoyer_sparsity(codes: jnp.ndarray, preserve_batch: bool=False) -> float:
+    """
+    Measures the Hoyer sparsity for a set of latent codes. 
+    Hoyer sparsity lies in [0, 1], where a value of 0.0 indicates if something is dense and 
+    a value of 1 indicates something is extremely sparse.
+
+    Args:
+        codes: matrix (shape: N x D) of non-negative codes to measure
+            sparsity of (per row); D is flattened latent code size
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar mean score
+
+    Returns:
+        an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
+    """
+    # Flatten everything past the batch dimension
+    x = jnp.reshape(codes, (codes.shape[0], -1))
+    N = x.shape[1]
+
+    l1 = jnp.sum(jnp.abs(x), axis=1)
+    l2 = jnp.sqrt(jnp.sum(jnp.square(x), axis=1) + 1e-8) # epsilon to avoid division by zero
+
+    hoyer = (jnp.sqrt(N) - (l1 / l2)) / (jnp.sqrt(N) - 1.0)
+    if not preserve_batch:
+        hoyer = jnp.mean(hoyer) # calc average sparsity across set/batch
+    return hoyer
+
+@partial(jit, static_argnums=[1])
+def measure_excess_kurtosis(codes: jnp.ndarray, preserve_batch: bool=False) -> float:
+    """
+    Measures the peak and heavy-tailedness of a set of neural activation codes. Note that 
+    higher values (> 0) indicate sparse, localized 'high-burst' activations.
+    
+    Args:
+        codes: matrix (shape: N x D) of non-negative codes to measure
+            sparsity of (per row)
+
+        preserve_batch: if True, will return one score per sample in batch
+            (Default: False), otherwise, returns scalar mean score
+
+    Returns:
+        an (N x 1) column vector (if preserve_batch=True) OR (1,1) scalar otherwise
+    """
+    x = jnp.reshape(codes, (codes.shape[0], -1))
+    mean = jnp.mean(x, axis=1, keepdims=True) ## 1st moment
+    variance = jnp.var(x, axis=1, keepdims=True) ## 2nd moment
+    
+    ## 4th central moment divided by variance squared
+    fourth_moment = jnp.mean(jnp.power(x - mean, 4), axis=1, keepdims=True)
+    kurtosis = fourth_moment / (jnp.square(variance) + 1e-8) ## kurtosis of distribution
+    excess_kurtosis = kurtosis - 3.0  ## calc "excess kurtosis" by subtracting 3
+    if not preserve_batch:
+        excess_kurtosis = jnp.mean(excess_kurtosis) ## calc avg excess-kurtosis over set/batch
+    return excess_kurtosis 
+
+
+### class conformity metrics ###
 
 @partial(jit, static_argnums=[2, 3])
 def _compute_contingency_table( ## vectorized construction of contingency matrix

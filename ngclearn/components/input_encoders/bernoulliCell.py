@@ -27,7 +27,12 @@ class BernoulliCell(JaxComponent):
     """
 
     def __init__(
-            self, name: str, n_units: int, batch_size: int = 1, key: Union[jax.Array, None] = None, **kwargs
+        self, 
+        name: str, 
+        n_units: int, 
+        batch_size: int = 1, 
+        key: Union[jax.Array, None] = None, 
+        **kwargs
     ):
         super().__init__(name=name, key=key)
 

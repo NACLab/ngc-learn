@@ -28,7 +28,12 @@ def extract_pca_latents(vectors): ## PCA mapping routine
         z_2D = vectors
     return z_2D
 
-def extract_tsne_latents(vectors, perplexity=30, n_pca_comp=32, batch_size=500): ## tSNE mapping routine
+def extract_tsne_latents(
+        vectors,
+        perplexity=30,
+        n_pca_comp=32,
+        batch_size=500
+): ## tSNE mapping routine
     """
     Projects collection of K vectors (stored in a matrix) to a two-dimensional (2D) visualization space via the
     t-distributed stochastic neighbor embedding algorithm (t-SNE). This algorithm also uses PCA to produce an
@@ -41,9 +46,9 @@ def extract_tsne_latents(vectors, perplexity=30, n_pca_comp=32, batch_size=500):
         perplexity: the perplexity control factor for t-SNE (Default: 30)
 
         n_pca_comp: number of PCA top components (sorted by eigen-values) to retain/extract before continuing
-            with t-SNE dimensionality reduction
+            with t-SNE dimensionality reduction (Default: 32)
 
-        batch_size: number of sampled embedding vectors to use per iteration of online internal PCA
+        batch_size: number of sampled embedding vectors to use per iteration of online internal PCA (Default: 500)
 
     Returns:
         a matrix (K x 2) of projected vectors (to 2D space)
@@ -67,7 +72,15 @@ def extract_tsne_latents(vectors, perplexity=30, n_pca_comp=32, batch_size=500):
         z_2D = vectors
     return z_2D
 
-def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1., cmap=None):
+def plot_latents(
+        code_vectors,
+        labels,
+        plot_fname="2Dcode_plot.jpg",
+        alpha=1.,
+        cmap=None,
+        xaxis_title=None,
+        yaxis_title=None
+):
     """
     Produces a label-overlaid (label map to distinct colors) scatterplot for visualizing two-dimensional latent codes
     (produced by either PCA or t-SNE).
@@ -84,6 +97,11 @@ def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1., c
         alpha: alpha intensity level to present colors in scatterplot
 
         cmap: custom color-map to provide
+
+        xaxis_title: string denoting title to place for X-axis (Default: None)
+
+        yaxis_title:  string denoting title to place for Y-axis (Default: None)
+
     """
     curr_backend = plt.rcParams["backend"]
     matplotlib.use('Agg') ## temporarily go in Agg plt backend for tsne plotting
@@ -98,10 +116,17 @@ def plot_latents(code_vectors, labels, plot_fname="2Dcode_plot.jpg", alpha=1., c
     if _cmap is None:
         _cmap = default_cmap
         #print("> USING DEFAULT CMAP!")
-    plt.scatter(code_vectors[:, 0], code_vectors[:, 1], c=lab, cmap=_cmap, alpha=alpha)
+    plt.scatter(
+        code_vectors[:, 0], code_vectors[:, 1], c=lab, cmap=_cmap, alpha=alpha
+    )
     colorbar = plt.colorbar()
     #colorbar.set_alpha(1)
     #plt.draw_all()
+    if xaxis_title is not None:
+        plt.xlabel(xaxis_title, fontsize=16, fontweight="bold")
+    if yaxis_title is not None:
+        plt.ylabel(yaxis_title, fontsize=16, fontweight="bold")
+
     plt.grid()
     plt.savefig("{0}".format(plot_fname), dpi=300)
     plt.clf()

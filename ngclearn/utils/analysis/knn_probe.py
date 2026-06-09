@@ -2,27 +2,33 @@ import jax
 import numpy as np
 from ngcsimlib import deprecate_args
 from ngclearn.utils.analysis.probe import Probe
-from ngclearn.utils.model_utils import kwta
 from jax import jit, random, numpy as jnp, lax, nn
 from functools import partial as bind
-from ngclearn.utils.distribution_generator import DistributionGenerator
 
-@bind(jax.jit, static_argnums=[2, 3])
-def _run_knn_probe(_embeddings, Wx, K, dist_order=2):
-    ## Notes:
-    ### We do some 3D tensor math to handle a batch of predictions that need to be made
-    ### B = batch-size, D = embedding/input dim, C = number classes, N = number of memories
-    _Wx = jnp.expand_dims(Wx, axis=0)  ## 3D tensor format of KNN params (1 x N x D)
-    embed_tensor = jnp.expand_dims(_embeddings, axis=1)  ## 3D projection of input signals (B x 1 x D)
-    D = embed_tensor - _Wx  ## compute 3D batched delta tensor (B x N x D)
-    ## get batched (negative) distance measurements
-    dist = jnp.linalg.norm(D, ord=dist_order, axis=2, keepdims=True)  ## (B x N x 1)
-    ## else, default -> euclidean
-    ### Note: negative distance allows us to find minimal points w/ maximal functions
-    dist = -jnp.squeeze(dist, axis=2)  ## (B x N)
-    ## now get K winners per sample in batch
+
+@bind(jax.jit, static_argnums=[2, 3, 4])
+def _run_knn_probe(_embeddings, Wx, K, dist_order=2, dist_metric="minkowski"):
+    if dist_metric == "cosine":
+        ## normalize the incoming batch embeddings along the feature axis (axis 1)
+        ### add a tiny epsilon to prevent division-by-zero errors
+        eps = 1e-12
+        embed_norm = _embeddings / (jnp.linalg.norm(_embeddings, axis=1, keepdims=True) + eps)
+        ## normalize the internal memory database array (axis 1)
+        Wx_norm = Wx / (jnp.linalg.norm(Wx, axis=1, keepdims=True) + eps)
+        ## compute batched cosine similarity using standard 2D matrix multiplication
+        ### (B x D) @ (D x N) -> yields a (B x N) similarity matrix directly!
+        dist = jnp.matmul(embed_norm, Wx_norm.T)
+    else:  # Default back to your Minkowski setup
+        _Wx = jnp.expand_dims(Wx, axis=0)  ## (1 x N x D)
+        embed_tensor = jnp.expand_dims(_embeddings, axis=1)  ## (B x 1 x D)
+        D = embed_tensor - _Wx  ## (B x N x D)
+        dist = jnp.linalg.norm(D, ord=dist_order, axis=2, keepdims=True)  ## (B x N x 1)
+        dist = -jnp.squeeze(dist, axis=2)  ## (B x N)
+
+    # lax.top_k naturally grabs the maximums (highest similarity or smallest negative distance)
     values, indices = lax.top_k(dist, K)
     return values, indices
+
 
 class KNNProbe(Probe):
     """
@@ -82,16 +88,21 @@ class KNNProbe(Probe):
         self.vote_fx = 0 ## 0 -> mode prediction; 1 -> mean prediction
         if vote_style == "mean":
             self.vote_fx = 1
+
         self.distance_function = distance_function
-        dist_fun, dist_order = distance_function  ## Default: ("minkowski", 2) -> Euclidean
-        if "euclidean" in dist_fun.lower():
+        dist_fun, dist_order = distance_function
+        self.dist_metric = "minkowski"  # default tracker
+        if "cosine" in dist_fun.lower():
+            self.dist_metric = "cosine"
+            dist_order = 2  ## fallback assignment
+        elif "euclidean" in dist_fun.lower():
             dist_order = 2
         elif "manhattan" in dist_fun.lower():
             dist_order = 1
         elif "chebyshev" in dist_fun.lower():
             dist_order = jnp.inf
-        ## TODO: add in cosine-distance (and maybe Mahalanobis distance)
         self.dist_order = dist_order  ## set distance order p
+
         self.predictor_type = predictor_type
         self.pred_fx = 0
         if "regressor" == predictor_type:
@@ -102,14 +113,18 @@ class KNNProbe(Probe):
         Wx = Wy = jnp.ones((1, 1)) ## Wy will be assumed to be one-hot encoded
         self.probe_params = (Wx, Wy)
 
-    def process(self, embeddings, dkey=None): ## TODO: JIT-i-fy this
+    def process(self, embeddings, dkey=None):
         _embeddings = embeddings
         if len(_embeddings.shape) > 2:
             flat_dim = embeddings.shape[1] * embeddings.shape[2]
             _embeddings = jnp.reshape(_embeddings, (embeddings.shape[0], flat_dim))
 
-        Wx, Wy = self.probe_params ## pull out KNN parameters
-        values, indices =  _run_knn_probe(_embeddings, Wx, self.K, self.dist_order)
+        Wx, Wy = self.probe_params
+
+        # Pass the explicit metric string directly to the JIT-compiled loop
+        values, indices = _run_knn_probe(
+            _embeddings, Wx, self.K, self.dist_order, self.dist_metric
+        )
 
         ## do K-neighbor voting scheme (find mode/frequency prediction)
         Y_counts = jnp.zeros((_embeddings.shape[0], Wy.shape[1]))
