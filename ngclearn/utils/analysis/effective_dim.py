@@ -20,18 +20,15 @@ def participation_ratio(latent_codes):
 
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
 
-
-
-
 def rankme(Z, eps=1e-7):
     """
-    Calculates the effective rank of for a code matrix Z
-    effective rank = exp(Shannon entropy), from Garrido, Balestriero,
-    Najman & LeCun, "RankMe: Assessing the Downstream Performance of Pretrained
-    Self-Supervised Representations by Their Rank" (ICML 2023, arXiv:2210.02885).
+    Calculates the effective rank of for a code matrix Z effective rank = exp(Shannon entropy), adapted from:
+
+    | Garrido, Balestriero, Najman & LeCun, "RankMe: Assessing the Downstream Performance of Pretrained
+    | Self-Supervised Representations by Their Rank" (ICML 2023, arXiv:2210.02885).
 
     Args:
-        latent_codes: a set of (N x D) latent code vectors (one row per vector code)
+        Z: a set of (N x D) latent code vectors (one row per vector code)
 
     Returns:
         scalar measurement of the effective dimension
