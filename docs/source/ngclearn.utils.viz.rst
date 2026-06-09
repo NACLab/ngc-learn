@@ -4,6 +4,14 @@ ngclearn.utils.viz package
 Submodules
 ----------
 
+ngclearn.utils.viz.classification\_analysis module
+--------------------------------------------------
+
+.. automodule:: ngclearn.utils.viz.classification_analysis
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.utils.viz.compartment\_plot module
 -------------------------------------------
 

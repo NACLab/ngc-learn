@@ -20,6 +20,14 @@ ngclearn.components.input\_encoders.ganglionCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.input\_encoders.gridCell module
+---------------------------------------------------
+
+.. automodule:: ngclearn.components.input_encoders.gridCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.input\_encoders.latencyCell module
 ------------------------------------------------------
 
@@ -36,10 +44,26 @@ ngclearn.components.input\_encoders.phasorCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.input\_encoders.placeCell module
+----------------------------------------------------
+
+.. automodule:: ngclearn.components.input_encoders.placeCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.input\_encoders.poissonCell module
 ------------------------------------------------------
 
 .. automodule:: ngclearn.components.input_encoders.poissonCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.components.input\_encoders.populationCoderCell module
+--------------------------------------------------------------
+
+.. automodule:: ngclearn.components.input_encoders.populationCoderCell
    :members:
    :undoc-members:
    :show-inheritance:
