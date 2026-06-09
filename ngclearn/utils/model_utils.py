@@ -73,8 +73,7 @@ def create_function(fun_name, args=None):
     Args:
         fun_name: string name of activation function to produce;
             Currently supports: "tanh", "bkwta" (binary K-winners-take-all), "sigmoid", "relu", "lrelu", "relu6",
-            "elu", "silu", "gelu",  "softplus", "softmax" (derivative not supported), "unit_threshold", "heaviside",
-            "identity"
+            "elu", "silu", "gelu",  "softplus", "softmax", "unit_threshold", "heaviside", "identity"
 
     Returns:
         function fx, first derivative of function (w.r.t. input) dfx
@@ -108,7 +107,7 @@ def create_function(fun_name, args=None):
     elif fun_name == "elu":
         fx = elu
         dfx = d_elu
-    elif fun_name == "silu":
+    elif fun_name == "silu": # NOTE: this is also the swish function
         fx = silu
         dfx = d_silu
     elif fun_name == "gelu":
@@ -122,26 +121,33 @@ def create_function(fun_name, args=None):
         dfx = d_softplus
     elif fun_name == "softmax":
         fx = softmax
-        ## NOTE: below is an improper derivative proxy
-        ##       correct dfx is a Jacobian of softmax (not currently supported!)
-        dfx = d_identity 
+        dfx = d_softmax ## NOTE: this yields a Jacobian tensor Jx
     elif fun_name == "unit_threshold":
         fx = threshold ## default threshold is 1 (thus unit)
-        dfx = d_threshold ## STE approximation
+        dfx = d_threshold ## NOTE: STE approximation
     elif "heaviside" in fun_name:
         fx = heaviside
-        dfx = d_heaviside ## STE approximation
+        dfx = d_heaviside ## NOTE: STE approximation
     elif fun_name == "identity":
         fx = identity
         dfx = d_identity
-    else:
+    else: ## throw exception for un-supported activation
         raise RuntimeError(
             "Activation function (" + fun_name + ") is not recognized/supported!"
-            )
+        )
     return fx, dfx
 
 @partial(jit, static_argnums=[1])
-def bkwta(x, nWTA=5): #5 10 15 #K=50):
+def bkwta(x, nWTA=5): ## binarized k-winner-take-all function
+    """
+    The binarized K winner-take-all (K-WTA) function:
+
+    Args:
+        x: input (tensor) value (real-valued)
+
+    Returns:
+        output (tensor) value (binary values)
+    """
     values, indices = lax.top_k(x, nWTA) # Note: we do not care to sort the indices
     kth = jnp.expand_dims(jnp.min(values,axis=1),axis=1) # must do comparison per sample in potential mini-batch
     topK = jnp.greater_equal(x, kth).astype(jnp.float32) # cast booleans to floats
@@ -214,7 +220,6 @@ def clamp_max(x, max_val):
     _x = x * mask + (1. - mask) * max_val
     return _x
 
-
 @jit
 def one_hot(P):
     """
@@ -254,7 +259,7 @@ def chebyshev_norm(d, axis=-1, keepdims=False):
 @jit
 def binarize(data, threshold=0.5):
     """
-    Converts the vector *data* to its binary equivalent
+    Converts the vector *data* to its binary equivalent. 
 
     Args:
         data: the data to binarize (real-valued)
@@ -357,10 +362,13 @@ def d_telu(x):
     ex = jnp.exp(x)
     tanh_ex = jnp.tanh(ex)
     return tanh_ex + x * ex * (1.0 - tanh_ex ** 2)
+
 @jit
 def sine(x, omega_0=30):
     """
-    f(x) = sin(x * omega_0).
+    The sine function, parameterized by frequency `omega`:
+
+    | f(x) = sin(x * omega_0).
 
     Args:
         x: input (tensor) value
@@ -373,14 +381,15 @@ def sine(x, omega_0=30):
 @jit
 def d_sine(x, omega_0=30):
     """
-    frequency = omega_0
-    frequency * cos(x * frequency).
+    The derivative of the sine function: 
+    
+    | f'(x) = frequency * cos(x * frequency); where frequency = omega_0
 
     Args:
         x: input (tensor) value
 
     Returns:
-        output (tensor) value
+        output (tensor) derivative value (with respect to input)
     """
     return omega_0 * jnp.cos(omega_0 * x)
 
@@ -492,7 +501,9 @@ def d_relu6(x):
 @jit
 def softplus(x):
     """
-    The softplus elementwise function.
+    The softplus elementwise function:
+
+    | f(x) = ln(1 + exp(-x))
 
     Args:
         x: input (tensor) value
@@ -514,31 +525,94 @@ def d_softplus(x):
         output (tensor) derivative value (with respect to input argument)
     """
     ## d/dx of softplus = logistic sigmoid
-    return nn.sigmoid(x)
+    return sigmoid(x) #nn.sigmoid(x)
 
 @jit
 def threshold(x, thr=1.):
+    """
+    The threshold function (or Heaviside but with a non-zero boundary):
+
+    | f(x) = 1 if x >= thr, otherwise 0 (for x < thr)
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return (x >= thr).astype(jnp.float32)
 
 @jit
 def d_threshold(x, thr=1.):
-    return x * 0. + 1. ## straight-thru estimator
+    """
+    Derivative of the threshold function; specifically, this employs the
+    straight-through estimator (STE) as a proxy/surrogate derivative instead.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
+    return x * 0. + 1. ## NOTE: straight-thru estimator (STE)
 
 @jit
 def heaviside(x):
+    """
+    The Heaviside function:
+
+    | f(x) = 1 if x >= 0, otherwise 0 (for x < 0)
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) value
+    """
     return (x >= 0.).astype(jnp.float32)
 
 @jit
 def d_heaviside(x):
-    return x * 0. + 1. ## straight-thru estimator
+    """
+    Derivative of the Heaviside function; specifically, this employs the 
+    straight-through estimator (STE) as a proxy/surrogate derivative instead. 
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
+    return x * 0. + 1. ## NOTE: straight-thru estimator (STE)
 
 @jit
 def sigmoid(x):
-    return nn.sigmoid(x)
+    """
+    The sigmoid / logistic-link function: 
+
+    | f(x) = 1/(1 + exp(-x)
+
+    Args:
+        x: input (tensor) value
+
+    Returns: 
+        output (tensor) value
+    """
+    sigm_x = 1./ (1. + jnp.exp(-x))
+    return sigm_x #nn.sigmoid(x)
 
 @jit
 def d_sigmoid(x):
-    sigm_x = nn.sigmoid(x) ## pre-compute once
+    """
+    Derivative of the sigmoid / logistic-link function.
+
+    Args:
+        x: input (tensor) value
+
+    Returns:
+        output (tensor) derivative value (with respect to input argument)
+    """
+    sigm_x = sigmoid(x) #nn.sigmoid(x) ## pre-compute once
     return sigm_x * (1. - sigm_x)
 
 def inverse_sigmoid(x, clip_bound=0.03): ## wrapper call for naming convention ease
@@ -590,7 +664,9 @@ def d_swish(x, beta):
 @jit
 def silu(x):
     """
-    Applies the sigmoid-weighted linear unit (SiLU or SiL) activation.
+    Applies the sigmoid-weighted linear unit (SiLU or SiL) activation. 
+    Note that this is primarily a convenience wrapper function for 
+    the `swish` activation.
 
     Args:
         x: data to transform via inverse logistic function
@@ -607,7 +683,8 @@ def d_silu(x):
 @jit
 def gelu(x):
     """
-    Applies the Gaussian Error Linear Unit (GeLU) activation (specifically, a fast approximation is used).
+    Applies the Gaussian Error Linear Unit (GeLU) activation 
+    (specifically, a fast approximation is used via a weighted `swish`).
 
     Args:
         x: data to transform via inverse logistic function
@@ -635,7 +712,7 @@ def elu(x, alpha=1.):
     Returns:
         output of the GeLU activation
         """
-    mask = x >= 0.
+    mask = x >= 0. ## pre-compute mask
     return x * mask + ((jnp.exp(x) - 1) * alpha) * (1. - mask)
 
 @jit
@@ -653,21 +730,68 @@ def softmax(x, tau=0.0):
     Args:
         x: a (N x D) input argument (pre-activity) to the softmax operator
 
-        tau: probability sharpening/softening factor
+        tau: probability sharpening/softening factor, if > 0.; else, <= 0 disables
+            this (Default: 0.)
 
     Returns:
         a (N x D) probability distribution output block
     """
-    if tau > 0.0:
-        x = x / tau
+    #if tau > 0.0:
+    #    x = x / tau
+    _m = tau > 0.
+    _tau = tau * _m + (1. - _m) ## sets _tau=1 if tau <= 0
+    x = x * (1./ _tau)
     max_x = jnp.max(x, axis=1, keepdims=True)
     exp_x = jnp.exp(x - max_x)
     return exp_x / jnp.sum(exp_x, axis=1, keepdims=True)
 
+@partial(jit, static_argnums=[2])
+def d_softmax(x, tau=0., vmap_form=False): ## temperature-controlled softmax derivative co-routine
+    """
+    Derivative of the softmax function. 
+    Note that this returns specifically the Jacobian tensor `Jx` of softmax(x) w.r.t. 
+    potential batch set of vectors (one per row).
+
+    Args:
+        x: input (tensor) value (B x D)
+
+        vmap_form: optional algorithm switch flag; if True, `Jx` is computed using 
+            Jax vmap (Default: False) 
+
+    Returns:
+        output (tensor) derivative values (Jacobian with respect to input argument; B x D x D)
+    """
+    _m = tau > 0.
+    _tau = tau * _m + (1. - _m) ## sets _tau=1 if tau <= 0
+    Jx = 0. ## d_softmax(x)/d_x is a Jacobian matrix per sample
+    ## caclulate softmax along feature dimension (axis=-1)
+    s = softmax(x, tau=_tau) # nn.softmax(x, axis=-1) ## (BxD)
+    if not vmap_form: ### use pure tensorized batch-identity trick algorithm
+        diag_s = jnp.expand_dims(s, axis=-1) * jnp.eye(s.shape[-1]) ## Shape: (BxDx1) * (1xDxD) => (BxDxD)
+        ## batched outer(s, s) ~> outer product for each batch vector
+        outer_s = jnp.expand_dims(s, axis=-1) * jnp.expand_dims(s, axis=-2) ## (BxDx1) * (Bx1xD) => (BxDxD)
+        Jx = (diag_s - outer_s) * (1. / _tau)
+    else: ### switch to vmap algorithm
+        ## calc outer product using einsum (clean and readable)
+        outer_s = jnp.einsum('bi,bj->bij', s, s) ## (BxDxD)
+        ## fast batched diagonal insertion via a diagonal mask
+        d = s.shape[-1]
+        diag_indices = jnp.arange(d)
+        ## jax.at subtracts outer product from diagonal
+        ## (s - s^2) for diagonal, (-s_i s_j) for off-diagonal
+        ## avoids constructing a giant identity matrix
+        jacobian = -outer_s
+        ## vmap over index updates across batch
+        def add_diag(J_matrix, s_vector):
+            return J_matrix.at[diag_indices, diag_indices].add(s_vector)  
+        Jx = ( jax.vmap(add_diag)(jacobian, s) ) * (1. / _tau)
+    return Jx ## return full, final Jacobian
+
 @jit
 def threshold_soft(x, lmbda):
     """
-    A soft threshold routine applied to each dimension of input
+    A soft threshold routine applied to each dimension of input. 
+    (Note that this function does not contain a complementary derivative.)
 
     Args:
         x: data to apply threshold function over
@@ -684,7 +808,8 @@ def threshold_soft(x, lmbda):
 @jit
 def threshold_cauchy(x, lmbda):
     """
-    A Cauchy distributional threshold routine applied to each dimension of input
+    A Cauchy distributional threshold routine applied to each dimension of input. 
+    (Note that this function does not contain a complementary derivative.)
 
     Args:
         x: data to apply threshold function over
@@ -769,6 +894,23 @@ def create_block_matrix(map_matrix, group_shape, alpha_inh=-1., alpha_exc=1.):
         gmat.append(row)
     gmat = jnp.concatenate(gmat, axis=0)
     return gmat
+
+@partial(jit, static_argnums=[0])
+def eye_wrapped(N, k, values):
+    """
+    Creates an N x N matrix with a wrapped off-diagonal.
+
+    Args:
+        N: Size of the square matrix (N x N)
+
+        k: Diagonal offset (positive=above, negative=below)
+
+        values: Array of values to place (length should match n)
+    """
+    matrix = jnp.zeros((N, N)) ## Create empty matrix
+    row_indices = jnp.arange(N) ## Generate indices for the diagonal
+    col_indices = (row_indices + k) % N ## Wrap column indices using modulo
+    return matrix.at[row_indices, col_indices].set(values) ## Fill diagonal using efficient indexing
 
 @partial(jit, static_argnums=[1, 2, 3, 4])
 def normalize_block_matrix(matrix, block_size, order=2, axis=0, norm_targ=1.):

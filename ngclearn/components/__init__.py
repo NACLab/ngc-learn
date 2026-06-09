@@ -30,6 +30,9 @@ from .input_encoders.poissonCell import PoissonCell
 from .input_encoders.ganglionCell import RetinalGanglionCell
 from .input_encoders.latencyCell import LatencyCell
 from .input_encoders.phasorCell import PhasorCell
+#from .input_encoders.populationCoderCell import PopulationCoderCell
+#from .input_encoders.gridCell import GridCell
+#from .input_encoders.placeCell import PlaceCell
 
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse

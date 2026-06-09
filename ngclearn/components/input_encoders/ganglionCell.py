@@ -8,25 +8,27 @@ from typing import Union, Tuple
 def _create_gaussian_filter(patch_shape, sigma):
     ## Create a 2D Gaussian kernel centered on patch_shape with given sigma.
     px, py = patch_shape
-
     x_ = jnp.linspace(0, px - 1, px)
     y_ = jnp.linspace(0, py - 1, py)
-
     x, y = jnp.meshgrid(x_, y_)
-
     xc = px // 2
     yc = py // 2
-
-    filter = jnp.exp(-((x - xc) ** 2 + (y - yc) ** 2) / (2 * (sigma ** 2)))
-    return filter / jnp.sum(filter)
+    _filter = jnp.exp(-((x - xc) ** 2 + (y - yc) ** 2) / (2 * (sigma ** 2)))
+    return _filter / jnp.sum(_filter)
 
 def _create_dog_filter(patch_shape, sigma, k=1.6, lmbda=1):
     g1 = _create_gaussian_filter(patch_shape, sigma=sigma)
     g2 = _create_gaussian_filter(patch_shape, sigma=sigma * k)
-
     dog = g1 - lmbda * g2
-
     return dog #- jnp.mean(dog)
+
+
+def _create_ratio_of_gauss_filter(patch_shape, sigma, k=1.6):
+    g1 = _create_gaussian_filter(patch_shape, sigma=sigma)
+    g2 = _create_gaussian_filter(patch_shape, sigma=sigma * k)
+    rog = g1 / (g2 + 1e-8)
+    return rog
+    
 
 def _create_patches(obs, patch_shape, step_shape):
     """
@@ -66,6 +68,29 @@ def _create_patches(obs, patch_shape, step_shape):
     ], axis=1)
 
     return patches
+
+def _reconstruct(patches, nx_ny, area_shape, patch_shape, step_shape):
+    # patches: (N, nx * ny, px, py)
+
+    B = len(patches)
+    nx, ny = nx_ny
+    ix, iy = area_shape
+    px, py = patch_shape
+    sx, sy = step_shape
+    x = jnp.zeros((B, ix, iy))
+    counts = jnp.zeros((ix, iy))
+
+    idx = 0
+    for i in range(ny):
+        for j in range(nx):
+            di = i * sx
+            dj = j * sy
+            x = x.at[:, di:di + px, dj:dj + py].add(patches[:, idx])
+            counts = counts.at[di:di + px, dj:dj + py].add(1.0)
+            idx += 1
+
+    return x / counts[None, :, :]
+
 
 
 class RetinalGanglionCell(JaxComponent):
@@ -126,23 +151,30 @@ class RetinalGanglionCell(JaxComponent):
         self.patch_shape = patch_shape
         self.step_shape = step_shape
 
-        filter = jnp.ones(self.patch_shape)
+        _filter = jnp.ones(self.patch_shape)
 
-        if filter_type == 'gaussian':
-            filter = _create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
-        elif filter_type == 'difference_of_gaussian':
-            filter = _create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
+        if self.filter_type == 'gaussian':
+            print("filter type is ", self.filter_type)
+            _filter = _create_gaussian_filter(patch_shape=self.patch_shape, sigma=self.sigma)
+            
+        elif self.filter_type in ["difference_of_gaussian", "DoG"]:
+            print("filter type is difference of gaussian: f(x) = p1 - p2")
+            _filter = _create_dog_filter(patch_shape=self.patch_shape, sigma=sigma)
+            
+        elif self.filter_type in ["ratio_of_gaussian", "RoG"]:
+            print("filter type is ratio of gaussian: f(x) = p1 / p2")
+            _filter = _create_ratio_of_gauss_filter(patch_shape=self.patch_shape, sigma=sigma)
 
         # ═════════════════ compartments initial values ════════════════════
-        in_restVals = jnp.zeros((batch_size,
-                                 *self.area_shape))    ## input: (B | ix | iy)
+        in_restVals = jnp.zeros((batch_size, *self.area_shape)) ## input: (B | ix | iy)
 
-        out_restVals = jnp.zeros((batch_size,     ## output.shape: (B | n_cells * px * py)
-                                  self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
+        out_restVals = jnp.zeros(
+            (batch_size, self.n_cells * self.patch_shape[0] * self.patch_shape[1])
+        ) ## output.shape: (B | n_cells * px * py)
 
         # ═══════════════════ set compartments ══════════════════════
         self.inputs = Compartment(in_restVals, display_name="Input Stimulus") # input compartment
-        self.filter = Compartment(filter, display_name="Filter") # Filter compartment
+        self.filter = Compartment(_filter, display_name="Filter") # Filter compartment
         self.outputs = Compartment(out_restVals, display_name="Output Signal") # output compartment
 
     @compilable
@@ -165,26 +197,15 @@ class RetinalGanglionCell(JaxComponent):
 
         self.outputs.set(outputs)
 
+
+
     @compilable
     def reset(self):  ## reset core components/statistics
-        # self.batched_reset(batch_size=self.batch_size)  ## arg = batch_size data-member
         in_restVals = jnp.zeros((self.batch_size, *self.area_shape))      ## input: (B | ix | iy)
         out_restVals = jnp.zeros((self.batch_size,      ## output.shape: (B | n_cells * px * py)
                                   self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
         self.inputs.set(in_restVals)
         self.outputs.set(out_restVals)
-
-    # Viet: NOTE: we should not need this function since the reset function
-    #   one could set the batch size then do reset
-    # @compilable
-    # def batched_reset(self, batch_size):
-    #     in_restVals = jnp.zeros((batch_size, *self.area_shape))      ## input: (B | ix | iy)
-
-    #     out_restVals = jnp.zeros((batch_size,      ## output.shape: (B | n_cells * px * py)
-    #                               self.n_cells * self.patch_shape[0] * self.patch_shape[1]))
-
-    #     self.inputs.set(in_restVals)
-    #     self.outputs.set(out_restVals)
 
     @classmethod
     def help(cls): ## component help function

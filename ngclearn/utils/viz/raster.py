@@ -140,3 +140,4 @@ def create_overlay_raster_plot(spike_train, targ_train, Y, idxs, s=1.5, c="black
         plt.savefig(plot_fname + '_' + str(idx) + suffix)
         plt.clf()
         plt.close()
+
