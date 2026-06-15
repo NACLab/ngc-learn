@@ -46,13 +46,16 @@ with Context("Circuit") as circuit:
     
     ## create and compile core simulation commands  
     evolve = (MethodProcess("evolve")
-              >> a.evolve)
+              >> Wab.evolve)
     
     advance = (MethodProcess("advance")
-               >> a.advance_state)
+               >> a.advance_state
+               >> Wab.advance_state
+               >> b.advance_state)
     
     reset = (MethodProcess("reset")
-             >> a.reset)
+             >> a.reset
+             >> b.reset)
     
 ## set up non-compiled utility commands
 def clamp(x):
@@ -67,7 +70,7 @@ and evolve the synapse every time step like so:
 x_seq = jnp.asarray([[1, 1, 0, 0, 1]], dtype=jnp.float32)
 
 reset.run()
-print("{}: Wab = {}".format(-1, Wab.weights.value))
+print("{}: Wab = {}".format(-1, Wab.weights.get()))
 for ts in range(x_seq.shape[1]):
   x_t = jnp.expand_dims(x_seq[0,ts], axis=0) ## get data at time t
   clamp(x_t)
