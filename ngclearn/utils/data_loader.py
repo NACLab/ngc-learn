@@ -25,8 +25,14 @@ class DataLoader(object):
         key: PRNG key to control determinism of any underlying random values
             associated with this synaptic cable
     """
-    def __init__(self, design_matrices, batch_size, disable_shuffle=False,
-                 ensure_equal_batches=True, key=None):
+    def __init__(
+            self,
+            design_matrices,
+            batch_size,
+            disable_shuffle=False,
+            ensure_equal_batches=True,
+            key=None
+    ):
         self.key = key
         if self.key is None:
             self.key = random.PRNGKey(time.time_ns())
@@ -47,23 +53,25 @@ class DataLoader(object):
 
     def __iter__(self):
         """
-        Yields a mini-batch of the form:  [("name", batch),("name",batch),...]
+        Yields a mini-batch of the form:
+
+        | batch = [("name", batchx), ("name", batchy),...("name", batchz)]
         """
-        if self.disable_shuffle == False:
+        if not self.disable_shuffle: #self.disable_shuffle == False:
             self.key, *subkeys = random.split(self.key, 2)
             self.ptrs = random.permutation(subkeys[0], self.data_len)
         idx = 0
-        while idx < len(self.ptrs): # go through each sample via the sampling pointer
+        while idx < len(self.ptrs): ## go through each sample via the sampling pointer
             e_idx = idx + self.batch_size
-            if e_idx > len(self.ptrs): # prevents reaching beyond length of dataset
+            if e_idx > len(self.ptrs): ## prevents reaching beyond length of dataset
                 e_idx = len(self.ptrs)
-            # extract sampling integer pointers
+            ## extract sampling integer pointers
             indices = self.ptrs[idx:e_idx]
-            if self.ensure_equal_batches == True:
+            if self.ensure_equal_batches: # == True:
                 if indices.shape[0] < self.batch_size:
                     diff = self.batch_size - indices.shape[0]
                     indices = jnp.concatenate((indices, self.ptrs[0:diff]))
-            # create the actual pattern vector batch block matrices
+            ## create the actual pattern vector batch block matrices
             data_batch = []
             for dname, dmatrix in self.design_matrices:
                 x_batch = dmatrix[indices]
