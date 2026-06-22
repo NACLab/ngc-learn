@@ -5,29 +5,8 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
 from ngclearn.utils.surrogate_fx import (secant_lif_estimator, arctan_estimator,
                                          triangular_estimator,
                                          straight_through_estimator)
-
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
-
-def _dfv(t, v, params): ## voltage dynamics wrapper
-    j, rfr, tau_m, refract_T, v_rest, g_L = params
-    mask = (rfr >= refract_T) * 1.  # get refractory mask
-    ## update voltage / membrane potential
-    dv_dt = (v_rest - v) * g_L + (j * mask)
-    dv_dt = dv_dt * (1. / tau_m)
-    return dv_dt
-
-
-#@partial(jit, static_argnums=[3, 4])
-def _update_theta(dt, v_theta, s, tau_theta, theta_plus: Array=0.05):
-    ### Runs homeostatic threshold update dynamics one step (via Euler integration).
-    #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
-    #theta_plus = 0.05
-    #_V_theta = V_theta * theta_decay + S * theta_plus
-    theta_decay = jnp.exp(-dt/tau_theta)
-    _v_theta = v_theta * theta_decay + s * theta_plus
-    #_V_theta = V_theta + -V_theta * (dt/tau_theta) + S * alpha
-    return _v_theta
 
 
 class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
@@ -108,9 +87,24 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     """ ## batch_size arg?
 
     def __init__(
-            self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., conduct_leak=1., tau_theta=1e7,
-            theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler", surrogate_type="straight_through",
-            v_min=None, max_one_spike=False, key=None
+            self, 
+            name, 
+            n_units, 
+            tau_m, 
+            resist_m=1., 
+            thr=-52., 
+            v_rest=-65., 
+            v_reset=-60., 
+            conduct_leak=1., 
+            tau_theta=1e7,
+            theta_plus=0.05, 
+            refract_time=5., 
+            one_spike=False, 
+            integration_type="euler", 
+            surrogate_type="straight_through",
+            v_min=None, 
+            max_one_spike=False, 
+            key=None
     ):
         super().__init__(name, key)
 
@@ -162,29 +156,50 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") ## time-of-last-spike
         # self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
 
+    @staticmethod
+    def _dfv(t, v, params): ## voltage dynamics wrapper
+        j, rfr, tau_m, refract_T, v_rest, g_L = params
+        mask = (rfr >= refract_T) * 1.  ## get refractory mask
+        ## update voltage / membrane potential
+        dv_dt = (v_rest - v) * g_L + (j * mask)
+        dv_dt = dv_dt * (1. / tau_m)
+        return dv_dt
+
+    #@partial(jit, static_argnums=[3, 4])
+    @staticmethod
+    def _update_theta(dt, v_theta, s, tau_theta, theta_plus: Array=0.05):
+        ### Runs homeostatic threshold update dynamics one step (via Euler integration).
+        #theta_decay = 0.9999999 #0.999999762 #jnp.exp(-dt/1e7)
+        #theta_plus = 0.05
+        #_V_theta = V_theta * theta_decay + S * theta_plus
+        theta_decay = jnp.exp(-dt/tau_theta)
+        _v_theta = v_theta * theta_decay + s * theta_plus
+        #_V_theta = V_theta + -V_theta * (dt/tau_theta) + S * alpha
+        return _v_theta
+
     @compilable
     def advance_state(self, dt, t):
-        j = self.j.get() * self.resist_m
+        j = self.j.get() * self.resist_m ## get current electrical current input
 
         _v_thr = self.thr_theta.get() + self.thr  ## calc present voltage threshold
 
+        ## perform step of ODE integration
         v_params = (j, self.rfr.get(), self.tau_m.get(), self.refract_T, self.v_rest, self.g_L)
-
-        if self.intgFlag == 1:
-            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
-        else:
-            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
-
+        if self.intgFlag == 1: ## midpoint method
+            _, _v = step_rk2(0., self.v.get(), LIFCell._dfv, dt, v_params)
+        else: ## take forward Euler step
+            _, _v = step_euler(0., self.v.get(), LIFCell._dfv, dt, v_params)
+        ## calculate spike emission and post-spike voltage-reset mechanism
         s = (_v > _v_thr) * 1.
         _rfr = (self.rfr.get() + dt) * (1. - s)
         _v = _v * (1. - s) + s * self.v_reset
 
-        raw_s = s
+        raw_s = s ## "raw" spikes
 
         if self.one_spike and not self.max_one_spike:
             key, skey = random.split(self.key.get(), 2)
-
-            m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: not batch-able
+            #m_switch = (jnp.sum(s) > 0.).astype(jnp.float32) ## TODO: this line is not batch-able
+            m_switch = (jnp.sum(s, axis=1, keepdims=True) > 0.).astype(jnp.float32)
             rS = s * random.uniform(skey, s.shape)
             rS = nn.one_hot(jnp.argmax(rS, axis=1), num_classes=s.shape[1], dtype=jnp.float32)
             s = s * (1. - m_switch) + rS * m_switch
@@ -196,7 +211,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
 
         if self.tau_theta > 0.:
             ## run one integration step for threshold dynamics
-            thr_theta = _update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus) #.get())
+            thr_theta = LIFCell._update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus) #.get())
             self.thr_theta.set(thr_theta)
 
         ## update time-of-last spike variable(s)
@@ -205,7 +220,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         if self.v_min is not None: ## ensures voltage never < v_rest
             _v = jnp.maximum(_v, self.v_min)
 
-
+        ## update internal compartment values
         self.v.set(_v)
         self.s.set(s)
         self.s_raw.set(raw_s)
