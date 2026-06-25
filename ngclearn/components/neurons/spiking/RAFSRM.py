@@ -1,5 +1,5 @@
 from ngclearn.components.jaxComponent import JaxComponent
-from jax import numpy as jnp, jit
+from jax import numpy as jnp, jit, lax
 from ngclearn import compilable, Compartment
 
 
@@ -82,6 +82,7 @@ class RAFSRM(JaxComponent): ## RAF spike-response model (RAF-SRM)
         self.s = Compartment(jnp.zeros((self.batch_size, self.n_units)))
         ## set up analytical state filters (to match RAFCell construction)
         self.t_last_spike = Compartment(jnp.full((self.batch_size, self.n_units), -1.0))
+        self.next_spike_t = Compartment(jnp.full((self.batch_size, self.n_units), -1.0))
         self.j_v = Compartment(jnp.zeros((self.batch_size, self.n_units)))
         self.j_w = Compartment(jnp.zeros((self.batch_size, self.n_units)))
         self.last_t_eval = Compartment(jnp.zeros((self.batch_size, self.n_units)))
@@ -111,9 +112,25 @@ class RAFSRM(JaxComponent): ## RAF spike-response model (RAF-SRM)
         self.v.set(jnp.zeros((self.batch_size, self.n_units)))
         self.s.set(jnp.zeros((self.batch_size, self.n_units)))
         self.t_last_spike.set(jnp.full((self.batch_size, self.n_units), -1.0))
+        self.next_spike_t.set(jnp.full((self.batch_size, self.n_units), -1.0))
         self.j_v.set(jnp.zeros((self.batch_size, self.n_units)))
         self.j_w.set(jnp.zeros((self.batch_size, self.n_units)))
         self.last_t_eval.set(jnp.zeros((self.batch_size, self.n_units)))
+
+    @compilable
+    def predict_next_spike(self, t_start):
+        next_spike_t = RAFSRM._predict_next_spike(  ## next-spike-time predictor
+            t_start,
+            self.j_v.get(),
+            self.j_w.get(),
+            self.tau_v,
+            self.tau_w,
+            self.omega,
+            self.dampen_factor,
+            self.thr,
+            max_iters=10
+        )
+        self.next_spike_t.set(next_spike_t)  ## store predicted next spike time(s)
 
     @staticmethod
     def _evaluate_SRM_filter( ## kernel co-routine
@@ -176,11 +193,18 @@ class RAFSRM(JaxComponent): ## RAF spike-response model (RAF-SRM)
         return v_total, new_v, new_w
 
     @staticmethod
-    def predict_next_spike(
-        t_start, j_v, j_w, tau_v, tau_w, omega, dampen_factor, thr, max_iters=10
+    def _predict_next_spike( ## co-routine used to compute when a future spike will occur
+        t_start,
+        j_v,
+        j_w,
+        tau_v,
+        tau_w,
+        omega,
+        dampen_factor,
+        thr,
+        max_iters=10
     ):
-        ## co-routine used to compute when a future spike will occur
-        ## based on a Newton-Raphson root finding process to predict when exactly
+        ## NOTE: this co-routine is based on a Newton-Raphson root finding process to predict when exactly
         ## continuous sub-threshold wave equation will cross threshold line
 
         ## standardize SRM system parameters
@@ -220,7 +244,7 @@ class RAFSRM(JaxComponent): ## RAF spike-response model (RAF-SRM)
             return s_next, None
 
         ## execute unrolled iteration passes completely w/in JAX/JIT compiler context
-        final_s, _ = jax.lax.scan(scan_body, s_guess, None, length=max_iters)
+        final_s, _ = lax.scan(scan_body, s_guess, None, length=max_iters)
         predicted_t = t_start + final_s ## compute absolute (executed) global clock projection coordinate
         ## employ a safety check:
         ### if initial slope is negative (or diverging), flag it as un-triggered (i.e., -1.0)

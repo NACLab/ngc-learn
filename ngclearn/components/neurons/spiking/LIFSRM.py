@@ -70,6 +70,7 @@ class LIFSRM(JaxComponent): ## LIF spike-response model (LIF-SRM)
 
         ## analytical SRM state compartments/variables (NOTE: designed to avoid maintaining explicit spike history tensors)
         self.t_last_spike = Compartment(jnp.full((self.batch_size, self.n_units), -1.0))
+        self.next_spike_t = Compartment(jnp.full((self.batch_size, self.n_units), -1.0))
         self.j_lowpass = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## integrated input trace
         self.last_t_eval = Compartment(jnp.zeros((self.batch_size, self.n_units))) ## tracks clock index (when evaluated)
 
@@ -98,8 +99,22 @@ class LIFSRM(JaxComponent): ## LIF spike-response model (LIF-SRM)
         self.v.set(jnp.full((self.batch_size, self.n_units), self.v_rest))
         self.s.set(jnp.zeros((self.batch_size, self.n_units)))
         self.t_last_spike.set(jnp.full((self.batch_size, self.n_units), -1.0))
+        self.next_spike_t.set(jnp.full((self.batch_size, self.n_units), -1.0))
         self.j_lowpass.set(jnp.zeros((self.batch_size, self.n_units)))
         self.last_t_eval.set(jnp.zeros((self.batch_size, self.n_units)))
+
+    @compilable
+    def predict_next_spike(self, t_start):
+        next_spike_t = LIFSRM._predict_next_spike(  ## call next-spike-time predictor
+            t_start,
+            self.t_last_spike.get(),
+            self.j_lowpass.get(),
+            self.tau_m,
+            self.v_rest,
+            self.v_reset,
+            self.thr
+        )
+        self.next_spike_t.set(next_spike_t) ## store predicted next spike time(s)
 
     @staticmethod
     def _evaluate_SRM_filter( ## kernel co-routine
@@ -129,11 +144,11 @@ class LIFSRM(JaxComponent): ## LIF spike-response model (LIF-SRM)
         return v_total, new_j_trace
 
     @staticmethod
-    def predict_next_spike( ## next-spike-time prediction co-routine
+    def _predict_next_spike( ## next-spike-time prediction co-routine
         t_start, t_last_spike, j_lowpass, tau_m, v_rest, v_reset, thr
     ):
-        ## co-routine to predict future next spike, takes advantage of an LIF-SRM's 
-        ## closed-form setup; specificaly, this function calculates a future (global)
+        ## co-routine predicts future next spike, taking particular advantage of an LIF-SRM's
+        ## closed-form setup; specifically, this function calculates a future (global)
         ## clock time-stamp as to when this LIF model's decaying voltage would 
         ## cross a firing threshold (note, this does not require step-wise numerical integration)
         
@@ -160,4 +175,3 @@ class LIFSRM(JaxComponent): ## LIF spike-response model (LIF-SRM)
         ## safety check: if total driving force is insufficient to cross,
         ## then flag output as "un-triggered" (i.e.,-1.0)
         return jnp.where(can_reach_thr, predicted_t, -1.0) # predicted spike time(s)
-
