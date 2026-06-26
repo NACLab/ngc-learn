@@ -4,6 +4,7 @@ as experimental inspection and probing (many of these are neuroscience-oriented 
 """
 from jax import numpy as jnp, jit
 from functools import partial
+from ngcsimlib import deprecated
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
 
 @partial(jit, static_argnums=[1])
@@ -54,33 +55,57 @@ def measure_firingRate(spikes, preserve_batch=False):
     return fireRates
 
 @partial(jit, static_argnums=[1])
-def measure_breadth_TC(spikes, preserve_batch=False):
+def measure_breadthOfTuningCurve(responses, preserve_batch=False):
     """
-    Calculates the breath tuning curve (BTC) of a group of neurons given full
-    spike train.(s). BTC measures the neural selectivity such that the
-    sparse code distribution concentrates near zero with a heavy tail. For a
-    neural layer where most of the neurons fire, the activity distribution is
+    Calculates the breadth of tuning curve (BTC) of a population of neurons given full
+    response window(s), across multiple trials. BTC measures the neural selectivity such that the
+    sparse code distribution concentrates near zero with a heavy tail. 
+    Note that, within `responses`, neural response values will include measurements of 
+    characteristics such as firing rates, spike counts (burstiness measures), etc. 
+    at a particular point in time/stimulus condition (each row represents a condition). 
+
+    For a neural layer where most of the neurons fire, the activity distribution is
     more uniformly spread and BTC > 0.5. When most of the neurons do not fire,
     the firing distribution is peaked at zero and BTC < 0.5.
 
     Args:
-        spikes: full spike train matrix; shape is (T x D) where D is number of
-            neurons in a group/cluster
+        responses: tensor of shape (B x T x D), containing "evoked activity", where:
+            B = number of trials (batch length; trial axis=0); 
+            T = number of unique stimulus conditions / orientations (stimulus axis=1); and, 
+            D = number of neurons in the population (neural index axis=2)
+        preserve_batch: if True, returns (1 x D) vector of tuning widths (BTC) per neuron; 
+            if False, returns scalar representing population-wide average tuning width (BTC)
 
-        preserve_batch: if True, will return one score per neuron in train/window  
-            (Default: False), otherwise, returns scalar average score
-
-    Returns:
-        a 1 x D BTC vector (one factor per neuron) OR a single
-        average BTC across the neuronal group
+    Returns: 
+        a 1 x D BTC vector (one factor per neuron) OR a single average BTC across 
+        the neuronal group / population
     """
-    mu = jnp.mean(spikes, axis=0, keepdims=True)
-    sigSqr = jnp.square(jnp.std(spikes, axis=0, keepdims=True))
-    C = sigSqr/mu
-    BTC = 1./(1 + jnp.square(C))
-    if not preserve_batch:
+    ## clean out trial noise: mean across"trials" axis (axis=0)
+    clean_responses = jnp.mean(responses, axis=0, keepdims=True) ## (1xTxD)
+
+    ## calculate mean & variance across stimulus axis (i.e., `axis=1`)
+    mu = jnp.mean(clean_responses, axis=1, keepdims=True) ## (1x1xD)
+    sigSqr = jnp.square(jnp.std(clean_responses, axis=1, keepdims=True)) ## (1x1xD)
+
+    safe_mu = jnp.where(mu == 0.0, 1.0, mu)  ## check for 0/0 division for non-responsive neurons
+    C = sigSqr / safe_mu
+    raw_BTC = 1. / (1 + jnp.square(C)) ## raw original BTC metric
+
+    ## NOTE: if neuron never fires for any stimulus (mu == 0),  its breadth of 
+    ##       tuning is exactly 0.0 (not 1.0); thus assign it maximal sparsity
+    BTC = jnp.where(mu == 0.0, 0.0, raw_BTC) ## masking check
+    BTC = jnp.squeeze(BTC) ## obtain flat vector of length D (number of neurons)
+    if not preserve_batch: ## calc population average
         BTC = jnp.mean(BTC)
     return BTC
+
+@deprecated(replaced_by=measure_breadthOfTuningCurve)
+def measure_breadth_TC(responses, preserve_batch=False): ## old BTC function
+    """
+    WARNING: this function is deprecated (renamed to `measure_breadthOfTuningCurve(.)`).
+    """
+    return measure_breadthOfTuningCurve(responses, preserve_batch)
+
 
 @partial(jit, static_argnums=[1])
 def measure_gini_index(codes, preserve_batch=True):
@@ -164,8 +189,7 @@ def measure_sparsity(codes, tolerance=0., preserve_batch=True, flip_measure=Fals
         rho = jnp.mean(rho)
     return rho
 
-#@partial(jit, static_argnums=[2])
-def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation statistics
+def analyze_categorization_performance(mu, y, extract_label_indx=True): ## examines classifcation statistics
     """
     Analyzes a set of prediction matrix and target/ground-truth matrix or vector.
 
@@ -203,6 +227,13 @@ def analyze_scores(mu, y, extract_label_indx=True): ## examines classifcation st
     adj_acc = jnp.sum(equality_mask * (1. - miss_mask)) / (y.shape[0] * 1.)
     ## output analysis statistics
     return conf_matrix, precision, recall, misses, acc, adj_acc
+
+@deprecated(replaced_by=analyze_categorization_performance) ## deprecated name of funct was "analyze_scores(.)"
+def analyze_scores(*args, **kwargs):
+    """
+    WARNING: this function is deprecated (renamed to `analyze_categorization_performance(.)`).
+    """
+    return analyze_categorization_performance(*args, **kwargs)
 
 @partial(jit, static_argnums=[2])
 def measure_ACC(mu, y, extract_label_indx=True): ## measures/calculates accuracy
