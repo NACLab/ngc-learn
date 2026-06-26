@@ -657,9 +657,11 @@ def swish(x, beta):
 def d_swish(x, beta):
     # df/dx = beta * [ 1/(exp(-x) + 1) + (exp(-x) * x) / (exp(-x) + 1)^2]
     # df/dx = beta * sigmoid(x * beta) * (1 - sigmoid(x) * beta)
-    exp_neg_x = jnp.exp(-x)
-    _x = (1./(exp_neg_x + 1.)) + (exp_neg_x * x)/jnp.square(exp_neg_x+1)
-    return _x * beta
+    # exp_neg_x = jnp.exp(-x)
+    # _x = (1./(exp_neg_x + 1.)) + (exp_neg_x * x)/jnp.square(exp_neg_x+1)
+    # return _x * beta
+    return sigmoid(x * beta) + beta * x * d_sigmoid(x * beta)
+
 
 @jit
 def silu(x):
