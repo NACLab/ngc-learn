@@ -19,6 +19,9 @@ from .neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .neurons.spiking.izhikevichCell import IzhikevichCell
 from .neurons.spiking.hodgkinHuxleyCell import HodgkinHuxleyCell
 from .neurons.spiking.RAFCell import RAFCell
+## point to standard spiking spike-response model component types
+from .neurons.spiking.LIFSRM import LIFSRM
+from .neurons.spiking.RAFSRM import RAFSRM
 
 ## point to transformer/operator component types
 from .other.varTrace import VarTrace
@@ -30,6 +33,7 @@ from .input_encoders.poissonCell import PoissonCell
 from .input_encoders.ganglionCell import RetinalGanglionCell
 from .input_encoders.latencyCell import LatencyCell
 from .input_encoders.phasorCell import PhasorCell
+from .input_encoders.TTFSCell import TTFSCell
 #from .input_encoders.populationCoderCell import PopulationCoderCell
 #from .input_encoders.gridCell import GridCell
 #from .input_encoders.placeCell import PlaceCell

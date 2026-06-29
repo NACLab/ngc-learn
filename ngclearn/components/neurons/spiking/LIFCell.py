@@ -155,6 +155,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift", units="mV")
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") ## time-of-last-spike
         # self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
+        self.v_thr = Compartment(restVals + self.thr)
 
     @staticmethod
     def _dfv(t, v, params): ## voltage dynamics wrapper
@@ -213,6 +214,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
             ## run one integration step for threshold dynamics
             thr_theta = LIFCell._update_theta(dt, self.thr_theta.get(), raw_s, self.tau_theta, self.theta_plus) #.get())
             self.thr_theta.set(thr_theta)
+            self.v_thr.set(self.thr + thr_theta)
 
         ## update time-of-last spike variable(s)
         self.tols.set((1. - s) * self.tols.get() + (s * t))
@@ -237,6 +239,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.s_raw.set(restVals)
         self.rfr.set(restVals + self.refract_T)
         self.tols.set(restVals)
+        self.v_thr.set(restVals + self.thr)
 
     @classmethod
     def help(cls): ## component help function
