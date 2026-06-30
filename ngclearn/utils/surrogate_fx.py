@@ -60,13 +60,6 @@ def triangular_estimator(get_surr_fx=False):
         # Peak value is bounded, slope drops off proportional to alpha
         gradient = 1.0 - alpha * jnp.abs(v_centered)
         return jnp.maximum(0.0, gradient)
-    @jit
-    def d_spike_fx(v, thr=0., window=5.0):
-        ## sloped surrogate gate with an explicit window size
-        distance = jnp.abs(v - thr)
-        ## linear ramp down to 0.0 at edge of window
-        gradient = 1.0 - (distance / window)
-        return jnp.maximum(0.0, gradient) ## clip negative values to 0.0
     if get_surr_fx:
         return spike_fx, spike_fx, d_spike_fx
     else:
