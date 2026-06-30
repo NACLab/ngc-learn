@@ -32,7 +32,7 @@ def straight_through_estimator(get_surr_fx=False):
     @jit
     def d_spike_fx(v, thr):
         return v * 0 + 1.
-    if get_surr_fx == True:
+    if get_surr_fx:
         return spike_fx, spike_fx, d_spike_fx
     else:
         return spike_fx, d_spike_fx
@@ -48,12 +48,51 @@ def triangular_estimator(get_surr_fx=False):
     @jit
     def spike_fx(v, thr):
         return (v > thr).astype(jnp.float32)
+    # @jit
+    # def d_spike_fx1(v, thr=0., alpha=0.2):
+    #     mask = (v < thr).astype(jnp.float32)
+    #     dfx = mask * thr - (1. - mask) * thr
+    #     return dfx
     @jit
-    def d_spike_fx(v, thr):
-        mask = (v < thr).astype(jnp.float32)
-        dfx = mask * thr - (1. - mask) * thr
-        return dfx
-    if get_surr_fx == True:
+    def d_spike_fx(v, thr=0., alpha=2.0):
+        ## alpha: controls the width of triangle base (larger alpha = narrower window).
+        v_centered = v - thr
+        # Peak value is bounded, slope drops off proportional to alpha
+        gradient = 1.0 - alpha * jnp.abs(v_centered)
+        return jnp.maximum(0.0, gradient)
+    @jit
+    def d_spike_fx(v, thr=0., window=5.0):
+        ## sloped surrogate gate with an explicit window size
+        distance = jnp.abs(v - thr)
+        ## linear ramp down to 0.0 at edge of window
+        gradient = 1.0 - (distance / window)
+        return jnp.maximum(0.0, gradient) ## clip negative values to 0.0
+    if get_surr_fx:
+        return spike_fx, spike_fx, d_spike_fx
+    else:
+        return spike_fx, d_spike_fx
+
+def explicit_triangular_estimator(get_surr_fx=False):
+    """
+    The explicit triangular surrogate gradient estimator for binary spike emission.
+    This is controlled by a "window" argument, instead of the alpha-scaled variant
+    `triangular_estimator()'.
+
+    Returns:
+        ( spike_fx(x, thr), d_spike_fx(x, thr) ) OR
+        ( spike_fx(x, thr), surr_fx(x, thr, args), d_spike_fx(x, thr, args) )
+    """
+    @jit
+    def spike_fx(v, thr):
+        return (v > thr).astype(jnp.float32)
+    @jit
+    def d_spike_fx(v, thr=0., window=5.0):
+        ## sloped surrogate gate with an explicit window size
+        distance = jnp.abs(v - thr)
+        ## linear ramp down to 0.0 at edge of window
+        gradient = 1.0 - (distance / window)
+        return jnp.maximum(0.0, gradient) ## clip negative values to 0.0
+    if get_surr_fx:
         return spike_fx, spike_fx, d_spike_fx
     else:
         return spike_fx, d_spike_fx
@@ -79,12 +118,35 @@ def arctan_estimator(get_surr_fx=False):
         return jnp.arctan(v * (alpha/2.) * pi) * (1. / pi)
     @jit
     def d_spike_fx(v, thr=0., alpha=2.):
+        v_centered = v - thr
         pi = jnp.pi
-        divTerm = jnp.square(v * pi * (alpha/2.))
+        divTerm = jnp.square(v_centered * pi * (alpha/2.))
         dfx = (1./(1. + divTerm)) * (1./pi)
         return dfx
-    if get_surr_fx == True:
+    if get_surr_fx:
         return spike_fx, surr_fx, d_spike_fx
+    else:
+        return spike_fx, d_spike_fx
+
+def boxcar_estimator(get_surr_fx=False):
+    """
+    The box-car surrogate gradient estimator for binary spike emission.
+
+    Returns:
+        ( spike_fx(x, thr), d_spike_fx(x, thr) ) OR
+        ( spike_fx(x, thr), surr_fx(x, thr, args), d_spike_fx(x, thr, args) )
+    """
+    @jit
+    def spike_fx(v, thr):
+        return (v > thr).astype(jnp.float32)
+    @jit
+    def d_spike_fx(v, thr=0., window=5.0):
+        ## returns 1.0 if voltage is w/in a "window" millivolts of threshold; else 0
+        distance = jnp.abs(v - thr)
+        dfx = jnp.where(distance <= window, 1.0, 0.0) ## box-car gate
+        return dfx
+    if get_surr_fx:
+        return spike_fx, spike_fx, d_spike_fx
     else:
         return spike_fx, d_spike_fx
 

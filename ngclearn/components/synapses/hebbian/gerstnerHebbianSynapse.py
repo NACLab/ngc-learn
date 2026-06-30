@@ -13,10 +13,10 @@ class GerstnerHebbianSynapse(DenseSynapse):
     A synapse component that implements Gerstner's general Hebbian
     learning (Taylor) expansion (Equation 3 from Gerstner & Kistler, 2002).
 
-    Note that this synpatic update model can recover several classical forms
+    Note that this synaptic update model can recover several classical forms
     of Hebbian-like update rules, including the covariance rule.
 
-    There are other higher-order terms possible, i.e., \Theta(xy), such as
+    There are other higher-order terms possible, i.e., Theta(xy), such as
     x * y2 and y x^2, etc.
 
     | c2_corr > 0 and c0 = c1_pre = c1_post = 0 => Hebbian update
