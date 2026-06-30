@@ -26,6 +26,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
     | v - membrane potential/voltage state
     | rfr - (relative) refractory variable state
     | thr_theta - homeostatic/adaptive threshold increment state
+    | surrogate - current estimated derivative of spikes w.r.t. j
     | key - JAX PRNG key
     | --- Cell Output Compartments: ---
     | s - emitted binary spikes/action potentials
@@ -135,15 +136,9 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.batch_size = 1
         self.n_units = n_units
 
-        # ## set up surrogate function for spike emission
-        # if surrogate_type == "secant_lif":
-        #     spike_fx, d_spike_fx = secant_lif_estimator()
-        # elif surrogate_type == "arctan":
-        #     spike_fx, d_spike_fx = arctan_estimator()
+        self.spike_fx, self.d_spike_fx = arctan_estimator() ## arctan
         # elif surrogate_type == "triangular":
         #     spike_fx, d_spike_fx = triangular_estimator()
-        # else: ## default: straight_through
-        #     spike_fx, d_spike_fx = straight_through_estimator()
 
         ## Compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
@@ -154,7 +149,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.rfr = Compartment(restVals + self.refract_T, display_name="Refractory Time Period", units="ms")
         self.thr_theta = Compartment(restVals, display_name="Threshold Adaptive Shift", units="mV")
         self.tols = Compartment(restVals, display_name="Time-of-Last-Spike", units="ms") ## time-of-last-spike
-        # self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
+        self.surrogate = Compartment(restVals + 1., display_name="Surrogate State Value")
         self.v_thr = Compartment(restVals + self.thr)
 
     @staticmethod
@@ -193,6 +188,11 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         ## calculate spike emission and post-spike voltage-reset mechanism
         s = (_v > _v_thr) * 1.
         _rfr = (self.rfr.get() + dt) * (1. - s)
+        ## calculate a surrogate estimate of ds/dj
+        ds_dv = self.d_spike_fx(_v, _v_thr, alpha=0.2) ## deriv of spike w.r.t. v/j
+        ds_dj = (self.resist_m * dt) / self.tau_m.get()
+        self.surrogate.set(ds_dv * ds_dj)
+        ## set after-potential values
         _v = _v * (1. - s) + s * self.v_reset
 
         raw_s = s ## "raw" spikes
@@ -237,6 +237,7 @@ class LIFCell(JaxComponent): ## leaky integrate-and-fire cell
         self.v.set(restVals + self.v_rest)
         self.s.set(restVals)
         self.s_raw.set(restVals)
+        self.surrogate.set(restVals + 1.)
         self.rfr.set(restVals + self.refract_T)
         self.tols.set(restVals)
         self.v_thr.set(restVals + self.thr)

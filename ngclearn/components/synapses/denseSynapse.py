@@ -11,11 +11,14 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
     A dense synaptic cable; no form of synaptic evolution/adaptation
     is in-built to this component.
 
-    | --- Synapse Compartments: ---
+    | --- Synapse Input Compartments: ---
     | inputs - input (takes in external signals)
-    | outputs - output signals
+    | --- Synapse State Compartments: ---
     | weights - current value matrix of synaptic efficacies (strength values)
     | biases - current value vector of synaptic bias values
+    | gate - current values of multiplicative (output) gate/modulator (Default: 1)
+    | --- Synapse Output Compartments: ---
+    | outputs - output signals
 
     Args:
         name: the string name of this cell
@@ -91,21 +94,24 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         if bias_init is None:
             info(self.name, "is using default bias value of zero (no bias kernel provided)!")
         self.biases = Compartment(bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0)
+        self.gate = Compartment(postVals + 1.)
         ## pin weight/bias initializers to component
         self.weight_init = weight_init
         self.bias_init = bias_init
 
     @compilable
     def advance_state(self):
+        gate = self.gate.get()
         weights = self.weights.get()
         weights = weights * self.mask.get()
-        self.outputs.set((jnp.matmul(self.inputs.get(), weights) * self.resist_scale) + self.biases.get())
+        self.outputs.set((jnp.matmul(self.inputs.get(), weights) * gate * self.resist_scale) + self.biases.get())
 
     @compilable
     def reset(self):
         if not self.inputs.targeted:
             self.inputs.set(jnp.zeros((self.batch_size, self.shape[0])))
-
+        if not self.gate.targeted:
+            self.gate.set(jnp.ones((self.batch_size, self.shape[1])))
         self.outputs.set(jnp.zeros((self.batch_size, self.shape[1])))
 
     @classmethod
