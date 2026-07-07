@@ -2,17 +2,15 @@
 
 import matplotlib.pyplot as plt
 from jax import random, numpy as jnp, jit
-from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
-
-from ngcsimlib.logger import info
-from ngclearn import compilable #from ngcsimlib.parser import compilable
-from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+from ngclearn.utils.io_utils import save_pkl, load_pkl
+from ngclearn import compilable 
+from ngclearn import Compartment 
 
 from ngclearn.components.synapses.patched import PatchedSynapse
 from ngclearn.utils import tensorstats
 
-# @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
+
 def _calc_update(
         pre, post, W, mask, w_bound, is_nonnegative=True, signVal=1., prior_type=None, prior_lmbda=0., pre_wght=1.,
         post_wght=1.
@@ -75,7 +73,7 @@ def _calc_update(
 
     return dW * signVal, db * signVal
 
-# @partial(jit, static_argnums=[1,2, 3])
+
 def _enforce_constraints(W, block_mask, w_bound, is_nonnegative=True):
     """
     Enforces constraints that the (synaptic) efficacies/values within matrix
@@ -234,10 +232,10 @@ class HebbianPatchedSynapse(PatchedSynapse):
         self.dWeights = Compartment(jnp.zeros(self.shape))
         self.dBiases = Compartment(jnp.zeros(self.shape[1]))
 
-        #key, subkey = random.split(self.key.get())
         self.opt_params = Compartment(get_opt_init_fn(optim_type)(
             [self.weights.get(), self.biases.get()]
-            if bias_init else [self.weights.get()]))
+            if bias_init else [self.weights.get()]),
+            auto_save=False)
 
     @staticmethod
     def _compute_update(block_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
@@ -249,6 +247,16 @@ class HebbianPatchedSynapse(PatchedSynapse):
             post_wght=post_wght)
 
         return dW  * jnp.where(0 != jnp.abs(weights), 1, 0) , db
+
+    def save(self, directory: str):
+        super().save(directory)
+        # Also save the optimizer parameters
+        save_pkl(directory, self.name + "_opt_params", self.opt_params.get())
+
+    def load(self, directory: str):
+        super().load(directory)
+        # load the optimizer parameters in a custom way
+        self.opt_params.set(load_pkl(directory, self.name + "_opt_params"))
 
     @compilable
     def evolve(self):
