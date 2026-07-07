@@ -48,6 +48,7 @@ class TTFSCell(JaxComponent): ## time-to-first-spike (en)coding cell
             **kwargs
     ):
         super().__init__(name, **kwargs)
+
         ## ttfs meta-parameters
         self.n_units = n_units
         self.batch_size = batch_size

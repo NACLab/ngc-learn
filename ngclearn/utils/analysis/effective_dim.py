@@ -1,11 +1,17 @@
-from jax import numpy as jnp
+from jax import numpy as jnp, jit
 
-def participation_ratio(latent_codes):
+@partial(jit, static_argnums=[1])
+def participation_ratio(
+    latent_codes, use_NaN_fallback=False
+):
     """
     Calculates the participation ratio coefficient for a set of latent codes
 
     Args:
         latent_codes: a set of (N x D) latent code vectors (one row per vector code)
+
+        use_NaN_fallback: if True, this function returns NaN for a squared covariance 
+            trace of zero; else, it returns an eff-dim of 1 (Default: False)
 
     Returns:
         scalar measurement of the effective dimension
@@ -18,6 +24,12 @@ def participation_ratio(latent_codes):
     tr2_cov = tr * tr
     cov2_tr = jnp.trace(cov @ cov)
 
+    ## this algorithm supports one of two fallback cases
+    if not use_NaN_fallback: ## use fallback-to-1 eff-dim check
+        ## use JAX-friendly conditional / direct switch to fallback to 1.0.
+        ### if squared trace of covariance is 0 then effective dimension is 1.0
+        return jnp.where(cov2_tr > 0.0, tr2_cov / cov2_tr, 1.0)
+    ##else, use ML-oriented NaN return value fallback
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
 
 def rankme(Z, eps=1e-7):
@@ -30,14 +42,16 @@ def rankme(Z, eps=1e-7):
     Args:
         Z: a set of (N x D) latent code vectors (one row per vector code)
 
+        eps: (regularization) constant to prevent division by zero
+
     Returns:
         scalar measurement of the effective dimension
     """
 
-    singular_values = jnp.linalg.svd(Z, compute_uv=False)   ## singular values of Z
-    sum_singular_vals = jnp.sum(singular_values)            ## L1
+    singular_values = jnp.linalg.svd(Z, compute_uv=False) ## singular values of Z
+    sum_singular_vals = jnp.sum(singular_values) ## L1
     if sum_singular_vals <= 0:
         return float("nan")
-    p = singular_values / sum_singular_vals + eps          ## L1-normalized singular value
-    shannon_entropy = -jnp.sum(p * jnp.log(p))             ## Shannon entropy
-    return jnp.exp(shannon_entropy)                        ## exp(Shannon entropy) = effective rank
+    p = singular_values / sum_singular_vals + eps ## L1-normalized singular value
+    shannon_entropy = -jnp.sum(p * jnp.log(p)) ## calc Shannon entropy
+    return jnp.exp(shannon_entropy) ## compute final exp(Shannon entropy) = effective rank
