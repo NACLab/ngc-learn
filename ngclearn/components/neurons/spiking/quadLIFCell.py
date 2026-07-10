@@ -120,9 +120,23 @@ class QuadLIFCell(LIFCell): ## quadratic integrate-and-fire cell
 
     @deprecate_args(thr_jitter=None, critical_V="critical_v")
     def __init__(
-            self, name, n_units, tau_m, resist_m=1., thr=-52., v_rest=-65., v_reset=-60., v_scale=-41.6, critical_v=1.,
-            tau_theta=1e7, theta_plus=0.05, refract_time=5., one_spike=False, integration_type="euler",
-            surrogate_type="straight_through", v_min=None, **kwargs
+            self,
+            name,
+            n_units,
+            tau_m, resist_m=1.,
+            thr=-52.,
+            v_rest=-65.,
+            v_reset=-60.,
+            v_scale=-41.6,
+            critical_v=1.,
+            tau_theta=1e7,
+            theta_plus=0.05,
+            refract_time=5.,
+            one_spike=False,
+            integration_type="euler",
+            surrogate_type="straight_through",
+            v_min=None,
+            **kwargs
     ):
         super().__init__(
             name, n_units, tau_m, resist_m, thr, v_rest, v_reset, 1., tau_theta, theta_plus, refract_time,

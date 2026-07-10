@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses.denseSynapse import DenseSynapse
@@ -46,18 +47,33 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
-        resist_scale: a fixed scaling factor to apply to synaptic transform
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform
             (Default: 1), i.e., yields: out = ((W * Rscale) * in) + b
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, eta, lmbda=0.01, A_plus=1., A_minus=1., presyn_win_len=2., w_bound=1., 
-            weight_init=None, resist_scale=1., p_conn=1., batch_size=1, **kwargs
+            self,
+            name,
+            shape,
+            eta,
+            lmbda=0.01,
+            A_plus=1.,
+            A_minus=1.,
+            presyn_win_len=2.,
+            w_bound=1.,
+            weight_init=None,
+            g_conduct_factor=1.,
+            p_conn=1.,
+            batch_size=1,
+            **kwargs
     ):
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(
+            name, shape, weight_init, None, g_conduct_factor, p_conn, batch_size=batch_size, **kwargs
+        )
 
         ## Synaptic hyper-parameters
         self.eta = eta ## global learning rate governing plasticity
@@ -66,7 +82,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
         assert self.presyn_win_len >= 0. ## pre-synaptic window must be non-negative
         self.Aplus = A_plus
         self.Aminus = A_minus
-        self.Rscale = resist_scale ## post-transformation scale factor
+        self.Rscale = g_conduct_factor ## post-transformation scale factor
         self.w_bound = w_bound ## soft weight constraint
 
         ## Compartment setup
@@ -143,7 +159,7 @@ class EventSTDPSynapse(DenseSynapse): # event-driven, post-synaptic STDP
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "lmbda": "Degree of synaptic disconnect",
             "eta": "Global learning rate (multiplier beyond A_plus and A_minus)",

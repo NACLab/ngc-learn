@@ -4,14 +4,11 @@ from jax import random, jit
 from ngclearn import compilable
 from ngclearn import Compartment
 from ngclearn.components.synapses import DenseSynapse
-from ngclearn.utils import tensorstats
-from ngcsimlib import deprecate_args
-#from ngclearn.utils.io_utils import save_pkl, load_pkl
 
 class GerstnerHebbianSynapse(DenseSynapse):
     """
-    A synapse component that implements Gerstner's general Hebbian
-    learning (Taylor) expansion (Equation 3 from Gerstner & Kistler, 2002).
+    A synapse component that implements Gerstner's general Hebbian learning (Taylor) expansion (Equation 3 from
+    Gerstner & Kistler, 2002).
 
     Note that this synaptic update model can recover several classical forms
     of Hebbian-like update rules, including the covariance rule.
@@ -27,6 +24,32 @@ class GerstnerHebbianSynapse(DenseSynapse):
     | Gerstner, W. and Kistler, W.M., 2002. Mathematical formulations of Hebbian 
     | learning. Biological cybernetics, 87(5), pp.404-415.
 
+    Args:
+        name: the string name of this cell
+
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
+            with number of inputs by number of outputs)
+
+        eta: global learning rate
+
+        coeffs: dictionary containing relevant (meta-)parameter coefficients for this hebbian-synapse;
+            this dictionary must contain/specificy `c0`, `c1_pre`, `c1_post`, `c2_corr`
+
+        weight_init: a kernel to drive initialization of this synaptic cable's values;
+            typically a tuple with 1st element as a string calling the name of
+            initialization to use
+
+        sign_value: multiplicative factor to apply to final synaptic update before
+            it is applied to synapses; this is useful if gradient descent style
+            optimization is required (as Hebbian rules typically yield
+            adjustments for ascent)
+
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in) + b
+
+        p_conn: probability of a connection existing (default: 1.); setting
+            this to < 1. will result in a sparser synaptic structure
+
     """
     def __init__(
         self,
@@ -36,7 +59,7 @@ class GerstnerHebbianSynapse(DenseSynapse):
         coeffs=None, ## these configure which kind of Hebb learning is done
         weight_init=None,
         p_conn=1.,
-        resist_scale=1.,
+        g_conduct_factor=1.,
         sign_value=1.,
         batch_size=1,
         **kwargs
@@ -47,7 +70,7 @@ class GerstnerHebbianSynapse(DenseSynapse):
             shape=shape,
             weight_init=weight_init,
             bias_init=bias_init,
-            resist_scale=resist_scale,
+            g_conduct_factor=g_conduct_factor,
             p_conn=p_conn,
             batch_size=batch_size,
             **kwargs

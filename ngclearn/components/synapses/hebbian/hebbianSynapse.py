@@ -160,22 +160,37 @@ class HebbianSynapse(DenseSynapse):
 
         post_wght: post-synaptic weighting factor (Default: 1.)
 
-        resist_scale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in) + b
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in) + b
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
     """
 
-    @deprecate_args(_rebind=False, w_decay='prior')
+    @deprecate_args(_rebind=True, w_decay='prior', resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, eta=0., weight_init=None, bias_init=None, w_bound=1., is_nonnegative=False,
-            prior=("constant", 0.), w_decay=0., sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., 
-            p_conn=1., resist_scale=1., batch_size=1, **kwargs
+            self,
+            name,
+            shape,
+            eta=0.,
+            weight_init=None,
+            bias_init=None,
+            w_bound=1.,
+            is_nonnegative=False,
+            prior=("constant", 0.),
+            w_decay=0.,
+            sign_value=1.,
+            optim_type="sgd",
+            pre_wght=1.,
+            post_wght=1.,
+            p_conn=1.,
+            g_conduct_factor=1.,
+            batch_size=1,
+            **kwargs
     ):
         super().__init__(
-            name, shape=shape, weight_init=weight_init, bias_init=bias_init, resist_scale=resist_scale, p_conn=p_conn,
-            batch_size=batch_size, **kwargs
+            name, shape=shape, weight_init=weight_init, bias_init=bias_init, g_conduct_factor=g_conduct_factor,
+            p_conn=p_conn, batch_size=batch_size, **kwargs
         )
 
         if w_decay > 0.:
@@ -186,7 +201,7 @@ class HebbianSynapse(DenseSynapse):
             prior_type = "constant"
         ## synaptic plasticity properties and characteristics
         self.shape = shape
-        self.Rscale = resist_scale
+        self.Rscale = g_conduct_factor
         self.prior_type = prior_type
         if self.prior_type.lower() == "gaussian":
             self.prior_type = "ridge"
@@ -338,7 +353,7 @@ class HebbianSynapse(DenseSynapse):
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "is_nonnegative": "Should synapses be constrained to be non-negative post-updates?",
             "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",

@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngcsimlib.logger import info
@@ -38,15 +39,16 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
-            transform (Default: 1.), i.e., yields: out = ((W @.T Rscale) * in) + b
+        g_conduct_factor: a fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((W @.T g_conduct_factor) * in) + b
             where `@.T` denotes deconvolution
 
         batch_size: batch size dimension of this component
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, x_shape, filter_init=None, bias_init=None, stride=1, padding=None, resist_scale=1.,
+            self, name, shape, x_shape, filter_init=None, bias_init=None, stride=1, padding=None, g_conduct_factor=1.,
             batch_size=1, **kwargs
     ):
         super().__init__(name, **kwargs)
@@ -58,7 +60,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         self.shape = shape ## shape of synaptic filter tensor
         x_size, x_size = x_shape
         self.x_size = x_size
-        self.resist_scale = resist_scale ## post-transformation scale factor
+        self.g_conduct_factor = g_conduct_factor ## post-transformation scale factor
         self.padding = padding
         self.stride = stride
 
@@ -84,8 +86,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         self.outputs = Compartment(jnp.zeros(self.out_shape))
         self.weights = Compartment(weights)
         if self.bias_init is None:
-            info(self.name, "is using default bias value of zero (no bias "
-                            "kernel provided)!")
+            info(self.name, "is using default bias value of zero (no bias kernel provided)!")
         self.biases = Compartment(
             # dist.initialize_params(subkeys[2], bias_init, (1, shape[1])) if bias_init else 0.0
             self.bias_init((1, shape[1]), subkeys[2]) if bias_init else 0.0
@@ -96,7 +97,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
         _x = self.inputs.get()
         out = deconv2d(
             _x, self.weights.get(), stride_size=self.stride, padding=self.padding
-        ) * self.resist_scale + self.biases.get()
+        ) * self.g_conduct_factor + self.biases.get()
         self.outputs.set(out)
 
     @compilable
@@ -143,7 +144,7 @@ class DeconvSynapse(JaxComponent): ## base-level deconvolutional cable
             "x_shape": "Shape of any single incoming/input feature map",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level output scaling factor (R)",
+            "g_conduct_factor": "Conductance level output scaling factor (R)",
             "stride": "length / size of stride",
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`"
         }

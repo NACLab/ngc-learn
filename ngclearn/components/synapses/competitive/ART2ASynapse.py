@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit, nn
+from ngcsimlib import deprecate_args
 from functools import partial
 from ngclearn import compilable 
 from ngclearn import Compartment 
@@ -6,15 +7,6 @@ from ngclearn.utils.model_utils import softmax, bkwta
 
 from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
-@partial(jit, static_argnums=[1])
-def _normalize(x_in, norm_fx=0):
-    if norm_fx == 1:
-        xmin = jnp.min(x, axis=1, keepdims=True)
-        xmax = jnp.max(x, axis=1, keepdims=True)
-        x = (x_in - xmin)/(xmax - xmin)
-    else:
-        x = x_in / jnp.linalg.norm(x_in, ord=2, axis=1, keepdims=True)
-    return x
 
 class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic cable
     """
@@ -58,12 +50,13 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
-        resist_scale: a fixed scaling factor to apply to synaptic transform (Default: 1.)
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform (Default: 1.)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
             self,
             name,
@@ -72,13 +65,13 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
             eta_decrement=0., ## linear scheduled decrement over eta
             vigilance=0.3, ## vigilance parameter (rho)
             weight_init=None,
-            resist_scale=1.,
+            g_conduct_factor=1.,
             p_conn=1.,
             batch_size=1,
             **kwargs
     ):
         super().__init__(
-            name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs
+            name, shape, weight_init, None, g_conduct_factor, p_conn, batch_size=batch_size, **kwargs
         )
 
         ### Synapse and ART-2A hyper-parameters
@@ -142,13 +135,24 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
         ##       can add a function that "grows" out block matrix by a chunk (to control growth)
         ## TODO: add pruning mechanism for low-usage slots
 
+    #@partial(jit, static_argnums=[1])
+    @staticmethod
+    def _normalize(x_in, norm_fx=0):
+        if norm_fx == 1:
+            xmin = jnp.min(x, axis=1, keepdims=True)
+            xmax = jnp.max(x, axis=1, keepdims=True)
+            x = (x_in - xmin) / (xmax - xmin)
+        else:
+            x = x_in / jnp.linalg.norm(x_in, ord=2, axis=1, keepdims=True)
+        return x
+
     @compilable
     def advance_state(self): ## forward-inference step of ART2A
         x_in = self.inputs.get()
         W = self.weights.get() ## get (transposed) memory matrix
         used = self.used.get()
 
-        x = _normalize(x_in, norm_fx=self.norm_fx) 
+        x = ART2ASynapse._normalize(x_in, norm_fx=self.norm_fx)
         self.xprobe.set(x)
         sims = jnp.matmul(x, W) ## compute similarities (parallel dot products)
         ## we correct activities by masking out unused slots
@@ -227,7 +231,7 @@ class ART2ASynapse(DenseSynapse): # Adaptive resonance theory (ART) 2A synaptic 
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "eta": "Global learning rate",
             "eta_decrement": "Constant amount to decrease global learning by each call to `evolve`"

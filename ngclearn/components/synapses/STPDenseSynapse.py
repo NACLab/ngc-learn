@@ -1,5 +1,6 @@
 from jax import random, numpy as jnp, jit
 from ngcsimlib.logger import info
+from ngcsimlib import deprecate_args
 
 from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngclearn import compilable #from ngcsimlib.parser import compilable
@@ -38,8 +39,8 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
 
-        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
-            transform (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+        g_conduct_factor: a fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1 and > 0. will result in a sparser synaptic structure
@@ -54,11 +55,23 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         resources_int: initialization kernel for synaptic resources matrix
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, weight_init=None, bias_init=None, resist_scale=1., p_conn=1., tau_f=750., tau_d=50.,
-            resources_init=None, **kwargs
+            self,
+            name,
+            shape,
+            weight_init=None,
+            bias_init=None,
+            g_conduct_factor=1.,
+            p_conn=1.,
+            tau_f=750.,
+            tau_d=50.,
+            resources_init=None,
+            **kwargs
     ):
-        super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
+        super().__init__(
+            name, shape, weight_init, bias_init, g_conduct_factor, p_conn, **kwargs
+        )
         ## STP meta-parameters
         self.resources_init = resources_init
         self.tau_f = tau_f
@@ -94,7 +107,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
         if self.tau_d > 0.:
             x = x + (1. - x) * (1./self.tau_d) - u * x * s
         ## else, do nothing with x (keep it pointing to current x compartment)
-        outputs = jnp.matmul(self.inputs.get(), Wdyn * self.resist_scale) + self.biases.get()
+        outputs = jnp.matmul(self.inputs.get(), Wdyn * self.g_conduct_factor) + self.biases.get()
 
         self.outputs.set(outputs)
         self.u.set(u)
@@ -156,7 +169,7 @@ class STPDenseSynapse(DenseSynapse): ## short-term plastic synaptic cable
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance/average level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "tau_f": "Short-term facilitation time constant",
             "tau_d": "Short-term depression time constant"

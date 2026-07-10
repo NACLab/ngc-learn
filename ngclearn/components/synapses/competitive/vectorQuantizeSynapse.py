@@ -1,13 +1,11 @@
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.utils.model_utils import softmax, bkwta #, chebyshev_norm
 
 from ngclearn.components.synapses.denseSynapse import DenseSynapse
 
-def _gaussian_kernel(dist, sigma): ## Gaussian weighting function
-    density = jnp.exp(-jnp.power(dist, 2) / (2 * (sigma ** 2)))  # n_units x 1
-    return density
 
 class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic cable
     """
@@ -74,13 +72,14 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
-        resist_scale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
             self,
             name,
@@ -94,13 +93,13 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
             initial_patterns=None, ## possible class-based prototypes to init by
             langevin_noise_scale=0., ## scale of Langevin noise to apply to updates
             weight_init=None,
-            resist_scale=1.,
+            g_conduct_factor=1.,
             p_conn=1.,
             batch_size=1,
             **kwargs
     ):
         super().__init__(
-            name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs
+            name, shape, weight_init, None, g_conduct_factor, p_conn, batch_size=batch_size, **kwargs
         )
 
         ### Synapse / VQ hyper-parameters
@@ -153,6 +152,12 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
                 self.weights.set(initX)
                 if self.label_dim > 0: ## do we preload label matrix?
                     self.label_weights.set(initY)
+
+    @staticmethod
+    def _gaussian_kernel(dist, sigma):  ## Gaussian weighting function
+        density = jnp.exp(-jnp.power(dist, 2) / (2 * (sigma ** 2)))  # n_units x 1
+        return density
+
     @compilable
     def advance_state(self): ## forward-inference step of VQ
         x_in = self.inputs.get()
@@ -267,7 +272,7 @@ class VectorQuantizeSynapse(DenseSynapse): # Vector quantization (VQ) synaptic c
             "label_dim": "Dimensionality of labels (if this VQ is supervised)", 
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "eta": "Global learning rate",
             "eta_decrement": "Constant to decrement `eta` by per update/call to `evolve()`",

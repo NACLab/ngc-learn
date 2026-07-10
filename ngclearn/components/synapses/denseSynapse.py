@@ -2,6 +2,7 @@ from jax import random, numpy as jnp, jit
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
+from ngcsimlib import deprecate_args
 
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
@@ -33,8 +34,8 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases)
 
-        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
-            transform (Default: 1.), i.e., yields: out = ((W * in) * resist_scale) + bias
+        g_conduct_factor: a fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((W * in) * g_conduct_factor) + bias
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1 and > 0. will result in a sparser synaptic structure
@@ -43,13 +44,14 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         mask: if non-None, a (multiplicative) mask is applied to this synaptic weight matrix
     """
 
+    @deprecate_args(_rebind=False, resist_scale='g_conduct_factor')
     def __init__(
             self,
             name,
             shape,
             weight_init=None,
             bias_init=None,
-            resist_scale=1.,
+            g_conduct_factor=1.,
             p_conn=1.,
             mask=None,
             batch_size=1,
@@ -64,7 +66,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
         ## Synapse meta-parameters
         self.shape = shape
-        self.resist_scale = resist_scale
+        self.g_conduct_factor = g_conduct_factor
 
         ## Set up synaptic weight values
         tmp_key, *subkeys = random.split(self.key.get(), 4)
@@ -104,7 +106,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         gate = self.gate.get()
         weights = self.weights.get()
         weights = weights * self.mask.get()
-        self.outputs.set((jnp.matmul(self.inputs.get(), weights) * gate * self.resist_scale) + self.biases.get())
+        self.outputs.set((jnp.matmul(self.inputs.get(), weights) * gate * self.g_conduct_factor) + self.biases.get())
 
     @compilable
     def reset(self):
@@ -136,7 +138,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level scaling factor (Rscale); applied to output of transformation",
+            "g_conduct_factor": "Conductance/average level scaling factor; applied to output of transformation",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)"
         }
         info = {cls.__name__: properties,

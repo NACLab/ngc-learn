@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit, vmap
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.utils.model_utils import softmax, bkwta
@@ -58,13 +59,14 @@ class HopfieldSynapse(DenseSynapse): # (Modern) Hopfield synaptic cable
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
-        resist_scale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
             self,
             name,
@@ -75,13 +77,13 @@ class HopfieldSynapse(DenseSynapse): # (Modern) Hopfield synaptic cable
             initial_patterns=None,
             update_rule = "delta", ## memory plasticity rule
             weight_init=None,
-            resist_scale=1.,
+            g_conduct_factor=1.,
             p_conn=1.,
             batch_size=1,
             **kwargs
     ):
         super().__init__(
-            name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs
+            name, shape, weight_init, None, g_conduct_factor, p_conn, batch_size=batch_size, **kwargs
         )
 
         ### Synapse and Hopfield hyper-parameters
@@ -208,7 +210,7 @@ class HopfieldSynapse(DenseSynapse): # (Modern) Hopfield synaptic cable
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "eta": "Global learning rate (to control update to memory matrix)",
             "beta": "Inverse temperature (controls softmax sharpness",

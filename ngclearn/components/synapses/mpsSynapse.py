@@ -11,9 +11,9 @@ class MPSSynapse(JaxComponent):
     A Matrix Product State (MPS) compressed synaptic cable.
 
     This component represents a synaptic weight matrix decomposed into a 
-    contracted chain of low-rank tensor cores (also known as a Tensor Train). 
+    contracted chain of low-rank tensor cores (also known as a "tensor train").
     This architecture drastically reduces parameter counts for high-dimensional 
-    layers—from O(N*M) to O(N*K + M*K)—while maintaining high expressive power
+    layers -- from O(N*M) to O(N*K + M*K) -- while maintaining high expressive power
     and biological plausibility through local error-driven updates.
 
     | References:
