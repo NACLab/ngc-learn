@@ -66,7 +66,7 @@ def _calc_update(
         prior_lmbda = prior_lmbda[0]
         dW_reg = jnp.sign(W) * l1_ratio + W * (1-l1_ratio)/2
 
-    dW = dW + prior_lmbda * dW_reg
+    dW = dW - prior_lmbda * dW_reg
 
     if mask != None:
         dW = dW * mask
