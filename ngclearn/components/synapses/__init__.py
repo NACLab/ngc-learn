@@ -14,6 +14,7 @@ from .hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .hebbian.BCMSynapse import BCMSynapse
+from .hebbian.inhibitorySTDPSynapse import InhibitorySTDPSynapse
 from .mpsSynapse import MPSSynapse
 ### dense competitive synaptic components/elements
 from .competitive.SOMSynapse import SOMSynapse
