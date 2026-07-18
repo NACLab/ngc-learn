@@ -146,7 +146,7 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
         )
 
     @compilable
-    def evolve(self, t, dt): ## NOTE: trace-based vogels-sprekeler STDP rule
+    def evolve(self, t, dt): ## NOTE: spike-based anti-Hebbian rule
         W = self.weights.get()
         s_pre = self.s_pre.get() ## pre-synaptic inhibitory spikes
         s_post = self.s_post.get()
@@ -154,7 +154,7 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
         x_post = self.x_post.get() ## post-synaptic target's spikes
         v_post = self.v_post.get() ## post-synaptic target's voltage
 
-        ## filter synaptic spikes over time
+        ## (low-pass) filter synaptic spikes over time
         x_pre = x_pre + (-x_pre + s_pre) * dt/self.tau_x_pre ## pre-trace
         self.x_pre.set(x_pre)
         x_post = x_post + (-x_post + s_post) * dt/self.tau_x_post ## post-trace
@@ -172,7 +172,7 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
             bound_scale = jnp.where(dW > 0, self.w_max - W, W)
             dW = dW * bound_scale
         else:
-            ## Vogels-Sprekeler rule STDP assumes:
+            ## Vogels-Sprekeler rule iSTDP assumes:
             ### W - excitatory-to-inhibitory synaptic efficacies
             ### x_pre - inhibitory spike trace (shape = batch_size x num_inh)
             ### s_pre - raw inhibitory spikes  (shape = batch_size x num_inh)
@@ -181,8 +181,7 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
             ### rho - target firing rate fraction
 
             ## calculate Vogels-Sprekeler coincidence + homeostatic matrices
-            ### coincidence matrix shape = num_inh x num_exc
-            potentiation = ( (x_pre.T @ s_post) + (s_pre.T @ x_post) )
+            potentiation = ( (x_pre.T @ s_post) + (s_pre.T @ x_post) ) ## coincidence matrix shape = num_inh x num_exc
             ## target-rate suppression matrix (broadcasted across excitatory dimension)
             ### this depends on x_pre (scales depression based on recent inhibitory activity)
             ### 2 * rho * x_pre(t)  (where ltd_bias = 2)
@@ -192,7 +191,7 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
             ltp = potentiation
             ltd = -depression
             if self.use_soft_bounds: ## apply weight-dependency (NAC-lab extension)
-                ltp = potentiation * (self.w_bound - W)
+                ltp = potentiation * (self.w_max - W)
                 ltd = -depression * W
             dW = (ltp * self.Aplus + ltd * self.Aminus) / batch_size
 

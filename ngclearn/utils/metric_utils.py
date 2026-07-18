@@ -54,6 +54,40 @@ def measure_firingRate(spikes, preserve_batch=False):
         fireRates = jnp.mean(fireRates)
     return fireRates
 
+#@partial(jit, static_argnums=[1])
+@jit
+def measure_workload_entropy(spike_count_matrix):
+    """
+    Calculates the workload entropy (or balance) across a D-length population of neuronal units across
+    N samples of stimuli. This routine also returns the number of "dead neurons" (or those that never activate
+    in the context of all N stimuli samples). This measurement function is useful for characterizing the
+    "lifetime sparsity" of a population of D spiking/pulsing neuronal units.
+
+    Args:
+        spike_count_matrix: N x D tensor containing N rows of D-length spike count vectors (over D neuronal units)
+
+    Returns:
+        (min, max, mean) pulse count/rate, workload entropy, number of "dead"/silent neurons
+    """
+    global_neuron_activity = jnp.sum(spike_count_matrix, axis=0)
+    min_act = jnp.min(global_neuron_activity)
+    max_act = jnp.max(global_neuron_activity)
+    mean_act = jnp.mean(global_neuron_activity)
+    dead_neurons = jnp.sum(global_neuron_activity == 0)
+    ### compute workload entropy across neuron pool
+    total_epoch_spikes = jnp.sum(global_neuron_activity)
+
+    _flag = (total_epoch_spikes > 0) ## mask
+    probs = global_neuron_activity / total_epoch_spikes
+    full_entropy = -jnp.sum(jnp.where(probs > 0, probs * jnp.log2(probs), 0.0))  ## prevents log2(0)
+    entropy = full_entropy * _flag
+    # if total_epoch_spikes > 0:
+    #     probs = global_neuron_activity / total_epoch_spikes
+    #     entropy = -jnp.sum(jnp.where(probs > 0, probs * jnp.log2(probs), 0.0)) ## prevents log2(0)
+    # else:
+    #     entropy = 0.0
+    return (min_act, max_act, mean_act), entropy, dead_neurons
+
 @partial(jit, static_argnums=[1])
 def measure_breadthOfTuningCurve(responses, preserve_batch=False):
     """
