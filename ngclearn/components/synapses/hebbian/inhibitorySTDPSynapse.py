@@ -96,6 +96,7 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
             weight_init=None,
             bias_init=None,
             g_conduct_factor=1.,
+            p_release_mean=1.0,
             p_conn=1.,
             mask=None, ## None input -> triggers default mask=1
             batch_size=1,
@@ -107,6 +108,7 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
             weight_init=weight_init,
             bias_init=bias_init,
             g_conduct_factor=g_conduct_factor,
+            p_release_mean=p_release_mean,
             p_conn=p_conn,
             batch_size=batch_size,
             mask=mask,
@@ -136,14 +138,14 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
         self.dWeights = Compartment(jnp.zeros(shape))
         self.weights.set(self.weights.get() * self.mask.get()) ## make sure mask is enforced
 
-    @compilable
-    def advance_state(self, t, dt): ## masked synaptic transmission
-        W = self.weights.get()
-        W = W * self.mask.get()
-        inputs = self.inputs.get() ## reuses incoming cable input signals
-        self.outputs.set(
-            (jnp.matmul(inputs, W) * self.g_conduct_factor) + self.biases.get()
-        )
+    # @compilable
+    # def advance_state(self, t, dt): ## masked synaptic transmission
+    #     W = self.weights.get()
+    #     W = W * self.mask.get()
+    #     inputs = self.inputs.get() ## reuses incoming cable input signals
+    #     self.outputs.set(
+    #         (jnp.matmul(inputs, W) * self.g_conduct_factor) + self.biases.get()
+    #     )
 
     @compilable
     def evolve(self, t, dt): ## NOTE: spike-based anti-Hebbian rule

@@ -52,6 +52,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             weight_init=None,
             bias_init=None,
             g_conduct_factor=1.,
+            p_release_mean=1.,
             p_conn=1.,
             mask=None,
             batch_size=1,
@@ -67,6 +68,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         ## Synapse meta-parameters
         self.shape = shape
         self.g_conduct_factor = g_conduct_factor
+        self.p_release_mean = p_release_mean
 
         ## Set up synaptic weight values
         tmp_key, *subkeys = random.split(self.key.get(), 4)
@@ -101,12 +103,40 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.weight_init = weight_init
         self.bias_init = bias_init
 
+        ## create static vector of heterogeneous release probabilities (e.g., bounded between 0.15 and 0.45)
+        key, *skey = random.split(self.key.get(), 3)
+        pre_units = shape[0]
+        self.p_release_mean = p_release_mean
+        p_jitter = 0.1  # 0.05 #0.15
+        self.p_release = jnp.ones((1, pre_units))
+        if self.p_release_mean < 1.:
+            self.p_release = random.uniform(
+                skey[0], shape=(1, pre_units), minval=self.p_release_mean - p_jitter, maxval=p_release_mean + p_jitter
+            )  ## probability of spike release
+
     @compilable
     def advance_state(self):
         gate = self.gate.get()
         weights = self.weights.get()
         weights = weights * self.mask.get()
-        self.outputs.set((jnp.matmul(self.inputs.get(), weights) * gate * self.g_conduct_factor) + self.biases.get())
+        raw_inputs = self.inputs.get()
+
+        if 0. < self.p_release_mean < 1.:
+            ## Below implements a probability-format of stochastic synaptic transmission
+            # Del Castillo, J. and Katz, B., 1954. Quantal components of the end-plate potential.
+            # The Journal of physiology, 124(3), p.560.
+            ## get per-neuron unique release probabilities
+            p_matrix = self.p_release
+            # 2. Generate a parallelized, fast JAX random Bernoulli mask
+            key, skey = random.split(self.key.get(), 2)
+            release_mask = (random.uniform(skey, shape=raw_inputs.shape) < p_matrix).astype(jnp.float32)
+            self.key.set(key)
+            ## apply stochastic transmission: fully sparse, binary, event-driven signals
+            inputs = raw_inputs * release_mask
+        else:
+            inputs = raw_inputs
+
+        self.outputs.set((jnp.matmul(inputs, weights) * gate * self.g_conduct_factor) + self.biases.get())
 
     @compilable
     def reset(self):

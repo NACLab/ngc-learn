@@ -140,6 +140,48 @@ def measure_breadth_TC(responses, preserve_batch=False): ## old BTC function
     """
     return measure_breadthOfTuningCurve(responses, preserve_batch)
 
+@partial(jit, static_argnums=[2])
+def measure_Pearson_correlation(a, b, preserve_batch=False):
+    """
+    Computes general Pearson correlation `r` between two arbitrary signal sets.
+    Tracks raw positive/negative directional correlations and assumes time steps are along `axis=1`.
+
+    Args:
+        a: response set/signals a (shape: N x T x D)
+
+        b: response set/signals b (shape: N x T x D)
+
+        preserve_batch: if True, returns one score per sample across batch.
+            (Default: False), otherwise, returns scalar average score.
+
+    Returns:
+        A (N x 1) Pearson correlation score vector (one score per sample) OR a single
+        global scalar average Pearson score for the entire signal set.
+    """
+    t_axis = 1  ## temporal axis
+    
+    ## calculate means of raw signals
+    mean_a = jnp.mean(a, axis=t_axis, keepdims=True)
+    mean_b = jnp.mean(b, axis=t_axis, keepdims=True)
+    ## calculate deviation & variance/covariance terms
+    dev_a = a - mean_a
+    dev_b = b - mean_b
+    covariance = jnp.sum(dev_a * dev_b, axis=t_axis)
+    var_a = jnp.sum(jnp.square(dev_a), axis=t_axis)
+    var_b = jnp.sum(jnp.square(dev_b), axis=t_axis)
+    
+    ## now compute Pearson correlation
+    denominator = jnp.sqrt(var_a * var_b)
+    safe_denominator = jnp.where(denominator == 0.0, 1e-7, denominator)
+    r_per_neuron = covariance / safe_denominator
+    r_per_neuron = jnp.where(denominator == 0.0, 0.0, r_per_neuron) ## handle silent/dead channels
+    
+    if preserve_batch: 
+        ## collapse neuron dimension to return one score per batch sample
+        r_mu = jnp.mean(r_per_neuron, axis=1, keepdims=True)
+        return r_mu
+    return jnp.mean(r_per_neuron) ## output global scalar score (averaged over neurons and batch)
+
 
 @partial(jit, static_argnums=[1])
 def measure_gini_index(codes, preserve_batch=True):
