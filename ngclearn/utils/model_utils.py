@@ -256,6 +256,20 @@ def chebyshev_norm(d, axis=-1, keepdims=False):
     dist_vals = jnp.max(abs_diff, axis=axis, keepdims=keepdims)
     return dist_vals
 
+@partial(jit, static_argnums=[2])
+def sample_values_by_group(skey, values, n_groups): ## multi-group value sampling co-routine 
+    s = values
+    K = n_groups
+    batch_size, num_neurons = s.shape
+    L = num_neurons // K
+    s_reshaped = s.reshape((batch_size, K, L))
+    m_switch = (jnp.sum(s_reshaped, axis=2, keepdims=True) > 0.).astype(jnp.float32)
+    rS = s_reshaped * random.uniform(skey, s_reshaped.shape)
+    winning_indices = jnp.argmax(rS, axis=2)
+    rS_one_hot = nn.one_hot(winning_indices, num_classes=L, dtype=jnp.float32)
+    s_partitioned = s_reshaped * (1. - m_switch) + rS_one_hot * m_switch
+    return s_partitioned.reshape((batch_size, num_neurons))
+
 @jit
 def binarize(data, threshold=0.5):
     """
