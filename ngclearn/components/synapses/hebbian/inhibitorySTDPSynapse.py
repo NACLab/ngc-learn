@@ -138,19 +138,10 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
         self.dWeights = Compartment(jnp.zeros(shape))
         self.weights.set(self.weights.get() * self.mask.get()) ## make sure mask is enforced
 
-    # @compilable
-    # def advance_state(self, t, dt): ## masked synaptic transmission
-    #     W = self.weights.get()
-    #     W = W * self.mask.get()
-    #     inputs = self.inputs.get() ## reuses incoming cable input signals
-    #     self.outputs.set(
-    #         (jnp.matmul(inputs, W) * self.g_conduct_factor) + self.biases.get()
-    #     )
-
     @compilable
     def evolve(self, t, dt): ## NOTE: spike-based anti-Hebbian rule
         W = self.weights.get()
-        s_pre = self.s_pre.get() ## pre-synaptic inhibitory spikes
+        s_pre = self.s_pre.get() ## pre-synaptic inhibitory spikes ## NOTE: use delayed inputs?
         s_post = self.s_post.get()
         x_pre = self.x_pre.get() ## filtered inhibitory spikes
         x_post = self.x_post.get() ## post-synaptic target's spikes

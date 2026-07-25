@@ -117,6 +117,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         pre_units = shape[0]
         self.p_release_mean = p_release_mean
         p_jitter = 0.1 ## NOTE: this is hard-coded jitter
+        self.use_one_spike = True #False
         self.p_release = jnp.ones((1, pre_units))
         if 0. < self.p_release_mean < 1.: ## if proper p(transmit) mean given
             self.p_release = random.uniform(
@@ -131,6 +132,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         ## create fixed memory grid to store a rolling history of incoming pre-synaptic signals
         initial_buffer_state = jnp.zeros((self.max_delay_steps, self.batch_size, pre_units))
         self.input_delay_buffer = Compartment(initial_buffer_state, display_name="Synaptic Input Queue")
+        self.delayed_inputs = Compartment(preVals) ## record of actual emitted delayed inputs (if delay > 0)
 
     @compilable
     def advance_state(self):
@@ -158,15 +160,19 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             ## Reference: 
             ## Del Castillo, J. and Katz, B., 1954. Quantal components of the end-plate potential.
             ## The Journal of physiology, 124(3), p.560.
-
             p_matrix = self.p_release ## get per-neuron release probs
             key, skey = random.split(self.key.get(), 2) ## generate random Bernoulli mask
-            release_mask = (random.uniform(skey, shape=raw_inputs.shape) < p_matrix).astype(jnp.float32)
-            self.key.set(key)
+            if not self.use_one_spike: ## does per-neuron sampled firing
+                release_mask = (random.uniform(skey, shape=raw_inputs.shape) < p_matrix).astype(jnp.float32)
+            else: ## does blind "guarantee-one-signal-fires" sampling
+                rP = raw_inputs * random.uniform(skey, raw_inputs.shape)
+                release_mask = nn.one_hot(jnp.argmax(rP, axis=1), num_classes=raw_inputs.shape[1], dtype=jnp.float32)
             ## apply stochastic transmission: fully sparse, event-driven signals
             inputs = raw_inputs * release_mask
+            self.key.set(key) ## update noise key of this component
         ## else, leave inputs un-corrupted/untouched
 
+        self.delayed_inputs.set(inputs) ## store emitted delayed inputs
         ## carry signals across synaptic cable
         self.outputs.set((jnp.matmul(inputs, weights) * gate * self.g_conduct_factor) + self.biases.get())
 
@@ -176,6 +182,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             self.inputs.set(jnp.zeros((self.batch_size, self.shape[0])))
         if not self.gate.targeted:
             self.gate.set(jnp.ones((self.batch_size, self.shape[1])))
+        self.delayed_inputs.set(self.delayed_inputs.get() * 0)
         self.outputs.set(jnp.zeros((self.batch_size, self.shape[1])))
         self.input_delay_buffer.set(self.input_delay_buffer.get() * 0)
 
