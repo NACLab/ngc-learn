@@ -37,9 +37,18 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         g_conduct_factor: a fixed (resistance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((W * in) * g_conduct_factor) + bias
 
+        p_release_mean: probability of pre-synaptic transmission; only if this value is > 0 and < 1, 
+            this synapse will enforce stochastic synaptic tranmission on pre-synaptic signals, 
+            meaning that each pre-synaptic signal will make it across the synaptic cable with 
+            a probability of `p(transmit) = p_release_mean +/- 0.1` (Default: 1) 
+
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1 and > 0. will result in a sparser synaptic structure
             (lower values yield sparse structure)
+
+        max_delay_steps: maximum delay length (in terms of discrete simulation time-steps) to 
+            delay transmission of pre-synaptic signals across this synaptic cable; note 
+            that setting this to 0 disables the use of synaptic delay (Default: 0)
 
         mask: if non-None, a (multiplicative) mask is applied to this synaptic weight matrix
     """
@@ -54,7 +63,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             g_conduct_factor=1.,
             p_release_mean=1.,
             p_conn=1.,
-            max_delay_steps=0,
+            max_delay_steps=0, ## "Tk"
             mask=None,
             batch_size=1,
             **kwargs
@@ -76,11 +85,10 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
 
         if weight_init is None:
             info(self.name, "is using default weight initializer!")
-            # self.weight_init = {"dist": "uniform", "amin": 0.025, "amax": 0.8}
             weight_init = DistributionGenerator.uniform(0.025, 0.8)
         weights = weight_init(shape, subkeys[0])
 
-        if 0. < p_conn < 1.: ## Modifier/constraint: only non-zero and <1 probs allowed
+        if 0. < p_conn < 1.: ## modifier/constraint: only non-zero and <1 probs allowed
             p_mask = random.bernoulli(subkeys[1], p=p_conn, shape=shape)
             weights = weights * p_mask ## sparsify matrix
 
@@ -104,27 +112,25 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         self.weight_init = weight_init
         self.bias_init = bias_init
 
-        ## create static vector of heterogeneous release probabilities (e.g., bounded between 0.15 and 0.45)
+        ## Stochastic synaptic transmission - create static vector of heterogeneous release probabilities
         key, *skey = random.split(self.key.get(), 4)
         pre_units = shape[0]
         self.p_release_mean = p_release_mean
-        p_jitter = 0.1  # 0.05 #0.15
+        p_jitter = 0.1 ## NOTE: this is hard-coded jitter
         self.p_release = jnp.ones((1, pre_units))
-        if self.p_release_mean < 1.:
+        if 0. < self.p_release_mean < 1.: ## if proper p(transmit) mean given
             self.p_release = random.uniform(
                 skey[0], shape=(1, pre_units), minval=self.p_release_mean - p_jitter, maxval=p_release_mean + p_jitter
             )  ## probability of spike release
 
-        ## implement potential staggered cable delays
-        self.max_delay_steps = max_delay_steps #4  # Extends up to a Tk ms temporal jitter window
-        pre_units = shape[0]
-
-        ## initialize a static random index array specifying a custom delay step for each pre-synaptic line
-        ### e.g., Axon line 0 delays by 1ms, axon line 1 delays by 3ms, axon line 2 delays by 0ms, etc.
-        self.syn_delay_indices = random.randint(skey[1], shape=(pre_units,), minval=0, maxval=self.max_delay_steps)
-        ## create fixed JAX memory grid to store rolling history of incoming pre-spikes
-        initial_buffer = jnp.zeros((self.max_delay_steps, self.batch_size, pre_units))
-        self.input_delay_buffer = Compartment(initial_buffer, display_name="Synaptic_Input_Queue")
+        ## Implement staggered (pre-synaptic/axonal) cable delays
+        self.max_delay_steps = max_delay_steps ## extends up to a `Tk` ms temporal jitter window
+        pre_units = shape[0] 
+        ## jitter axonal delays from 0 up to Tk
+        self.syn_delay_indices = random.randint(skey[1], shape=(pre_units,), minval=0, maxval=self.max_delay_steps) 
+        ## create fixed memory grid to store a rolling history of incoming pre-synaptic signals
+        initial_buffer_state = jnp.zeros((self.max_delay_steps, self.batch_size, pre_units))
+        self.input_delay_buffer = Compartment(initial_buffer_state, display_name="Synaptic Input Queue")
 
     @compilable
     def advance_state(self):
@@ -134,36 +140,34 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         raw_inputs = self.inputs.get()
 
         inputs = raw_inputs
-        if self.max_delay_steps > 0:
+        if self.max_delay_steps > 0: ## implements synaptic jitter via axonal delay
             buffer = self.input_delay_buffer.get()
-            ## synaptic jitter through delay
-            ## gathers a unique historical timestep slice independently for each input line
-            time_indices = self.syn_delay_indices  # Shape: (D_pre,)
-            pre_indices = jnp.arange(raw_inputs.shape[1])  # Shape: (D_pre,)
-            ## advanced gather outputs a parallelized, jittered spike matrix : shape: (batch_size, D_pre)
+            ## gather historical timestep slice, independently for each input axon line
+            time_indices = self.syn_delay_indices  ## shape: (D_pre,)
+            pre_indices = jnp.arange(raw_inputs.shape[1])  ## shape: (D_pre,)
+            ## advanced gather outputs parallelized, jittered spike matrix (shape: (batch_size, D_pre))
             inputs = buffer[time_indices, :, pre_indices].T ## get delay pre-synaptic signal(s)
-
-            ## roll input conveyor belt forward - shift historical slots down (dropping oldest timestep)
+            ## roll input conveyor belt forward - shift historical slots down (& drop oldest timestep)
             rolled_buffer = jnp.roll(buffer, shift=-1, axis=0)
-            ## append current input spikes 'raw_inputs' to back of queue
+            ## update buffer - current input spikes 'raw_inputs' go to back of queue
             updated_buffer = rolled_buffer.at[-1, :, :].set(raw_inputs)
             self.input_delay_buffer.set(updated_buffer)
-        ## else, leave inputs = raw_inputs
+        ## else, leave inputs = raw_inputs untouched
 
-        if 0. < self.p_release_mean < 1.:
-            ## Below implements a probability-format of stochastic synaptic transmission
-            # Del Castillo, J. and Katz, B., 1954. Quantal components of the end-plate potential.
-            # The Journal of physiology, 124(3), p.560.
-            ## get per-neuron unique release probabilities
-            p_matrix = self.p_release
-            # 2. Generate a parallelized, fast JAX random Bernoulli mask
-            key, skey = random.split(self.key.get(), 2)
+        if 0. < self.p_release_mean < 1.: ## engage in stochastic synaptic transmission (in probability form)
+            ## Reference: 
+            ## Del Castillo, J. and Katz, B., 1954. Quantal components of the end-plate potential.
+            ## The Journal of physiology, 124(3), p.560.
+
+            p_matrix = self.p_release ## get per-neuron release probs
+            key, skey = random.split(self.key.get(), 2) ## generate random Bernoulli mask
             release_mask = (random.uniform(skey, shape=raw_inputs.shape) < p_matrix).astype(jnp.float32)
             self.key.set(key)
-            ## apply stochastic transmission: fully sparse, binary, event-driven signals
+            ## apply stochastic transmission: fully sparse, event-driven signals
             inputs = raw_inputs * release_mask
-        ## else, leave inputs un-corrupted
+        ## else, leave inputs un-corrupted/untouched
 
+        ## carry signals across synaptic cable
         self.outputs.set((jnp.matmul(inputs, weights) * gate * self.g_conduct_factor) + self.biases.get())
 
     @compilable
@@ -198,7 +202,9 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
             "g_conduct_factor": "Conductance/average level scaling factor; applied to output of transformation",
-            "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)"
+            "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)", 
+            "p_release_mean": "Probability of pre-synaptic signal firing across axon and into synaptic cable line", 
+            "max_delay_steps": "Maximum number of simulation steps to delay signal making it over axon & into cable line"
         }
         info = {cls.__name__: properties,
                 "compartments": compartment_props,
