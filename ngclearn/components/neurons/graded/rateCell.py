@@ -269,7 +269,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                                                 weight_init=dist.diag_offdiag(on_diag=exc, off_diag=inh),
                                                 eta=Wl_eta,
                                                 prior=Wl_prior,
-                                                sign_value=-1.,
+                                                sign_value=1.,
                                                 optim_type=Wl_opt_type,
                                                 batch_size=batch_size,
                                                 )
