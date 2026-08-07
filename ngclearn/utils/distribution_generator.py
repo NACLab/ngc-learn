@@ -74,6 +74,26 @@ class DistributionGenerator(object):
         return constant_generator
 
     @staticmethod
+    def diag_offdiag(on_diag: float, off_diag: float, **params: Unpack[DistributionParams]) -> DistributionInitializer:
+        using_np = params.get("use_numpy", False)
+        if using_np:
+            def diag_offdiag_generator(shape: Sequence[int], seed: int | None = None) -> numpy.ndarray:
+                eye = numpy.eye(*shape).astype(params.get("dtype", numpy.float32))
+                ones = numpy.ones(shape).astype(params.get("dtype", numpy.float32))
+                matrix = on_diag * eye + off_diag * (ones - eye)
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
+                return matrix
+        else:
+            def diag_offdiag_generator(shape: Sequence[int], dKey: jax.dtypes.prng_key | None = None) -> jax.Array:
+                eye = jax.numpy.eye(*shape).astype(params.get("dtype", jax.numpy.float32))
+                ones = jax.numpy.ones(shape).astype(params.get("dtype", jax.numpy.float32))
+                matrix = on_diag * eye + off_diag * (ones - eye)
+                matrix = DistributionGenerator._process_params_jax(matrix, params, dKey)
+                return matrix
+        return diag_offdiag_generator
+
+
+    @staticmethod
     def uniform(low: float = 0.0, high: float = 1.0, **params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer for a uniform distribution.
