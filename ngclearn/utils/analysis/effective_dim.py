@@ -33,6 +33,8 @@ def participation_ratio(
     ##else, use ML-oriented NaN return value fallback
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
 
+
+
 @partial(jit, static_argnums=[1])
 def rankme(latent_codes, eps=1e-7):
     """
@@ -52,10 +54,12 @@ def rankme(latent_codes, eps=1e-7):
     """
 
     singular_values = jnp.linalg.svd(latent_codes, compute_uv=False) ## singular values of latent_codes
-    sum_singular_vals = jnp.sum(singular_values) ## L1
-    if sum_singular_vals <= 0:
-        return float("nan")
-    p = singular_values / sum_singular_vals + eps   ## L1-normalized singular value
-    shannon_entropy = -jnp.sum(p * jnp.log(p))      ## calc Shannon entropy
-    return jnp.exp(shannon_entropy)                 ## compute final exp(Shannon entropy) = effective rank
+    sum_singular_values = jnp.sum(singular_values)                   ## L1
+    sum_S_vals = jnp.where(sum_singular_values > 0.0, sum_singular_values, 1.0)
+    p = singular_values / sum_S_vals + eps                           ## L1-normalized singular value
+    shannon_entropy = -jnp.sum(p * jnp.log(p))                       ## calc Shannon entropy
+
+    return jnp.exp(jnp.where(sum_singular_values > 0.0, 
+                             shannon_entropy,                       ## compute final exp(Shannon entropy) = effective rank
+                             jnp.nan))
 
