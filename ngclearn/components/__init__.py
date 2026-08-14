@@ -41,6 +41,8 @@ from .input_encoders.TTFSCell import TTFSCell
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
+from .synapses.sparseTensorSynapse import SparseTensorSynapse
+from .synapses.staticSparseTensorSynapse import StaticSparseTensorSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.STDPSynapse import STDPSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse

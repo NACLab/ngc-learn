@@ -1,5 +1,7 @@
 from .denseSynapse import DenseSynapse
 from .staticSynapse import StaticSynapse
+from .sparseTensorSynapse import SparseTensorSynapse
+from .staticSparseTensorSynapse import StaticSparseTensorSynapse
 
 ## short-term plasticity components
 from .STPDenseSynapse import STPDenseSynapse
