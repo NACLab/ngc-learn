@@ -53,7 +53,7 @@ class DenseSynapse(JaxComponent): ## base dense synaptic cable
         mask: if non-None, a (multiplicative) mask is applied to this synaptic weight matrix
     """
 
-    @deprecate_args(_rebind=False, resist_scale='g_conduct_factor')
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
             self,
             name,

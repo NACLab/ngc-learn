@@ -929,20 +929,22 @@ def eye_wrapped(N, k, values):
     return matrix.at[row_indices, col_indices].set(values) ## Fill diagonal using efficient indexing
 
 @partial(jit, static_argnums=[1, 2, 3, 4])
-def normalize_block_matrix(matrix, block_size, order=2, axis=0, norm_targ=1.):
+def normalize_block_matrix(
+    matrix, block_size, order=2, axis=0, norm_targ=1.
+):
     """
-    Normalizes columns of blocks within a matrix.
+    Normalizes blocks within a block-matrix.
 
     Args:
         matrix: 2D JAX Array (M, N)
 
-        block_size: Tuple (block_rows, block_cols)
+        block_size: block shape tuple (n_block_rows, n_block_cols)
 
-        order:
+        order: order (p) of p-norm
 
         axis: (relative) axis for normalization within block; 0 -> by rows, 1 -> by cols
 
-        norm_targ:
+        norm_targ: target p-norm value to enforce
 
     Returns:
         block-normalized (M, N) matrix
@@ -955,18 +957,18 @@ def normalize_block_matrix(matrix, block_size, order=2, axis=0, norm_targ=1.):
     ## else, we leave row-axis as target for normalization
     M, N = matrix.shape
     r_blk, c_blk = block_size
-    # Reshape to 4D to isolate blocks: (num_blocks_row, block_rows, num_blocks_col, block_cols)
+    ## reshape to 4D to isolate blocks: (num_blocks_row, block_rows, num_blocks_col, block_cols)
     reshaped = matrix.reshape(M // r_blk, r_blk, N // c_blk, c_blk)
-    # Transpose to group block data: (num_blocks_row, num_blocks_col, block_rows, block_cols)
+    ## transpose to group block data: (num_blocks_row, num_blocks_col, block_rows, block_cols)
     transposed = jnp.transpose(reshaped, (0, 2, 1, 3))
     # Calculate norm for each column "w/in" each block
     ## (over axis 2 -> block_rows); (over axis 3 -> block_cols)
     norms = jnp.linalg.norm(transposed, ord=order, axis=_tensor_axis, keepdims=True)
     #normalized_blocks = jnp.divide(transposed, norms + 1e-8) ## normalize (w/ safe-division)
     normalized_blocks = transposed * (norm_targ/(norms + 1e-8))
-    # Reverse transpose: (num_blocks_row, block_rows, num_blocks_col, block_cols)
+    ## reverse-transpose: (num_blocks_row, block_rows, num_blocks_col, block_cols)
     reverted = jnp.transpose(normalized_blocks, (0, 2, 1, 3))
-    # Reshape back to original 2D shape (M, N)
+    ## reshape back to original 2D shape (M, N)
     return reverted.reshape(M, N)
 
 @partial(jit, static_argnums=[2, 3])

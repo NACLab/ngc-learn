@@ -9,6 +9,93 @@ import imageio.v3 as iio
 import jax.numpy as jnp
 
 
+def visualize_macro_grid( ## more complex filter visualization co-routine
+        thetas,
+        sizes,
+        macro_grid_shape,
+        prefix,
+        order=None,
+        suffix='.jpg',
+        contrast_by_data=True
+):
+    """
+    Stitches filter sets into a 2D Grid-of-Grids layout with bright white padding.
+
+    Args:
+        thetas:
+        sizes:
+        macro_grid_shape:
+        prefix:
+        order:
+        suffix:
+        contrast_by_data:
+
+    Returns:
+
+    """
+    if order is None:
+        order = ['C' for _ in range(len(thetas))]
+
+    H_macro, W_macro = macro_grid_shape
+    num_banks = len(thetas)
+
+    T_sample = thetas[0].T
+    filters_per_bank = T_sample.shape[0]
+    f_cols = int(math.ceil(math.sqrt(filters_per_bank)))
+    f_rows = int(math.ceil(filters_per_bank / f_cols))
+
+    p_h, p_w = sizes[0]
+    ## total pixel height/width of an individual composite filter bank block
+    bank_px_h = f_rows * p_h
+    bank_px_w = f_cols * p_w
+
+    ## Use stark white background; initialize the entire master sheet canvas with 1.0 (White in grayscale)
+    pad = 2
+    canvas_h = H_macro * bank_px_h + (H_macro + 1) * pad
+    canvas_w = W_macro * bank_px_w + (W_macro + 1) * pad
+    master_canvas = np.ones((canvas_h, canvas_w))
+
+    for b_idx in range(num_banks):
+        m_row = b_idx // W_macro
+        m_col = b_idx % W_macro
+        if m_row >= H_macro:
+            break
+
+        T = thetas[b_idx].T
+        b_start_y = m_row * bank_px_h + (m_row + 1) * pad
+        b_start_x = m_col * bank_px_w + (m_col + 1) * pad
+        for f_idx in range(filters_per_bank):
+            if f_idx >= T.shape[0]:
+                break
+            i_row = f_idx // f_cols
+            i_col = f_idx % f_cols
+            single_filter = np.reshape(T[f_idx, :], (p_h, p_w), order=order[b_idx])
+
+            ## shift values to map correctly to the bone color scheme; max absolute value normalization
+            max_val = float(np.max(np.abs(single_filter)))
+            if max_val > 0:
+                single_filter = single_filter / max_val
+
+            y_loc = b_start_y + (i_row * p_h)
+            x_loc = b_start_x + (i_col * p_w)
+            master_canvas[y_loc:y_loc + p_h, x_loc:x_loc + p_w] = single_filter
+
+    ## render out the crisp grid sheet
+    plt.figure(figsize=(10, 10), dpi=300)
+
+    ## use vmin=-1.0 and vmax=1.0 so that the 1.0 canvas background registers as absolute white
+    max_val = 1.
+    min_val = -1.
+    if contrast_by_data:
+        max_val = float(jnp.max(jnp.abs(master_canvas)))
+        min_val = float(jnp.min(jnp.abs(master_canvas)))
+    plt.imshow(master_canvas, cmap=plt.cm.bone, interpolation='nearest', vmin=min_val, vmax=max_val)
+    plt.axis("off")
+    plt.savefig(prefix + suffix, bbox_inches='tight', pad_inches=0.0)
+    plt.clf()
+    plt.close()
+
+
 def visualize(
         thetas,
         sizes,
@@ -56,9 +143,11 @@ def visualize(
             point = start + 1 + i + (r * extra)
             plt.subplot(n_rows_total, n_cols_total, point)
             _filter = T[i, :]
+            max_val = float(jnp.max(jnp.abs(_filter)))
+            min_val = float(jnp.min(jnp.abs(_filter)))
             plt.imshow(
                 np.reshape(_filter, (sizes[idx][0], sizes[idx][1]), order=order[idx]), 
-                cmap=plt.cm.bone, interpolation='nearest'
+                cmap=plt.cm.bone, interpolation='nearest', vmin=min_val, vmax=max_val
             )
             plt.axis("off")
 
