@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
@@ -57,18 +58,32 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
-        resist_scale: a fixed scaling factor to apply to synaptic transform
-            (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform
+            (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1. will result in a sparser synaptic structure
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, tau_w, tau_theta, theta0=-1., w_bound=0., w_decay=0., weight_init=None, resist_scale=1.,
-            p_conn=1., batch_size=1, **kwargs
+            self,
+            name,
+            shape,
+            tau_w,
+            tau_theta,
+            theta0=-1.,
+            w_bound=0.,
+            w_decay=0.,
+            weight_init=None,
+            g_conduct_factor=1.,
+            p_conn=1.,
+            batch_size=1,
+            **kwargs
     ):
-        super().__init__(name, shape, weight_init, None, resist_scale, p_conn, batch_size=batch_size, **kwargs)
+        super().__init__(
+            name, shape, weight_init, None, g_conduct_factor, p_conn, batch_size=batch_size, **kwargs
+        )
 
         ## Synapse and BCM hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
@@ -76,7 +91,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
         self.tau_theta = tau_theta ## time constant of threshold delta variables
         self.w_decay = w_decay ## synaptic decay factor
         self.w_bound = w_bound  ## soft weight constraint
-        self.Rscale = resist_scale ## post-transformation scale factor
+        self.Rscale = g_conduct_factor ## post-transformation scale factor
         self.theta0 = theta0 #-1. ## initial condition for theta/threshold variables
 
         ## Compartment setup
@@ -157,7 +172,7 @@ class BCMSynapse(DenseSynapse): # BCM-adjusted synaptic cable
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "tau_theta": "Time constant for synaptic threshold variable `theta`",
             "tau_w": "Time constant for BCM synaptic adjustment",

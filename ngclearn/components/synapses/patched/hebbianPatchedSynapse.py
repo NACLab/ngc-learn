@@ -1,18 +1,15 @@
 # %%
 
-import matplotlib.pyplot as plt
 from jax import random, numpy as jnp, jit
-from functools import partial
 from ngclearn.utils.optim import get_opt_init_fn, get_opt_step_fn
-
-from ngcsimlib.logger import info
-from ngclearn import compilable #from ngcsimlib.parser import compilable
-from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+from ngclearn.utils.io_utils import save_pkl, load_pkl
+from ngclearn import compilable 
+from ngclearn import Compartment 
 
 from ngclearn.components.synapses.patched import PatchedSynapse
 from ngclearn.utils import tensorstats
 
-# @partial(jit, static_argnums=[3, 4, 5, 6, 7, 8, 9])
+
 def _calc_update(
         pre, post, W, mask, w_bound, is_nonnegative=True, signVal=1., prior_type=None, prior_lmbda=0., pre_wght=1.,
         post_wght=1.
@@ -68,42 +65,13 @@ def _calc_update(
         prior_lmbda = prior_lmbda[0]
         dW_reg = jnp.sign(W) * l1_ratio + W * (1-l1_ratio)/2
 
-    dW = dW + prior_lmbda * dW_reg
+    dW = dW - prior_lmbda * dW_reg
 
-    if mask != None:
+    if mask is not None:
         dW = dW * mask
 
     return dW * signVal, db * signVal
 
-# @partial(jit, static_argnums=[1,2, 3])
-def _enforce_constraints(W, block_mask, w_bound, is_nonnegative=True):
-    """
-    Enforces constraints that the (synaptic) efficacies/values within matrix
-    `W` must adhere to.
-
-    Args:
-        W: synaptic weight values (at time t)
-
-         block_mask: weight mask matrix
-
-        w_bound: maximum value to enforce over newly computed efficacies
-
-        is_nonnegative: ensure updated value matrix is strictly non-negative
-
-    Returns:
-        the newly evolved synaptic weight value matrix
-    """
-    _W = W
-    if w_bound > 0.:
-        if is_nonnegative:
-            _W = jnp.clip(_W, 0., w_bound)
-        else:
-            _W = jnp.clip(_W, -w_bound, w_bound)
-
-    if block_mask != None:
-        _W = _W * block_mask
-
-    return _W
 
 
 class HebbianPatchedSynapse(PatchedSynapse):
@@ -234,10 +202,10 @@ class HebbianPatchedSynapse(PatchedSynapse):
         self.dWeights = Compartment(jnp.zeros(self.shape))
         self.dBiases = Compartment(jnp.zeros(self.shape[1]))
 
-        #key, subkey = random.split(self.key.get())
         self.opt_params = Compartment(get_opt_init_fn(optim_type)(
             [self.weights.get(), self.biases.get()]
-            if bias_init else [self.weights.get()]))
+            if bias_init else [self.weights.get()]),
+            auto_save=False)
 
     @staticmethod
     def _compute_update(block_mask, w_bound, is_nonnegative, sign_value, prior_type, prior_lmbda, pre_wght,
@@ -249,6 +217,30 @@ class HebbianPatchedSynapse(PatchedSynapse):
             post_wght=post_wght)
 
         return dW  * jnp.where(0 != jnp.abs(weights), 1, 0) , db
+
+    @staticmethod
+    def _enforce_constraints(W, block_mask, w_bound, is_nonnegative=True):
+        ## Enforces constraints that the (synaptic) efficacies/values within matrix `W` must adhere to
+        _W = W
+        if w_bound > 0.:
+            if is_nonnegative:
+                _W = jnp.clip(_W, 0., w_bound)
+            else:
+                _W = jnp.clip(_W, -w_bound, w_bound)
+
+        if block_mask is not None:
+            _W = _W * block_mask
+        return _W
+
+    def save(self, directory: str):
+        super().save(directory)
+        # Also save the optimizer parameters
+        save_pkl(directory, self.name + "_opt_params", self.opt_params.get())
+
+    def load(self, directory: str):
+        super().load(directory)
+        # load the optimizer parameters in a custom way
+        self.opt_params.set(load_pkl(directory, self.name + "_opt_params"))
 
     @compilable
     def evolve(self):
@@ -271,7 +263,9 @@ class HebbianPatchedSynapse(PatchedSynapse):
             # ignore db since no biases configured
             opt_params, [weights] = self.opt(opt_params, [weights], [dWeights])
         ## ensure synaptic efficacies adhere to constraints
-        weights = _enforce_constraints(weights, self.block_mask, self.w_bound, is_nonnegative=self.is_nonnegative)
+        weights = HebbianPatchedSynapse._enforce_constraints(
+            weights, self.block_mask, self.w_bound, is_nonnegative=self.is_nonnegative
+        )
 
         # Update compartments
         self.opt_params.set(opt_params)
@@ -352,12 +346,18 @@ class HebbianPatchedSynapse(PatchedSynapse):
 
 if __name__ == '__main__':
     from ngcsimlib.context import Context
+    import matplotlib.pyplot as plt
+
     with Context("Bar") as bar:
         Wab = HebbianPatchedSynapse("Wab", (9, 30), 3, (0, 0), optim_type='adam',
                              sign_value=-1.0, prior=("l1l2", 0.001))
     print(Wab)
+
     plt.imshow(Wab.weights.get(), cmap='gray')
     plt.show()
+
+
+
 
 
 

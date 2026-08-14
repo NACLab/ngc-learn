@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngclearn.components.synapses.convolution.deconvSynapse import DeconvSynapse
@@ -53,8 +54,8 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
-            transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
+        g_conduct_factor: a fixed (conductance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((K @ in) * g_conduct_factor) + b
             where `@` denotes convolution
 
         w_bound: maximum weight to softly bound this cable's value matrix to; if
@@ -66,12 +67,27 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
         batch_size: batch size dimension of this component
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, x_shape, A_plus, A_minus, eta=0., pretrace_target=0., filter_init=None, stride=1,
-            padding=None, resist_scale=1., w_bound=0., w_decay=0., batch_size=1, **kwargs
+            self,
+            name,
+            shape,
+            x_shape,
+            A_plus,
+            A_minus,
+            eta=0.,
+            pretrace_target=0.,
+            filter_init=None,
+            stride=1,
+            padding=None,
+            g_conduct_factor=1.,
+            w_bound=0.,
+            w_decay=0.,
+            batch_size=1,
+            **kwargs
     ):
         super().__init__(
-            name, shape, x_shape=x_shape, filter_init=filter_init, bias_init=None, resist_scale=resist_scale,
+            name, shape, x_shape=x_shape, filter_init=filter_init, bias_init=None, g_conduct_factor=g_conduct_factor,
             stride=stride, padding=padding, batch_size=batch_size, **kwargs
         )
 
@@ -201,7 +217,7 @@ class TraceSTDPDeconvSynapse(DeconvSynapse): ## trace-based STDP deconvolutional
             "x_shape": "Shape of any single incoming/input feature map",
             "batch_size": "Batch size dimension of this component",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
-            "resist_scale": "Resistance level output scaling factor (R)",
+            "g_conduct_factor": "Conductance level output scaling factor (R)",
             "stride": "length / size of stride",
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`",
             "A_plus": "Strength of long-term potentiation (LTP)",

@@ -31,7 +31,7 @@ class StaticDeconvSynapse(DeconvSynapse):
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
+        g_conduct_factor: a fixed (conductance) scaling factor to apply to synaptic
             transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
             where `@` denotes convolution
 

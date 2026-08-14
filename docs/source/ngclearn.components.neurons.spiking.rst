@@ -20,10 +20,26 @@ ngclearn.components.neurons.spiking.LIFCell module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.neurons.spiking.LIFSRM module
+-------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.spiking.LIFSRM
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.neurons.spiking.RAFCell module
 --------------------------------------------------
 
 .. automodule:: ngclearn.components.neurons.spiking.RAFCell
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ngclearn.components.neurons.spiking.RAFSRM module
+-------------------------------------------------
+
+.. automodule:: ngclearn.components.neurons.spiking.RAFSRM
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 from ngcsimlib.logger import info
@@ -37,16 +38,26 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
 
         padding: pre-operator padding to use -- "VALID" (none), "SAME"
 
-        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
-            transform (Default: 1.), i.e., yields: out = ((K @ in) * resist_scale) + b
+        g_conduct_factor: a fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((K @ in) * g_conduct_factor) + b
             where `@` denotes convolution
 
         batch_size: batch size dimension of this component
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, x_shape, filter_init=None, bias_init=None, stride=1, padding=None, resist_scale=1.,
-            batch_size=1, **kwargs
+            self,
+            name,
+            shape,
+            x_shape,
+            filter_init=None,
+            bias_init=None,
+            stride=1,
+            padding=None,
+            g_conduct_factor=1.,
+            batch_size=1,
+            **kwargs
     ):
         super().__init__(name, **kwargs)
 
@@ -57,7 +68,7 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
         self.shape = shape ## shape of synaptic filter tensor
         x_size, x_size = x_shape
         self.x_size = x_size
-        self.resist_scale = resist_scale ## post-transformation scale factor
+        self.g_conduct_factor = g_conduct_factor ## post-transformation scale factor
         self.padding = padding
         self.stride = stride
 
@@ -105,10 +116,10 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
     @compilable
     def advance_state(self): #Rscale, padding, stride, weights, biases, inputs):
         _x = self.inputs.get()
-        ## FIXME: does resist_scale affect update rules?
+        ## FIXME: does g_conduct_factor affect update rules?
         outputs = conv2d(
             _x, self.weights.get(), stride_size=self.stride, padding=self.padding
-        ) * self.resist_scale + self.biases.get()
+        ) * self.g_conduct_factor + self.biases.get()
         self.outputs.set(outputs)
 
     @compilable
@@ -155,7 +166,7 @@ class ConvSynapse(JaxComponent): ## base-level convolutional cable
             "x_shape": "Shape of any single incoming/input feature map",
             "filter_init": "Initialization conditions for synaptic filter (K) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level output scaling factor (R)",
+            "g_conduct_factor": "Conductance level output scaling factor (R)",
             "stride": "length / size of stride",
             "padding": "pre-operator padding to use, i.e., `VALID` `SAME`"
         }

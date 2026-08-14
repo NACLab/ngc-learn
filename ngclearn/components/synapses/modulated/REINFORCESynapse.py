@@ -1,6 +1,7 @@
 # %%
 
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 from ngclearn import compilable, Compartment
 
 from ngclearn.utils.model_utils import clip, d_clip
@@ -10,60 +11,6 @@ import jax
 from ngclearn.components.synapses import DenseSynapse
 from ngclearn.utils import tensorstats
 from ngclearn.utils.model_utils import create_function
-
-def _gaussian_logpdf(event, mean, stddev):
-  scale_sqrd = stddev ** 2
-  log_normalizer = jnp.log(2 * jnp.pi * scale_sqrd)
-  quadratic = (event - mean)**2 / scale_sqrd
-  return - 0.5 * (log_normalizer + quadratic)
-
-
-def _compute_update(
-        dt, inputs, rewards, act_fx, weights, seed, mu_act_fx, dmu_act_fx, mu_out_min, mu_out_max, scalar_stddev
-):
-    learning_stddev_mask = jnp.asarray(scalar_stddev <= 0.0, dtype=jnp.float32)
-    # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
-    W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
-    # Forward pass
-    activation = act_fx(inputs)
-    mean = activation @ W_mu
-    fx_mean = mu_act_fx(mean)
-    logstd = activation @ W_logstd
-    clip_logstd = clip(logstd, -10.0, 2.0)
-    std = jnp.exp(clip_logstd)
-    std = learning_stddev_mask * std + (1.0 - learning_stddev_mask) * scalar_stddev # masking trick
-    # Sample using reparameterization trick
-    epsilon = jax.random.normal(seed, fx_mean.shape)
-    sample = epsilon * std + fx_mean
-    sample = jnp.clip(sample, mu_out_min, mu_out_max)
-    outputs = sample # the actual action that we take
-    # Compute log probability density of the Gaussian
-    log_prob = _gaussian_logpdf(sample, fx_mean, std).sum(-1)
-    # Compute objective (negative REINFORCE objective)
-    objective = (-log_prob * rewards).mean() * 1e-2
-
-    # Backward pass
-    batch_size = inputs.shape[0] # B
-    dL_dlogp = -rewards[:, None] * 1e-2 / batch_size # (B, 1)
-
-    # Compute gradients manually based on the derivation
-    # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
-    dlog_prob_dfxmean = (sample - fx_mean) / (std ** 2)
-    dL_dmean = dL_dlogp * dlog_prob_dfxmean * dmu_act_fx(mean) # (B, A)
-    dL_dWmu = activation.T @ dL_dmean
-
-    # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
-    dlog_prob_dlogstd = - 1.0 / std + (sample - fx_mean)**2 / std**3
-    dL_dstd = dL_dlogp * dlog_prob_dlogstd
-    # Apply gradient clipping for logstd
-    dL_dlogstd = d_clip(logstd, -10.0, 2.0) * dL_dstd * std
-    dL_dWlogstd = activation.T @ dL_dlogstd # (I, B) @ (B, A) = (I, A)
-    dL_dWlogstd = dL_dWlogstd * learning_stddev_mask # there is no learning for the scalar stddev
-
-    # Update weights, negate the gradient because gradient ascent in ngc-learn
-    dW = jnp.concatenate([-dL_dWmu, -dL_dWlogstd], axis=-1)
-    # Finally, return metrics if needed
-    return dW, objective, outputs
 
 
 class REINFORCESynapse(DenseSynapse):
@@ -97,7 +44,7 @@ class REINFORCESynapse(DenseSynapse):
             typically a tuple with 1st element as a string calling the name of
             initialization to use
 
-        resist_scale: a fixed scaling factor to apply to synaptic transform
+        g_conduct_factor: a fixed scaling factor to apply to synaptic transform
             (Default: 1.)
 
         act_fx: activation function to apply to inputs (Default: "identity")
@@ -114,22 +61,36 @@ class REINFORCESynapse(DenseSynapse):
         mu_act_fx: activation function to apply to the mean of the Gaussian distribution (Default: "identity")
     """
 
-    # Define Functions
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, eta=1e-4, decay=0.99, weight_init=None, resist_scale=1., act_fx=None,
-            p_conn=1., w_bound=1., batch_size=1, seed=None, mu_act_fx=None, mu_out_min=-jnp.inf, mu_out_max=jnp.inf,
-            scalar_stddev=-1.0, **kwargs
+            self,
+            name,
+            shape,
+            eta=1e-4,
+            decay=0.99,
+            weight_init=None,
+            g_conduct_factor=1.,
+            act_fx=None,
+            p_conn=1.,
+            w_bound=1.,
+            batch_size=1,
+            seed=None,
+            mu_act_fx=None,
+            mu_out_min=-jnp.inf,
+            mu_out_max=jnp.inf,
+            scalar_stddev=-1.0,
+            **kwargs
     ) -> None:
         # This is because we have weights mu and weight log sigma
         input_dim, output_dim = shape
         super().__init__(
-            name, (input_dim, output_dim * 2), weight_init, None, resist_scale, p_conn,
+            name, (input_dim, output_dim * 2), weight_init, None, g_conduct_factor, p_conn,
             batch_size=batch_size, **kwargs
         )
 
         ## Synaptic hyper-parameters
         self.shape = shape ## shape of synaptic efficacy matrix
-        self.Rscale = resist_scale ## post-transformation scale factor
+        self.Rscale = g_conduct_factor ## post-transformation scale factor
         self.w_bound = w_bound #1. ## soft weight constraint
         self.eta = eta ## learning rate
         # self.out_min = out_min
@@ -152,6 +113,72 @@ class REINFORCESynapse(DenseSynapse):
         self.learning_mask = Compartment(jnp.zeros(()))
         self.seed = Compartment(jax.random.PRNGKey(seed if seed is not None else 42))
 
+    @staticmethod
+    def _gaussian_logpdf(event, mean, stddev): ## internal Gauss log pdf function
+        ## NOTE: might want to replace this later with external ngclearn.utils.model_utils (or "kernels/pdfs") import
+        scale_sqrd = stddev ** 2
+        log_normalizer = jnp.log(2 * jnp.pi * scale_sqrd)
+        quadratic = (event - mean) ** 2 / scale_sqrd
+        return - 0.5 * (log_normalizer + quadratic)
+
+    @staticmethod
+    def _compute_update( ## internal update calculation routine for REINFORCE
+            dt,
+            inputs,
+            rewards,
+            act_fx,
+            weights,
+            seed,
+            mu_act_fx,
+            dmu_act_fx,
+            mu_out_min,
+            mu_out_max,
+            scalar_stddev
+    ):
+        learning_stddev_mask = jnp.asarray(scalar_stddev <= 0.0, dtype=jnp.float32)
+        # (input_dim, output_dim * 2) => (input_dim, output_dim), (input_dim, output_dim)
+        W_mu, W_logstd = jnp.split(weights, 2, axis=-1)
+        # Forward pass
+        activation = act_fx(inputs)
+        mean = activation @ W_mu
+        fx_mean = mu_act_fx(mean)
+        logstd = activation @ W_logstd
+        clip_logstd = clip(logstd, -10.0, 2.0)
+        std = jnp.exp(clip_logstd)
+        std = learning_stddev_mask * std + (1.0 - learning_stddev_mask) * scalar_stddev  # masking trick
+        # Sample using reparameterization trick
+        epsilon = jax.random.normal(seed, fx_mean.shape)
+        sample = epsilon * std + fx_mean
+        sample = jnp.clip(sample, mu_out_min, mu_out_max)
+        outputs = sample  # the actual action that we take
+        # Compute log probability density of the Gaussian
+        log_prob = REINFORCESynapse._gaussian_logpdf(sample, fx_mean, std).sum(-1)
+        # Compute objective (negative REINFORCE objective)
+        objective = (-log_prob * rewards).mean() * 1e-2
+
+        # Backward pass
+        batch_size = inputs.shape[0]  # B
+        dL_dlogp = -rewards[:, None] * 1e-2 / batch_size  # (B, 1)
+
+        # Compute gradients manually based on the derivation
+        # dL/dmu = -(r-r_hat) * dlog_prob/dmu = -(r-r_hat) * -(sample-mu)/sigma^2
+        dlog_prob_dfxmean = (sample - fx_mean) / (std ** 2)
+        dL_dmean = dL_dlogp * dlog_prob_dfxmean * dmu_act_fx(mean)  # (B, A)
+        dL_dWmu = activation.T @ dL_dmean
+
+        # dL/dlog(sigma) = -(r-r_hat) * dlog_prob/dlog(sigma) = -(r-r_hat) * (((sample-mu)/sigma)^2 - 1)
+        dlog_prob_dlogstd = - 1.0 / std + (sample - fx_mean) ** 2 / std ** 3
+        dL_dstd = dL_dlogp * dlog_prob_dlogstd
+        # Apply gradient clipping for logstd
+        dL_dlogstd = d_clip(logstd, -10.0, 2.0) * dL_dstd * std
+        dL_dWlogstd = activation.T @ dL_dlogstd  # (I, B) @ (B, A) = (I, A)
+        dL_dWlogstd = dL_dWlogstd * learning_stddev_mask  # there is no learning for the scalar stddev
+
+        # Update weights, negate the gradient because gradient ascent in ngc-learn
+        dW = jnp.concatenate([-dL_dWmu, -dL_dWlogstd], axis=-1)
+        # Finally, return metrics if needed
+        return dW, objective, outputs
+
     @compilable
     def evolve(self, dt):
         # Get compartment values
@@ -167,7 +194,7 @@ class REINFORCESynapse(DenseSynapse):
 
         # Main logic
         main_seed, sub_seed = jax.random.split(seed)
-        dWeights, objective, outputs = _compute_update(
+        dWeights, objective, outputs = REINFORCESynapse._compute_update(
             dt, inputs, rewards, self.act_fx, weights, sub_seed, self.mu_act_fx, self.dmu_act_fx, self.mu_out_min, self.mu_out_max, self.scalar_stddev
         )
         ## do a gradient ascent update/shift
@@ -236,7 +263,7 @@ class REINFORCESynapse(DenseSynapse):
             "eta": "Learning rate for weight updates",
             "decay": "Decay factor for EMA of gradients",
             "weight_init": "Initialization conditions for synaptic weight values",
-            "resist_scale": "Resistance level scaling factor applied to output",
+            "g_conduct_factor": "Conductance level scaling factor applied to output",
             "act_fx": "Activation function to apply to inputs",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "w_bound": "Upper bound for weight clipping",

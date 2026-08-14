@@ -19,6 +19,9 @@ from .neurons.spiking.fitzhughNagumoCell import FitzhughNagumoCell
 from .neurons.spiking.izhikevichCell import IzhikevichCell
 from .neurons.spiking.hodgkinHuxleyCell import HodgkinHuxleyCell
 from .neurons.spiking.RAFCell import RAFCell
+## point to standard spiking spike-response model component types
+from .neurons.spiking.LIFSRM import LIFSRM
+from .neurons.spiking.RAFSRM import RAFSRM
 
 ## point to transformer/operator component types
 from .other.varTrace import VarTrace
@@ -30,6 +33,7 @@ from .input_encoders.poissonCell import PoissonCell
 from .input_encoders.ganglionCell import RetinalGanglionCell
 from .input_encoders.latencyCell import LatencyCell
 from .input_encoders.phasorCell import PhasorCell
+from .input_encoders.TTFSCell import TTFSCell
 #from .input_encoders.populationCoderCell import PopulationCoderCell
 #from .input_encoders.gridCell import GridCell
 #from .input_encoders.placeCell import PlaceCell
@@ -37,12 +41,15 @@ from .input_encoders.phasorCell import PhasorCell
 ## point to synapse component types
 from .synapses.denseSynapse import DenseSynapse
 from .synapses.staticSynapse import StaticSynapse
+from .synapses.sparseTensorSynapse import SparseTensorSynapse
+from .synapses.staticSparseTensorSynapse import StaticSparseTensorSynapse
 from .synapses.hebbian.hebbianSynapse import HebbianSynapse
 from .synapses.hebbian.STDPSynapse import STDPSynapse
 from .synapses.hebbian.traceSTDPSynapse import TraceSTDPSynapse
 from .synapses.hebbian.expSTDPSynapse import ExpSTDPSynapse
 from .synapses.hebbian.eventSTDPSynapse import EventSTDPSynapse
 from .synapses.hebbian.BCMSynapse import BCMSynapse
+from .synapses.hebbian.inhibitorySTDPSynapse import InhibitorySTDPSynapse
 from .synapses.competitive.SOMSynapse import SOMSynapse
 from .synapses.STPDenseSynapse import STPDenseSynapse
 from .synapses.exponentialSynapse import ExponentialSynapse

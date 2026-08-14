@@ -28,14 +28,6 @@ ngclearn.components.synapses.competitive.hopfieldSynapse module
    :undoc-members:
    :show-inheritance:
 
-ngclearn.components.synapses.competitive.simple\_ART2ASynapse module
---------------------------------------------------------------------
-
-.. automodule:: ngclearn.components.synapses.competitive.simple_ART2ASynapse
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ngclearn.components.synapses.competitive.vectorQuantizeSynapse module
 ---------------------------------------------------------------------
 

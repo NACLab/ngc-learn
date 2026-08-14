@@ -1,4 +1,5 @@
 from jax import random, numpy as jnp, jit
+from ngcsimlib import deprecate_args
 
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
@@ -46,8 +47,8 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         bias_init: a kernel to drive initialization of biases for this synaptic cable
             (Default: None, which turns off/disables biases) <unused>
 
-        resist_scale: a fixed (resistance) scaling factor to apply to synaptic
-            transform (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+        g_conduct_factor: a fixed (resistance) scaling factor to apply to synaptic
+            transform (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in)
 
         p_conn: probability of a connection existing (default: 1.); setting
             this to < 1 and > 0. will result in a sparser synaptic structure
@@ -57,11 +58,21 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
 
     """
 
+    @deprecate_args(_rebind=True, resist_scale='g_conduct_factor')
     def __init__(
-            self, name, shape, tau_decay, g_syn_bar, syn_rest, weight_init=None, bias_init=None, resist_scale=1.,
-            p_conn=1., is_nonplastic=True, **kwargs
+            self, name,
+            shape,
+            tau_decay,
+            g_syn_bar,
+            syn_rest,
+            weight_init=None,
+            bias_init=None,
+            g_conduct_factor=1.,
+            p_conn=1.,
+            is_nonplastic=True,
+            **kwargs
     ):
-        super().__init__(name, shape, weight_init, bias_init, resist_scale, p_conn, **kwargs)
+        super().__init__(name, shape, weight_init, bias_init, g_conduct_factor, p_conn, **kwargs)
         ## dynamic synapse meta-parameters
         self.tau_decay = tau_decay
         self.g_syn_bar = g_syn_bar
@@ -85,10 +96,10 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
         dgsyn_dt = -self.g_syn.get()/self.tau_decay + (_out * self.g_syn_bar) * (1./dt)
         g_syn = self.g_syn.get() + dgsyn_dt * dt ## run Euler step to move conductance
         ## compute derive electrical current variable
-        i_syn = -g_syn * self.resist_scale
+        i_syn = -g_syn * self.g_conduct_factor
         if self.syn_rest is not None:
-            i_syn =  -(g_syn * self.resist_scale) * (self.v.get() - self.syn_rest)
-        outputs = i_syn #jnp.matmul(inputs, Wdyn * self.resist_scale) + biases
+            i_syn =  -(g_syn * self.g_conduct_factor) * (self.v.get() - self.syn_rest)
+        outputs = i_syn #jnp.matmul(inputs, Wdyn * self.g_conduct_factor) + biases
 
         self.outputs.set(outputs)
         self.i_syn.set(i_syn)
@@ -130,7 +141,7 @@ class ExponentialSynapse(DenseSynapse): ## dynamic exponential synapse cable
             "shape": "Shape of synaptic weight value matrix; number inputs x number outputs",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
             "bias_init": "Initialization conditions for bias/base-rate (b) values",
-            "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
+            "g_conduct_factor": "Conductance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
             "tau_decay": "Conductance decay time constant (ms)",
             "g_bar_syn": "Maximum conductance value",

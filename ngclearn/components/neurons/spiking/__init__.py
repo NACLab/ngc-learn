@@ -10,3 +10,7 @@ from .izhikevichCell import IzhikevichCell
 from .RAFCell import RAFCell
 from .hodgkinHuxleyCell import HodgkinHuxleyCell
 
+## spike-response models (SRMs)
+from .LIFSRM import LIFSRM 
+from .RAFSRM import RAFSRM
+

@@ -20,8 +20,8 @@ class StaticSynapse(DenseSynapse):
                 typically a tuple with 1st element as a string calling the name of
                 initialization to use
 
-            resist_scale: a fixed (resistance) scaling factor to apply to synaptic
-                transform (Default: 1.), i.e., yields: out = ((W * Rscale) * in)
+            g_conduct_factor: a fixed (conductance) scaling factor to apply to synaptic
+                transform (Default: 1.), i.e., yields: out = ((W * g_conduct_factor) * in)
 
             p_conn: probability of a connection existing (default: 1.); setting
                 this to < 1 and > 0. will result in a sparser synaptic structure

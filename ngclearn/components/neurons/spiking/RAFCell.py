@@ -8,33 +8,6 @@ from ngclearn.utils.diffeq.ode_utils import get_integrator_code, \
 from ngclearn import compilable #from ngcsimlib.parser import compilable
 from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
 
-########################################################################################################################
-## RAF dynamics (multi-dimensional ODEs)
-@jit
-def _dfv_internal(j, v, w, tau_m, omega, b): ## "voltage" dynamics
-    # dy/dt =  omega x + b y
-    dv_dt = omega * w + v * b ## dv/dt
-    dv_dt = dv_dt * (1./tau_m)
-    return dv_dt
-
-def _dfv(t, v, params): ## voltage dynamics wrapper
-    j, w, tau_m, omega, b = params
-    dv_dt = _dfv_internal(j, v, w, tau_m, omega, b)
-    return dv_dt
-
-@jit
-def _dfw_internal(j, v, w, tau_w, omega, b): ## raw angular driver dynamics
-    # dx/dt = b x − omega y + I; I is scaled injected electrical current
-    dw_dt = w * b - v * omega + j
-    dw_dt = dw_dt * (1./tau_w)
-    return dw_dt
-
-def _dfw(t, w, params): ## angular driver dynamics wrapper
-    j, v, tau_w, omega, b = params
-    dv_dt = _dfw_internal(j, v, w, tau_w, omega, b)
-    return dv_dt
-########################################################################################################################
-
 class RAFCell(JaxComponent):
     """
     The resonate-and-fire (RAF) neuronal cell
@@ -99,34 +72,51 @@ class RAFCell(JaxComponent):
 
     @deprecate_args(resist_m="resist_v", tau_m="tau_v", b="dampen_factor")
     def __init__(
-            self, name, n_units, tau_v=1., tau_w=1., thr=1., omega=10., dampen_factor=-1., v_reset=0., w_reset=0.,
-            v0=0., w0=0., resist_v=1., integration_type="euler", batch_size=1, **kwargs
+            self, 
+            name, 
+            n_units, 
+            tau_v=1., 
+            tau_w=1., 
+            thr=1., 
+            omega=10., 
+            dampen_factor=-1., 
+            v_reset=0., 
+            w_reset=0.,
+            v0=0., ## voltage/membrane potential initial conditions
+            w0=0., ## angular variable driver initial conditions
+            resist_v=1., 
+            post_spike_reset=True, ## if True, snaps states to reset values post-spike-emission
+            integration_type="euler", 
+            batch_size=1, 
+            **kwargs
     ):
         #v_rest=-72., v_reset=-75., w_reset=0., thr=5., v0=-70., w0=0., tau_w=400., thr=5., omega=10., b=-1.
         super().__init__(name, **kwargs)
 
-        ## Integration properties
+        ## integration properties
         self.integrationType = integration_type
         self.intgFlag = get_integrator_code(self.integrationType)
 
-        ## Cell properties
+        ## RAF cell properties
+        self.post_spike_reset = post_spike_reset
         self.tau_v = tau_v
         self.resist_v = resist_v
         self.tau_w = tau_w
         self.omega = omega ## angular frequency
         self.dampen_factor = dampen_factor ## dampening factor (b)
-        ## Note: the smaller that dampen_factor "b" is, the faster the oscillation dampens to resting state values
+        ## Note: the smaller that dampen_factor "b" is, faster oscillation dampens 
+        ##       to resting state values
         self.v_reset = v_reset
         self.w_reset = w_reset
         self.v0 = v0
         self.w0 = w0
         self.thr = thr
 
-        ## Layer Size Setup
+        ## layer size setup
         self.batch_size = batch_size
         self.n_units = n_units
 
-        ## Compartment setup
+        ## RAF key compartment setup
         restVals = jnp.zeros((self.batch_size, self.n_units))
         self.j = Compartment(restVals, display_name="Current", units="mA")
         self.v = Compartment(restVals + self.v0, display_name="Voltage", units="mV")
@@ -136,6 +126,21 @@ class RAFCell(JaxComponent):
             restVals, display_name="Time-of-Last-Spike", units="ms"
         ) ## time-of-last-spike
 
+    ## RAF dynamics: multi-dimensional ODE system (2 ODEs)
+    def _dfv(t, v, params): ## voltage dynamics wrapper
+        j, w, tau_m, omega, b = params
+        #dv_dt = _dfv_internal(j, v, w, tau_m, omega, b)
+        dv_dt = omega * w + v * b ## dv/dt
+        dv_dt = dv_dt * (1./tau_m)
+        return dv_dt
+
+    def _dfw(t, w, params): ## angular driver dynamics wrapper
+        j, v, tau_w, omega, b = params
+        #dv_dt = _dfw_internal(j, v, w, tau_w, omega, b)
+        dw_dt = w * b - v * omega + j
+        dw_dt = dw_dt * (1./tau_w)
+        return dw_dt
+
     @compilable
     def advance_state(self, t, dt):
         ## continue with centered dynamics
@@ -143,20 +148,23 @@ class RAFCell(JaxComponent):
         if self.intgFlag == 1:  ## RK-2/midpoint
             ## Note: we integrate ODEs in order: first w, then v
             w_params = (j_, self.v.get(), self.tau_w, self.omega, self.dampen_factor)
-            _, _w = step_rk2(0., self.w.get(), _dfw, dt, w_params)
+            _, _w = step_rk2(0., self.w.get(), RAFCell._dfw, dt, w_params)
             v_params = (j_, _w, self.tau_v, self.omega, self.dampen_factor)
-            _, _v = step_rk2(0., self.v.get(), _dfv, dt, v_params)
+            _, _v = step_rk2(0., self.v.get(), RAFCell._dfv, dt, v_params)
         else:  # integType == 0 (default -- Euler)
             ## Note: we integrate ODEs in order: first w, then v
             w_params = (j_, self.v.get(), self.tau_w, self.omega, self.dampen_factor)
-            _, _w = step_euler(0., self.w.get(), _dfw, dt, w_params)
+            _, _w = step_euler(0., self.w.get(), RAFCell._dfw, dt, w_params)
             v_params = (j_, _w, self.tau_v, self.omega, self.dampen_factor)
-            _, _v = step_euler(0., self.v.get(), _dfv, dt, v_params)
+            _, _v = step_euler(0., self.v.get(), RAFCell._dfv, dt, v_params)
 
         s = (_v > self.thr) * 1. ## emit spikes/pulses
-        ## hyperpolarize/reset/snap variables
-        w = _w * (1. - s) + s * self.w_reset
-        v = _v * (1. - s) + s * self.v_reset
+        if self.post_spike_reset: ## hyperpolarize/reset/snap variables
+            w = _w * (1. - s) + s * self.w_reset
+            v = _v * (1. - s) + s * self.v_reset
+        else:
+            w = _w
+            v = _v
 
         self.tols.set((1. - s) * self.tols.get() + (s * t)) ## update times-of-last-spike(s)
 
