@@ -69,10 +69,10 @@ def explicit_triangular_estimator(get_surr_fx=False):
     """
     The explicit triangular surrogate gradient estimator for binary spike emission.
     This is controlled by a "window" argument, instead of the alpha-scaled variant
-    `triangular_estimator()'.
+    "triangular_estimator()".
 
     Returns:
-        ( spike_fx(x, thr), d_spike_fx(x, thr) ) OR
+        ( spike_fx(x, thr), d_spike_fx(x, thr) ) OR 
         ( spike_fx(x, thr), surr_fx(x, thr, args), d_spike_fx(x, thr, args) )
     """
     @jit

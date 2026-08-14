@@ -103,10 +103,15 @@ History
 
   3.1.1
   — — — — — — — — -
-  * Several patches and fixes (ensured certain error-neurons behaved as in v3.0.0)
-  * Update to docs/revisions
-  * Integration of filters/filtering functionality (including simple divisive normalization) in utilities
-  * Integration of several useful metrics (including for characterizing sparsity)
-  * Some additional clean-up throughout
+  * several patches and fixes (ensured certain error-neurons behaved as in v3.0.0)
+  * ipdate to docs/revisions
+  * integration of filters/filtering functionality (including simple divisive normalization) in utilities
+  * integration of several useful metrics (including for characterizing sparsity)
+  * some additional clean-up throughout
 
-
+  3.2.0
+  — — — — — — — — -
+  * various fixes/patches as well as clean-up/minor tweaks to utils/core components
+  * integration of additional visualization tools
+  * integration of sparse-tensor synaptic cable (locally-connected/unshared-convolutional structure)
+  * additional component integration/revisions, including updates to patched-synaptic cable components

@@ -11,7 +11,6 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
     A synaptic cable that adjusts its efficacies via the trace-based, inhibitory 
     spike-timing-dependent plasticity (iSTDP); this rule can also be configured to 
     utilize a voltage-dependent format of Foldiak anti-Hebbian plasticity. 
-.
 
     | --- Synapse Compartments: ---
     | inputs - input (takes in external signals)
@@ -38,8 +37,8 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
     Args:
         name: the string name of this cell
 
-        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
-            with number of inputs by number of outputs)
+        shape: tuple specifying shape of this synaptic cable (usually a 2-tuple with number of 
+            inputs by number of outputs)
 
         A_plus: strength of long-term potentiation (LTP)
 
@@ -64,18 +63,19 @@ class InhibitorySTDPSynapse(DenseSynapse): ## inhibitory-STDP synaptic cable
             plasticity (Default: False)
 
         weight_init: a kernel to drive initialization of this synaptic cable's values;
-            typically a tuple with 1st element as a string calling the name of
-            initialization to use
+            typically a tuple with 1st element as a string calling the name of initialization to use
 
         bias_init: a kernel to drive initialization to this cable's fixed bias/shift values
 
         g_conduct_factor: a fixed scaling factor to apply to synaptic transform
             (Default: 1.), i.e., yields: out = ((W * mask) * in) * g_conduct_factor
 
-        p_conn: probability of a connection existing (default: 1); setting
-            this to < 1. will result in a sparser synaptic structure
+        p_conn: probability of a connection existing (default: 1); setting this to < 1. will 
+            result in a sparser synaptic structure
 
-        weight_mask: synaptic binary masking matrix to apply (to enforce a constant sparse structure; default: None)
+        weight_mask: synaptic binary masking matrix to apply (to enforce a constant sparse 
+            structure; default: None)
+
     """
 
     @deprecate_args(_rebind=True, w_bound='w_max')
