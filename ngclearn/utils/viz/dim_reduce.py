@@ -32,7 +32,8 @@ def extract_tsne_latents(
         vectors,
         perplexity=30,
         n_pca_comp=32,
-        batch_size=500
+        batch_size=500, 
+        verbose=1
 ): ## tSNE mapping routine
     """
     Projects collection of K vectors (stored in a matrix) to a two-dimensional (2D) visualization space via the
@@ -67,7 +68,7 @@ def extract_tsne_latents(
         z_2D = ipca.transform(vectors)
         print(" PCA.lat.shape = ",z_2D.shape)
         print(" > Finishing projection via t-SNE...")
-        z_2D = TSNE(n_components=2,perplexity=perplexity, verbose=1).fit_transform(z_2D)
+        z_2D = TSNE(n_components=2,perplexity=perplexity, verbose=verbose).fit_transform(z_2D)
     else:
         z_2D = vectors
     return z_2D
