@@ -58,7 +58,10 @@ def _make_connectivity_map(
             center = S / 2.0
             distance_from_center = abs(s - center) / center
             ## shrink window proportionally, ensuring it uses at least 1 connection
-            local_P = max(1, int(P * (1.0 - convergent_factor * distance_from_center)))
+            #local_P = max(1, int(P * (1.0 - convergent_factor * distance_from_center)))
+            local_P = max(
+                1, round(P * (1.0 - convergent_factor * distance_from_center))
+            )
         else:
             local_P = P
 
@@ -509,7 +512,7 @@ class SparseTensorSynapse(DenseSynapse):
             outputs = outputs_3d.reshape(B, -1)  ## flatten to 2D formatted output
         else:
             outputs = inputs @ weights  ## block-diagonal/block-matrix multiply
-        outputs + biases
+        outputs = (outputs * self.g_conduct_factor) + biases
         self.outputs.set(outputs)
 
     @compilable
