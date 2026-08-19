@@ -337,14 +337,14 @@ class SparseTensorSynapse(DenseSynapse):
         self.norm_trigger = Compartment(jnp.zeros((1, 1)))
         if self.normalize:
             self.norm_trigger.set(self.norm_trigger.get() + 1)
-            P, S, Klocal, Olocal = self.shape
-            norm_axis = 1 #0 #1
-            Weffdim = Klocal * P
-            if norm_axis == 1:
-                Weffdim = Olocal * self.n_out_streams #Weffdim = Olocal
-            weight_init = dist.gaussian(mean=0., std=float(1.0 / jnp.sqrt(Weffdim)))
-            weights = weight_init(self.shape, self.key.get())
-            self.weights.set(weights)
+        #     P, S, Klocal, Olocal = self.shape
+        #     norm_axis = 1 #0 #1
+        #     Weffdim = Klocal * P
+        #     if norm_axis == 1:
+        #         Weffdim = Olocal * self.n_out_streams #Weffdim = Olocal
+        #     weight_init = dist.gaussian(mean=0., std=float(1.0 / jnp.sqrt(Weffdim)))
+        #     weights = weight_init(self.shape, self.key.get())
+        #     self.weights.set(weights)
 
         if self.use_block_matrix_format: ## set up block-diagonal algorithm backend if flagged
             block_weights = _reconstruct_global_2d_matrix(
@@ -527,12 +527,16 @@ class SparseTensorSynapse(DenseSynapse):
         ### - axis 0 (P) and Axis 2 (K_local) isolate an individual input neuron.
         ### - axis 1 (S) and Axis 3 (O_local) represent all the places its synapses land.
 
-        if axis == 0:
-            ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
-            reduce_axes = (0, 2)
-        elif axis == 1:
-            ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
-            reduce_axes = (1, 3)
+        # if axis == 0:
+        #     ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
+        #     reduce_axes = (0, 2)
+        # elif axis == 1:
+        #     ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
+        #     reduce_axes = (1, 3)
+        if axis == 1:
+            reduce_axes = 3  ## get col-axis for normalization
+        elif axis == 0:
+            reduce_axes = 2  ## assume row-axis for normalization
         else:
             raise ValueError("Norm.axis must be 0 or 1.")
 
@@ -594,12 +598,16 @@ class SparseTensorSynapse(DenseSynapse):
         gathered_weights = global_matrix[global_y_indices, global_x_indices]
 
         ## compute norms on the isolated valid blocks based on the desired axis
-        if axis == 0:
-            ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
-            reduce_axes = (0, 2)
-        elif axis == 1:
-            ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
-            reduce_axes = (1, 3)
+        # if axis == 0:
+        #     ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
+        #     reduce_axes = (0, 2)
+        # elif axis == 1:
+        #     ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
+        #     reduce_axes = (1, 3)
+        if axis == 1:
+            reduce_axes = 3  ## get col-axis for normalization
+        elif axis == 0:
+            reduce_axes = 2  ## assume row-axis for normalization
         else:
             raise ValueError("Norm.axis must be 0 or 1.")
 
