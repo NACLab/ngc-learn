@@ -84,8 +84,8 @@ def visualize_macro_grid( ## more complex filter visualization co-routine
     plt.figure(figsize=(10, 10), dpi=300)
 
     ## use vmin=-1.0 and vmax=1.0 so that the 1.0 canvas background registers as absolute white
-    max_val = 1.
-    min_val = -1.
+    max_val = None #1.
+    min_val = None #-1.
     if contrast_by_data:
         max_val = float(jnp.max(jnp.abs(master_canvas)))
         min_val = float(jnp.min(jnp.abs(master_canvas)))

@@ -12,9 +12,9 @@ from ngclearn.utils.distribution_generator import DistributionGenerator as dist
 ########################################################################################################################
 ## helper-functions for sparse-synaptic tensors
 def _make_connectivity_map(
-    P,
-    S,
-    stride=1,
+    P, ## size of sliding input connectivity window
+    S, ## number of output streams/maps/groups
+    stride=1, ## stream skip (Default: 1)
     padding=0,
     dilation=1,
     convergent_factor=0.0,
@@ -80,13 +80,6 @@ def _make_connectivity_map(
                     ## swap connection with completely random global input stream
                     conn_map[s, p] = rng.integers(0, total_inputs)
     return jnp.array(conn_map)
-
-# def make_sliding_connectivity_map(P, S, stride=1, padding=0):
-#     conn_map = np.zeros((S, P), dtype=np.int32)
-#     for s in range(S):
-#         start_idx = s * stride - padding
-#         conn_map[s, :] = np.arange(start_idx, start_idx + P)
-#     return jnp.array(conn_map)
 
 @partial(jit, static_argnums=(2, 3, 4, 5))
 def _reconstruct_global_2d_matrix(
@@ -473,6 +466,7 @@ class SparseTensorSynapse(DenseSynapse):
         biases = self.biases.get()
         inputs = self.inputs.get()  ## get inputs
         conn_map = self.connectivity_map  ## get connectivity structure
+        #print(self.name, " ", weights.shape, " ", inputs.shape)
 
         B = inputs.shape[0]  ## get batch size for subsequent averaging
         if not self.use_block_matrix_format:
