@@ -233,8 +233,7 @@ def measure_sparsity(codes, tolerance=0., preserve_batch=True, flip_measure=Fals
     
     | rho_mean(X) = 1/N Sum^N_{i=1} rho(x_i)
     
-    where lower/closer to 0 means codes more sparse and closer to 1 means 
-    codes are more dense.
+    where lower/closer to 0 means codes more sparse and closer to 1 means codes are denser.
 
     Note that this definition of sparsity aligns with Foldiak's definition of 
     the ratio of active neurons to inactive ones (assuming binary coding):

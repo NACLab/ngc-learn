@@ -1,4 +1,5 @@
 from functools import partial
+import jax
 from jax import numpy as jnp, jit
 
 @partial(jit, static_argnums=[1])
@@ -6,7 +7,8 @@ def participation_ratio(
     latent_codes, use_NaN_fallback=False
 ):
     """
-    Calculates the participation ratio coefficient for a set of latent codes
+    Calculates the participation ratio coefficient (also known as the Gini effective 
+    dimension) for a set of latent codes. 
 
     Args:
         latent_codes: a set of (N x D) latent code vectors (one row per vector code)
@@ -23,8 +25,9 @@ def participation_ratio(
 
     tr = jnp.trace(cov)
     tr2_cov = tr * tr
-    cov2_tr = jnp.trace(cov @ cov)
-
+    ## calc frob-norm squared; NOTE: faster line replaced older un-commented one to right
+    cov2_tr = jnp.sum(jnp.square(cov)) #cov2_tr = jnp.trace(cov @ cov)
+    
     ## this algorithm supports one of two fallback cases
     if not use_NaN_fallback: ## use fallback-to-1 eff-dim check
         ## use JAX-friendly conditional / direct switch to fallback to 1.0.
@@ -56,10 +59,48 @@ def rankme(latent_codes, eps=1e-7):
     singular_values = jnp.linalg.svd(latent_codes, compute_uv=False) ## singular values of latent_codes
     sum_singular_values = jnp.sum(singular_values)                   ## L1
     sum_S_vals = jnp.where(sum_singular_values > 0.0, sum_singular_values, 1.0)
-    p = singular_values / sum_S_vals + eps                           ## L1-normalized singular value
-    shannon_entropy = -jnp.sum(p * jnp.log(p))                       ## calc Shannon entropy
+    p = singular_values / (sum_S_vals + eps)                         ## L1-normalized singular value
+    safe_p = jnp.where(p > 0.0, p, 1.0)
+    shannon_entropy = -jnp.sum(p * jnp.log(safe_p))                       ## calc Shannon entropy
 
-    return jnp.exp(jnp.where(sum_singular_values > 0.0, 
-                             shannon_entropy,                       ## compute final exp(Shannon entropy) = effective rank
-                             jnp.nan))
+    ## compute final exp(Shannon entropy) = effective rank
+    #rankme_score = jnp.exp( ## compute final exp(Shannon entropy) = effective rank
+    #    jnp.where(sum_singular_values > 0.0, shannon_entropy, jnp.nan)
+    #)
+    rankme_score = jnp.where(sum_singular_values > 0.0, jnp.exp(shannon_entropy), 1.0)
+    return rankme_score
+
+@partial(jit, static_argnums=[1])
+def stable_rank(latent_codes, num_iters=10): ## power-iterator method
+    """
+    Computes the stable rank via the power iteration method in order to find the 
+    top singular value.
+
+    Args:
+        latent_codes: a set of (N x D) latent code vectors (one row per vector code)
+
+        num_iters: number of iterations to run power iterator calculation (Default: 10)
+
+    Returns:
+        scalar measurement of the stable rank (proxy for effective dimension)
+    """
+    Z = latent_codes
+    Zc = Z - Z.mean(axis=0, keepdims=True) ## center codes
+    frobenius_norm_sq = jnp.sum(jnp.square(Zc)) ## calc squared frob-norm
+    
+    ## use power iteration to find dominant eigenvector of Zc.T @ Zc
+    ### start w/ random vector: 
+    key = jax.random.PRNGKey(0)
+    v = jax.random.normal(key, (Zc.shape[1], 1))
+    v = v / jnp.linalg.norm(v)
+    ## apply standard power iteration loop
+    for _ in range(num_iters):
+        ## v = (Zc.T @ (Zc @ v))
+        v = Zc.T @ (Zc @ v)
+        v = v / jnp.linalg.norm(v)
+    ## compute largest singular value squared (i.e., the Rayleigh quotient): 
+    ### sigma_max^2 = ||Zc @ v||^2
+    sigma_max_sq = jnp.sum(jnp.square(Zc @ v)) 
+    return jnp.where(sigma_max_sq > 0.0, frobenius_norm_sq / sigma_max_sq, 1.0) # stable-rank score
+
 
