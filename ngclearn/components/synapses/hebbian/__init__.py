@@ -6,4 +6,5 @@ from .eventSTDPSynapse import EventSTDPSynapse
 from .BCMSynapse import BCMSynapse
 from .gerstnerHebbianSynapse import GerstnerHebbianSynapse ## Taylor-expansion Hebbian model
 from .inhibitorySTDPSynapse import InhibitorySTDPSynapse ## iSTDP rule (trace-based)
+from .ojaTensorSynapse import OjaTensorSynapse ## generalized Oja's synaptic cable
 

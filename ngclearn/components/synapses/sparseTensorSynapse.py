@@ -12,9 +12,9 @@ from ngclearn.utils.distribution_generator import DistributionGenerator as dist
 ########################################################################################################################
 ## helper-functions for sparse-synaptic tensors
 def _make_connectivity_map(
-    P,
-    S,
-    stride=1,
+    P, ## size of sliding input connectivity window
+    S, ## number of output streams/maps/groups
+    stride=1, ## stream skip (Default: 1)
     padding=0,
     dilation=1,
     convergent_factor=0.0,
@@ -58,7 +58,10 @@ def _make_connectivity_map(
             center = S / 2.0
             distance_from_center = abs(s - center) / center
             ## shrink window proportionally, ensuring it uses at least 1 connection
-            local_P = max(1, int(P * (1.0 - convergent_factor * distance_from_center)))
+            #local_P = max(1, int(P * (1.0 - convergent_factor * distance_from_center)))
+            local_P = max(
+                1, round(P * (1.0 - convergent_factor * distance_from_center))
+            )
         else:
             local_P = P
 
@@ -77,13 +80,6 @@ def _make_connectivity_map(
                     ## swap connection with completely random global input stream
                     conn_map[s, p] = rng.integers(0, total_inputs)
     return jnp.array(conn_map)
-
-# def make_sliding_connectivity_map(P, S, stride=1, padding=0):
-#     conn_map = np.zeros((S, P), dtype=np.int32)
-#     for s in range(S):
-#         start_idx = s * stride - padding
-#         conn_map[s, :] = np.arange(start_idx, start_idx + P)
-#     return jnp.array(conn_map)
 
 @partial(jit, static_argnums=(2, 3, 4, 5))
 def _reconstruct_global_2d_matrix(
@@ -137,6 +133,70 @@ def _reconstruct_global_2d_matrix(
         global_y_indices.ravel(), global_x_indices.ravel()
     ].set(weights.ravel())
     return global_2d_matrix
+
+
+def precompute_transpose_indices(
+        forward_conn_map,
+        backward_conn_map,
+        forward_shape,
+        backward_shape
+):
+    """
+    Pre-computes a flat index gather array mapping a forward unshared tensor to its exact transposed
+    backward tensor configuration.
+
+    Forward Shape:  (P_f, S_f, K_f, O_f)
+    Backward Shape: (P_b, S_b, K_b, O_b) -> Typically K_b == O_f and O_b == K_f
+    """
+    P_f, S_f, K_f, O_f = forward_shape
+    P_b, S_b, K_b, O_b = backward_shape
+
+    ## create empty template of destination tensor layout
+    ### we populate this with absolute memory addresses of forward tensor
+    backward_flat_indices = np.full((P_b, S_b, K_b, O_b), -1, dtype=np.int32)
+    ## loop over every single target slot in backward transpose tensor
+    for p_b in range(P_b):
+        for s_b in range(S_b):
+            ## look up which input stream this backward slot is "listening" to
+            input_stream = backward_conn_map[s_b, p_b]
+            if input_stream == -1:
+                continue  ## skip dead padding zones
+            ## in forward pass, this destination 's_b' was an input stream,
+            ### and input_stream was destination output stream ('s_f')
+            s_f = int(input_stream)
+            ## scan forward connectivity map for this stream to locate
+            ### where it connects back to backward stream source 's_b'
+            forward_inputs = forward_conn_map[s_f, :]
+            matches = np.where(forward_inputs == s_b)[0]
+
+            if len(matches) > 0:
+                p_f = int(matches[0])
+
+                ## slices connect across local neural blocks:
+                ### forward K_f maps to backward O_b; forward O_f maps to backward K_b
+                for k_b in range(K_b):
+                    for o_b in range(O_b):
+                        ## map back to corresponding forward coordinates
+                        k_f = o_b
+                        o_f = k_b
+                        ## compute absolute 1D flat memory index inside  forward tensor
+                        forward_flat_idx = (
+                                p_f * (S_f * K_f * O_f) +
+                                s_f * (K_f * O_f) +
+                                k_f * O_f +
+                                o_f
+                        )
+                        ## store coordinate memory location in lookup block
+                        backward_flat_indices[p_b, s_b, k_b, o_b] = forward_flat_idx
+
+    ## flatten the lookup block into a 1D index array for quick GPU gathering
+    flat_gather_indices = backward_flat_indices.flatten()
+    ## create a mask array to cleanly zero-out entries corresponding to dead padding zones (-1)
+    valid_mask = (flat_gather_indices != -1).astype(np.float32)
+    ## clip indices to 0 so jnp.take doesn't throw out-of-bounds tracking faults on padding slots
+    flat_gather_indices = np.clip(flat_gather_indices, 0, None)
+
+    return jnp.array(flat_gather_indices), jnp.array(valid_mask)
 
 def _make_backwards_connectivity_map(
         forward_conn_map, total_input_streams
@@ -257,32 +317,41 @@ class SparseTensorSynapse(DenseSynapse):
         ## set up internal structure/topology
         ### run geometry math internally first; if invert_conn is True, 'incoming' streams to this component are actually
         ### errors from upper layer, meaning 'in_streams' is upper layer's output streams (S_forward)
+        ## standard forward-projection synaptic cable
+        dims = SparseTensorSynapse.initialize_layer_geometry(
+            n_in_streams,
+            K_local,
+            O_local,
+            P_l,
+            stride,
+            auto_pad=False,
+            dilation_l=dilation,
+            convergent_factor_l=convergent_factor
+        )
+
         if invert_conn:
-            dims = SparseTensorSynapse.initialize_layer_geometry(
-                n_in_streams,
-                K_local,
-                O_local,
-                P_l,
-                stride,
-                auto_pad=False,
-                dilation_l=dilation,
-                convergent_factor_l=convergent_factor
+            # 1. Build the TRUE forward connectivity map matching your architecture's dimensions
+            forward_connectivity_map = _make_connectivity_map(
+                P_l, dims["total_num_output_streams"], stride, convergent_factor=convergent_factor, dilation=dilation
             )
+            _old_S = dims["total_num_output_streams"]
+            _old_forward_shape = (P_l, _old_S, K_local, O_local)
 
             total_forward_inputs = n_in_streams
             total_forward_outputs = dims["total_num_output_streams"]
 
-            ## build base forward connectivity map so this can later be "inverted"
-            f_map = _make_connectivity_map(
-                P_l, S=n_in_streams, stride=stride, convergent_factor=convergent_factor, dilation=dilation
+            # 2. CRITICAL FIX: Invert the EXACT SAME map we just generated above!
+            # Do NOT call _make_connectivity_map a second time with different stream sizes.
+            backward_connectivity_map, P_back = _make_backwards_connectivity_map( ## invert map
+                forward_connectivity_map, total_forward_inputs
             )
-            self.connectivity_map, P_back = _make_backwards_connectivity_map(f_map, total_forward_inputs) ## invert map
+            self.connectivity_map = backward_connectivity_map
 
             ## explicitly compile exact shapes that ngc-learn expects
-            self.n_in_streams = total_forward_outputs  ## e.g., 1 (number of incoming error maps)
-            self.n_out_streams = total_forward_inputs  ## e.g., 3 (number of feedback target maps)
-            self.K_local = O_local  # Error size (9)
-            self.O_local = K_local  # Hidden feature target size (16)
+            self.n_in_streams = total_forward_outputs
+            self.n_out_streams = total_forward_inputs
+            self.K_local = O_local
+            self.O_local = K_local
 
             # Final 4D tensor shape for backwards weights
             calculated_shape = (P_back, total_forward_inputs, O_local, K_local)
@@ -291,19 +360,16 @@ class SparseTensorSynapse(DenseSynapse):
             # Clear window strides for pure backward routing execution
             self.stride = 0
             self.dilation = 1
-        else:
-            ## standard forward-projection synaptic cable
-            dims = SparseTensorSynapse.initialize_layer_geometry(
-                n_in_streams,
-                K_local,
-                O_local,
-                P_l,
-                stride,
-                auto_pad=False,
-                dilation_l=dilation,
-                convergent_factor_l=convergent_factor
-            )
 
+            # 3. Both maps are now in perfect structural harmony
+            self.transpose_indices, self.transpose_mask = precompute_transpose_indices(
+                forward_connectivity_map,
+                backward_connectivity_map,
+                _old_forward_shape,
+                calculated_shape
+            )
+        else:
+            self.transpose_indices = self.transpose_mask = None
             self.n_in_streams = n_in_streams # dims["total_input_streams"]  # nlm1_streams
             self.n_out_streams = dims["total_num_output_streams"]  # Computed S
             self.K_local = K_local
@@ -341,14 +407,14 @@ class SparseTensorSynapse(DenseSynapse):
         self.norm_trigger = Compartment(jnp.zeros((1, 1)))
         if self.normalize:
             self.norm_trigger.set(self.norm_trigger.get() + 1)
-            P, S, Klocal, Olocal = self.shape
-            norm_axis = 1 #0 #1
-            Weffdim = Klocal * P
-            if norm_axis == 1:
-                Weffdim = Olocal * self.n_out_streams #Weffdim = Olocal
-            weight_init = dist.gaussian(mean=0., std=float(1.0 / jnp.sqrt(Weffdim)))
-            weights = weight_init(self.shape, self.key.get())
-            self.weights.set(weights)
+        #     P, S, Klocal, Olocal = self.shape
+        #     norm_axis = 1 #0 #1
+        #     Weffdim = Klocal * P
+        #     if norm_axis == 1:
+        #         Weffdim = Olocal * self.n_out_streams #Weffdim = Olocal
+        #     weight_init = dist.gaussian(mean=0., std=float(1.0 / jnp.sqrt(Weffdim)))
+        #     weights = weight_init(self.shape, self.key.get())
+        #     self.weights.set(weights)
 
         if self.use_block_matrix_format: ## set up block-diagonal algorithm backend if flagged
             block_weights = _reconstruct_global_2d_matrix(
@@ -378,12 +444,13 @@ class SparseTensorSynapse(DenseSynapse):
                 )
             self.weights.set(weights)
 
-
+        ## set up core compartments
         self.initial_weights = Compartment(self.weights.get())  ## store synaptic initial conditions (never updated)
         preVals = jnp.zeros((self.batch_size, self.io_shape[0]))
         postVals = jnp.zeros((self.batch_size, self.io_shape[1]))
         self.inputs.set(preVals)
         self.outputs.set(postVals)
+        self.weight_transpose_target = Compartment(self.weights.get())
 
     @staticmethod
     def initialize_layer_geometry( ## internal co-routine for tensor-synaptic projection shaping
@@ -470,6 +537,7 @@ class SparseTensorSynapse(DenseSynapse):
         biases = self.biases.get()
         inputs = self.inputs.get()  ## get inputs
         conn_map = self.connectivity_map  ## get connectivity structure
+        #print(self.name, " ", weights.shape, " ", inputs.shape)
 
         B = inputs.shape[0]  ## get batch size for subsequent averaging
         if not self.use_block_matrix_format:
@@ -509,7 +577,7 @@ class SparseTensorSynapse(DenseSynapse):
             outputs = outputs_3d.reshape(B, -1)  ## flatten to 2D formatted output
         else:
             outputs = inputs @ weights  ## block-diagonal/block-matrix multiply
-        outputs + biases
+        outputs = (outputs * self.g_conduct_factor) + biases
         self.outputs.set(outputs)
 
     @compilable
@@ -530,12 +598,16 @@ class SparseTensorSynapse(DenseSynapse):
         ### - axis 0 (P) and Axis 2 (K_local) isolate an individual input neuron.
         ### - axis 1 (S) and Axis 3 (O_local) represent all the places its synapses land.
 
-        if axis == 0:
-            ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
-            reduce_axes = (0, 2)
-        elif axis == 1:
-            ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
-            reduce_axes = (1, 3)
+        # if axis == 0:
+        #     ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
+        #     reduce_axes = (0, 2)
+        # elif axis == 1:
+        #     ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
+        #     reduce_axes = (1, 3)
+        if axis == 1:
+            reduce_axes = 3  ## get col-axis for normalization
+        elif axis == 0:
+            reduce_axes = 2  ## assume row-axis for normalization
         else:
             raise ValueError("Norm.axis must be 0 or 1.")
 
@@ -597,12 +669,16 @@ class SparseTensorSynapse(DenseSynapse):
         gathered_weights = global_matrix[global_y_indices, global_x_indices]
 
         ## compute norms on the isolated valid blocks based on the desired axis
-        if axis == 0:
-            ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
-            reduce_axes = (0, 2)
-        elif axis == 1:
-            ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
-            reduce_axes = (1, 3)
+        # if axis == 0:
+        #     ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
+        #     reduce_axes = (0, 2)
+        # elif axis == 1:
+        #     ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
+        #     reduce_axes = (1, 3)
+        if axis == 1:
+            reduce_axes = 3  ## get col-axis for normalization
+        elif axis == 0:
+            reduce_axes = 2  ## assume row-axis for normalization
         else:
             raise ValueError("Norm.axis must be 0 or 1.")
 
@@ -621,4 +697,39 @@ class SparseTensorSynapse(DenseSynapse):
             global_y_indices.ravel(), global_x_indices.ravel()
         ].set(normalized_gathered.ravel())
         return new_global_matrix
+
+    @compilable
+    def tie_transpose_weights(self):
+        current_weights = self.weights.get()
+        weights_to_transpose_absorb = self.weight_transpose_target.get()
+
+        transposed_tensor = SparseTensorSynapse._transpose_synaptic_tensor(
+            weights_to_transpose_absorb,
+            self.transpose_indices,
+            self.transpose_mask,
+            current_weights.shape
+        )
+        self.weights.set(transposed_tensor)
+
+    @staticmethod
+    def _transpose_synaptic_tensor( ## internal lc-tensor transpose co-routine
+            forward_weights,
+            flat_gather_indices,
+            valid_mask,
+            backward_shape
+    ):
+        # Executes a 4D locally-connected tensor transpose operation instantly.
+        # Arguments:
+        #     forward_weights_flat: The RAW forward tensor, flattened to 1D via .flatten()
+        #     flat_gather_indices:  The pre-computed index lookup array from Stage 1
+        #     valid_mask:           The pre-computed padding gate array from Stage 1
+        #     backward_shape:       Static tuple indicating target shape (P_b, S_b, K_b, O_b)
+        forward_weights_flat = forward_weights.flatten()
+        ## memory address gathering: pull elements into correct positions instantly
+        transposed_flat = jnp.take(forward_weights_flat, flat_gather_indices)
+        ## masking: enforce absolute zero over dead-zone padding slots
+        transposed_flat = transposed_flat * valid_mask
+        ## reshape: snap 1D gathered block back into true 4D backward tensor dimensions
+        return jnp.reshape(transposed_flat, backward_shape)
+
 

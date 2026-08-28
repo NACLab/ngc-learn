@@ -2,10 +2,9 @@ numpy>=1.26.4
 scikit-learn>=1.6.1
 scipy>=1.14.1
 matplotlib>=3.9.4
-# patchify ## note: patchify has issues with pip installation
 jax>=0.4.28
 jaxlib>=0.4.28
-ngcsimlib>=3.1.0
+ngcsimlib>=3.1.1
 imageio>=2.37.0
 pandas>=2.2.3
 typing_extensions>=4.15.0

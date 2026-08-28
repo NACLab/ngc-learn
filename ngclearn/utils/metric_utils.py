@@ -81,11 +81,6 @@ def measure_workload_entropy(spike_count_matrix):
     probs = global_neuron_activity / total_epoch_spikes
     full_entropy = -jnp.sum(jnp.where(probs > 0, probs * jnp.log2(probs), 0.0))  ## prevents log2(0)
     entropy = full_entropy * _flag
-    # if total_epoch_spikes > 0:
-    #     probs = global_neuron_activity / total_epoch_spikes
-    #     entropy = -jnp.sum(jnp.where(probs > 0, probs * jnp.log2(probs), 0.0)) ## prevents log2(0)
-    # else:
-    #     entropy = 0.0
     return (min_act, max_act, mean_act), entropy, dead_neurons
 
 @partial(jit, static_argnums=[1])
@@ -233,8 +228,7 @@ def measure_sparsity(codes, tolerance=0., preserve_batch=True, flip_measure=Fals
     
     | rho_mean(X) = 1/N Sum^N_{i=1} rho(x_i)
     
-    where lower/closer to 0 means codes more sparse and closer to 1 means 
-    codes are more dense.
+    where lower/closer to 0 means codes more sparse and closer to 1 means codes are denser.
 
     Note that this definition of sparsity aligns with Foldiak's definition of 
     the ratio of active neurons to inactive ones (assuming binary coding):
