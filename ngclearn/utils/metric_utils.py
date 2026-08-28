@@ -81,11 +81,6 @@ def measure_workload_entropy(spike_count_matrix):
     probs = global_neuron_activity / total_epoch_spikes
     full_entropy = -jnp.sum(jnp.where(probs > 0, probs * jnp.log2(probs), 0.0))  ## prevents log2(0)
     entropy = full_entropy * _flag
-    # if total_epoch_spikes > 0:
-    #     probs = global_neuron_activity / total_epoch_spikes
-    #     entropy = -jnp.sum(jnp.where(probs > 0, probs * jnp.log2(probs), 0.0)) ## prevents log2(0)
-    # else:
-    #     entropy = 0.0
     return (min_act, max_act, mean_act), entropy, dead_neurons
 
 @partial(jit, static_argnums=[1])

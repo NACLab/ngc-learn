@@ -328,42 +328,7 @@ class SparseTensorSynapse(DenseSynapse):
             dilation_l=dilation,
             convergent_factor_l=convergent_factor
         )
-        # if invert_conn:
-        #     forward_connectivity_map = _make_connectivity_map(
-        #         P_l, dims["total_num_output_streams"], stride, convergent_factor=convergent_factor, dilation=dilation
-        #     )
-        #     _old_S = dims["total_num_output_streams"]
-        #     _old_forward_shape = (P_l, _old_S, K_local, O_local)
-        #
-        #     total_forward_inputs = n_in_streams
-        #     total_forward_outputs = dims["total_num_output_streams"]
-        #     ## build base forward connectivity map so this can later be "inverted"
-        #     f_map = _make_connectivity_map(
-        #         P_l, S=n_in_streams, stride=stride, convergent_factor=convergent_factor, dilation=dilation
-        #     )
-        #     backward_connectivity_map, P_back = _make_backwards_connectivity_map(f_map, total_forward_inputs) ## invert map
-        #     self.connectivity_map = backward_connectivity_map
-        #
-        #     ## explicitly compile exact shapes that ngc-learn expects
-        #     self.n_in_streams = total_forward_outputs  ## e.g., 1 (number of incoming error maps)
-        #     self.n_out_streams = total_forward_inputs  ## e.g., 3 (number of feedback target maps)
-        #     self.K_local = O_local  # Error size (9)
-        #     self.O_local = K_local  # Hidden feature target size (16)
-        #
-        #     # Final 4D tensor shape for backwards weights
-        #     calculated_shape = (P_back, total_forward_inputs, O_local, K_local)
-        #     self.io_shape = calculated_io_shape = (self.n_in_streams * self.K_local, self.n_out_streams * self.O_local)
-        #
-        #     # Clear window strides for pure backward routing execution
-        #     self.stride = 0
-        #     self.dilation = 1
-        #
-        #     self.transpose_indices, self.transpose_mask = precompute_transpose_indices(
-        #         forward_connectivity_map,
-        #         backward_connectivity_map,
-        #         _old_forward_shape, ## original pre-transposed forward shape
-        #         calculated_shape ## backwards-shape
-        #     )
+
         if invert_conn:
             # 1. Build the TRUE forward connectivity map matching your architecture's dimensions
             forward_connectivity_map = _make_connectivity_map(

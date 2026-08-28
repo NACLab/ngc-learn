@@ -36,8 +36,6 @@ def participation_ratio(
     ##else, use ML-oriented NaN return value fallback
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
 
-
-
 @partial(jit, static_argnums=[1])
 def rankme(latent_codes, eps=1e-7):
     """
