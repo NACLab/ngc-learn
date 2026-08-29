@@ -3,18 +3,26 @@ import jax
 from jax import numpy as jnp, jit
 
 '''
-Notes on effective dimensional analysis: 
+Some useful notes on effective dimensional analysis: 
+
 * Participation ratio (PR), which measures the general usage of a vector space (how many 
 features are being used), can be easily "fooled" by a "bully" dimension, specifically yielding 
 cases where, say all D dimensions are all active but one of them holds 99% of variance while 
 the other D-1 dims share the remaining 1%; in this case, PR would yield a rather high, seemingly 
 healthy-looking score yet it is not accounting for the fact that other low-variance dims are 
 participating yet are far too "quiet"
-* Stable rank (a function of the Rayleigh coefficient) is good with detecting if a single feature/dimension is 
+
+* Stable rank (SR; which is a function of the Rayleigh coefficient) is good with detecting 
+if a single feature/dimension is 
 completely drowning out the rest of the vector space - if stable rank goes close to 1, then 
 model has collapsed to a 1-dim case even though the PR is high; this metric is useful to 
 examine to check if a vector space is multi-dimensional and balanced (and not just a single 
 massive eigenvector surrounded by insignificant/low-contributing dimensions)
+
+PR, SR, and Rankme are metrics along a spectral analysis metric spectrum: 
+* Rankme is the exponential Shannon entropy of spectrum, 
+* PR is the Renyi-2 "effective dimension", and, 
+* SR focuses on the single largest eigenvalue of the dimensional space
 '''
 
 @partial(jit, static_argnums=[1])
