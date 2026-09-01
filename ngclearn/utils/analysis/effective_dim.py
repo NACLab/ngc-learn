@@ -61,6 +61,34 @@ def participation_ratio(
     ##else, use ML-oriented NaN return value fallback
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
 
+@jit
+def covariance_error(latent_codes):
+    """
+    Calculates the off-diagonal covariance error of a set of latent codes. This dimensional metric is useful for
+    quantifying informational redundancy. If the error/score is high, units/dimensions are highly correlated, which
+    means the vector code space is wasting its dimensional capacity by having different dimensions/features model
+    the exact same piece of information.
+
+    Args:
+        latent_codes: a set of (N x D) latent code vectors (one row per vector code)
+
+    Returns:
+        scalar measurement of the off-diagonal covariance error
+    """
+    Z = latent_codes
+    Zc = Z - Z.mean(axis=0, keepdims=True)
+    cov = (Zc.T @ Zc) / (Zc.shape[0] - 1)
+    ## normalize covariance to get correlation matrix
+    d = jnp.diag(cov)
+    std_dev = jnp.sqrt(jnp.clip(d, a_min=1e-8))
+    corr = cov / (std_dev[:, None] * std_dev[None, :])
+    ## zero out diagonal elements
+    diag_mask = jnp.eye(corr.shape[0])
+    off_diag = corr * (1.0 - diag_mask)
+    ## calc mean squared off-diagonal error
+    off_diagonal_error = jnp.sum(off_diag ** 2) / (corr.shape[0] * (corr.shape[0] - 1))
+    return off_diagonal_error
+
 @partial(jit, static_argnums=[1])
 def rankme(latent_codes, eps=1e-7):
     """
