@@ -115,3 +115,10 @@ History
   * integration of additional visualization tools
   * integration of sparse-tensor synaptic cable (locally-connected/unshared-convolutional structure)
   * additional component integration/revisions, including updates to patched-synaptic cable components
+
+  3.2.2
+  — — — — — — — — -
+  * upgrades to utils/effective dimension toolset
+  * minor patches
+  * adjustments to requirements to nudge to modern >=Python 3.12 and >=Jax 0.11.1 (for cuda12)
+

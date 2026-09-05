@@ -60,6 +60,14 @@ ngclearn.components.synapses.hebbian.inhibitorySTDPSynapse module
    :undoc-members:
    :show-inheritance:
 
+ngclearn.components.synapses.hebbian.ojaTensorSynapse module
+------------------------------------------------------------
+
+.. automodule:: ngclearn.components.synapses.hebbian.ojaTensorSynapse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ngclearn.components.synapses.hebbian.traceSTDPSynapse module
 ------------------------------------------------------------
 

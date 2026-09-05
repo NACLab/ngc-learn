@@ -31,16 +31,17 @@ def test_HebbianConvSynapse1():
             stride=stride, padding=padding_style, batch_size=batch_size, key=subkeys[0]
         )
 
-        evolve_process = (MethodProcess("evolve_process")
+        use_jit = True #False
+        evolve_process = (MethodProcess("evolve_process", use_jit=use_jit)
                           >> a.evolve)
 
-        backtransmit_process = (MethodProcess("backtransmit_process")
+        backtransmit_process = (MethodProcess("backtransmit_process", use_jit=use_jit)
                            >> a.backtransmit)
 
-        advance_process = (MethodProcess("advance_proc")
+        advance_process = (MethodProcess("advance_proc", use_jit=use_jit)
                            >> a.advance_state)
 
-        reset_process = (MethodProcess("reset_proc")
+        reset_process = (MethodProcess("reset_proc", use_jit=use_jit)
                          >> a.reset)
 
     x = jnp.ones(x_shape)

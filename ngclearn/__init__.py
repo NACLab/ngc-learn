@@ -18,7 +18,6 @@ if sys.version_info.minor < 10:
         "with python 3.8 is maintained to allow for lava-nc components and should only be used with those")
 
 ## Following obtains installed package names (as normalized keys) for ngc-learn
-#required = {'ngcsimlib', 'jax', 'jaxlib'} ## list of core ngclearn dependencies
 required = {'ngcsimlib'} #, 'jax', 'jaxlib'}
 #installed = {pkg.key for pkg in pkg_resources.working_set}
 #missing = required - installed

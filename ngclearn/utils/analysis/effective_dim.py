@@ -2,13 +2,38 @@ from functools import partial
 import jax
 from jax import numpy as jnp, jit
 
+'''
+Some useful notes on effective dimensional analysis: 
+
+* Participation ratio (PR), which measures the general usage of a vector space (how many 
+features are being used), can be easily "fooled" by a "bully" dimension, specifically yielding 
+cases where, say all D dimensions are all active but one of them holds 99% of variance while 
+the other D-1 dims share the remaining 1%; in this case, PR would yield a rather high, seemingly 
+healthy-looking score yet it is not accounting for the fact that other low-variance dims are 
+participating yet are far too "quiet"
+
+* Stable rank (SR; which is a function of the Rayleigh coefficient) is good with detecting 
+if a single feature/dimension is 
+completely drowning out the rest of the vector space - if stable rank goes close to 1, then 
+model has collapsed to a 1-dim case even though the PR is high; this metric is useful to 
+examine to check if a vector space is multi-dimensional and balanced (and not just a single 
+massive eigenvector surrounded by insignificant/low-contributing dimensions)
+
+PR, SR, and Rankme are metrics along a spectral analysis metric spectrum: 
+* Rankme is the exponential Shannon entropy of spectrum, 
+* PR is the Renyi-2 "effective dimension", and, 
+* SR focuses on the single largest eigenvalue of the dimensional space
+'''
+
 @partial(jit, static_argnums=[1])
 def participation_ratio(
     latent_codes, use_NaN_fallback=False
 ):
     """
-    Calculates the participation ratio coefficient (also known as the Gini effective 
-    dimension) for a set of latent codes. 
+    Calculates the participation ratio (PR) coefficient (also known as the Gini effective 
+    dimension) for a set of latent codes. PR is useful for detecting "total dimensional 
+    collapse", where the data/vector-space essentially flattens into a line (or only 
+    make use of too few or even just a single dimension of the space).
 
     Args:
         latent_codes: a set of (N x D) latent code vectors (one row per vector code)
@@ -35,6 +60,35 @@ def participation_ratio(
         return jnp.where(cov2_tr > 0.0, tr2_cov / cov2_tr, 1.0)
     ##else, use ML-oriented NaN return value fallback
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
+
+@jit
+def covariance_error(latent_codes):
+    """
+    Calculates the off-diagonal covariance error of a set of latent codes. This dimensional metric is useful for
+    quantifying informational redundancy. If the error/score is high, units/dimensions are highly correlated, which
+    means the vector code space is wasting its dimensional capacity by having different dimensions/features model
+    the exact same piece of information.
+
+    Args:
+        latent_codes: a set of (N x D) latent code vectors (one row per vector code)
+
+    Returns:
+        scalar measurement of the off-diagonal covariance error
+    """
+    Z = latent_codes
+    Zc = Z - Z.mean(axis=0, keepdims=True)
+    cov = (Zc.T @ Zc) / (Zc.shape[0] - 1)
+    ## normalize covariance to get correlation matrix
+    d = jnp.diag(cov)
+    std_dev = jnp.sqrt(jnp.clip(d, a_min=1e-8))
+    denominator = std_dev[:, None] * std_dev[None, :]
+    corr = cov / jnp.clip(denominator, a_min=1e-6)
+    ## zero out diagonal elements
+    diag_mask = jnp.eye(corr.shape[0])
+    off_diag = corr * (1.0 - diag_mask)
+    ## calc mean squared off-diagonal error
+    off_diagonal_error = jnp.sum(off_diag ** 2) / (corr.shape[0] * (corr.shape[0] - 1))
+    return off_diagonal_error
 
 @partial(jit, static_argnums=[1])
 def rankme(latent_codes, eps=1e-7):
@@ -71,8 +125,11 @@ def rankme(latent_codes, eps=1e-7):
 @partial(jit, static_argnums=[1])
 def stable_rank(latent_codes, num_iters=10): ## power-iterator method
     """
-    Computes the stable rank via the power iteration method in order to find the 
-    top singular value.
+    Computes the "stable rank} via the power iteration method in order to find the 
+    top singular value (this metric is a function of the Rayleigh coefficient). Note that 
+    this metric is useful for detecting a case of dimensional collapse known as "dominant 
+    component collapse", where a single feature "hogs" up all 
+    the power of the representational vector space while ignoring everything else. 
 
     Args:
         latent_codes: a set of (N x D) latent code vectors (one row per vector code)
@@ -91,14 +148,13 @@ def stable_rank(latent_codes, num_iters=10): ## power-iterator method
     key = jax.random.PRNGKey(0)
     v = jax.random.normal(key, (Zc.shape[1], 1))
     v = v / jnp.linalg.norm(v)
-    ## apply standard power iteration loop
+    ## run power iteration loop
     for _ in range(num_iters):
         ## v = (Zc.T @ (Zc @ v))
         v = Zc.T @ (Zc @ v)
         v = v / jnp.linalg.norm(v)
-    ## compute largest singular value squared (i.e., the Rayleigh quotient): 
-    ### sigma_max^2 = ||Zc @ v||^2
-    sigma_max_sq = jnp.sum(jnp.square(Zc @ v)) 
+    ## compute largest singular value squared => sigma_max^2 = ||Zc @ v||^2
+    sigma_max_sq = jnp.sum(jnp.square(Zc @ v)) ## Rayleigh coefficient/quotient
     return jnp.where(sigma_max_sq > 0.0, frobenius_norm_sq / sigma_max_sq, 1.0) # stable-rank score
 
 

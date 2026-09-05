@@ -8,7 +8,6 @@ import numpy as np
 import imageio.v3 as iio
 import jax.numpy as jnp
 
-
 def visualize_macro_grid( ## more complex filter visualization co-routine
         thetas,
         sizes,
@@ -101,7 +100,8 @@ def visualize(
         sizes,
         prefix,
         order=None,
-        suffix='.jpg'
+        suffix='.jpg',
+        contrast_by_data=False
 ):
     """
 
@@ -113,6 +113,8 @@ def visualize(
         prefix:
 
         suffix:
+
+        contrast_by_data:
     """
     if order is None:
         order = ['C' for _ in range(len(thetas))]
@@ -143,8 +145,11 @@ def visualize(
             point = start + 1 + i + (r * extra)
             plt.subplot(n_rows_total, n_cols_total, point)
             _filter = T[i, :]
-            max_val = float(jnp.max(jnp.abs(_filter)))
-            min_val = float(jnp.min(jnp.abs(_filter)))
+            max_val = None  # 1.
+            min_val = None  # -1.
+            if contrast_by_data:
+                max_val = float(jnp.max(jnp.abs(_filter)))
+                min_val = float(jnp.min(jnp.abs(_filter)))
             plt.imshow(
                 np.reshape(_filter, (sizes[idx][0], sizes[idx][1]), order=order[idx]), 
                 cmap=plt.cm.bone, interpolation='nearest', vmin=min_val, vmax=max_val
