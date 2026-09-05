@@ -52,6 +52,6 @@ Python 3.12.13 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'3.2.2'
+'3.2.3'
 ```
 
