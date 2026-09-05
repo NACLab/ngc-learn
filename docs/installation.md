@@ -4,13 +4,14 @@
 
 <i>Setup:</i> <a href="https://github.com/NACLab/ngc-learn">NGC-Learn</a>, in its entirety (including its supporting utility sub-packages), requires that you ensure that you have installed the following base dependencies in your system. Note that this library was developed and tested on Ubuntu 22.04 (with much earlier versions on Ubuntu 18.04/20.04). 
 Specifically, NGC-Learn requires:
-* Python (>=3.10)
+* Python (>=3.12)
 * ngcsimlib (>=3.1.1), (<a href="https://github.com/NACLab/ngc-sim-lib">official page</a>)
-* NumPy (>=1.22.0)
-* SciPy (>=1.7.0)
+* NumPy (>=2.5.2)
+* SciPy (>=1.18.1)
 * JAX (>= 0.11.1; and jaxlib>=0.11.1) <!--(tested for cuda 12)-->
-* Matplotlib (>=3.8.0), (for `ngclearn.utils.viz`)
-* Scikit-learn (>=1.6.1), (for `ngclearn.utils.patch_utils` and `ngclearn.utils.density`)
+* Matplotlib (>=3.11.1), (for `ngclearn.utils.viz`)
+* Scikit-learn (>=1.9.0), (for `ngclearn.utils.patch_utils` and `ngclearn.utils.density`)
+* imageio (>=2.37.4)
 
 Note that the above requirements are taken care of if one installs NGC-Learn through either `pip`. One can either install the CPU version of NGC-Learn (if no JAX is pre-installed or only the CPU version of JAX is currently installed) via: 
 ```console
