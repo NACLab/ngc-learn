@@ -9,4 +9,5 @@ imageio>=2.37.4
 pandas>=3.0.5
 typing_extensions>=4.15.0
 sphinx
+myst_parser
 sphinx_rtd_theme
