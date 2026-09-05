@@ -1,6 +1,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/downloads)[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)[![Documentation Status](https://readthedocs.org/projects/ngc-learn/badge/?version=latest)](http://ngc-learn.readthedocs.io/en/latest/?badge=latest)[![DOI](https://zenodo.org/badge/483413212.svg)](https://zenodo.org/badge/latestdoi/483413212)
 
-<img src="docs/images/ngc-learn-logo.png" width="300">
+<!-- <img src="docs/images/ngc-learn-logo.png" width="300"> -->
+<img src="https://raw.githubusercontent.com/NACLab/ngc-learn/main/docs/images/ngc-learn-logo.png" width="300">
 
 <b>ngc-learn</b> is a Python library for building, simulating, and analyzing biophysical / neurobiological systems, spiking neuronal networks, predictive coding circuitry, and biomimetic (NeuroAI) agents that learn in a biologically-plausible manner. This simulation toolkit, meant to support computational neuroscience and brain-inspired computing research, is built on top of JAX and is distributed under the 3-Clause BSD license.
 
@@ -26,24 +27,22 @@ chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics<
 ### Dependencies
 
 ngc-learn requires:
-1) Python (>=3.10)
-2) NumPy (>=1.22.0)
-3) SciPy (>=1.7.0)
+1) Python (>=3.12)
+2i) NumPy (>=2.5.2)
+3) SciPy (>=1.18.1)
 4) ngcsimlib (>=3.1.1), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
-5) JAX (>=0.4.28) (to enable GPU use, make sure to install one of the CUDA variants)
+5) JAX (>=0.11.1) (to enable GPU use, make sure to install one of the CUDA variants)
 <!--
-5) scikit-learn (>=1.3.1) if using `ngclearn.utils.density`
-6) matplotlib (>=3.4.3) if using `ngclearn.utils.viz`
 6) networkx  (>=2.6.3) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
 7) pyviz (>=0.2.0) (currently optional but required if using `ngclearn.utils.experimental.viz_utils`)
 -->
 
 ---
-ngc-learn 3.2.1 and later require Python 3.10 or newer as well as ngcsimlib >=3.1.1. 
+ngc-learn 3.2.3 and later require Python 3.12 or newer as well as ngcsimlib >=3.1.1. 
 ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require
-Matplotlib (>=3.8.0) and imageio (>=2.31.5) and both plotting and density estimation
-tools (routines within ``ngclearn.utils.density``) will require Scikit-learn (>=0.24.2).
-Many of the tutorials will require Matplotlib (>=3.8.0), imageio (>=2.31.5), and Scikit-learn (>=0.24.2).
+Matplotlib (>=3.11.1) and imageio (>=2.37.4) and both plotting and density estimation
+tools (routines within ``ngclearn.utils.density``) will require Scikit-learn (>=1.9.0).
+Many of the tutorials will require Matplotlib (>=3.11.1), imageio (>=2.37.4), and Scikit-learn (>=1.9.0).
 
 <i>Note</i>: If you are working with Cuda 12 and want to use jax/jaxlib versions > 0.4.28, you might need to 
 check that you are working with the right version of Cudnn (e.g., `nvidia-cudnn-cu12==9.10.2.21`) to ensure 
@@ -93,7 +92,7 @@ Python 3.12.13 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'3.2.1'
+'3.2.3'
 ```
 
 <i>Note:</i> For access to the previous Tensorflow-2 version of ngc-learn (of
