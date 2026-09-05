@@ -52,13 +52,15 @@ correctly onto the GPU (if using an architecture based on Pascal GPUs, i.e., Com
 combined with NVIDIA Driver 580+). 
 
 **Important Note for Legacy GPU Users (Pascal Architecture)**
-> If you are running JAX (`> 0.4.28`) on **CUDA 12** using an older **Pascal-generation GPU** (Compute Capability 6.1, 
-> e.g., GTX 1080/1080Ti, Titan X) combined with **NVIDIA Driver 580+**, you might encounter compilation crashes during 
+> If you are running JAX (`> 0.4.28`) on **CUDA 12** using an older 
+> **Pascal-generation GPU** (Compute Capability 6.1, e.g., GTX 1080/1080Ti, Titan X) 
+> combined with **NVIDIA Driver 580+**, you might encounter compilation crashes during 
 > convolution/deconvolution operations (such as `unknown cudnn status: 5003`).
 > 
-> Newer versions of `nvidia-cudnn-cu12` have dropped critical hardware support for these legacy architectures. To 
-> fix this and ensure `ngclearn` compiles correctly on your GPU, you will need to explicitly "pin" your cuDNN 
-> library version using this command (after installing Cuda-12 JAX):
+> Newer versions of `nvidia-cudnn-cu12` have dropped critical hardware support for 
+> these legacy architectures. To fix this and ensure `ngclearn` compiles correctly 
+> on your GPU, you will need to explicitly "pin" your cuDNN library version using 
+> this command (after installing Cuda-12 JAX):
 >
 > ```bash
 > pip install --force-reinstall "nvidia-cudnn-cu12==9.10.2.21"
@@ -87,7 +89,7 @@ and complete the following sequence of steps as depicted in the screenshot below
 right major and minor version of ngc-learn):
 
 ```console
-Python 3.11.4 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
+Python 3.12.13 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
@@ -138,7 +140,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-3.2.1 <!--1.2.3-Beta--> <!-- -Alpha -->
+3.2.1
 
 Author:
 Alexander G. Ororbia II<br>

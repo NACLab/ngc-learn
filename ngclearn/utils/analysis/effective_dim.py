@@ -81,7 +81,8 @@ def covariance_error(latent_codes):
     ## normalize covariance to get correlation matrix
     d = jnp.diag(cov)
     std_dev = jnp.sqrt(jnp.clip(d, a_min=1e-8))
-    corr = cov / (std_dev[:, None] * std_dev[None, :])
+    denominator = std_dev[:, None] * std_dev[None, :]
+    corr = cov / jnp.clip(denominator, a_min=1e-6)
     ## zero out diagonal elements
     diag_mask = jnp.eye(corr.shape[0])
     off_diag = corr * (1.0 - diag_mask)
