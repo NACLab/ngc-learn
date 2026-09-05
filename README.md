@@ -140,7 +140,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-3.2.1
+3.2.2
 
 Author:
 Alexander G. Ororbia II<br>
