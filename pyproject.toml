@@ -32,6 +32,7 @@ classifiers=[
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12", 
   "Operating System :: Unix"
 ]
 dynamic = ["dependencies"]
@@ -43,6 +44,9 @@ Homepage = "https://github.com/NACLab/ngc-learn"
 Documentation = "https://ngc-learn.readthedocs.io/"
 "Lab Page" = "https://www.cs.rit.edu/~ago/nac_lab.html"
 Changelog = "https://github.com/NACLab/ngc-learn/blob/main/history.txt"
+
+[tool.readthedocs.build.tools]
+python = "3.12"
 
 [tool.setuptools.packages.find]
 exclude = ["docs"]
