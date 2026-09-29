@@ -134,16 +134,20 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             weights = weights * mask ## sparsify matrix
 
         ## Compartment setup
+        self.weights = Compartment(weights)
+
         preVals = jnp.zeros((self.batch_size, self.shape[0]))
         postVals = jnp.zeros((self.batch_size, self.shape[1]))
 
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
-        self.weights = Compartment(weights)
+
+        self.project_input = Compartment(preVals)
+        self.project_output = Compartment(postVals)
 
         self.post_in = Compartment(postVals)
         self.pre_out = Compartment(preVals)
-        self.weights_T = Compartment(weights.T)
+
 
         ## Set up (optional) bias values
         if self.bias_init is None:
@@ -154,17 +158,34 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
     @compilable
     def advance_state(self):
         # Get the variables
-        inputs = self.inputs.get()
-        post_in = self.post_in.get()
         weights = self.weights.get()
         biases = self.biases.get()
 
-        outputs = (jnp.matmul(inputs, weights) * self.Rscale) + biases
-        pre_out = jnp.matmul(post_in, weights.T)
 
-        # Update compartment
+        ################### inputs  →  W  → outputs = (inputs @ W)
+        inputs = self.inputs.get()
+        ## Compute (inputs @ W)
+        outputs = (jnp.matmul(inputs, weights) * self.Rscale) + biases
+        ## Update outputs compartment
         self.outputs.set(outputs)
+
+
+        ###################    post_in →  Wᵀ  → pre_out = (post_in @ Wᵀ)
+        post_in = self.post_in.get()
+        ## Compute (post_in @ Wᵀ)
+        pre_out = jnp.matmul(post_in, weights.T)
+        ## Update pre_out compartment
         self.pre_out.set(pre_out)
+
+
+        ################### project_input →  W  → project_output = (project_input @ W)
+        project_input = self.project_input.get()
+        ## Compute (project_input @ W)
+        project_output = (jnp.matmul(project_input, weights) * self.Rscale) + biases
+        ## Update project_output compartment
+        self.project_output.set(project_output)
+
+
 
     @compilable
     def reset(self): ## closed, no-batch argument reset
@@ -182,6 +203,8 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.outputs.set(postVals)
         self.post_in.set(postVals)
         self.pre_out.set(preVals)
+        self.project_input.set(preVals)
+        self.project_output.set(postVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -193,14 +216,18 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         compartment_props = {
             "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "post_in": "Takes in external input signal values"},
+                 "project_input": "Takes in external input signal values",
+                 "post_in": "Takes in external input signal values",
+                 },
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",
                  "key": "JAX PRNG key"},
             "outputs":
                 {"outputs": "Output of synaptic transformation",
-                 "pre_out": "Output of synaptic transformation"},
+                 "project_output": "Output of synaptic transformation",
+                 "pre_out": "Output of synaptic transformation",
+                 },
         }
         hyperparams = {
             "shape": "Overall shape of synaptic weight value matrix; number inputs x number outputs",
