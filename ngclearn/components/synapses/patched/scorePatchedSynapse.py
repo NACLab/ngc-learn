@@ -229,7 +229,7 @@ class ScorePatchedSynapse(PatchedSynapse):
         biases = self.biases.get()
 
 
-        ################### inputs  →  W  → outputs = (inputs @ W)
+        ################### inputs  >>  W  >> outputs = (inputs @ W)
         inputs = self.inputs.get()
         ## Compute (inputs @ W)
         outputs = (jnp.matmul(inputs, weights) * self.Rscale) + biases
@@ -237,15 +237,15 @@ class ScorePatchedSynapse(PatchedSynapse):
         self.outputs.set(outputs)
 
 
-        ###################    post_in →  Wᵀ  → pre_out = (post_in @ Wᵀ)
+        ###################    post_in >>  W.T  >> pre_out = (post_in @ W.T)
         post_in = self.post_in.get()
-        ## Compute (post_in @ Wᵀ)
+        ## Compute (post_in @ W.T)
         pre_out = jnp.matmul(post_in, weights.T)
         ## Update pre_out compartment
         self.pre_out.set(pre_out)
 
 
-        ################### project_input →  W  → project_output = (project_input @ W)
+        ################### project_input >>  W  >> project_output = (project_input @ W)
         project_input = self.project_input.get()
         ## Compute (project_input @ W)
         project_output = (jnp.matmul(project_input, weights) * self.Rscale) + biases
@@ -290,11 +290,13 @@ class ScorePatchedSynapse(PatchedSynapse):
         # BUG: the self.inputs here does not have the targeted field
         # NOTE: Quick workaround is to check if targeted is in the input or not
         hasattr(self.inputs, "targeted") and not self.inputs.targeted and self.inputs.set(preVals)  # inputs
-        self.outputs.set(postVals)  # outputs
-        self.post_in.set(postVals)  # post_in
-        self.pre_out.set(preVals)  # pre_out
-        self.pre.set(preVals)  # pre
-        self.post.set(postVals)  # post
+        self.outputs.set(postVals)               # outputs
+        self.project_input.set(preVals)          # project_input
+        self.project_output.set(postVals)        # project_output
+        self.post_in.set(postVals)               # post_in
+        self.pre_out.set(preVals)                # pre_out
+        self.pre.set(preVals)                    # pre
+        self.post.set(postVals)                  # post
         self.dScores.set(jnp.zeros(self.shape))  # dS
 
     @classmethod
