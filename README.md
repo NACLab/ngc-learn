@@ -28,7 +28,7 @@ chosen as one of the <i>Editors' Highlights for Applied Physics and Mathematics<
 
 ngc-learn requires:
 1) Python (>=3.12)
-2i) NumPy (>=2.5.2)
+2) NumPy (>=2.5.2)
 3) SciPy (>=1.18.1)
 4) ngcsimlib (>=3.1.1), (visit official page <a href="https://github.com/NACLab/ngc-sim-lib">here</a>)
 5) JAX (>=0.11.1) (to enable GPU use, make sure to install one of the CUDA variants)
