@@ -1,8 +1,14 @@
 from functools import partial
 import jax
 from jax import numpy as jnp, jit
+from ngcsimlib import deprecated
 
 '''
+This sub-module contains measurement functions for analyzing properties of vector codes, particularly for the case 
+of dimensional analysis (to investigate issues surrounding representational/dimensional collapse and dimensional 
+usage/capacity). Some routines provided (e.g., `measure_excecss_kurtosis(.)`) come from the independent component analysis 
+(ICA) literature and help investigate if vector codes lean towards ICA-like patterns. 
+
 Some useful notes on effective dimensional analysis: 
 
 * Participation ratio (PR), which measures the general usage of a vector space (how many 
@@ -26,9 +32,7 @@ PR, SR, and Rankme are metrics along a spectral analysis metric spectrum:
 '''
 
 @partial(jit, static_argnums=[1])
-def participation_ratio(
-    latent_codes, use_NaN_fallback=False
-):
+def measure_participation_ratio(latent_codes, use_NaN_fallback=False):
     """
     Calculates the participation ratio (PR) coefficient (also known as the Gini effective 
     dimension) for a set of latent codes. PR is useful for detecting "total dimensional 
@@ -61,8 +65,15 @@ def participation_ratio(
     ##else, use ML-oriented NaN return value fallback
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
 
+@deprecated(replaced_by=measure_participation_ratio)
+def participation_ratio(latent_codes, use_NaN_fallback=False):
+    """
+    WARNING: this function is deprecated (renamed to `measure_participation_ratio(.)`).
+    """
+    return measure_participation_ratio(latent_codes, use_NaN_fallback=use_NaN_fallback)
+
 @jit
-def covariance_error(latent_codes):
+def measure_covariance_error(latent_codes):
     """
     Calculates the off-diagonal covariance error of a set of latent codes. This dimensional metric is useful for
     quantifying informational redundancy. If the error/score is high, units/dimensions are highly correlated, which
@@ -84,46 +95,46 @@ def covariance_error(latent_codes):
     denominator = std_dev[:, None] * std_dev[None, :]
     corr = cov / jnp.clip(denominator, a_min=1e-6)
     ## zero out diagonal elements
-    diag_mask = jnp.eye(corr.shape[0])
-    off_diag = corr * (1.0 - diag_mask)
+    # diag_mask = jnp.eye(corr.shape[0])
+    # off_diag = corr * (1.0 - diag_mask)
     ## calc mean squared off-diagonal error
-    off_diagonal_error = jnp.sum(off_diag ** 2) / (corr.shape[0] * (corr.shape[0] - 1))
+    # off_diagonal_error = jnp.sum(off_diag ** 2) / (corr.shape[0] * (corr.shape[0] - 1))
+    off_diagonal_error = (jnp.sum(corr ** 2) - jnp.sum(jnp.diag(corr) ** 2)) / (corr.shape[0] * (corr.shape[0] - 1))
     return off_diagonal_error
 
-@partial(jit, static_argnums=[1])
-def rankme(latent_codes, eps=1e-7):
+@deprecated(replaced_by=measure_covariance_error)
+def covariance_error(latent_codes):
     """
-    Calculates the effective rank of for a code matrix latent_codes
+    WARNING: this function is deprecated (renamed to `measure_covariance_error(.)`).
+    """
+    return measure_covariance_error(latent_codes)
 
-    effective rank = exp(Shannon entropy), adapted from:
-    | Garrido, Balestriero, Najman & LeCun, "RankMe: Assessing the Downstream Performance of Pretrained
-    | Self-Supervised Representations by Their Rank" (ICML 2023, arXiv:2210.02885).
+@jit
+def measure_excess_kurtosis(y):
+    """
+    Computes the sample excess kurtosis for each neuron/unit across a batch; this then takes the mean over all neurons/units.
 
     Args:
-        latent_codes: a set of (N x D) latent code vectors (one row per vector code)
-
-        eps: (regularization) constant to prevent division by zero
+        y: Latent activations batch matrix of shape (B, H)
 
     Returns:
-        scalar measurement of the effective dimension
+        mean_kurtosis: scalar value (>0 indicates super-Gaussianity)
     """
+    ## center the hidden activities relative to the batch mean
+    y_centered = y - jnp.mean(y, axis=0, keepdims=True)
 
-    singular_values = jnp.linalg.svd(latent_codes, compute_uv=False) ## singular values of latent_codes
-    sum_singular_values = jnp.sum(singular_values)                   ## L1
-    sum_S_vals = jnp.where(sum_singular_values > 0.0, sum_singular_values, 1.0)
-    p = singular_values / (sum_S_vals + eps)                         ## L1-normalized singular value
-    safe_p = jnp.where(p > 0.0, p, 1.0)
-    shannon_entropy = -jnp.sum(p * jnp.log(safe_p))                       ## calc Shannon entropy
+    ## compute the 2nd and 4th central moments
+    variance = jnp.mean(y_centered ** 2, axis=0) + 1e-8
+    fourth_moment = jnp.mean(y_centered ** 4, axis=0)
 
-    ## compute final exp(Shannon entropy) = effective rank
-    #rankme_score = jnp.exp( ## compute final exp(Shannon entropy) = effective rank
-    #    jnp.where(sum_singular_values > 0.0, shannon_entropy, jnp.nan)
-    #)
-    rankme_score = jnp.where(sum_singular_values > 0.0, jnp.exp(shannon_entropy), 1.0)
-    return rankme_score
+    ## calculate excess kurtosis (Pearson's kurtosis minus 3)
+    neuron_kurtosis = (fourth_moment / (variance ** 2)) - 3.0
+
+    ## Return the average sparsity signature across the entire layer profile
+    return jnp.mean(neuron_kurtosis)
 
 @partial(jit, static_argnums=[1])
-def stable_rank(latent_codes, num_iters=10): ## power-iterator method
+def measure_stable_rank(latent_codes, num_iters=10): ## built on power-iterator method
     """
     Computes the "stable rank} via the power iteration method in order to find the 
     top singular value (this metric is a function of the Rayleigh coefficient). Note that 
@@ -157,4 +168,48 @@ def stable_rank(latent_codes, num_iters=10): ## power-iterator method
     sigma_max_sq = jnp.sum(jnp.square(Zc @ v)) ## Rayleigh coefficient/quotient
     return jnp.where(sigma_max_sq > 0.0, frobenius_norm_sq / sigma_max_sq, 1.0) # stable-rank score
 
+@deprecated(replaced_by=measure_stable_rank)
+def stable_rank(latent_codes, num_iters=10):
+    """
+    WARNING: this function is deprecated (renamed to `measure_stable_rank(.)`).
+    """
+    return measure_stable_rank(latent_codes, num_iters=num_iters)
 
+@partial(jit, static_argnums=[1])
+def measure_rankme(latent_codes, eps=1e-7):
+    """
+    Calculates the effective rank of for a code matrix latent_codes
+
+    effective rank = exp(Shannon entropy), adapted from:
+    | Garrido, Balestriero, Najman & LeCun, "RankMe: Assessing the Downstream Performance of Pretrained
+    | Self-Supervised Representations by Their Rank" (ICML 2023, arXiv:2210.02885).
+
+    Args:
+        latent_codes: a set of (N x D) latent code vectors (one row per vector code)
+
+        eps: (regularization) constant to prevent division by zero
+
+    Returns:
+        scalar measurement of the effective dimension
+    """
+
+    singular_values = jnp.linalg.svd(latent_codes, compute_uv=False) ## singular values of latent_codes
+    sum_singular_values = jnp.sum(singular_values)                   ## L1
+    sum_S_vals = jnp.where(sum_singular_values > 0.0, sum_singular_values, 1.0)
+    p = singular_values / (sum_S_vals + eps)                         ## L1-normalized singular value
+    safe_p = jnp.where(p > 0.0, p, 1.0)
+    shannon_entropy = -jnp.sum(p * jnp.log(safe_p))                       ## calc Shannon entropy
+
+    ## compute final exp(Shannon entropy) = effective rank
+    #rankme_score = jnp.exp( ## compute final exp(Shannon entropy) = effective rank
+    #    jnp.where(sum_singular_values > 0.0, shannon_entropy, jnp.nan)
+    #)
+    rankme_score = jnp.where(sum_singular_values > 0.0, jnp.exp(shannon_entropy), 1.0)
+    return rankme_score
+
+@deprecated(replaced_by=measure_rankme)
+def rankme(latent_codes, eps=1e-7):
+    """
+    WARNING: this function is deprecated (renamed to `measure_rankme(.)`).
+    """
+    return measure_rankme(latent_codes, eps=eps)
