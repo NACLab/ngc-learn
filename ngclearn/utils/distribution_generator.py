@@ -270,16 +270,17 @@ class DistributionGenerator(object):
         return fan_in_uniform_generator
 
     @staticmethod
-    def fan_in_gaussian(**params: Unpack[DistributionParams]) -> DistributionInitializer:
+    def fan_in_gaussian(gain: float = 1.0, **params: Unpack[DistributionParams]) -> DistributionInitializer:
         """
         Produces a distribution initializer using a fan-in Gaussian (normal) strategy.
-        The values are sampled from a normal distribution with mean 0 and stddev = sqrt(1 / fan_in),
+        The values are sampled from a normal distribution with mean 0 and stddev = gain * sqrt(1 / fan_in),
         where fan_in is inferred from the shape.
 
         | He, Kaiming, et al. "Delving deep into rectifiers: Surpassing human-level performance on imagenet
         | classification." Proceedings of the IEEE international conference on computer vision. 2015.
 
         Args:
+            gain: scaling factor applied to the standard deviation (Default: 1.)
             **params: extra distribution parameters
 
         Returns:
@@ -288,7 +289,7 @@ class DistributionGenerator(object):
         using_numpy = params.get("use_numpy", False)
 
         def compute_std(fan_in: int) -> float:
-            return float(numpy.sqrt(1.0 / fan_in))
+            return float(gain * numpy.sqrt(1.0 / fan_in))
 
         if using_numpy:
             def fan_in_gaussian_generator(shape: Sequence[int], seed: int | None) -> numpy.ndarray:
@@ -323,6 +324,66 @@ class DistributionGenerator(object):
                 return matrix
 
         return fan_in_gaussian_generator
+
+    @staticmethod
+    def fan_in_signed_constant(gain: float = 1.0, **params: Unpack[DistributionParams]) -> DistributionInitializer:
+        """
+        Produces a distribution initializer using a fan-in signed constant strategy.
+        Every value has the constant magnitude gain * sqrt(1 / fan_in) and a random sign,
+        where fan_in is inferred from the shape.
+
+
+        | Zhou, Hattie, et al. "Deconstructing lottery tickets: Zeros, signs, and the supermask."
+        | Advances in Neural Information Processing Systems 32 (2019).
+        
+        | gain = sqrt(2): Ramanujan, Vivek, et al. "What's hidden in a randomly weighted neural network?"
+        | Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. 2020.
+
+        Args:
+            gain: scaling factor applied to the constant magnitude (Default: 1.)
+            **params: extra distribution parameters
+
+        Returns:
+            a distribution initializer
+        """
+        using_numpy = params.get("use_numpy", False)
+
+        def compute_std(fan_in: int) -> float:
+            return float(gain * numpy.sqrt(1.0 / fan_in))
+
+        if using_numpy:
+            def fan_in_signed_constant_generator(shape: Sequence[int], seed: int | None) -> numpy.ndarray:
+                if len(shape) < 2:
+                    error("fan_in_signed_constant requires shape with at least 2 dimensions")
+                fan_in = shape[0]
+                std = compute_std(fan_in)
+
+                rng = numpy.random.default_rng(seed)
+                matrix = rng.choice([-std, std], size=shape).astype(
+                    params.get("dtype", numpy.float32))
+                matrix = DistributionGenerator._process_params_numpy(matrix, params, seed)
+                return matrix
+        else:
+            def fan_in_signed_constant_generator(shape: Sequence[int], dKey: jax.Array | None) -> jax.Array:
+                if len(shape) < 2:
+                    error("fan_in_signed_constant requires shape with at least 2 dimensions")
+                fan_in = shape[0]
+                std = compute_std(fan_in)
+
+                if dKey is None:
+                    dKey = jax.random.PRNGKey(time.time_ns())
+                dKey, subKey = jax.random.split(dKey, 2)
+
+                matrix = jax.random.rademacher(
+                    dKey,
+                    shape=shape,
+                    dtype=params.get("dtype", jax.numpy.float32)
+                )
+                matrix = matrix * std
+                matrix = DistributionGenerator._process_params_jax(matrix, params, subKey)
+                return matrix
+
+        return fan_in_signed_constant_generator
 
     @staticmethod
     def _process_params_jax(ary: jax.Array, params: DistributionParams, dKey: jax.dtypes.prng_key | None) -> jax.Array:
