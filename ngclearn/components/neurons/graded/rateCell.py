@@ -288,6 +288,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF = Compartment(restVals, display_name="Transformed Rate Activity") # rate-coded output - activity
         self.j_td = Compartment(restVals, display_name="Modulatory Stimulus Current", units="mA") # top-down electrical current - pressure
         self.z = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
+        self.mu_top = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
+        self.mu_top_zF = Compartment(restVals, display_name="Transformed Rate Activity") # rate-coded output - activity
         ## lateral compartments
         if use_lateral:
             self.j_lat = Compartment(restVals, display_name="Lateral Stimulus Current", units="mA")  # lateral current
@@ -309,6 +311,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         j = self.j.get()
         j_td = self.j_td.get()
         z = self.z.get()
+        mu_top = self.mu_top.get()
 
         if self.is_stateful:
             ## ════════════════════════════════════════════════════════════════
@@ -320,7 +323,6 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             dfx_val = self.dfx(z)
             j = _modulate(j, dfx_val)
             j = j * self.resist_scale
-
             ## ══════════════════════════
             ## Calculate lateral pressure
             if self.use_lateral:
@@ -355,6 +357,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             ## ════════════════════════════════════════════════════════════════
             ## run in "stateless" mode (when no membrane time constant provided)
             z = _run_cell_stateless(j + j_td)  ## (j+j_td) >> z
+            mu_top = _run_cell_stateless(mu_top)
 
         ## ═══════════════════════════════════════════════
         ## fx(z) >> zF post-activation function value(s)
@@ -363,11 +366,16 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             zF_lat = self.fx_lat(z) * self.output_scale
 
         ## ════════════════════
+        mu_top_zF = self.fx(mu_top) * self.output_scale
+
+        ## ═══════════════════════════════════════════════
         ## Update compartments
         self.j.set(j)
         self.j_td.set(j_td)
         self.z.set(z)
         self.zF.set(zF)
+        self.mu_top.set(mu_top)
+        self.mu_top_zF.set(mu_top_zF)
         if self.use_lateral:
             self.j_lat.set(j_lat)
             self.zF_lat.set(zF_lat)
@@ -391,6 +399,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.j_td.set(restVals)
         self.z.set(restVals)
         self.zF.set(restVals)
+        self.mu_top.set(restVals)
+        self.mu_top_zF.set(restVals)
 
         if self.use_lateral:
             self.Wl.reset()
@@ -417,13 +427,16 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             "inputs":
                 {"j": "External input stimulus value(s)",
                  "j_td": "External top-down input stimulus value(s); these get "
-                         "multiplied by the derivative of f(x), i.e., df(x)"},
+                         "multiplied by the derivative of f(x), i.e., df(x)",
+                 "mu_top": "Top-down Prediction"},
             "states":
                 {"z": "Update to rate-coded continuous dynamics; value at time t"},
             "outputs":
                 {"zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)",
                  "zF_lat": "(if use_lateral is True) zF for lateral fx_lat(z)",
-                 "j_lat": "(if use_lateral is True) lateral pressure"},
+                 "j_lat": "(if use_lateral is True) lateral pressure",
+                 "mu_top_zF": "Nonlinearity/function applied to the top-down prediction",
+                 },
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
