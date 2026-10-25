@@ -32,7 +32,7 @@ PR, SR, and Rankme are metrics along a spectral analysis metric spectrum:
 '''
 
 @partial(jit, static_argnums=[1])
-def measure_participation_ratio(latent_codes, use_NaN_fallback=False):
+def measure_participation_ratio(latent_codes, use_NaN_fallback=False): ## PR
     """
     Calculates the participation ratio (PR) coefficient (also known as the Gini effective 
     dimension) for a set of latent codes. PR is useful for detecting "total dimensional 
@@ -66,19 +66,17 @@ def measure_participation_ratio(latent_codes, use_NaN_fallback=False):
     return tr2_cov / cov2_tr if cov2_tr > 0 else float("nan")
 
 @deprecated(replaced_by=measure_participation_ratio)
-def participation_ratio(latent_codes, use_NaN_fallback=False):
+def participation_ratio(latent_codes, use_NaN_fallback=False): ## PR
     """
     WARNING: this function is deprecated (renamed to `measure_participation_ratio(.)`).
     """
     return measure_participation_ratio(latent_codes, use_NaN_fallback=use_NaN_fallback)
 
 @jit
-def measure_covariance_error(latent_codes):
+def measure_covariance_error(latent_codes): ## absolute cross-correlation
     """
     Calculates the off-diagonal covariance error of a set of latent codes. This dimensional metric is useful for
-    quantifying informational redundancy. If the error/score is high, units/dimensions are highly correlated, which
-    means the vector code space is wasting its dimensional capacity by having different dimensions/features model
-    the exact same piece of information.
+    quantifying informational redundancy. If the error/score is high, units/dimensions are highly correlated, which means the vector code space is wasting its dimensional capacity by having different dimensions/features model the exact same piece of information.
 
     Args:
         latent_codes: a set of (N x D) latent code vectors (one row per vector code)
@@ -112,35 +110,31 @@ def covariance_error(latent_codes):
 @jit
 def measure_excess_kurtosis(y):
     """
-    Computes the sample excess kurtosis for each neuron/unit across a batch; this then takes the mean over all neurons/units.
+    Computes the sample excess kurtosis (distributional measure that's a funtion of sparsity) for each neuron/unit across a batch; this then takes the mean over all neurons/units.
 
     Args:
-        y: Latent activations batch matrix of shape (B, H)
+        y: Latent activations batch matrix of shape (N, H)
 
     Returns:
         mean_kurtosis: scalar value (>0 indicates super-Gaussianity)
     """
-    ## center the hidden activities relative to the batch mean
+    ## center activities/codes relative to batch mean
     y_centered = y - jnp.mean(y, axis=0, keepdims=True)
-
-    ## compute the 2nd and 4th central moments
+    ## compute 2nd + 4th central moments
     variance = jnp.mean(y_centered ** 2, axis=0) + 1e-8
     fourth_moment = jnp.mean(y_centered ** 4, axis=0)
-
     ## calculate excess kurtosis (Pearson's kurtosis minus 3)
-    neuron_kurtosis = (fourth_moment / (variance ** 2)) - 3.0
-
-    ## Return the average sparsity signature across the entire layer profile
-    return jnp.mean(neuron_kurtosis)
+    unit_kurtosis = (fourth_moment / ((variance ** 2) + 1e-8)) - 3.0
+    return jnp.mean(unit_kurtosis) ## average sparsity signature across profile/population
 
 @partial(jit, static_argnums=[1])
-def measure_stable_rank(latent_codes, num_iters=10): ## built on power-iterator method
+def measure_stable_rank(latent_codes, num_iters=10): ## SR; built on power-iterator method 
     """
-    Computes the "stable rank} via the power iteration method in order to find the 
+    Computes the "stable rank" via the power iteration method in order to find the 
     top singular value (this metric is a function of the Rayleigh coefficient). Note that 
     this metric is useful for detecting a case of dimensional collapse known as "dominant 
-    component collapse", where a single feature "hogs" up all 
-    the power of the representational vector space while ignoring everything else. 
+    component collapse", where a single feature "hogs" up all the power of the representational 
+    vector space while ignoring everything else. 
 
     Args:
         latent_codes: a set of (N x D) latent code vectors (one row per vector code)
@@ -169,14 +163,14 @@ def measure_stable_rank(latent_codes, num_iters=10): ## built on power-iterator 
     return jnp.where(sigma_max_sq > 0.0, frobenius_norm_sq / sigma_max_sq, 1.0) # stable-rank score
 
 @deprecated(replaced_by=measure_stable_rank)
-def stable_rank(latent_codes, num_iters=10):
+def stable_rank(latent_codes, num_iters=10): ## SR
     """
     WARNING: this function is deprecated (renamed to `measure_stable_rank(.)`).
     """
     return measure_stable_rank(latent_codes, num_iters=num_iters)
 
 @partial(jit, static_argnums=[1])
-def measure_rankme(latent_codes, eps=1e-7):
+def measure_rankme(latent_codes, eps=1e-7): ## canonical RankMe metric
     """
     Calculates the effective rank of for a code matrix latent_codes
 
@@ -196,9 +190,9 @@ def measure_rankme(latent_codes, eps=1e-7):
     singular_values = jnp.linalg.svd(latent_codes, compute_uv=False) ## singular values of latent_codes
     sum_singular_values = jnp.sum(singular_values)                   ## L1
     sum_S_vals = jnp.where(sum_singular_values > 0.0, sum_singular_values, 1.0)
-    p = singular_values / (sum_S_vals + eps)                         ## L1-normalized singular value
+    p = singular_values / (sum_S_vals + eps) ## L1-normalized singular value
     safe_p = jnp.where(p > 0.0, p, 1.0)
-    shannon_entropy = -jnp.sum(p * jnp.log(safe_p))                       ## calc Shannon entropy
+    shannon_entropy = -jnp.sum(p * jnp.log(safe_p)) ## calc Shannon entropy
 
     ## compute final exp(Shannon entropy) = effective rank
     #rankme_score = jnp.exp( ## compute final exp(Shannon entropy) = effective rank
@@ -208,8 +202,9 @@ def measure_rankme(latent_codes, eps=1e-7):
     return rankme_score
 
 @deprecated(replaced_by=measure_rankme)
-def rankme(latent_codes, eps=1e-7):
+def rankme(latent_codes, eps=1e-7): ## Rankme deprecator
     """
     WARNING: this function is deprecated (renamed to `measure_rankme(.)`).
     """
     return measure_rankme(latent_codes, eps=eps)
+

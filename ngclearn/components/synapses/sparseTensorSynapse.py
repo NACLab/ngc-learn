@@ -407,14 +407,6 @@ class SparseTensorSynapse(DenseSynapse):
         self.norm_trigger = Compartment(jnp.zeros((1, 1)))
         if self.normalize:
             self.norm_trigger.set(self.norm_trigger.get() + 1)
-        #     P, S, Klocal, Olocal = self.shape
-        #     norm_axis = 1 #0 #1
-        #     Weffdim = Klocal * P
-        #     if norm_axis == 1:
-        #         Weffdim = Olocal * self.n_out_streams #Weffdim = Olocal
-        #     weight_init = dist.gaussian(mean=0., std=float(1.0 / jnp.sqrt(Weffdim)))
-        #     weights = weight_init(self.shape, self.key.get())
-        #     self.weights.set(weights)
 
         if self.use_block_matrix_format: ## set up block-diagonal algorithm backend if flagged
             block_weights = _reconstruct_global_2d_matrix(
@@ -453,7 +445,7 @@ class SparseTensorSynapse(DenseSynapse):
         self.weight_transpose_target = Compartment(self.weights.get())
 
     @staticmethod
-    def initialize_layer_geometry( ## internal co-routine for tensor-synaptic projection shaping
+    def initialize_layer_geometry(  ## internal co-routine for tensor-synaptic projection shaping
             nlm1_streams,
             Nlm1,
             Nl,
@@ -463,15 +455,37 @@ class SparseTensorSynapse(DenseSynapse):
             dilation_l=1,
             convergent_factor_l=0.0,
     ):
-        ## this sets up geometrical constraints for this synaptic tensor component, notably this:
-        ### * calculates output stream count (S), maximum structural input reach, and
-        ### * allocates flat sizes for ngc-learn buffers in one unified sweep
-
-        ## check 1: dilation stride minimum bounds
-        if stride_l < 1:
+        ## check 1: lower bounds check altered to allow dense zero-stride cross-talk
+        if stride_l < 0:
             raise ValueError(
-                "Geometry Error: stride_l must be greater than or equal to 1."
+                "Geometry Error: stride_l must be greater than or equal to 0."
             )
+
+        ## --- DEFENSIVE SHORT-CIRCUIT FOR FULLY-CONNECTED DENSE CROSS-STREAM TOPOLOGY ---
+        if stride_l == 0:
+            # Under a zero stride, every input stream maps directly to every output stream.
+            # Your collaborator wants Nl hidden neurons *per output stream*.
+            # For 144 neurons split into 16 groups of 9, you would pass Nl=9.
+            # We assume your model's external configuration specifies how many output stream locations
+            # you are targeting (we will infer it or use nlm1_streams for full square mapping).
+            # For a pure dense map, the number of target output streams equals what you require.
+            # Let's cleanly derive it from the layout setup:
+            nl_streams = nlm1_streams  # maps 1-to-1 cross-talk streams globally
+
+            # Every output stream sees the entire physical physical reach of all input patches
+            total_input_streams = nlm1_streams
+
+            forward_weight_shape = (P_l, nl_streams, Nlm1, Nl)
+            return {
+                "total_num_output_streams": nl_streams,  ## computed num output streams (S)
+                "pad_streams": 0,  ## no sliding dead zones
+                "total_num_input_streams": total_input_streams,  ## spans across the entire fovea
+                "global_input_dim": nlm1_streams * Nlm1,  ## raw size of incoming layer nodes
+                "global_output_dim": nl_streams * Nl,  ## raw size of output nodes
+                "forward_weight_shape": forward_weight_shape,  ## (n_in, n_out, K, O)
+            }
+        ## ------------------------------------------------------------------------------
+
         ## check 2: check physical window limits if padding is disabled
         max_physical_span = (P_l - 1) * dilation_l + 1
         if max_physical_span > nlm1_streams and not auto_pad:
@@ -480,16 +494,12 @@ class SparseTensorSynapse(DenseSynapse):
                 f"exceeds incoming streams ({nlm1_streams}). Enable auto_pad."
             )
 
-        ## sweep over potential output streams to find exact boundary
+        ## sweep over potential output streams to find exact boundary (only runs if stride_l >= 1)
         s = 0
         max_seen_input_idx = -1
         while True:
             start_idx = s * stride_l
-            ## under foveation/convergence, calculate local window footprint dynamically
-            ### we estimate center distance dynamically as we look ahead
             if convergent_factor_l > 0.0:
-                ## we use a running estimation of center scaling
-                ## for a self-contained lookup, we approximate shrinking footprint relative to stride
                 estimated_S_guess = max(1, nlm1_streams // stride_l)
                 center = estimated_S_guess / 2.0
                 distance_from_center = abs(s - center) / center
@@ -498,37 +508,31 @@ class SparseTensorSynapse(DenseSynapse):
                 )
             else:
                 local_P = P_l
-            ## compute absolute furthest index this specific stream row will touch
+
             last_index_in_row = start_idx + (local_P - 1) * dilation_l
 
-            if auto_pad: ## boundary evaluation gates
-                ## stop if starting position completely falls off available canvas
+            if auto_pad:
                 if start_idx >= nlm1_streams:
                     break
             else:
-                ## without padding, entire synaptic projection footprint must fit w/in source bounds
                 if last_index_in_row >= nlm1_streams:
                     break
-            ## if stream is valid, track its absolute furthest input coordinate reach
             if last_index_in_row > max_seen_input_idx:
                 max_seen_input_idx = last_index_in_row
             s += 1
 
-        ## finalize verified number of output streams (S)
         nl_streams = max(1, s)
-        ## calculate unique input streams required to fully span generated matrix/tensor
         total_input_streams = max(1, max_seen_input_idx + 1)
-        ## calculate how many extra virtual padding streams are absorbed by "dead zone"
         pad_streams = max(0, total_input_streams - nlm1_streams)
-        ## build final (structural) metadata values
         forward_weight_shape = (P_l, nl_streams, Nlm1, Nl)
+
         return {
-            "total_num_output_streams": nl_streams,  ## computed num output streams (S)
-            "pad_streams": pad_streams,  ## num streams absorbed by padding filters
-            "total_num_input_streams": total_input_streams, ## total span across input map
-            "global_input_dim": nlm1_streams * Nlm1,  ## raw size of incoming layer nodes
-            "global_output_dim": nl_streams * Nl,  ## raw size of output nodes
-            "forward_weight_shape": forward_weight_shape, ## locally-connected tensor shape
+            "total_num_output_streams": nl_streams,
+            "pad_streams": pad_streams,
+            "total_num_input_streams": total_input_streams,
+            "global_input_dim": nlm1_streams * Nlm1,
+            "global_output_dim": nl_streams * Nl,
+            "forward_weight_shape": forward_weight_shape,
         }
 
     @compilable
@@ -597,13 +601,6 @@ class SparseTensorSynapse(DenseSynapse):
         ### weight tensor shape: (P, S, K_local, O_local)
         ### - axis 0 (P) and Axis 2 (K_local) isolate an individual input neuron.
         ### - axis 1 (S) and Axis 3 (O_local) represent all the places its synapses land.
-
-        # if axis == 0:
-        #     ## input-wise normalization: reduce across patch connections (P) and local features (K_local)
-        #     reduce_axes = (0, 2)
-        # elif axis == 1:
-        #     ## output-wise normalization: reduce across output streams (S) and local output neurons (O_local)
-        #     reduce_axes = (1, 3)
         if axis == 1:
             reduce_axes = 3  ## get col-axis for normalization
         elif axis == 0:
@@ -635,7 +632,7 @@ class SparseTensorSynapse(DenseSynapse):
         return weights / (outgoing_norms + epsilon)
 
 
-    @staticmethod  #@partial(jit, static_argnums=(2, 3, 4, 5, 6, 7, 8, 9))
+    @staticmethod
     def _normalize_block_matrix_outgoing_weights( ## internal block-matrix normalizer co-routine
             global_matrix: jnp.ndarray,
             conn_map: jnp.ndarray,
@@ -703,12 +700,15 @@ class SparseTensorSynapse(DenseSynapse):
         current_weights = self.weights.get()
         weights_to_transpose_absorb = self.weight_transpose_target.get()
 
-        transposed_tensor = SparseTensorSynapse._transpose_synaptic_tensor(
-            weights_to_transpose_absorb,
-            self.transpose_indices,
-            self.transpose_mask,
-            current_weights.shape
-        )
+        if not self.use_block_matrix_format: ## tensor/locally-connected (4D) format
+            transposed_tensor = SparseTensorSynapse._transpose_synaptic_tensor(
+                weights_to_transpose_absorb,
+                self.transpose_indices,
+                self.transpose_mask,
+                current_weights.shape
+            )
+        else:
+            transposed_tensor = weights_to_transpose_absorb.T ## 2D transpose special case
         self.weights.set(transposed_tensor)
 
     @staticmethod
@@ -718,12 +718,12 @@ class SparseTensorSynapse(DenseSynapse):
             valid_mask,
             backward_shape
     ):
-        # Executes a 4D locally-connected tensor transpose operation instantly.
-        # Arguments:
-        #     forward_weights_flat: The RAW forward tensor, flattened to 1D via .flatten()
-        #     flat_gather_indices:  The pre-computed index lookup array from Stage 1
-        #     valid_mask:           The pre-computed padding gate array from Stage 1
-        #     backward_shape:       Static tuple indicating target shape (P_b, S_b, K_b, O_b)
+        # Executes a 4D locally-connected tensor transpose operation:
+        ## Arguments:
+        ##     forward_weights_flat: RAW forward tensor, flattened to 1D via .flatten()
+        ##     flat_gather_indices:  pre-computed index lookup array from Stage 1
+        ##     valid_mask:           pre-computed padding gate array from Stage 1
+        ##     backward_shape:       static tuple indicating target shape (P_b, S_b, K_b, O_b)
         forward_weights_flat = forward_weights.flatten()
         ## memory address gathering: pull elements into correct positions instantly
         transposed_flat = jnp.take(forward_weights_flat, flat_gather_indices)
