@@ -49,7 +49,6 @@ def _modulate(j, dfx_val):
     """
     return j * dfx_val
 
-# @partial(jit, static_argnames=["integType", "priorType"])
 def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=0):
     """
     Runs leaky rate-coded state dynamics one step in time.
@@ -166,7 +165,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         use_lateral: determines wheter the RateCell uses lateral pressure during inference (Default: False)
 
-        n_patch:  the number of local patches in each layer (equivalent to n_sub_models in PatchedSynapse) (Default: 1)
+        n_patch:  the number of local patches in each layer (equivalent to n_patch in PatchedSynapse) (Default: 1)
 
         adaptive_lateral: if True, lateral synaptic is adaptive using HebbianPatchedSynapse component,
                           if False, lateral synaptic is a static using StaticPatchedSynapse component
@@ -265,7 +264,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
             if adaptive_lateral:
                 self.Wl = HebbianPatchedSynapse(f"Wl_{name}", shape=(n_units, n_units),
-                                                n_sub_models=n_patch,
+                                                n_patch=n_patch,
                                                 weight_init=dist.diag_offdiag(on_diag=exc, off_diag=inh),
                                                 eta=Wl_eta,
                                                 prior=Wl_prior,
@@ -275,7 +274,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                                                 )
             else:
                 self.Wl = StaticPatchedSynapse(f"Wl_{name}", shape=(n_units, n_units),
-                                               n_sub_models=n_patch,
+                                               n_patch=n_patch,
                                                weight_init=dist.diag_offdiag(on_diag=exc, off_diag=inh),
                                                batch_size=batch_size,
                                                )
@@ -447,7 +446,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             "threshold": "What kind of iterative thresholding function to place over neuronal dynamics?",
             "integration_type": "Type of numerical integration to use for the cell dynamics",
             "use_lateral": "If lateral synaptic is active for inference",
-            "n_patch": "Number of block-diagonal local lateral synaptic patch (n_sub_models of `Wl`)",
+            "n_patch": "Number of block-diagonal local lateral synaptic patch (n_patch of `Wl`)",
             "adaptive_lateral": "Adaptive lateral synapses (HebbianPatchedSynapse) or static lateral synaptic (StaticPatchedSynapse)",
             "Wl_eta": "Learning rate for the lateral synapses",
             "exc_inh": "(exc, inh) lateral synapses initial values. On-diagonal takes exc>0 and off-diagonal takes inh<0",
