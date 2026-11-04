@@ -98,7 +98,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
-        n_sub_models: The number of submodels in each layer (Default: 1 similar functionality as DenseSynapse)
+        n_patch: The number of patches in each layer (Default: 1 similar functionality as DenseSynapse)
 
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
@@ -160,12 +160,12 @@ class HebbianPatchedSynapse(PatchedSynapse):
     """
 
     def __init__(
-            self, name, shape, n_sub_models=1, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
+            self, name, shape, n_patch=1, stride_shape=(0,0), eta=0., weight_init=None, bias_init=None,
             block_mask=None, w_bound=1., is_nonnegative=False, prior=(None, 0.), sign_value=1., optim_type="sgd",
             pre_wght=1., post_wght=1., p_conn=1., resist_scale=1., batch_size=1, **kwargs
     ):
         super().__init__(
-            name, shape, n_sub_models, stride_shape, weight_init, bias_init, resist_scale, p_conn,
+            name, shape, n_patch, stride_shape, weight_init, bias_init, resist_scale, p_conn,
             batch_size, **kwargs
         )
 
@@ -173,13 +173,13 @@ class HebbianPatchedSynapse(PatchedSynapse):
         self.prior_type = prior_type
         self.prior_lmbda = prior_lmbda
 
-        self.n_sub_models = n_sub_models
-        self.sub_stride = stride_shape
+        self.n_patch = n_patch
+        self.patch_stride = stride_shape
 
         self.shape = (shape[0] + (2 * stride_shape[0]),
                       shape[1] + (2 * stride_shape[1]))
-        self.sub_shape = (shape[0]//n_sub_models + (2 * stride_shape[0]),
-                          shape[1]//n_sub_models + (2*  stride_shape[1]))
+        self.patch_shape = (shape[0]//n_patch + (2 * stride_shape[0]),
+                          shape[1]//n_patch + (2*  stride_shape[1]))
 
         ## synaptic plasticity properties and characteristics
         self.Rscale = resist_scale
@@ -324,7 +324,7 @@ class HebbianPatchedSynapse(PatchedSynapse):
         }
         hyperparams = {
             "shape": "Overall shape of synaptic weight value matrix; number inputs x number outputs",
-            "n_sub_models": "The number of submodels in each layer",
+            "n_patch": "The number of patches in each layer",
             "stride_shape": "Stride shape of overlapping synaptic weight value matrix",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",
