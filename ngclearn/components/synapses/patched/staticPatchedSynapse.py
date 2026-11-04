@@ -19,10 +19,10 @@ class StaticPatchedSynapse(PatchedSynapse):
                 with number of inputs by number of outputs)
 
 
-            n_sub_models: tuple specifying the number of sub models (the number of fully connected/dense synapses)  or the number of patches of this synaptic cable (usually a 2-tuple
+            n_patch: tuple specifying the number of patches (the number of fully connected/dense synapses)  or the number of patches of this synaptic cable (usually a 2-tuple
                 with number of inputs by number of outputs)
 
-            stride_shape: tuple specifying the stride (overlap) between sub models (patches) (Default: (0, 0))
+            stride_shape: tuple specifying the stride (overlap) between patches (Default: (0, 0))
 
             w_mask= Helps in creating patches (Default: None)
 
