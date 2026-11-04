@@ -114,7 +114,7 @@ class ScorePatchedSynapse(PatchedSynapse):
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
-        n_sub_models: The number of submodels in each layer (Default: 1 similar functionality as DenseSynapse)
+        n_patch: The number of patches in each layer (Default: 1 similar functionality as DenseSynapse)
 
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
@@ -159,12 +159,12 @@ class ScorePatchedSynapse(PatchedSynapse):
     """
 
     def __init__(
-            self, name, shape, n_sub_models=1, stride_shape=(0,0), eta=0., weight_init=None, score_init=None,
+            self, name, shape, n_patch=1, stride_shape=(0,0), eta=0., weight_init=None, score_init=None,
             k=0.5, prior=(None, 0.), sign_value=1., optim_type="sgd", pre_wght=1., post_wght=1., p_conn=1.,
             resist_scale=1., batch_size=1, **kwargs
     ):
         super().__init__(
-            name, shape, n_sub_models, stride_shape, weight_init, None, resist_scale, p_conn, batch_size, **kwargs
+            name, shape, n_patch, stride_shape, weight_init, None, resist_scale, p_conn, batch_size, **kwargs
         )
 
         prior_type, prior_lmbda = prior
@@ -187,9 +187,9 @@ class ScorePatchedSynapse(PatchedSynapse):
         if score_init is None:
             score_init = DistributionGenerator.fan_in_uniform()
         scores, _, _ = _create_multi_patch_synapses(shape=shape,
-                                                    n_modules=self.n_sub_models,
-                                                    module_stride=self.sub_stride,
-                                                    initialization_type=score_init, key=subkeys[0]
+                                                    n_patch=self.n_patch,
+                                                    patch_stride=self.patch_stride,
+                                                    init_type=score_init, key=subkeys[0]
                                                     )
 
         # compartments (state of the cell, parameters, will be updated through stateless calls)
@@ -329,7 +329,7 @@ class ScorePatchedSynapse(PatchedSynapse):
         }
         hyperparams = {
             "shape": "Overall shape of synaptic weight value matrix; number inputs x number outputs",
-            "n_sub_models": "The number of submodels in each layer",
+            "n_patch": "The number of patches in each layer",
             "stride_shape": "Stride shape of overlapping synaptic weight value matrix",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for (fixed) synaptic weight (W) values",
