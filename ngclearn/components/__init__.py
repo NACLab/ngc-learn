@@ -77,9 +77,9 @@ from .synapses.patched.scorePatchedSynapse import ScorePatchedSynapse
 from .synapses.patched.hebbianPatchedSynapse import HebbianPatchedSynapse
 
 ## point to attention patched synaptic components
-from .synapses.patched.attention.attentionPatchedSynapse import AttentionPatchedSynapse
-from .synapses.patched.attention.hebbianAttentionPatchedSynapse import HebbianAttentionPatchedSynapse
-from .synapses.patched.attention.scoreAttentionPatchedSynapse import ScoreAttentionPatchedSynapse
+from .synapses.attention.attentionPatchedSynapse import AttentionPatchedSynapse
+from .synapses.attention.hebbianAttentionPatchedSynapse import HebbianAttentionPatchedSynapse
+from .synapses.attention.scoreAttentionPatchedSynapse import ScoreAttentionPatchedSynapse
 
 
 
