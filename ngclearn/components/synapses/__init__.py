@@ -43,8 +43,8 @@ from .patched.scorePatchedSynapse import ScorePatchedSynapse
 from .patched.hebbianPatchedSynapse import HebbianPatchedSynapse
 
 ## attention patched synaptic components
-from attention.attentionPatchedSynapse import AttentionPatchedSynapse
-from attention.hebbianAttentionPatchedSynapse import HebbianAttentionPatchedSynapse
-from attention.scoreAttentionPatchedSynapse import ScoreAttentionPatchedSynapse
+from .attention.attentionPatchedSynapse import AttentionPatchedSynapse
+from .attention.hebbianAttentionPatchedSynapse import HebbianAttentionPatchedSynapse
+from .attention.scoreAttentionPatchedSynapse import ScoreAttentionPatchedSynapse
 
 
