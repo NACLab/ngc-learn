@@ -18,7 +18,7 @@ def test_patchedSynapse():
   dt = 1.  # ms
   # model hyper
   shape = (10, 5)
-  n_sub_models = 2
+  n_patch = 2
   stride_shape = (1, 1)
   batch_size = 1
   resist_scale = 1.0
@@ -26,7 +26,7 @@ def test_patchedSynapse():
     a = PatchedSynapse(
       name="a",
       shape=shape,
-      n_sub_models=n_sub_models,
+      n_patch=n_patch,
       stride_shape=stride_shape,
       resist_scale=resist_scale,
       batch_size=batch_size,
