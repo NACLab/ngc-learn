@@ -76,3 +76,10 @@ from .synapses.patched.staticPatchedSynapse import StaticPatchedSynapse
 from .synapses.patched.scorePatchedSynapse import ScorePatchedSynapse
 from .synapses.patched.hebbianPatchedSynapse import HebbianPatchedSynapse
 
+## point to attention patched synaptic components
+from .synapses.attention.attentionPatchedSynapse import AttentionPatchedSynapse
+from .synapses.attention.hebbianAttentionPatchedSynapse import HebbianAttentionPatchedSynapse
+from .synapses.attention.scoreAttentionPatchedSynapse import ScoreAttentionPatchedSynapse
+
+
+
