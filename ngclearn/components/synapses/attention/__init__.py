@@ -2,3 +2,4 @@
 from .attentionPatchedSynapse import AttentionPatchedSynapse
 from .hebbianAttentionPatchedSynapse import HebbianAttentionPatchedSynapse
 from .scoreAttentionPatchedSynapse import ScoreAttentionPatchedSynapse
+

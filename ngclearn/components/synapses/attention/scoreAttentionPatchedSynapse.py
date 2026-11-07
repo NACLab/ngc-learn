@@ -6,8 +6,8 @@ from ngclearn.utils.io_utils import save_pkl, load_pkl
 from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngclearn import compilable
 from ngclearn import Compartment
-from ngclearn.components.synapses.patched.attention import AttentionPatchedSynapse
-from ngclearn.components.synapses.patched.attention.attentionPatchedSynapse import (_create_attention_synapses,
+from ngclearn.components.synapses.attention import AttentionPatchedSynapse
+from ngclearn.components.synapses.attention.attentionPatchedSynapse import (_create_attention_synapses,
                                                                                     _attend,
                                                                                     _attend_backward,
                                                                                     _backtransmit)

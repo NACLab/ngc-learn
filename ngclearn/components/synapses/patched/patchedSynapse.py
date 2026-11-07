@@ -6,6 +6,7 @@ from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
 from ngclearn import compilable, Compartment
+from ngcsimlib import deprecate_args
 
 def _create_multi_patch_synapses(key, shape, n_patch, patch_stride=(0, 0), init_type=DistributionGenerator.fan_in_gaussian()):
     key, *subkey = random.split(key, n_patch+10)
@@ -102,6 +103,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             this to < 1. will result in a sparser synaptic structure
     """
 
+    @deprecate_args(n_sub_models="n_patch")
     def __init__(self, name, shape, n_patch=1, stride_shape=(0,0), weight_init=None, bias_init=None,
             resist_scale=1., p_conn=1., batch_size=1, **kwargs
     ):
