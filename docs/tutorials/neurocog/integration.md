@@ -148,7 +148,11 @@ which should yield you a plot like the one below:
 
 <img src="../../images/tutorials/neurocog/ode_method_comparison.jpg" width="500" />
 
-As you might observe, RK-4 give the best approximation of the solution. In addition, when the integration step size is held constant, Euler integration does quite poorly over just a few steps while RK-2 and Heun's method do much better at approximating the analytical equation. In the end, the type of numerical integration method employed can matter depending on the ODE(s) you use in modeling, particularly if you seek higher accuracy for more nonlinear dynamics like in our example above.
+As you might observe, RK-4 gives the best approximation of the solution. In addition, when the integration step size 
+is held constant, Euler integration does quite poorly over just a few steps whereas RK-2 and Heun's method do much 
+better at approximating the analytical equation. In the end, the type of numerical integration method that one employs 
+can matter depending on the ODE(s) that you use in modeling, particularly if you seek higher accuracy for more 
+nonlinear kinds of dynamics, such as in our example above.
 
 [^1]: The format expected by ngc-learn's backend is that the differential equation
       provides a functional API/form like so: for instance `dy/dt = diff_eqn(t, y(t), params)`,
