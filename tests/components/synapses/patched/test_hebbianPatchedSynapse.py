@@ -27,7 +27,7 @@ def test_hebbianPatchedSynapse():
     a = HebbianPatchedSynapse(
       name="a",
       shape=shape,
-      n_sub_models=n_sub_models,
+      n_patch=n_sub_models,
       stride_shape=stride_shape,
       resist_scale=resist_scale,
       batch_size=batch_size

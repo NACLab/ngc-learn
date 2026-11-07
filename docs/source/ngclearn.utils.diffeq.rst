@@ -9,21 +9,21 @@ ngclearn.utils.diffeq.ode\_utils module
 
 .. automodule:: ngclearn.utils.diffeq.ode_utils
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.utils.diffeq.odes module
 ---------------------------------
 
 .. automodule:: ngclearn.utils.diffeq.odes
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: ngclearn.utils.diffeq
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

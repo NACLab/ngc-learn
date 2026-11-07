@@ -38,7 +38,7 @@ ngc-learn requires:
 -->
 
 ---
-ngc-learn 3.2.3 and later require Python 3.12 or newer as well as ngcsimlib >=3.1.1. 
+ngc-learn 3.2.4 and later require Python 3.12 or newer as well as ngcsimlib >=3.1.1. 
 ngc-learn's plotting capabilities (routines within `ngclearn.utils.viz`) require
 Matplotlib (>=3.11.1) and imageio (>=2.37.4) and both plotting and density estimation
 tools (routines within ``ngclearn.utils.density``) will require Scikit-learn (>=1.9.0).
@@ -92,7 +92,7 @@ Python 3.12.13 (main, MONTH  DAY YEAR, TIME) [GCC XX.X.X] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import ngclearn
 >>> ngclearn.__version__
-'3.2.3'
+'3.2.4'
 ```
 
 <i>Note:</i> For access to the previous Tensorflow-2 version of ngc-learn (of
@@ -139,7 +139,7 @@ $ python install -e .
 </pre>
 
 **Version:**<br>
-3.2.2
+3.2.4
 
 Author:
 Alexander G. Ororbia II<br>

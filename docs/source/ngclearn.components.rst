@@ -20,13 +20,13 @@ ngclearn.components.jaxComponent module
 
 .. automodule:: ngclearn.components.jaxComponent
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: ngclearn.components
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

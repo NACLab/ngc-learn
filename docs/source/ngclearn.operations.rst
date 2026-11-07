@@ -6,5 +6,5 @@ Module contents
 
 .. automodule:: ngclearn.operations
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

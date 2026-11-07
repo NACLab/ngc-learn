@@ -5,24 +5,23 @@ from jax import random, numpy as jnp, jit
 from ngclearn.components.jaxComponent import JaxComponent
 from ngclearn.utils.distribution_generator import DistributionGenerator
 from ngcsimlib.logger import info
-from ngclearn import compilable #from ngcsimlib.parser import compilable
-from ngclearn import Compartment #from ngcsimlib.compartment import Compartment
+from ngclearn import compilable, Compartment
+from ngcsimlib import deprecate_args
 
-def _create_multi_patch_synapses(key, shape, n_modules, module_stride=(0, 0), initialization_type=DistributionGenerator.fan_in_gaussian()):
-    key, *subkey = random.split(key, n_modules+10)
+def _create_multi_patch_synapses(key, shape, n_patch, patch_stride=(0, 0), init_type=DistributionGenerator.fan_in_gaussian()):
+    key, *subkey = random.split(key, n_patch+10)
 
-    module_shape = (shape[0] // n_modules, shape[1] // n_modules)
-    di, dj = module_shape
-    si, sj = module_stride
+    patch_shape = (shape[0] // n_patch, shape[1] // n_patch)
+    di, dj = patch_shape
+    si, sj = patch_stride
 
-    module_shape = di + (2 * si), dj + (2 * sj)
+    patch_shape = di + (2 * si), dj + (2 * sj)
 
-
-    weight_shape = ((n_modules * di) + 2 * si, (n_modules * dj) + 2 * sj)
+    weight_shape = ((n_patch * di) + 2 * si, (n_patch * dj) + 2 * sj)
     weights = jnp.zeros(weight_shape)
     w_masks = jnp.zeros(weight_shape)
 
-    for i in range(n_modules):
+    for i in range(n_patch):
         start_i = i * di
         end_i = (i + 1) * di + 2 * si
         start_j = i * dj
@@ -31,7 +30,7 @@ def _create_multi_patch_synapses(key, shape, n_modules, module_stride=(0, 0), in
         shape_ = (end_i - start_i, end_j - start_j)  # (di + 2 * si, dj + 2 * sj)
 
         weights = weights.at[start_i : end_i,
-                start_j : end_j].set(initialization_type(shape_, subkey[i]))
+                start_j : end_j].set(init_type(shape_, subkey[i]))
 
         w_masks = w_masks.at[start_i : end_i,
                 start_j : end_j].set(jnp.ones(shape_))
@@ -51,7 +50,7 @@ def _create_multi_patch_synapses(key, shape, n_modules, module_stride=(0, 0), in
         w_masks = weights.at[:, -sj:].set(0.)
 
 
-    return weights, module_shape, w_masks
+    return weights, patch_shape, w_masks
 
 class PatchedSynapse(JaxComponent): ## base patched synaptic cable
     """
@@ -77,7 +76,7 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         shape: tuple specifying shape of this synaptic cable (usually a 2-tuple
             with number of inputs by number of outputs)
 
-        n_sub_models: The number of submodels in each layer (Default: 1 similar functionality as DenseSynapse)
+        n_patch: The number of n_patch in each layer (Default: 1 similar functionality as DenseSynapse)
 
         stride_shape: Stride shape of overlapping synaptic weight value matrix
             (Default: (0, 0))
@@ -104,7 +103,8 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             this to < 1. will result in a sparser synaptic structure
     """
 
-    def __init__(self, name, shape, n_sub_models=1, stride_shape=(0,0), weight_init=None, bias_init=None,
+    @deprecate_args(n_sub_models="n_patch")
+    def __init__(self, name, shape, n_patch=1, stride_shape=(0,0), weight_init=None, bias_init=None,
             resist_scale=1., p_conn=1., batch_size=1, **kwargs
     ):
         super().__init__(name, **kwargs)
@@ -114,18 +114,18 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.weight_init = weight_init
         self.bias_init = bias_init
 
-        self.n_sub_models = n_sub_models
-        self.sub_stride = stride_shape
+        self.n_patch = n_patch
+        self.patch_stride = stride_shape
 
         tmp_key, *subkeys = random.split(self.key.get(), 4)
         if self.weight_init is None:
             info(self.name, "is using default weight initializer!")
             self.weight_init = DistributionGenerator.fan_in_gaussian()
 
-        weights, self.sub_shape, self.w_masks = _create_multi_patch_synapses(
-            key=tmp_key, shape=shape, n_modules=self.n_sub_models, module_stride=self.sub_stride,
-            initialization_type = self.weight_init
-                                                                             )
+        weights, self.patch_shape, self.w_masks = _create_multi_patch_synapses(
+            key=tmp_key, shape=shape, n_patch=self.n_patch, patch_stride=self.patch_stride,
+            init_type=self.weight_init
+        )
 
         self.shape = weights.shape
         
@@ -134,16 +134,20 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
             weights = weights * mask ## sparsify matrix
 
         ## Compartment setup
+        self.weights = Compartment(weights)
+
         preVals = jnp.zeros((self.batch_size, self.shape[0]))
         postVals = jnp.zeros((self.batch_size, self.shape[1]))
 
         self.inputs = Compartment(preVals)
         self.outputs = Compartment(postVals)
-        self.weights = Compartment(weights)
+
+        self.project_input = Compartment(preVals)
+        self.project_output = Compartment(postVals)
 
         self.post_in = Compartment(postVals)
         self.pre_out = Compartment(preVals)
-        self.weights_T = Compartment(weights.T)
+
 
         ## Set up (optional) bias values
         if self.bias_init is None:
@@ -154,17 +158,34 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
     @compilable
     def advance_state(self):
         # Get the variables
-        inputs = self.inputs.get()
-        post_in = self.post_in.get()
         weights = self.weights.get()
         biases = self.biases.get()
 
-        outputs = (jnp.matmul(inputs, weights) * self.Rscale) + biases
-        pre_out = jnp.matmul(post_in, weights.T)
 
-        # Update compartment
+        ################### inputs  →  W  → outputs = (inputs @ W)
+        inputs = self.inputs.get()
+        ## Compute (inputs @ W)
+        outputs = (jnp.matmul(inputs, weights) * self.Rscale) + biases
+        ## Update outputs compartment
         self.outputs.set(outputs)
+
+
+        ###################    post_in →  Wᵀ  → pre_out = (post_in @ Wᵀ)
+        post_in = self.post_in.get()
+        ## Compute (post_in @ Wᵀ)
+        pre_out = jnp.matmul(post_in, weights.T)
+        ## Update pre_out compartment
         self.pre_out.set(pre_out)
+
+
+        ################### project_input →  W  → project_output = (project_input @ W)
+        project_input = self.project_input.get()
+        ## Compute (project_input @ W)
+        project_output = (jnp.matmul(project_input, weights) * self.Rscale) + biases
+        ## Update project_output compartment
+        self.project_output.set(project_output)
+
+
 
     @compilable
     def reset(self): ## closed, no-batch argument reset
@@ -182,6 +203,8 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         self.outputs.set(postVals)
         self.post_in.set(postVals)
         self.pre_out.set(preVals)
+        self.project_input.set(preVals)
+        self.project_output.set(postVals)
 
     @classmethod
     def help(cls): ## component help function
@@ -193,18 +216,22 @@ class PatchedSynapse(JaxComponent): ## base patched synaptic cable
         compartment_props = {
             "inputs":
                 {"inputs": "Takes in external input signal values",
-                 "post_in": "Takes in external input signal values"},
+                 "project_input": "Takes in external input signal values",
+                 "post_in": "Takes in external input signal values",
+                 },
             "states":
                 {"weights": "Synapse efficacy/strength parameter values",
                  "biases": "Base-rate/bias parameter values",
                  "key": "JAX PRNG key"},
             "outputs":
                 {"outputs": "Output of synaptic transformation",
-                 "pre_out": "Output of synaptic transformation"},
+                 "project_output": "Output of synaptic transformation",
+                 "pre_out": "Output of synaptic transformation",
+                 },
         }
         hyperparams = {
             "shape": "Overall shape of synaptic weight value matrix; number inputs x number outputs",
-            "n_sub_models": "The number of submodels (dense synaptic cables) in each layer",
+            "n_patch": "The number of patches (dense synaptic cables) in each layer",
             "stride_shape": "Stride shape of overlapping synaptic weight value matrix",
             "batch_size": "Batch size dimension of this component",
             "weight_init": "Initialization conditions for synaptic weight (W) values",

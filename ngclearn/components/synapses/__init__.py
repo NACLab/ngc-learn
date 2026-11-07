@@ -39,5 +39,12 @@ from .modulated.MSTDPETSynapse import MSTDPETSynapse
 ## patched synaptic components
 from .patched.patchedSynapse import PatchedSynapse
 from .patched.staticPatchedSynapse import StaticPatchedSynapse
+from .patched.scorePatchedSynapse import ScorePatchedSynapse
 from .patched.hebbianPatchedSynapse import HebbianPatchedSynapse
+
+## attention patched synaptic components
+from .attention.attentionPatchedSynapse import AttentionPatchedSynapse
+from .attention.hebbianAttentionPatchedSynapse import HebbianAttentionPatchedSynapse
+from .attention.scoreAttentionPatchedSynapse import ScoreAttentionPatchedSynapse
+
 

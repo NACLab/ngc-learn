@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   ngclearn.components.synapses.attention
    ngclearn.components.synapses.competitive
    ngclearn.components.synapses.convolution
    ngclearn.components.synapses.hebbian
@@ -21,77 +22,77 @@ ngclearn.components.synapses.STPDenseSynapse module
 
 .. automodule:: ngclearn.components.synapses.STPDenseSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.alphaSynapse module
 ------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.alphaSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.denseSynapse module
 ------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.denseSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.doubleExpSynapse module
 ----------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.doubleExpSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.exponentialSynapse module
 ------------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.exponentialSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.mpsSynapse module
 ----------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.mpsSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.sparseTensorSynapse module
 -------------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.sparseTensorSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.staticSparseTensorSynapse module
 -------------------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.staticSparseTensorSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.components.synapses.staticSynapse module
 -------------------------------------------------
 
 .. automodule:: ngclearn.components.synapses.staticSynapse
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: ngclearn.components.synapses
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

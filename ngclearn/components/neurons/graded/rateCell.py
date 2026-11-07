@@ -49,7 +49,6 @@ def _modulate(j, dfx_val):
     """
     return j * dfx_val
 
-# @partial(jit, static_argnames=["integType", "priorType"])
 def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=0):
     """
     Runs leaky rate-coded state dynamics one step in time.
@@ -166,7 +165,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
         use_lateral: determines wheter the RateCell uses lateral pressure during inference (Default: False)
 
-        n_patch:  the number of local patches in each layer (equivalent to n_sub_models in PatchedSynapse) (Default: 1)
+        n_patch:  the number of local patches in each layer (equivalent to n_patch in PatchedSynapse) (Default: 1)
 
         adaptive_lateral: if True, lateral synaptic is adaptive using HebbianPatchedSynapse component,
                           if False, lateral synaptic is a static using StaticPatchedSynapse component
@@ -265,7 +264,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
 
             if adaptive_lateral:
                 self.Wl = HebbianPatchedSynapse(f"Wl_{name}", shape=(n_units, n_units),
-                                                n_sub_models=n_patch,
+                                                n_patch=n_patch,
                                                 weight_init=dist.diag_offdiag(on_diag=exc, off_diag=inh),
                                                 eta=Wl_eta,
                                                 prior=Wl_prior,
@@ -275,7 +274,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                                                 )
             else:
                 self.Wl = StaticPatchedSynapse(f"Wl_{name}", shape=(n_units, n_units),
-                                               n_sub_models=n_patch,
+                                               n_patch=n_patch,
                                                weight_init=dist.diag_offdiag(on_diag=exc, off_diag=inh),
                                                batch_size=batch_size,
                                                )
@@ -288,6 +287,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.zF = Compartment(restVals, display_name="Transformed Rate Activity") # rate-coded output - activity
         self.j_td = Compartment(restVals, display_name="Modulatory Stimulus Current", units="mA") # top-down electrical current - pressure
         self.z = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
+        self.mu_top = Compartment(restVals, display_name="Rate Activity", units="mA") # rate activity
+        self.mu_top_zF = Compartment(restVals, display_name="Transformed Rate Activity") # rate-coded output - activity
         ## lateral compartments
         if use_lateral:
             self.j_lat = Compartment(restVals, display_name="Lateral Stimulus Current", units="mA")  # lateral current
@@ -309,6 +310,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         j = self.j.get()
         j_td = self.j_td.get()
         z = self.z.get()
+        mu_top = self.mu_top.get()
 
         if self.is_stateful:
             ## ════════════════════════════════════════════════════════════════
@@ -320,7 +322,6 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             dfx_val = self.dfx(z)
             j = _modulate(j, dfx_val)
             j = j * self.resist_scale
-
             ## ══════════════════════════
             ## Calculate lateral pressure
             if self.use_lateral:
@@ -355,6 +356,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             ## ════════════════════════════════════════════════════════════════
             ## run in "stateless" mode (when no membrane time constant provided)
             z = _run_cell_stateless(j + j_td)  ## (j+j_td) >> z
+            mu_top = _run_cell_stateless(mu_top)
 
         ## ═══════════════════════════════════════════════
         ## fx(z) >> zF post-activation function value(s)
@@ -363,11 +365,16 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             zF_lat = self.fx_lat(z) * self.output_scale
 
         ## ════════════════════
+        mu_top_zF = self.fx(mu_top) * self.output_scale
+
+        ## ═══════════════════════════════════════════════
         ## Update compartments
         self.j.set(j)
         self.j_td.set(j_td)
         self.z.set(z)
         self.zF.set(zF)
+        self.mu_top.set(mu_top)
+        self.mu_top_zF.set(mu_top_zF)
         if self.use_lateral:
             self.j_lat.set(j_lat)
             self.zF_lat.set(zF_lat)
@@ -391,6 +398,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
         self.j_td.set(restVals)
         self.z.set(restVals)
         self.zF.set(restVals)
+        self.mu_top.set(restVals)
+        self.mu_top_zF.set(restVals)
 
         if self.use_lateral:
             self.Wl.reset()
@@ -417,13 +426,16 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             "inputs":
                 {"j": "External input stimulus value(s)",
                  "j_td": "External top-down input stimulus value(s); these get "
-                         "multiplied by the derivative of f(x), i.e., df(x)"},
+                         "multiplied by the derivative of f(x), i.e., df(x)",
+                 "mu_top": "Top-down Prediction"},
             "states":
                 {"z": "Update to rate-coded continuous dynamics; value at time t"},
             "outputs":
                 {"zF": "Nonlinearity/function applied to rate-coded dynamics; f(z)",
                  "zF_lat": "(if use_lateral is True) zF for lateral fx_lat(z)",
-                 "j_lat": "(if use_lateral is True) lateral pressure"},
+                 "j_lat": "(if use_lateral is True) lateral pressure",
+                 "mu_top_zF": "Nonlinearity/function applied to the top-down prediction",
+                 },
         }
         hyperparams = {
             "n_units": "Number of neuronal cells to model in this layer",
@@ -434,7 +446,7 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             "threshold": "What kind of iterative thresholding function to place over neuronal dynamics?",
             "integration_type": "Type of numerical integration to use for the cell dynamics",
             "use_lateral": "If lateral synaptic is active for inference",
-            "n_patch": "Number of block-diagonal local lateral synaptic patch (n_sub_models of `Wl`)",
+            "n_patch": "Number of block-diagonal local lateral synaptic patch (n_patch of `Wl`)",
             "adaptive_lateral": "Adaptive lateral synapses (HebbianPatchedSynapse) or static lateral synaptic (StaticPatchedSynapse)",
             "Wl_eta": "Learning rate for the lateral synapses",
             "exc_inh": "(exc, inh) lateral synapses initial values. On-diagonal takes exc>0 and off-diagonal takes inh<0",
