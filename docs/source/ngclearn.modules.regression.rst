@@ -9,29 +9,29 @@ ngclearn.modules.regression.elastic\_net module
 
 .. automodule:: ngclearn.modules.regression.elastic_net
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.modules.regression.lasso module
 ----------------------------------------
 
 .. automodule:: ngclearn.modules.regression.lasso
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 ngclearn.modules.regression.ridge module
 ----------------------------------------
 
 .. automodule:: ngclearn.modules.regression.ridge
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: ngclearn.modules.regression
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

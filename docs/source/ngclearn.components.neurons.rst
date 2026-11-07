@@ -15,5 +15,5 @@ Module contents
 
 .. automodule:: ngclearn.components.neurons
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

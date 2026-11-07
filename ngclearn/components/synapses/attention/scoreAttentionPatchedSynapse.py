@@ -91,7 +91,7 @@ def _calc_update(
 class ScoreAttentionPatchedSynapse(AttentionPatchedSynapse):
     """
     A patched self-attention synaptic cable with fixed (random) query, key, and value efficacies that adjusts a
-    score per synapse via a two-factor Hebbian adjustment rule; only the top-k% synapses (by score magnitude |S|)
+    score per synapse via a two-factor Hebbian adjustment rule; only the top-k% synapses (by score magnitude \\|S\\|)
     are used to transform signals (the edge-popup algorithm).
 
     | Ramanujan, Vivek, et al. "What's hidden in a randomly weighted neural network?"
@@ -129,7 +129,7 @@ class ScoreAttentionPatchedSynapse(AttentionPatchedSynapse):
             (shape[1] / n_patch) / n_heads features (Default: 1)
 
         use_value: if False, the value synapses are fixed to the identity (v = zF)
-            and are left out of `weights` and `scores`, i.e., W = (Wq, Wk) (Default: True)
+            and are left out of "weights" and "scores", i.e., W = (Wq, Wk) (Default: True)
 
         eta: global learning rate
 
@@ -356,7 +356,7 @@ class ScoreAttentionPatchedSynapse(AttentionPatchedSynapse):
             "k": "Fraction of synapses kept in the sub-network",
             "resist_scale": "Resistance level scaling factor (applied to output of transformation)",
             "p_conn": "Probability of a connection existing (otherwise, it is masked to zero)",
-            "sign_value": "Scalar `flipping` constant -- changes direction to Hebbian descent if < 0",
+            "sign_value": "Scalar flipping constant -- changes direction to Hebbian descent if < 0",
             "eta": "Global (fixed) learning rate",
             "pre_wght": "Pre-synaptic weighting coefficient (q_pre)",
             "post_wght": "Post-synaptic weighting coefficient (q_post)",
