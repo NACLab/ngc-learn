@@ -34,7 +34,16 @@ def _dfz_internal_gaussian(z, j, j_td, tau_m, leak_gamma): ## raw dynamics
     dz_dt = (-z_leak * leak_gamma + (j + j_td)) * (1./tau_m)
     return dz_dt
 
-# @jit
+def _dfz_internal_vicreg(z, j, j_td, tau_m, leak_gamma, n_patch=1): ## raw dynamics
+    var_leak, cov_leak = leak_gamma
+    zc = z - jnp.mean(z, axis=0, keepdims=True)
+    cov = jnp.matmul(zc.T, zc) / (z.shape[0] - 1)
+    std = jnp.sqrt(jnp.diag(cov) + 1e-4)
+    off_diag = jnp.kron(jnp.eye(n_patch), 1. - jnp.eye(z.shape[1] // n_patch))
+    z_leak = jnp.matmul(zc, cov * off_diag) * cov_leak - zc * (std < 1.) / std * var_leak
+    dz_dt = (-z_leak + (j + j_td)) * (1./tau_m)
+    return dz_dt
+
 def _modulate(j, dfx_val):
     """
     Apply a signal modulator to j (typically of the form of a derivative/dampening function)
@@ -49,7 +58,7 @@ def _modulate(j, dfx_val):
     """
     return j * dfx_val
 
-def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=0):
+def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=0, n_patch=1):
     """
     Runs leaky rate-coded state dynamics one step in time.
 
@@ -78,6 +87,7 @@ def _run_cell(dt, j, j_td, z, tau_m, leak_gamma=0., integType=0, priorType=0):
         1: lambda t, z, params: _dfz_internal_laplace(z, *params),
         2: lambda t, z, params: _dfz_internal_cauchy(z, *params),
         3: lambda t, z, params: _dfz_internal_exp(z, *params),
+        4: lambda t, z, params: _dfz_internal_vicreg(z, *params, n_patch),
     }
     _dfz_fn = _dfz_fns.get(priorType, _dfz_internal_gaussian)
     _step_fns = {
@@ -217,7 +227,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
             "gaussian": 0,
             "laplacian": 1,
             "cauchy": 2,
-            "exp": 3
+            "exp": 3,
+            "vicreg": 4
         }
         self.priorType = priorTypeDict.get(priorType, 0)
         self.priorLeakRate = leakRate ## degree to which rate neurons leak (according to prior)
@@ -343,7 +354,8 @@ class RateCell(JaxComponent): ## Rate-coded/real-valued cell
                               tau_m=self.tau_m,
                               leak_gamma=self.priorLeakRate,
                               integType=self.intgFlag,
-                              priorType=self.priorType
+                              priorType=self.priorType,
+                              n_patch=self.n_patch
                               )
 
             ## apply optional thresholding sub-dynamics
